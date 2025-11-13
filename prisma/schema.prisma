@@ -1,0 +1,227 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  HUSTLER
+  ADMIN
+}
+
+enum IdVerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum JobStatus {
+  OPEN
+  REQUESTED
+  ASSIGNED
+  COMPLETED_BY_HUSTLER
+  AWAITING_CUSTOMER_CONFIRM
+  PAID
+  CANCELLED
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum PaymentStatus {
+  PREAUTHORIZED
+  CAPTURED
+  REFUNDED
+  VOIDED
+}
+
+model User {
+  id                    String                @id @default(cuid())
+  email                 String                @unique
+  passwordHash          String                @map("password_hash")
+  name                  String
+  username              String                @unique
+  city                  String
+  zip                   String
+  photoUrl              String?               @map("photo_url")
+  roles                 UserRole[]            @default([CUSTOMER])
+  ratingAvg             Float                 @default(0) @map("rating_avg")
+  ratingCount           Int                   @default(0) @map("rating_count")
+  idVerified            Boolean               @default(false) @map("id_verified")
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  jobsAsCustomer        Job[]                 @relation("CustomerJobs")
+  jobsAsHustler         Job[]                 @relation("HustlerJobs")
+  offers                Offer[]
+  reviewsReceived       Review[]              @relation("Reviewee")
+  reviewsGiven          Review[]              @relation("Reviewer")
+  messagesSent          Message[]
+  threadsAsA            Thread[]              @relation("UserA")
+  threadsAsB            Thread[]              @relation("UserB")
+  paymentsAsCustomer    Payment[]             @relation("CustomerPayments")
+  paymentsAsHustler     Payment[]             @relation("HustlerPayments")
+
+  @@index([email])
+  @@index([username])
+  @@index([city, zip])
+  @@map("users")
+}
+
+model Job {
+  id                    String                @id @default(cuid())
+  customerId            String                @map("customer_id")
+  title                 String
+  category              String
+  description           String                @db.Text
+  photos                String[]              @default([])
+  address               String
+  lat                   Float?
+  lng                   Float?
+  date                  DateTime
+  startTime             DateTime              @map("start_time")
+  endTime               DateTime              @map("end_time")
+  payType               String                @map("pay_type") // "flat" | "hourly"
+  amount                Decimal               @db.Decimal(10, 2)
+  hourlyRate            Decimal?              @map("hourly_rate") @db.Decimal(10, 2)
+  estHours              Int?                  @map("est_hours")
+  requirements          Json                  // { vehicle, stairs, team_size }
+  status                JobStatus             @default(OPEN)
+  hustlerId             String?               @map("hustler_id")
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  customer              User                  @relation("CustomerJobs", fields: [customerId], references: [id])
+  hustler               User?                 @relation("HustlerJobs", fields: [hustlerId], references: [id])
+  offers                Offer[]
+  thread                Thread?
+  payment                Payment?
+  reviews                Review[]
+
+  @@index([customerId])
+  @@index([hustlerId])
+  @@index([status])
+  @@index([category])
+  @@index([date])
+  @@index([lat, lng])
+  @@map("jobs")
+}
+
+model Offer {
+  id                    String                @id @default(cuid())
+  jobId                 String                @map("job_id")
+  hustlerId             String                @map("hustler_id")
+  note                  String?               @db.Text
+  status                OfferStatus           @default(PENDING)
+  createdAt             DateTime              @default(now()) @map("created_at")
+
+  // Relations
+  job                   Job                   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  hustler               User                  @relation(fields: [hustlerId], references: [id])
+
+  @@index([jobId])
+  @@index([hustlerId])
+  @@index([status])
+  @@map("offers")
+}
+
+model Thread {
+  id                    String                @id @default(cuid())
+  jobId                 String                @unique @map("job_id")
+  userAId               String                @map("user_a_id")
+  userBId               String                @map("user_b_id")
+  lastMessageAt         DateTime?             @map("last_message_at")
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  job                   Job                   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  userA                 User                  @relation("UserA", fields: [userAId], references: [id])
+  userB                 User                  @relation("UserB", fields: [userBId], references: [id])
+  messages               Message[]
+
+  @@index([userAId, userBId])
+  @@index([jobId])
+  @@map("threads")
+}
+
+model Message {
+  id                    String                @id @default(cuid())
+  threadId              String                @map("thread_id")
+  senderId              String                @map("sender_id")
+  body                  String                @db.Text
+  attachments           String[]              @default([])
+  createdAt             DateTime              @default(now()) @map("created_at")
+
+  // Relations
+  thread                Thread                @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender                User                  @relation(fields: [senderId], references: [id])
+
+  @@index([threadId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model Review {
+  id                    String                @id @default(cuid())
+  reviewerId            String                @map("reviewer_id")
+  revieweeId            String                @map("reviewee_id")
+  jobId                 String                @map("job_id")
+  stars                 Int                   // 1-5
+  text                  String                @db.Text
+  photos                String[]              @default([])
+  isHidden              Boolean               @default(false) @map("is_hidden")
+  createdAt             DateTime              @default(now()) @map("created_at")
+
+  // Relations
+  reviewer              User                  @relation("Reviewer", fields: [reviewerId], references: [id])
+  reviewee              User                  @relation("Reviewee", fields: [revieweeId], references: [id])
+  job                   Job                   @relation(fields: [jobId], references: [id])
+
+  @@index([reviewerId])
+  @@index([revieweeId])
+  @@index([jobId])
+  @@index([isHidden])
+  @@map("reviews")
+}
+
+model Payment {
+  id                    String                @id @default(cuid())
+  jobId                 String                @unique @map("job_id")
+  customerId            String                @map("customer_id")
+  hustlerId             String                @map("hustler_id")
+  amount                Decimal               @db.Decimal(10, 2)
+  tip                   Decimal               @default(0) @db.Decimal(10, 2)
+  feeCustomer           Decimal               @map("fee_customer") @db.Decimal(10, 2)
+  feeHustler            Decimal               @map("fee_hustler") @db.Decimal(10, 2)
+  total                 Decimal               @db.Decimal(10, 2)
+  status                PaymentStatus         @default(PREAUTHORIZED)
+  providerId            String?               @map("provider_id") // Stripe payment intent ID
+  receiptUrl            String?               @map("receipt_url")
+  created_at            DateTime              @default(now()) @map("created_at")
+
+  // Relations
+  job                   Job                   @relation(fields: [jobId], references: [id])
+  customer              User                  @relation("CustomerPayments", fields: [customerId], references: [id])
+  hustler               User                  @relation("HustlerPayments", fields: [hustlerId], references: [id])
+
+  @@index([customerId])
+  @@index([hustlerId])
+  @@index([status])
+  @@index([providerId])
+  @@map("payments")
+}
+

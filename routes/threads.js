@@ -1,0 +1,201 @@
+const express = require('express');
+const { body, validationResult } = require('express-validator');
+const prisma = require('../db');
+const { authenticate } = require('../middleware/auth');
+
+const router = express.Router();
+
+// All routes require authentication
+router.use(authenticate);
+
+// GET /threads - List user's threads
+router.get('/', async (req, res) => {
+  try {
+    const threads = await prisma.thread.findMany({
+      where: {
+        OR: [
+          { userAId: req.user.id },
+          { userBId: req.user.id },
+        ],
+      },
+      include: {
+        job: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+          },
+        },
+        userA: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+          },
+        },
+        userB: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+          },
+        },
+        messages: {
+          take: 1,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            body: true,
+            senderId: true,
+            createdAt: true,
+          },
+        },
+      },
+      orderBy: { lastMessageAt: 'desc' },
+    });
+
+    res.json(threads);
+  } catch (error) {
+    console.error('List threads error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /threads/:id/messages
+router.get('/:id/messages', async (req, res) => {
+  try {
+    const thread = await prisma.thread.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!thread) {
+      return res.status(404).json({ error: 'Thread not found' });
+    }
+
+    // Verify user is part of thread
+    if (thread.userAId !== req.user.id && thread.userBId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const messages = await prisma.message.findMany({
+      where: { threadId: req.params.id },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    res.json(messages);
+  } catch (error) {
+    console.error('Get messages error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /threads/:id/messages
+router.post('/:id/messages', [
+  body('body').trim().notEmpty().isLength({ max: 5000 }),
+  body('attachments').optional().isArray(),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const thread = await prisma.thread.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!thread) {
+      return res.status(404).json({ error: 'Thread not found' });
+    }
+
+    // Verify user is part of thread
+    if (thread.userAId !== req.user.id && thread.userBId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Rate limiting: max 5 messages per 10 seconds
+    const recentCount = await prisma.message.count({
+      where: {
+        threadId: req.params.id,
+        senderId: req.user.id,
+        createdAt: {
+          gte: new Date(Date.now() - 10000), // Last 10 seconds
+        },
+      },
+    });
+
+    if (recentCount >= 5) {
+      return res.status(429).json({ error: 'Rate limit exceeded' });
+    }
+
+    // Basic profanity check (simple - can be enhanced)
+    const { body, attachments = [] } = req.body;
+    
+    // Block phone/email patterns before assignment
+    const job = await prisma.job.findUnique({
+      where: { id: thread.jobId },
+      select: { status: true },
+    });
+
+    if (job.status === 'OPEN' || job.status === 'REQUESTED') {
+      const phoneRegex = /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/;
+      const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
+      
+      if (phoneRegex.test(body) || emailRegex.test(body)) {
+        return res.status(400).json({ 
+          error: 'Contact information cannot be shared before job assignment' 
+        });
+      }
+    }
+
+    // Validate attachments
+    if (attachments.length > 10) {
+      return res.status(400).json({ error: 'Maximum 10 attachments per message' });
+    }
+
+    const message = await prisma.message.create({
+      data: {
+        threadId: req.params.id,
+        senderId: req.user.id,
+        body,
+        attachments,
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+          },
+        },
+      },
+    });
+
+    // Update thread last message time
+    await prisma.thread.update({
+      where: { id: req.params.id },
+      data: { lastMessageAt: new Date() },
+    });
+
+    res.status(201).json(message);
+  } catch (error) {
+    console.error('Create message error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+module.exports = router;
+
