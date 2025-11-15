@@ -1,6 +1,16 @@
 const { Resend } = require('resend');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend only if API key is provided (email is optional)
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+
+// Helper to check if email is configured
+function isEmailConfigured() {
+  if (!resend) {
+    console.warn('Email not configured: RESEND_API_KEY is not set. Email functions will be disabled.');
+    return false;
+  }
+  return true;
+}
 
 // TODO: Update this email address when you get your domain
 // You'll need to verify the domain in Resend and update this to match
@@ -8,6 +18,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.FROM_EMAIL || 'Hustl <noreply@hustl.app>';
 
 async function sendSignupEmail(email, name) {
+  if (!isEmailConfigured()) return;
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -32,6 +43,7 @@ async function sendSignupEmail(email, name) {
 }
 
 async function sendPasswordResetEmail(email, name, resetUrl) {
+  if (!isEmailConfigured()) return;
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -53,6 +65,7 @@ async function sendPasswordResetEmail(email, name, resetUrl) {
 }
 
 async function sendOfferReceivedEmail(email, name, jobTitle, offerNote) {
+  if (!isEmailConfigured()) return;
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -72,6 +85,7 @@ async function sendOfferReceivedEmail(email, name, jobTitle, offerNote) {
 }
 
 async function sendJobAssignedEmail(email, name, jobTitle) {
+  if (!isEmailConfigured()) return;
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -91,6 +105,7 @@ async function sendJobAssignedEmail(email, name, jobTitle) {
 }
 
 async function sendJobCompleteEmail(email, name, jobTitle, verificationCode) {
+  if (!isEmailConfigured()) return;
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -114,6 +129,7 @@ async function sendJobCompleteEmail(email, name, jobTitle, verificationCode) {
 }
 
 async function sendPaymentReceiptEmail(email, name, payment, receiptUrl) {
+  if (!isEmailConfigured()) return;
   try {
     const amount = Number(payment.amount);
     const tip = Number(payment.tip);
@@ -143,6 +159,7 @@ async function sendPaymentReceiptEmail(email, name, payment, receiptUrl) {
 }
 
 async function sendPayoutSentEmail(email, name, amount) {
+  if (!isEmailConfigured()) return;
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -161,6 +178,7 @@ async function sendPayoutSentEmail(email, name, amount) {
 }
 
 async function sendPaymentCompleteEmail(email, name, jobTitle, amount) {
+  if (!isEmailConfigured()) return;
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -181,6 +199,7 @@ async function sendPaymentCompleteEmail(email, name, jobTitle, amount) {
 }
 
 async function sendAutoCompleteEmail(email, name, jobTitle) {
+  if (!isEmailConfigured()) return;
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -200,6 +219,7 @@ async function sendAutoCompleteEmail(email, name, jobTitle) {
 }
 
 async function sendRefundEmail(email, name, jobTitle, amount) {
+  if (!isEmailConfigured()) return;
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -219,6 +239,7 @@ async function sendRefundEmail(email, name, jobTitle, amount) {
 }
 
 async function sendStripeRequiredEmail(email, name, jobTitle) {
+  if (!isEmailConfigured()) return;
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -242,6 +263,7 @@ async function sendStripeRequiredEmail(email, name, jobTitle) {
 }
 
 async function sendNewMessageEmail(recipientEmail, recipientName, senderName, jobTitle, messagePreview, threadId) {
+  if (!isEmailConfigured()) return;
   try {
     const messageUrl = `${process.env.APP_BASE_URL || 'http://localhost:8080'}/messages/${threadId}`;
     
@@ -267,6 +289,10 @@ async function sendNewMessageEmail(recipientEmail, recipientName, senderName, jo
 }
 
 async function sendFeedbackEmail(feedbackName, feedbackEmail, feedbackMessage) {
+  if (!isEmailConfigured()) {
+    console.warn('Feedback email not sent: RESEND_API_KEY is not configured');
+    return; // Don't throw - feedback can be logged instead
+  }
   try {
     const feedbackEmailAddress = process.env.FEEDBACK_EMAIL || 'team.hustlapp@outlook.com';
     

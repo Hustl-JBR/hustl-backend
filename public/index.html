@@ -74,7 +74,7 @@
       gap: 1rem;
       position: sticky;
       top: 0;
-      z-index: 20;
+      z-index: 100;
     }
 
     .logo-row {
@@ -114,6 +114,8 @@
       flex-wrap: wrap;
       gap: 0.3rem;
       font-size: 0.85rem;
+      align-items: center;
+      position: relative;
     }
 
     .nav-tab {
@@ -124,12 +126,78 @@
       color: var(--text-muted);
       font-size: 0.8rem;
       font-weight: 500;
+      white-space: nowrap;
     }
 
     .nav-tab.active {
       background: var(--primary-soft);
       color: var(--primary);
       border-color: var(--primary);
+    }
+
+    /* Mobile Menu Button */
+    .mobile-menu-btn {
+      display: none;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--text-main);
+      font-size: 1.2rem;
+      cursor: pointer;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .mobile-menu-btn:hover {
+      background: var(--primary-soft);
+    }
+
+    /* Mobile Menu Dropdown */
+    .mobile-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 0.5rem);
+      right: 0;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 1001;
+      min-width: 150px;
+      overflow: hidden;
+    }
+
+    .mobile-menu.show {
+      display: block;
+    }
+
+    .mobile-menu-item {
+      display: block;
+      padding: 0.75rem 1rem;
+      color: var(--text-main);
+      text-decoration: none;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mobile-menu-item:last-child {
+      border-bottom: none;
+    }
+
+    .mobile-menu-item:hover {
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+
+    .mobile-menu-item.active {
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-weight: 600;
     }
 
     .auth-pill {
@@ -173,33 +241,33 @@
     .mode-toggle {
       display: flex;
       align-items: center;
-      gap: 0.3rem;
-      padding: 0.3rem;
+      gap: 0.15rem;
+      padding: 0.15rem;
       background: #f3f4f6;
-      border-radius: 10px;
-      border: 2px solid var(--border);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
 
     .mode-toggle button {
-      padding: 0.5rem 1rem;
-      border-radius: 8px;
+      padding: 0.3rem 0.6rem;
+      border-radius: 5px;
       border: none;
-      font-size: 0.8rem;
+      font-size: 0.7rem;
       font-weight: 600;
       background: transparent;
       color: var(--text-muted);
       cursor: pointer;
       transition: all 0.2s;
-      min-height: 36px;
+      min-height: 26px;
       white-space: nowrap;
     }
 
     .mode-toggle button.active {
       background: var(--primary);
       color: #fff;
-      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
-      font-weight: 700;
+      box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+      font-weight: 600;
     }
     
     .mode-toggle button:not(.active):hover {
@@ -209,14 +277,14 @@
     
     @media (max-width: 768px) {
       .mode-toggle {
-        padding: 0.2rem;
-        gap: 0.2rem;
+        padding: 0.1rem;
+        gap: 0.1rem;
       }
       
       .mode-toggle button {
-        padding: 0.4rem 0.7rem;
-        font-size: 0.7rem;
-        min-height: 32px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.65rem;
+        min-height: 24px;
       }
       
       .auth-pill {
@@ -261,6 +329,7 @@
       header {
         padding: 0.6rem 1rem;
         flex-wrap: wrap;
+        position: relative;
       }
       
       .logo-text-main {
@@ -270,11 +339,44 @@
       .nav-tabs {
         font-size: 0.75rem;
         gap: 0.25rem;
+        flex: 1;
+        justify-content: space-between;
       }
       
       .nav-tab {
         padding: 0.3rem 0.6rem;
         font-size: 0.75rem;
+      }
+
+      /* Hide Profile and About on mobile - they go in menu */
+      .nav-tab[data-view="profile"],
+      .nav-tab[data-view="about"] {
+        display: none;
+      }
+
+      /* Show mobile menu button on mobile */
+      .mobile-menu-btn {
+        display: block !important;
+      }
+
+      /* Make mode toggle part of nav on mobile - show first */
+      .mode-toggle {
+        order: -1;
+        margin-right: auto;
+        flex-shrink: 0;
+      }
+
+      /* Stack nav items better on mobile */
+      .nav-tabs {
+        flex-wrap: wrap;
+        row-gap: 0.5rem;
+      }
+
+      /* Make auth pill more compact on mobile */
+      .auth-pill {
+        width: 100%;
+        margin-top: 0.5rem;
+        justify-content: space-between;
       }
     }
 
@@ -1107,6 +1209,11 @@
         </div>
       </div>
       <nav class="nav-tabs">
+        <!-- Mode Toggle (moved to nav, shown when logged in) -->
+        <div class="mode-toggle" id="modeToggle" style="display: none;">
+          <button id="modeCustomerBtn" class="active">Customer</button>
+          <button id="modeHustlerBtn">Hustler</button>
+        </div>
         <button class="nav-tab active" data-view="home">Home</button>
         <button class="nav-tab" data-view="jobs">Jobs</button>
         <button class="nav-tab" data-view="post">Post a job</button>
@@ -1114,13 +1221,15 @@
         <button class="nav-tab" data-view="profile">Profile</button>
         <button class="nav-tab" data-view="owner" id="ownerTab" style="display:none;">Owner</button>
         <button class="nav-tab" data-view="about">About</button>
+        <!-- Mobile Menu Button (shown on mobile only) -->
+        <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+        <!-- Mobile Menu Dropdown -->
+        <div class="mobile-menu" id="mobileMenu" style="display: none;">
+          <button class="mobile-menu-item" data-view="profile">👤 Profile</button>
+          <button class="mobile-menu-item" data-view="about">ℹ️ About</button>
+        </div>
       </nav>
       <div class="auth-pill" id="authPill">
-        <!-- Mode Toggle (shown when logged in) -->
-        <div class="mode-toggle" id="modeToggle" style="display: none;">
-          <button id="modeCustomerBtn" class="active">Customer</button>
-          <button id="modeHustlerBtn">Hustler</button>
-        </div>
         <span id="authPillText">Not signed in</span>
         <button id="openAuthButton">Sign in / Create account</button>
       </div>
@@ -2255,6 +2364,18 @@ if (job.acceptedHustlerId) {
         tab.classList.toggle("active", tab.dataset.view === view);
       });
 
+      // Update mobile menu items
+      document.querySelectorAll(".mobile-menu-item").forEach((item) => {
+        item.classList.toggle("active", item.dataset.view === view);
+      });
+
+      // Close mobile menu when navigating
+      const mobileMenu = document.getElementById("mobileMenu");
+      if (mobileMenu) {
+        mobileMenu.classList.remove("show");
+        mobileMenu.style.display = "none";
+      }
+
       renderAll();
     }
 
@@ -2317,16 +2438,18 @@ async function renderAuthPill() {
         newHustlerBtn.classList.add("active");
       }
       
-      // Add click handlers
+      // Add click handlers - go to home when switching modes
       newCustomerBtn.addEventListener("click", () => {
         userMode = "customer";
         localStorage.setItem("hustl_userMode", userMode);
+        setView("home"); // Go to home page when switching mode
         renderAll();
       });
       
       newHustlerBtn.addEventListener("click", () => {
         userMode = "hustler";
         localStorage.setItem("hustl_userMode", userMode);
+        setView("home"); // Go to home page when switching mode
         renderAll();
       });
     }
@@ -5446,6 +5569,43 @@ async function renderJobs() {
   nameField.appendChild(nameInput);
   formSection.appendChild(nameField);
   
+  // Gender field
+  const genderField = document.createElement("div");
+  genderField.style.marginBottom = "1.25rem";
+  const genderLabel = document.createElement("label");
+  genderLabel.style.display = "block";
+  genderLabel.style.fontWeight = "600";
+  genderLabel.style.marginBottom = "0.5rem";
+  genderLabel.style.color = "#1f2937";
+  genderLabel.textContent = "Gender";
+  genderLabel.htmlFor = "profileGenderInput";
+  genderField.appendChild(genderLabel);
+  const genderSelect = document.createElement("select");
+  genderSelect.id = "profileGenderInput";
+  genderSelect.style.width = "100%";
+  genderSelect.style.padding = "0.75rem";
+  genderSelect.style.border = "1px solid #e5e7eb";
+  genderSelect.style.borderRadius = "8px";
+  genderSelect.style.fontSize = "1rem";
+  genderSelect.style.fontFamily = "inherit";
+  genderSelect.style.background = "white";
+  const genderOptions = [
+    { value: "", text: "Select..." },
+    { value: "male", text: "Male" },
+    { value: "female", text: "Female" },
+    { value: "other", text: "Other" },
+    { value: "prefer_not_to_say", text: "Prefer not to say" },
+  ];
+  genderOptions.forEach(opt => {
+    const option = document.createElement("option");
+    option.value = opt.value;
+    option.textContent = opt.text;
+    if (user.gender === opt.value) option.selected = true;
+    genderSelect.appendChild(option);
+  });
+  genderField.appendChild(genderSelect);
+  formSection.appendChild(genderField);
+  
   // Bio field
   const bioField = document.createElement("div");
   bioField.style.marginBottom = "1.25rem";
@@ -5591,7 +5751,14 @@ if (hasHustlerRole) {
         }, 3000);
       } catch (error) {
         console.error("Stripe Connect error:", error);
-        showToast("Error: " + (error.message || "Failed to connect Stripe"));
+        let errorMsg = error.message || "Failed to connect Stripe";
+        if (error.error === 'Forbidden' || error.message?.includes('hustler')) {
+          errorMsg = "You must be a hustler to connect Stripe. Make sure you're logged in as a hustler.";
+        } else if (error.error === 'Stripe account already connected') {
+          errorMsg = "Stripe account already connected. Refreshing...";
+          setTimeout(() => renderProfile(), 1000);
+        }
+        showToast("Error: " + errorMsg);
         connectBtn.disabled = false;
         connectBtn.textContent = "Connect Stripe Account";
       }
@@ -6076,6 +6243,7 @@ setTimeout(() => {
   // Hook up profile save with better feedback
   const nameInputEl = document.getElementById("profileNameInput");
   const bioInputEl = document.getElementById("profileBioInput");
+  const genderInputEl = document.getElementById("profileGenderInput");
   const saveProfileBtn = document.getElementById("saveProfileButton");
   const saveStatusEl = document.getElementById("saveStatus");
   
@@ -6083,6 +6251,7 @@ setTimeout(() => {
     saveProfileBtn.addEventListener("click", async () => {
       const name = nameInputEl?.value.trim() || "";
       const bio = bioInputEl?.value.trim() || "";
+      const gender = genderInputEl?.value || "";
       
       if (!name) {
         saveStatusEl.textContent = "⚠️ Please enter your name";
@@ -6097,18 +6266,28 @@ setTimeout(() => {
       saveStatusEl.textContent = "";
       
       try {
-        // Update via API
-        const updatedUser = await window.hustlAPI.users.update({ name });
+        // Update via API - include bio and gender
+        const updateData = { name };
+        if (bio) updateData.bio = bio;
+        if (gender) updateData.gender = gender;
+        
+        const updatedUser = await window.hustlAPI.users.update(updateData);
         
         // Update local state
         user.name = updatedUser.name;
-        user.bio = bio;
+        user.bio = updatedUser.bio || bio;
+        user.gender = updatedUser.gender || gender;
         saveState();
         
         // Show success
         saveProfileBtn.textContent = "✓ Saved!";
         saveStatusEl.textContent = "Profile saved successfully";
         saveStatusEl.style.color = "#059669";
+        
+        // Refresh profile to show updates
+        setTimeout(() => {
+          renderProfile();
+        }, 500);
         
         // Reset button after 2 seconds
         setTimeout(() => {
@@ -6386,6 +6565,28 @@ async function openUserProfile(userId) {
 
   card.appendChild(row);
 
+  // Gender (if available)
+  if (user.gender) {
+    const genderWrap = document.createElement("div");
+    genderWrap.className = "field";
+    genderWrap.style.marginTop = "0.6rem";
+    const genderLabel = document.createElement("div");
+    genderLabel.className = "stat-label";
+    genderLabel.textContent = "Gender";
+    genderWrap.appendChild(genderLabel);
+    const genderText = document.createElement("div");
+    genderText.className = "about-text";
+    const genderMap = {
+      'male': 'Male',
+      'female': 'Female',
+      'other': 'Other',
+      'prefer_not_to_say': 'Prefer not to say'
+    };
+    genderText.textContent = genderMap[user.gender] || user.gender;
+    genderWrap.appendChild(genderText);
+    card.appendChild(genderWrap);
+  }
+
   // Bio / description
   const bioWrap = document.createElement("div");
   bioWrap.className = "field";
@@ -6399,7 +6600,7 @@ async function openUserProfile(userId) {
   const bioText = document.createElement("div");
   bioText.className = "about-text";
   bioText.textContent =
-    user.bio || "This person hasn’t added anything about themselves yet.";
+    user.bio || "This person hasn't added anything about themselves yet.";
   bioWrap.appendChild(bioText);
 
   card.appendChild(bioWrap);
@@ -6614,12 +6815,62 @@ meta.textContent =
     /* ---------- Init ---------- */
 
     function initNav() {
+      // Regular nav tabs
       document.querySelectorAll(".nav-tab").forEach((tab) => {
         tab.addEventListener("click", () => {
           const v = tab.dataset.view;
           setView(v);
         });
       });
+
+      // Mobile menu items
+      document.querySelectorAll(".mobile-menu-item").forEach((item) => {
+        item.addEventListener("click", () => {
+          const view = item.dataset.view;
+          if (view) setView(view);
+        });
+      });
+
+      // Mobile menu button toggle
+      const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+      const mobileMenu = document.getElementById("mobileMenu");
+      
+      if (mobileMenuBtn && mobileMenu) {
+        // Show/hide mobile menu button based on screen size
+        function updateMobileMenuVisibility() {
+          if (window.innerWidth <= 768) {
+            mobileMenuBtn.style.display = "block";
+          } else {
+            mobileMenuBtn.style.display = "none";
+            mobileMenu.classList.remove("show");
+          }
+        }
+        
+        // Initial check
+        updateMobileMenuVisibility();
+        window.addEventListener("resize", updateMobileMenuVisibility);
+        
+        // Toggle menu on click
+        mobileMenuBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const isShowing = mobileMenu.classList.contains("show");
+          if (isShowing) {
+            mobileMenu.classList.remove("show");
+            mobileMenu.style.display = "none";
+          } else {
+            mobileMenu.classList.add("show");
+            mobileMenu.style.display = "block";
+          }
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener("click", (e) => {
+          if (!mobileMenu.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+            mobileMenu.classList.remove("show");
+            mobileMenu.style.display = "none";
+          }
+        });
+      }
 
       document
         .getElementById("homeCtaPost")

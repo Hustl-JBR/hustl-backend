@@ -219,8 +219,9 @@ router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), a
       }
       
       return res.status(400).json({ 
-        error: 'Cannot accept offer: Hustler must connect their Stripe account first. They have been notified via email.',
-        requiresStripe: true 
+        error: 'Hustler must connect Stripe account',
+        requiresStripe: true,
+        message: 'This hustler needs to connect their Stripe account before you can pay them. They have been notified via email.'
       });
     }
     

@@ -20,6 +20,7 @@ const authenticate = async (req, res, next) => {
         username: true,
         roles: true,
         idVerified: true,
+        stripeAccountId: true,
       },
     });
 
@@ -50,6 +51,7 @@ const authenticate = async (req, res, next) => {
           username: true,
           roles: true,
           idVerified: true,
+          stripeAccountId: true,
         },
       });
     }

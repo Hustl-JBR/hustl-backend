@@ -753,4 +753,50 @@ router.post('/:id/confirm-complete', authenticate, requireRole('CUSTOMER'), asyn
   }
 });
 
+// DELETE /jobs/:id - Delete a job (Customer only, only if OPEN)
+router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) => {
+  try {
+    const job = await prisma.job.findUnique({
+      where: { id: req.params.id },
+      include: {
+        offers: true,
+        payment: true,
+      },
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'You can only delete your own jobs' });
+    }
+
+    // Can only delete if job is OPEN and has no accepted offers
+    if (job.status !== 'OPEN') {
+      return res.status(400).json({ 
+        error: 'Can only delete open jobs that have not been assigned',
+        message: `Job status is ${job.status}. Only OPEN jobs can be deleted.`
+      });
+    }
+
+    if (job.offers && job.offers.some(o => o.status === 'ACCEPTED')) {
+      return res.status(400).json({ 
+        error: 'Cannot delete job with accepted offer',
+        message: 'This job has an accepted offer and cannot be deleted.'
+      });
+    }
+
+    // Delete the job (cascade will handle offers, threads, etc.)
+    await prisma.job.delete({
+      where: { id: req.params.id },
+    });
+
+    res.json({ message: 'Job deleted successfully' });
+  } catch (error) {
+    console.error('Delete job error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

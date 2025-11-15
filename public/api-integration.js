@@ -201,6 +201,12 @@ const apiJobs = {
     });
   },
 
+  async delete(id) {
+    return await apiRequest(`/jobs/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   async complete(id) {
     return await apiRequest(`/jobs/${id}/complete`, {
       method: 'POST',

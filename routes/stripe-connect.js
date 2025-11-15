@@ -5,12 +5,22 @@ const { createConnectedAccount, createAccountLink } = require('../services/strip
 
 const router = express.Router();
 
-router.use(authenticate, requireRole('HUSTLER'));
+// Authenticate but allow any user (they can be both customer and hustler)
+router.use(authenticate);
 
 // POST /stripe-connect/create-account - Create a Stripe connected account for the hustler
 router.post('/create-account', async (req, res) => {
   try {
     const user = req.user;
+
+    // Check if user has HUSTLER role
+    const userRoles = (user.roles || []).map(r => r.toUpperCase());
+    if (!userRoles.includes('HUSTLER')) {
+      return res.status(403).json({ 
+        error: 'Forbidden',
+        message: 'You must be a hustler to connect a Stripe account'
+      });
+    }
 
     if (user.stripeAccountId) {
       return res.status(400).json({ error: 'Stripe account already connected' });
@@ -46,6 +56,15 @@ router.get('/onboarding-link', async (req, res) => {
   try {
     const user = req.user;
 
+    // Check if user has HUSTLER role
+    const userRoles = (user.roles || []).map(r => r.toUpperCase());
+    if (!userRoles.includes('HUSTLER')) {
+      return res.status(403).json({ 
+        error: 'Forbidden',
+        message: 'You must be a hustler to connect a Stripe account'
+      });
+    }
+
     if (!user.stripeAccountId) {
       return res.status(400).json({ error: 'Stripe account not created. Please create account first.' });
     }
@@ -77,6 +96,12 @@ router.get('/onboarding-link', async (req, res) => {
 router.get('/status', async (req, res) => {
   try {
     const user = req.user;
+
+    // Check if user has HUSTLER role
+    const userRoles = (user.roles || []).map(r => r.toUpperCase());
+    if (!userRoles.includes('HUSTLER')) {
+      return res.json({ connected: false, accountId: null });
+    }
 
     if (!user.stripeAccountId) {
       return res.json({ connected: false, accountId: null });
