@@ -3,6 +3,8 @@ const prisma = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { capturePaymentIntent } = require('../services/stripe');
 const { sendPaymentReceiptEmail } = require('../services/email');
+const Stripe = require('stripe');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const router = express.Router();
 
@@ -55,11 +57,18 @@ router.post('/jobs/:jobId/confirm', requireRole('CUSTOMER'), async (req, res) =>
       return res.status(400).json({ error: 'Payment is not pre-authorized' });
     }
 
-    // Capture payment
-    const captured = await capturePaymentIntent(job.payment.providerId);
+    // Capture payment - Skip in test mode
+    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+    let captured;
+    if (skipStripeCheck) {
+      console.log('[TEST MODE] Skipping Stripe payment capture');
+      captured = { id: job.payment.providerId, status: 'succeeded' };
+    } else {
+      captured = await capturePaymentIntent(job.payment.providerId);
+    }
 
-    // Calculate hustler fee (10% platform fee)
-    const hustlerFee = Number(job.payment.amount) * 0.1;
+    // Calculate hustler fee (16% platform fee)
+    const hustlerFee = Number(job.payment.amount) * 0.16;
 
     // Update payment
     const payment = await prisma.payment.update({
@@ -102,6 +111,249 @@ router.post('/jobs/:jobId/confirm', requireRole('CUSTOMER'), async (req, res) =>
   } catch (error) {
     console.error('Confirm payment error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /payments/jobs/:jobId - Get payment for a job
+router.get('/jobs/:jobId', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: {
+        payment: true,
+      },
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    // Verify user is involved in the job
+    if (job.customerId !== req.user.id && job.hustlerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    if (!job.payment) {
+      return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    res.json(job.payment);
+  } catch (error) {
+    console.error('Get payment error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /payments/checkout/offer/:offerId - Create Stripe checkout for offer acceptance
+router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), async (req, res) => {
+  try {
+    const { offerId } = req.params;
+    console.log(`[CHECKOUT] User ${req.user.id} (roles: ${req.user.roles?.join(', ')}) attempting checkout for offer ${offerId}`);
+    
+    // Get offer with job details
+    const offer = await prisma.offer.findUnique({
+      where: { id: offerId },
+      include: {
+        job: {
+          include: {
+            customer: true,
+          },
+        },
+        hustler: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            stripeAccountId: true,
+          },
+        },
+      },
+    });
+
+    if (!offer) {
+      return res.status(404).json({ error: 'Offer not found' });
+    }
+
+    if (!offer.job) {
+      console.error(`[500] Offer ${offerId} has no associated job`);
+      return res.status(500).json({ error: 'Offer has no associated job' });
+    }
+
+    if (offer.job.customerId !== req.user.id) {
+      console.error(`[403] User ${req.user.id} tried to checkout offer ${offerId} for job owned by ${offer.job.customerId}`);
+      return res.status(403).json({ 
+        error: 'Forbidden',
+        message: 'You can only checkout offers for your own jobs'
+      });
+    }
+
+    if (offer.status !== 'PENDING') {
+      return res.status(400).json({ 
+        error: 'Offer is not pending',
+        message: `Offer status is ${offer.status}, must be PENDING to checkout`
+      });
+    }
+
+    if (!offer.hustler) {
+      console.error(`[500] Offer ${offerId} has no associated hustler`);
+      return res.status(500).json({ error: 'Offer has no associated hustler' });
+    }
+
+    // REQUIRE STRIPE ACCOUNT - Hustler must have Stripe connected
+    // Skip in test mode (when SKIP_STRIPE_CHECK=true)
+    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+    
+    if (!offer.hustler.stripeAccountId && !skipStripeCheck) {
+      // Send email to hustler about needing Stripe
+      try {
+        const { sendStripeRequiredEmail } = require('../services/email');
+        await sendStripeRequiredEmail(
+          offer.hustler.email,
+          offer.hustler.name,
+          offer.job.title
+        );
+      } catch (emailError) {
+        console.error('Error sending Stripe required email:', emailError);
+      }
+      
+      return res.status(400).json({ 
+        error: 'Cannot accept offer: Hustler must connect their Stripe account first. They have been notified via email.',
+        requiresStripe: true 
+      });
+    }
+    
+    // In test mode, use a fake Stripe account ID if needed
+    if (skipStripeCheck && !offer.hustler.stripeAccountId) {
+      console.log('[TEST MODE] Skipping Stripe account check for hustler:', offer.hustler.id);
+    }
+
+    // Calculate payment amounts (3% customer fee)
+    const jobAmount = Number(offer.job.amount);
+    const tipPercent = Math.min(parseFloat(req.body.tipPercent || 0), 25);
+    const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50);
+    const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10);
+    const total = jobAmount + tipAmount + customerFee;
+
+    const origin = process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || 
+                   req.get('origin') || `${req.protocol}://${req.get('host')}`;
+    const base = origin.replace(/\/+$/, '');
+
+    // Create Stripe checkout session - Skip in test mode
+    let session;
+    if (skipStripeCheck) {
+      // In test mode, accept the offer first, then return fake success URL
+      console.log('[TEST MODE] Skipping Stripe checkout - accepting offer directly');
+      
+      // Accept the offer (same logic as /offers/:id/accept)
+      await prisma.offer.update({
+        where: { id: offerId },
+        data: { status: 'ACCEPTED' },
+      });
+
+      // Decline other offers
+      await prisma.offer.updateMany({
+        where: {
+          jobId: offer.job.id,
+          id: { not: offerId },
+          status: 'PENDING',
+        },
+        data: { status: 'DECLINED' },
+      });
+
+      // Update job
+      const updatedJob = await prisma.job.update({
+        where: { id: offer.job.id },
+        data: {
+          status: 'ASSIGNED',
+          hustlerId: offer.hustlerId,
+        },
+      });
+      
+      console.log(`[TEST MODE] Job ${updatedJob.id} updated: status=ASSIGNED, hustlerId=${updatedJob.hustlerId}`);
+
+      // Create fake payment record
+      const fakePaymentIntent = {
+        id: `pi_test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        client_secret: `pi_test_${Date.now()}_secret`,
+        status: 'requires_capture',
+        amount: Math.round(total * 100),
+      };
+
+      await prisma.payment.create({
+        data: {
+          jobId: offer.job.id,
+          customerId: req.user.id,
+          hustlerId: offer.hustlerId,
+          amount: jobAmount,
+          tip: tipAmount,
+          feeCustomer: customerFee,
+          feeHustler: 0,
+          status: 'PREAUTHORIZED',
+          providerId: fakePaymentIntent.id,
+          provider: 'STRIPE',
+        },
+      });
+
+      // Create thread for messaging
+      await prisma.thread.upsert({
+        where: {
+          jobId: offer.job.id,
+        },
+        update: {},
+        create: {
+          jobId: offer.job.id,
+          userAId: req.user.id,
+          userBId: offer.hustlerId,
+        },
+      });
+
+      console.log('[TEST MODE] Offer accepted and payment pre-authorized (fake)');
+      const fakeUrl = `${base}/?payment=success&offerId=${offerId}&jobId=${offer.job.id}&test_mode=true`;
+      return res.json({ url: fakeUrl });
+    } else {
+      session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: `Job: ${offer.job.title}`,
+                description: `Payment for ${offer.hustler.name || 'Hustler'}`,
+              },
+              unit_amount: Math.round(total * 100), // Convert to cents
+            },
+            quantity: 1,
+          },
+        ],
+        customer_email: req.user.email,
+        metadata: {
+          offerId: offer.id,
+          jobId: offer.job.id,
+          customerId: req.user.id,
+          hustlerId: offer.hustlerId,
+          amount: jobAmount.toString(),
+          tip: tipAmount.toString(),
+          customerFee: customerFee.toString(),
+        },
+        success_url: `${base}/?payment=success&offerId=${offerId}&jobId=${offer.job.id}`,
+        cancel_url: `${base}/?payment=cancelled`,
+      });
+    }
+
+    res.json({ url: session.url });
+  } catch (error) {
+    console.error('Create checkout session error:', error);
+    console.error('Error stack:', error.stack);
+    const errorMessage = error.message || 'Internal server error';
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 

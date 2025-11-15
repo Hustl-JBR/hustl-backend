@@ -43,6 +43,9 @@ const threadsRouter = require("./routes/threads");
 const paymentsRouter = require("./routes/payments");
 const webhooksRouter = require("./routes/webhooks");
 const r2Router = require("./routes/r2");
+const stripeConnectRouter = require("./routes/stripe-connect");
+const reviewsRouter = require("./routes/reviews");
+const feedbackRouter = require("./routes/feedback");
 
 // API Routes
 app.use("/auth", authRouter);
@@ -53,6 +56,9 @@ app.use("/threads", threadsRouter);
 app.use("/payments", paymentsRouter);
 app.use("/webhooks", webhooksRouter);
 app.use("/r2", r2Router);
+app.use("/stripe-connect", stripeConnectRouter);
+app.use("/reviews", reviewsRouter);
+app.use("/feedback", feedbackRouter);
 
 // Legacy Stripe Checkout session creation (keep for backward compatibility)
 app.post("/create-checkout-session", async (req, res) => {
@@ -96,8 +102,9 @@ app.post("/create-checkout-session", async (req, res) => {
 });
 
 // Serve index.html for all non-API routes (SPA fallback)
-app.get("*", (req, res) => {
-  // Don't serve index.html for API routes
+// Use middleware instead of wildcard route (Express 5.x compatibility)
+app.use((req, res, next) => {
+  // Don't serve index.html for API routes or static files
   if (
     req.path.startsWith("/auth/") ||
     req.path.startsWith("/users/") ||
@@ -107,16 +114,28 @@ app.get("*", (req, res) => {
     req.path.startsWith("/payments/") ||
     req.path.startsWith("/webhooks/") ||
     req.path.startsWith("/r2/") ||
+    req.path.startsWith("/stripe-connect/") ||
+    req.path.startsWith("/reviews/") ||
     req.path.startsWith("/health") ||
-    req.path.startsWith("/create-checkout-session")
+    req.path.startsWith("/create-checkout-session") ||
+    req.path.includes(".") // Exclude direct file requests (e.g., /style.css, /api-integration.js)
   ) {
-    return res.status(404).json({ error: "Not found" });
+    return next(); // Continue to next middleware/route handler
   }
+  // Serve index.html for all other routes (SPA fallback)
   res.sendFile(path.join(publicPath, "index.html"));
 });
 
 // Start the backend server
-app.listen(PORT, () => {
+const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '0.0.0.0';
+app.listen(PORT, host, () => {
   console.log(`🚀 Hustl backend running at http://localhost:${PORT}`);
   console.log(`📁 Serving static files from: ${publicPath}`);
+  if (process.env.NODE_ENV === 'production') {
+    console.log(`🌐 Production mode - App is live!`);
+    console.log(`🔗 Frontend URL: ${process.env.FRONTEND_BASE_URL || 'Not set'}`);
+  } else {
+    console.log(`📱 Development mode - Access from your phone: http://[your-ip]:${PORT}`);
+    console.log(`   (Make sure your phone is on the same WiFi network)`);
+  }
 });

@@ -6,6 +6,65 @@ const { createPaymentIntent } = require('../services/stripe');
 
 const router = express.Router();
 
+// GET /jobs/:jobId/offers - List offers for a job
+router.get('/jobs/:jobId/offers', authenticate, async (req, res) => {
+  try {
+    const { jobId } = req.params;
+
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    // Allow customer to see all offers for their job
+    // Allow assigned hustler to see offers
+    // Allow users with HUSTLER role to see offers (to check competition before applying)
+    if (job.customerId !== req.user.id && job.hustlerId !== req.user.id) {
+      // Check if user has HUSTLER role
+      const hasHustlerRole = req.user.roles?.some(r => r.toUpperCase() === 'HUSTLER');
+      
+      if (!hasHustlerRole) {
+        // If not a hustler, check if they have an offer for this job
+        const userOffer = await prisma.offer.findFirst({
+          where: {
+            jobId,
+            hustlerId: req.user.id,
+          },
+        });
+
+        if (!userOffer) {
+          return res.status(403).json({ error: 'Forbidden' });
+        }
+      }
+    }
+
+    const offers = await prisma.offer.findMany({
+      where: { jobId },
+      include: {
+        hustler: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            ratingAvg: true,
+            ratingCount: true,
+            photoUrl: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(offers);
+  } catch (error) {
+    console.error('List offers error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /jobs/:id/offers - Create an offer (Hustler only)
 router.post('/jobs/:jobId/offers', authenticate, requireRole('HUSTLER'), [
   body('note').optional().trim().isLength({ max: 1000 }),
@@ -17,17 +76,17 @@ router.post('/jobs/:jobId/offers', authenticate, requireRole('HUSTLER'), [
     }
 
     const { jobId } = req.params;
-    const { note } = req.body;
+    const { note, proposedAmount } = req.body;
 
-    // Check if hustler is verified
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: { idVerified: true },
-    });
+    // Check if hustler is verified (optional for now - can be enabled later)
+    // const user = await prisma.user.findUnique({
+    //   where: { id: req.user.id },
+    //   select: { idVerified: true },
+    // });
 
-    if (!user.idVerified) {
-      return res.status(403).json({ error: 'ID verification required to request jobs' });
-    }
+    // if (!user.idVerified) {
+    //   return res.status(403).json({ error: 'ID verification required to request jobs' });
+    // }
 
     const job = await prisma.job.findUnique({
       where: { id: jobId },
@@ -63,6 +122,7 @@ router.post('/jobs/:jobId/offers', authenticate, requireRole('HUSTLER'), [
         jobId,
         hustlerId: req.user.id,
         note: note || null,
+        proposedAmount: proposedAmount ? parseFloat(proposedAmount) : null,
         status: 'PENDING',
       },
       include: {
@@ -90,14 +150,36 @@ router.post('/jobs/:jobId/offers', authenticate, requireRole('HUSTLER'), [
       },
     });
 
-    // Send email to customer
-    const { sendOfferReceivedEmail } = require('../services/email');
-    await sendOfferReceivedEmail(
-      offer.job.customer.email,
-      offer.job.customer.name,
-      offer.job.title,
-      offer.note
-    );
+    // Create thread for messaging (as soon as hustler applies) - use upsert to handle unique constraint
+    try {
+      await prisma.thread.upsert({
+        where: { jobId },
+        update: {}, // If exists, don't update anything
+        create: {
+          jobId,
+          userAId: offer.job.customerId,
+          userBId: req.user.id,
+        },
+      });
+    } catch (threadError) {
+      // If thread creation fails (e.g., unique constraint), log but don't fail the offer
+      console.error('Thread creation error (non-fatal):', threadError);
+      // Continue - the offer is still created successfully
+    }
+
+    // Send email to customer about new offer (non-blocking - don't fail offer if email fails)
+    try {
+      const { sendOfferReceivedEmail } = require('../services/email');
+      await sendOfferReceivedEmail(
+        offer.job.customer.email,
+        offer.job.customer.name,
+        offer.job.title,
+        offer.note
+      );
+    } catch (emailError) {
+      console.error('Email sending error (non-fatal):', emailError);
+      // Continue - the offer is still created successfully
+    }
 
     res.status(201).json(offer);
   } catch (error) {
@@ -118,7 +200,14 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
             hustler: true,
           },
         },
-        hustler: true,
+        hustler: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            stripeAccountId: true,
+          },
+        },
       },
     });
 
@@ -138,27 +227,72 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       return res.status(400).json({ error: 'Job is not available' });
     }
 
+    // REQUIRE STRIPE ACCOUNT - Hustler must have Stripe connected to be accepted
+    // Skip in test mode (when SKIP_STRIPE_CHECK=true)
+    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+    
+    const hustler = await prisma.user.findUnique({
+      where: { id: offer.hustlerId },
+      select: { stripeAccountId: true, email: true, name: true },
+    });
+
+    if (!hustler.stripeAccountId && !skipStripeCheck) {
+      // Send email to hustler about needing Stripe
+      try {
+        const { sendStripeRequiredEmail } = require('../services/email');
+        await sendStripeRequiredEmail(
+          hustler.email,
+          hustler.name,
+          offer.job.title
+        );
+      } catch (emailError) {
+        console.error('Error sending Stripe required email:', emailError);
+      }
+      
+      return res.status(400).json({ 
+        error: 'Cannot accept offer: Hustler must connect their Stripe account first. They have been notified via email.',
+        requiresStripe: true 
+      });
+    }
+    
+    // In test mode, log that we're skipping the check
+    if (skipStripeCheck && !hustler.stripeAccountId) {
+      console.log('[TEST MODE] Skipping Stripe account check for hustler:', offer.hustlerId);
+    }
+
     // Calculate payment amounts
     const jobAmount = Number(offer.job.amount);
     const tipPercent = Math.min(parseFloat(req.body.tipPercent || 0), 25); // Max 25%
     const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50); // Max $50 tip
-    const serviceFee = Math.min(Math.max(jobAmount * 0.075, 2), 25); // 7.5% min $2, max $25
-    const total = jobAmount + tipAmount + serviceFee;
+    const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10); // 3% customer fee min $1, max $10
+    const total = jobAmount + tipAmount + customerFee;
 
-    // Create Stripe payment intent (pre-auth)
-    const paymentIntent = await createPaymentIntent({
-      amount: Math.round(total * 100), // Convert to cents
-      customerId: req.user.id,
-      jobId: offer.job.id,
-      metadata: {
-        jobId: offer.job.id,
+    // Create Stripe payment intent (pre-auth) - Skip in test mode
+    let paymentIntent;
+    if (skipStripeCheck) {
+      // In test mode, create a fake payment intent
+      console.log('[TEST MODE] Skipping Stripe payment intent creation');
+      paymentIntent = {
+        id: `pi_test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        client_secret: `pi_test_${Date.now()}_secret`,
+        status: 'requires_capture',
+        amount: Math.round(total * 100),
+      };
+    } else {
+      paymentIntent = await createPaymentIntent({
+        amount: Math.round(total * 100), // Convert to cents
         customerId: req.user.id,
-        hustlerId: offer.hustlerId,
-        amount: jobAmount.toString(),
-        tip: tipAmount.toString(),
-        serviceFee: serviceFee.toString(),
-      },
-    });
+        jobId: offer.job.id,
+        metadata: {
+          jobId: offer.job.id,
+          customerId: req.user.id,
+          hustlerId: offer.hustlerId,
+          amount: jobAmount.toString(),
+          tip: tipAmount.toString(),
+          customerFee: customerFee.toString(),
+        },
+      });
+    }
 
     // Update offer status
     await prisma.offer.update({
@@ -193,8 +327,8 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
         hustlerId: offer.hustlerId,
         amount: jobAmount,
         tip: tipAmount,
-        feeCustomer: serviceFee,
-        feeHustler: 0, // Will be calculated on capture
+        feeCustomer: customerFee,
+        feeHustler: 0, // Will be calculated on capture (16% of jobAmount)
         total,
         status: 'PREAUTHORIZED',
         providerId: paymentIntent.id,

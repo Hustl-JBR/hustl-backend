@@ -1,4 +1,4 @@
-// API Integration Layer for Hustl Demo
+// API Integration Layer for Hustl
 // This file replaces Supabase calls with our Express API
 
 const API_BASE_URL = window.location.origin; // Use same origin (backend serves frontend)
@@ -26,7 +26,10 @@ async function apiRequest(endpoint, options = {}) {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || `HTTP ${response.status}`);
+      // Try to get detailed error message
+      const errorMsg = data.error || data.message || `HTTP ${response.status}`;
+      const details = data.details ? `: ${JSON.stringify(data.details)}` : '';
+      throw new Error(errorMsg + details);
     }
 
     return data;
@@ -111,13 +114,30 @@ const apiAuth = {
 const apiJobs = {
   async list(filters = {}) {
     const params = new URLSearchParams();
-    if (filters.status) params.append('status', filters.status.toUpperCase());
+    // Map frontend status values to backend status values
+    if (filters.status) {
+      const statusUpper = filters.status.toUpperCase();
+      // Backend accepts: OPEN, ASSIGNED, COMPLETED_BY_HUSTLER
+      // Frontend might use: COMPLETED, PAID, DONE, etc.
+      let backendStatus = statusUpper;
+      if (statusUpper === 'COMPLETED' || statusUpper === 'PAID' || statusUpper === 'DONE') {
+        backendStatus = 'COMPLETED_BY_HUSTLER';
+      } else if (statusUpper === 'IN_PROGRESS' || statusUpper === 'IN-PROGRESS') {
+        backendStatus = 'ASSIGNED';
+      }
+      // Only add status if it's a valid backend status
+      if (['OPEN', 'ASSIGNED', 'COMPLETED_BY_HUSTLER'].includes(backendStatus)) {
+        params.append('status', backendStatus);
+      }
+    }
     if (filters.category) params.append('category', filters.category);
     if (filters.minPay) params.append('minPay', filters.minPay);
     if (filters.payType) params.append('payType', filters.payType);
     if (filters.lat) params.append('lat', filters.lat);
     if (filters.lng) params.append('lng', filters.lng);
     if (filters.radius) params.append('radius', filters.radius);
+    if (filters.city) params.append('city', filters.city);
+    if (filters.zip) params.append('zip', filters.zip);
     if (filters.page) params.append('page', filters.page);
     if (filters.limit) params.append('limit', filters.limit);
 
@@ -132,7 +152,8 @@ const apiJobs = {
   },
 
   async create(jobData) {
-    // Map demo format to API format
+    // Map frontend format to API format
+    // The frontend already sends the correct format, but we need to ensure all required fields are present
     const apiData = {
       title: jobData.title,
       category: jobData.category,
@@ -143,15 +164,30 @@ const apiJobs = {
       startTime: jobData.startTime || new Date().toISOString(),
       endTime: jobData.endTime || new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
       payType: jobData.paymentType || jobData.payType || 'flat',
-      amount: jobData.flatAmount || 0,
-      hourlyRate: jobData.hourlyRate || null,
-      estHours: jobData.maxHours || null,
-      requirements: {
+      // Use amount if provided (frontend calculates it), otherwise calculate from flatAmount or hourly
+      amount: jobData.amount || jobData.flatAmount || 0,
+      requirements: jobData.requirements || {
         vehicle: jobData.requiresVehicle || false,
         stairs: jobData.requiresStairs || false,
         teamSize: jobData.teamSize || 1,
+        onSiteOnly: jobData.requirements?.onSiteOnly || false,
+        notes: jobData.requirements?.notes || null,
       },
     };
+
+    // Only include hourly fields if they exist and payType is hourly
+    if (jobData.payType === 'hourly' || jobData.paymentType === 'hourly') {
+      if (jobData.hourlyRate !== null && jobData.hourlyRate !== undefined) {
+        apiData.hourlyRate = jobData.hourlyRate;
+      }
+      if (jobData.estHours !== null && jobData.estHours !== undefined) {
+        apiData.estHours = jobData.estHours;
+      }
+      // Fallback to maxHours if estHours not provided
+      if (!apiData.estHours && (jobData.maxHours !== null && jobData.maxHours !== undefined)) {
+        apiData.estHours = jobData.maxHours;
+      }
+    }
 
     return await apiRequest('/jobs', {
       method: 'POST',
@@ -170,14 +206,33 @@ const apiJobs = {
       method: 'POST',
     });
   },
+
+  async confirmComplete(id, verificationCode) {
+    const body = {};
+    if (verificationCode) {
+      body.verificationCode = verificationCode;
+    }
+    return await apiRequest(`/jobs/${id}/confirm-complete`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
 };
 
 // Offers functions
 const apiOffers = {
-  async create(jobId, note = '') {
+  async list(jobId) {
+    return await apiRequest(`/offers/jobs/${jobId}/offers`);
+  },
+
+  async create(jobId, note = '', proposedAmount = null) {
+    const body = { note };
+    if (proposedAmount !== null) {
+      body.proposedAmount = proposedAmount;
+    }
     return await apiRequest(`/offers/jobs/${jobId}/offers`, {
       method: 'POST',
-      body: JSON.stringify({ note }),
+      body: JSON.stringify(body),
     });
   },
 
@@ -211,6 +266,12 @@ const apiMessages = {
       body: JSON.stringify({ body, attachments }),
     });
   },
+  
+  async getThreadByJobId(jobId) {
+    // Helper to find thread by job ID
+    const threads = await this.getThreads();
+    return threads.find(t => t.jobId === jobId);
+  },
 };
 
 // Payments functions
@@ -219,6 +280,10 @@ const apiPayments = {
     return await apiRequest(`/payments/jobs/${jobId}/confirm`, {
       method: 'POST',
     });
+  },
+
+  async getByJobId(jobId) {
+    return await apiRequest(`/payments/jobs/${jobId}`);
   },
 
   async getReceipts() {
@@ -267,12 +332,84 @@ const apiUploads = {
 })();
 
 // Export for use in index.html
+// Users functions
+const apiUsers = {
+  async get(userId) {
+    return await apiRequest(`/users/${userId}`);
+  },
+  
+  async update(updateData) {
+    return await apiRequest('/users/me', {
+      method: 'PATCH',
+      body: JSON.stringify(updateData),
+    });
+  },
+};
+
+// Stripe Connect functions
+const apiStripeConnect = {
+  async createAccount() {
+    return await apiRequest('/stripe-connect/create-account', {
+      method: 'POST',
+    });
+  },
+  
+  async getOnboardingLink() {
+    return await apiRequest('/stripe-connect/onboarding-link');
+  },
+  
+  async getStatus() {
+    return await apiRequest('/stripe-connect/status');
+  },
+};
+
+// Reviews functions
+const apiReviews = {
+  async create(jobId, revieweeId, stars, text, photos = []) {
+    return await apiRequest('/reviews', {
+      method: 'POST',
+      body: JSON.stringify({
+        jobId,
+        revieweeId,
+        stars,
+        text,
+        photos,
+      }),
+    });
+  },
+  
+  async getUserReviews(userId) {
+    return await apiRequest(`/reviews/user/${userId}`);
+  },
+  
+  async getJobReviews(jobId) {
+    return await apiRequest(`/reviews/job/${jobId}`);
+  },
+};
+
+const apiFeedback = {
+  async send(name, email, message) {
+    return await apiRequest('/feedback', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: name || null,
+        email: email || null,
+        message,
+      }),
+    });
+  },
+};
+
 window.hustlAPI = {
   auth: apiAuth,
   jobs: apiJobs,
+  stripeConnect: apiStripeConnect,
   offers: apiOffers,
   messages: apiMessages,
   payments: apiPayments,
   uploads: apiUploads,
+  users: apiUsers,
+  reviews: apiReviews,
+  feedback: apiFeedback,
 };
 

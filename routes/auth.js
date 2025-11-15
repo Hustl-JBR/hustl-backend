@@ -10,7 +10,7 @@ const router = express.Router();
 // POST /auth/signup
 router.post('/signup', [
   body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 12 }),
+  body('password').isLength({ min: 8 }),
   body('name').trim().notEmpty(),
   body('username').trim().isAlphanumeric().isLength({ min: 3, max: 20 }),
   body('city').trim().notEmpty(),
@@ -19,7 +19,12 @@ router.post('/signup', [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      console.error('Signup validation errors:', errors.array());
+      const errorMessages = errors.array().map(e => `${e.param}: ${e.msg}`).join(', ');
+      return res.status(400).json({ 
+        error: 'Validation failed: ' + errorMessages,
+        details: errors.array() 
+      });
     }
 
     const { email, password, name, username, city, zip, role } = req.body;
@@ -38,7 +43,7 @@ router.post('/signup', [
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create user with both roles (users can be both customer and hustler)
     const user = await prisma.user.create({
       data: {
         email,
@@ -47,7 +52,7 @@ router.post('/signup', [
         username,
         city,
         zip,
-        roles: role === 'HUSTLER' ? ['HUSTLER'] : ['CUSTOMER'],
+        roles: ['CUSTOMER', 'HUSTLER'], // All users can be both
       },
       select: {
         id: true,
@@ -84,21 +89,30 @@ router.post('/login', [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      console.error('Login validation errors:', errors.array());
+      const errorMessages = errors.array().map(e => `${e.param}: ${e.msg}`).join(', ');
+      return res.status(400).json({ 
+        error: 'Validation failed: ' + errorMessages,
+        details: errors.array() 
+      });
     }
 
+    // Email is already normalized by express-validator
     const { email, password } = req.body;
 
+    // Find user by email (email is already normalized by validator)
     const user = await prisma.user.findUnique({
       where: { email },
     });
 
     if (!user) {
+      console.error('Login failed: User not found for email:', email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
+      console.error('Login failed: Invalid password for user:', user.email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 

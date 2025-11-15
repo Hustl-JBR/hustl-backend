@@ -1,0 +1,94 @@
+const express = require('express');
+const prisma = require('../db');
+const { authenticate, requireRole } = require('../middleware/auth');
+const { createConnectedAccount, createAccountLink } = require('../services/stripe');
+
+const router = express.Router();
+
+router.use(authenticate, requireRole('HUSTLER'));
+
+// POST /stripe-connect/create-account - Create a Stripe connected account for the hustler
+router.post('/create-account', async (req, res) => {
+  try {
+    const user = req.user;
+
+    if (user.stripeAccountId) {
+      return res.status(400).json({ error: 'Stripe account already connected' });
+    }
+
+    // In test mode, create a fake account ID
+    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+    let accountId;
+    
+    if (skipStripeCheck) {
+      // Use a fake test account ID
+      accountId = `acct_test_${user.id.substring(0, 24)}`;
+      console.log('[TEST MODE] Creating fake Stripe account:', accountId);
+    } else {
+      const account = await createConnectedAccount(user.email);
+      accountId = account.id;
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { stripeAccountId: accountId },
+    });
+
+    res.json({ accountId });
+  } catch (error) {
+    console.error('Error creating Stripe account:', error);
+    res.status(500).json({ error: 'Failed to create Stripe account' });
+  }
+});
+
+// GET /stripe-connect/onboarding-link - Get a link to onboard or manage the Stripe account
+router.get('/onboarding-link', async (req, res) => {
+  try {
+    const user = req.user;
+
+    if (!user.stripeAccountId) {
+      return res.status(400).json({ error: 'Stripe account not created. Please create account first.' });
+    }
+
+    // In test mode, return a fake success URL
+    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+    
+    if (skipStripeCheck) {
+      const origin = process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || req.get('origin');
+      const fakeUrl = `${origin}/profile?stripe_onboarding=success&test_mode=true`;
+      console.log('[TEST MODE] Returning fake Stripe onboarding link');
+      return res.json({ url: fakeUrl });
+    }
+
+    const origin = process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || req.get('origin');
+    const returnUrl = `${origin}/profile?stripe_onboarding=success`;
+    const refreshUrl = `${origin}/profile?stripe_onboarding=refresh`;
+
+    const accountLink = await createAccountLink(user.stripeAccountId, returnUrl, refreshUrl);
+
+    res.json({ url: accountLink.url });
+  } catch (error) {
+    console.error('Error creating account link:', error);
+    res.status(500).json({ error: 'Failed to create Stripe account link' });
+  }
+});
+
+// GET /stripe-connect/status - Check the status of the connected Stripe account
+router.get('/status', async (req, res) => {
+  try {
+    const user = req.user;
+
+    if (!user.stripeAccountId) {
+      return res.json({ connected: false, accountId: null });
+    }
+
+    // In a real app, you'd fetch the account from Stripe to check details
+    // For now, just checking if accountId exists is sufficient for 'connected'
+    res.json({ connected: true, accountId: user.stripeAccountId });
+  } catch (error) {
+    console.error('Error checking Stripe status:', error);
+    res.status(500).json({ error: 'Failed to check Stripe status' });
+  }
+});
+
+module.exports = router;

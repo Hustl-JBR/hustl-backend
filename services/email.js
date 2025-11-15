@@ -2,7 +2,10 @@ const { Resend } = require('resend');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_EMAIL = 'Hustl <noreply@hustl.app>'; // Update with your verified domain
+// TODO: Update this email address when you get your domain
+// You'll need to verify the domain in Resend and update this to match
+// Example: 'Hustl <noreply@yourdomain.com>'
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Hustl <noreply@hustl.app>';
 
 async function sendSignupEmail(email, name) {
   try {
@@ -87,7 +90,7 @@ async function sendJobAssignedEmail(email, name, jobTitle) {
   }
 }
 
-async function sendJobCompleteEmail(email, name, jobTitle) {
+async function sendJobCompleteEmail(email, name, jobTitle, verificationCode) {
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -97,8 +100,12 @@ async function sendJobCompleteEmail(email, name, jobTitle) {
         <h1>Job Complete</h1>
         <p>Hi ${name},</p>
         <p>The hustler has marked the job <strong>${jobTitle}</strong> as complete.</p>
+        ${verificationCode ? `
+        <p><strong>Verification Code: ${verificationCode}</strong></p>
+        <p>Please enter this code when confirming completion. This ensures you're both on the same page.</p>
+        ` : ''}
         <p>Please confirm completion and complete payment.</p>
-        <p><a href="${process.env.APP_BASE_URL}/jobs/${jobTitle}">Confirm & Pay</a></p>
+        <p><a href="${process.env.APP_BASE_URL}/jobs">Confirm & Pay</a></p>
       `,
     });
   } catch (error) {
@@ -153,6 +160,138 @@ async function sendPayoutSentEmail(email, name, amount) {
   }
 }
 
+async function sendPaymentCompleteEmail(email, name, jobTitle, amount) {
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `Payment released for "${jobTitle}"`,
+      html: `
+        <h1>Payment Released!</h1>
+        <p>Hi ${name},</p>
+        <p>Great news! The customer has confirmed completion of the job <strong>${jobTitle}</strong>.</p>
+        <p>Your payment of $${amount.toFixed(2)} has been released and will be processed.</p>
+        <p>Thank you for your hard work!</p>
+        <p><a href="${process.env.APP_BASE_URL}/jobs">View Jobs</a></p>
+      `,
+    });
+  } catch (error) {
+    console.error('Send payment complete email error:', error);
+  }
+}
+
+async function sendAutoCompleteEmail(email, name, jobTitle) {
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `Job "${jobTitle}" auto-completed`,
+      html: `
+        <h1>Job Auto-Completed</h1>
+        <p>Hi ${name},</p>
+        <p>The job <strong>${jobTitle}</strong> has been automatically marked as complete since the job date has passed.</p>
+        <p>Payment has been processed and released to the hustler.</p>
+        <p><a href="${process.env.APP_BASE_URL}/jobs">View Jobs</a></p>
+      `,
+    });
+  } catch (error) {
+    console.error('Send auto complete email error:', error);
+  }
+}
+
+async function sendRefundEmail(email, name, jobTitle, amount) {
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `Refund processed for "${jobTitle}"`,
+      html: `
+        <h1>Refund Processed</h1>
+        <p>Hi ${name},</p>
+        <p>Your job <strong>${jobTitle}</strong> has been cancelled.</p>
+        <p>A refund of $${amount.toFixed(2)} has been processed and will appear in your account within 5-10 business days.</p>
+        <p><a href="${process.env.APP_BASE_URL}/jobs">View Jobs</a></p>
+      `,
+    });
+  } catch (error) {
+    console.error('Send refund email error:', error);
+  }
+}
+
+async function sendStripeRequiredEmail(email, name, jobTitle) {
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `Action Required: Connect Stripe to Accept "${jobTitle}"`,
+      html: `
+        <h1>Stripe Account Required</h1>
+        <p>Hi ${name},</p>
+        <p>Great news! A customer wants to accept your offer for the job: <strong>${jobTitle}</strong></p>
+        <p><strong>However, you must connect your Stripe account first before you can be accepted.</strong></p>
+        <p>Stripe is required because it's the only way you can receive payments on Hustl. It's quick and secure.</p>
+        <p><a href="${process.env.APP_BASE_URL || 'http://localhost:8080'}/profile">Connect Stripe Account Now</a></p>
+        <p>Once you connect your Stripe account, the customer can accept your offer and you'll be assigned to the job.</p>
+        <p>Don't miss out on this opportunity - connect your account now!</p>
+      `,
+    });
+  } catch (error) {
+    console.error('Send Stripe required email error:', error);
+    throw error; // This is important, so we should know if it fails
+  }
+}
+
+async function sendNewMessageEmail(recipientEmail, recipientName, senderName, jobTitle, messagePreview, threadId) {
+  try {
+    const messageUrl = `${process.env.APP_BASE_URL || 'http://localhost:8080'}/messages/${threadId}`;
+    
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: recipientEmail,
+      subject: `New message from ${senderName} about "${jobTitle}"`,
+      html: `
+        <h2>New Message</h2>
+        <p>Hi ${recipientName},</p>
+        <p><strong>${senderName}</strong> sent you a new message about the job: <strong>${jobTitle}</strong></p>
+        <div style="background: #f9fafb; padding: 1rem; border-radius: 8px; margin: 1rem 0; border-left: 3px solid #2563eb;">
+          <p style="margin: 0; font-style: italic; color: #6b7280;">"${messagePreview}"</p>
+        </div>
+        <p><a href="${messageUrl}" style="display: inline-block; padding: 0.75rem 1.5rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; margin-top: 1rem;">View Message</a></p>
+        <p style="color: #6b7280; font-size: 0.85rem; margin-top: 1.5rem;">You're receiving this because you have an active job with ${senderName}.</p>
+      `,
+    });
+  } catch (error) {
+    console.error('Send new message email error:', error);
+    // Don't throw - message emails are nice-to-have, not critical
+  }
+}
+
+async function sendFeedbackEmail(feedbackName, feedbackEmail, feedbackMessage) {
+  try {
+    const feedbackEmailAddress = process.env.FEEDBACK_EMAIL || 'team.hustlapp@outlook.com';
+    
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: feedbackEmailAddress,
+      subject: `Feedback from ${feedbackName || 'Anonymous User'}`,
+      html: `
+        <h2>New Feedback Received</h2>
+        ${feedbackName ? `<p><strong>From:</strong> ${feedbackName}</p>` : '<p><strong>From:</strong> Anonymous</p>'}
+        ${feedbackEmail ? `<p><strong>Email:</strong> ${feedbackEmail}</p>` : '<p><strong>Email:</strong> Not provided</p>'}
+        <hr>
+        <p><strong>Message:</strong></p>
+        <p>${feedbackMessage.replace(/\n/g, '<br>')}</p>
+        <hr>
+        <p style="color: #6b7280; font-size: 0.85rem;">Sent from Hustl feedback form</p>
+      `,
+      replyTo: feedbackEmail || undefined, // Allow replying directly to user if email provided
+    });
+  } catch (error) {
+    console.error('Send feedback email error:', error);
+    throw error; // This is important for feedback
+  }
+}
+
 module.exports = {
   sendSignupEmail,
   sendPasswordResetEmail,
@@ -161,4 +300,10 @@ module.exports = {
   sendJobCompleteEmail,
   sendPaymentReceiptEmail,
   sendPayoutSentEmail,
+  sendPaymentCompleteEmail,
+  sendAutoCompleteEmail,
+  sendRefundEmail,
+  sendStripeRequiredEmail,
+  sendFeedbackEmail,
+  sendNewMessageEmail,
 };

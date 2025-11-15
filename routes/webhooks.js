@@ -25,6 +25,9 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
 
   try {
     switch (event.type) {
+      case 'checkout.session.completed':
+        await handleCheckoutSessionCompleted(event.data.object);
+        break;
       case 'payment_intent.succeeded':
         await handlePaymentIntentSucceeded(event.data.object);
         break;
@@ -44,6 +47,87 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
     res.status(500).json({ error: 'Webhook handler failed' });
   }
 });
+
+async function handleCheckoutSessionCompleted(session) {
+  // Handle Stripe checkout completion - accept offer if offerId is in metadata
+  const offerId = session.metadata?.offerId;
+  if (!offerId) return;
+
+  try {
+    const offer = await prisma.offer.findUnique({
+      where: { id: offerId },
+      include: {
+        job: true,
+        hustler: true,
+      },
+    });
+
+    if (!offer || offer.status !== 'PENDING') {
+      console.log('Offer not found or already processed:', offerId);
+      return;
+    }
+
+    // Accept the offer (same logic as /offers/:id/accept)
+    const jobAmount = Number(offer.job.amount);
+    const tipAmount = Number(session.metadata?.tip || 0);
+    const customerFee = Number(session.metadata?.customerFee || 0);
+    const total = jobAmount + tipAmount + customerFee;
+
+    // Create payment record
+    const payment = await prisma.payment.create({
+      data: {
+        jobId: offer.job.id,
+        customerId: offer.job.customerId,
+        hustlerId: offer.hustlerId,
+        amount: jobAmount,
+        tip: tipAmount,
+        feeCustomer: customerFee,
+        feeHustler: 0, // Will be calculated on capture (16% of jobAmount)
+        total,
+        status: 'CAPTURED', // Already paid via checkout
+        providerId: session.payment_intent,
+      },
+    });
+
+    // Update offer status
+    await prisma.offer.update({
+      where: { id: offerId },
+      data: { status: 'ACCEPTED' },
+    });
+
+    // Decline other offers
+    await prisma.offer.updateMany({
+      where: {
+        jobId: offer.job.id,
+        id: { not: offerId },
+        status: 'PENDING',
+      },
+      data: { status: 'DECLINED' },
+    });
+
+    // Update job
+    await prisma.job.update({
+      where: { id: offer.job.id },
+      data: {
+        status: 'ASSIGNED',
+        hustlerId: offer.hustlerId,
+      },
+    });
+
+    // Create thread for messaging
+    await prisma.thread.create({
+      data: {
+        jobId: offer.job.id,
+        userAId: offer.job.customerId,
+        userBId: offer.hustlerId,
+      },
+    });
+
+    console.log('Offer accepted via Stripe checkout:', offerId);
+  } catch (error) {
+    console.error('Error handling checkout session completion:', error);
+  }
+}
 
 async function handlePaymentIntentSucceeded(paymentIntent) {
   const jobId = paymentIntent.metadata?.jobId;

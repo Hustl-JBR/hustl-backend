@@ -58,6 +58,7 @@ model User {
   ratingAvg             Float                 @default(0) @map("rating_avg")
   ratingCount           Int                   @default(0) @map("rating_count")
   idVerified            Boolean               @default(false) @map("id_verified")
+  stripeAccountId      String?               @map("stripe_account_id") // Stripe Connect account ID
   createdAt             DateTime              @default(now()) @map("created_at")
   updatedAt             DateTime              @updatedAt @map("updated_at")
 
@@ -124,6 +125,7 @@ model Offer {
   jobId                 String                @map("job_id")
   hustlerId             String                @map("hustler_id")
   note                  String?               @db.Text
+  proposedAmount        Decimal?              @map("proposed_amount") @db.Decimal(10, 2)
   status                OfferStatus           @default(PENDING)
   createdAt             DateTime              @default(now()) @map("created_at")
 

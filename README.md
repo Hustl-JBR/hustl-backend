@@ -1,8 +1,8 @@
-# Hustl — Local Help, Real Hustle
+# Hustl Backend API
 
-End-to-end platform for local odd jobs. Customers post jobs, Hustlers find work, payments processed securely in-app.
+Express.js backend that serves the `/public` demo and provides the live API.
 
-## 🚀 Quick Start
+## Setup
 
 1. **Install dependencies:**
    ```bash
@@ -12,7 +12,7 @@ End-to-end platform for local odd jobs. Customers post jobs, Hustlers find work,
 2. **Set up environment:**
    ```bash
    cp .env.example .env
-   # Fill in all required values (see .env.example)
+   # Fill in all required values
    ```
 
 3. **Set up database:**
@@ -26,39 +26,11 @@ End-to-end platform for local odd jobs. Customers post jobs, Hustlers find work,
    npm run dev
    ```
 
-Server runs on `http://localhost:8080`
+Server runs on `http://localhost:8080` and serves:
+- Static files from `/public` at `/`
+- API endpoints at `/auth`, `/users`, `/jobs`, `/offers`, `/threads`, `/payments`, `/webhooks`, `/r2`
 
-## 📁 Project Structure
-
-```
-hustl-backend/
-├── server.js              # Main Express server
-├── routes/                # API route handlers
-│   ├── auth.js           # Authentication
-│   ├── users.js          # User management
-│   ├── jobs.js           # Job CRUD
-│   ├── offers.js         # Offer management
-│   ├── threads.js        # Messaging
-│   ├── payments.js       # Payment processing
-│   ├── webhooks.js       # Stripe webhooks
-│   └── r2.js             # File uploads
-├── services/             # External service integrations
-│   ├── stripe.js        # Stripe payments
-│   ├── mapbox.js        # Geocoding
-│   ├── r2.js            # Cloudflare R2
-│   └── email.js         # Resend emails
-├── middleware/           # Express middleware
-│   └── auth.js          # JWT authentication
-├── prisma/              # Database schema
-│   └── schema.prisma    # Prisma schema
-├── public/              # Frontend files
-│   ├── index.html       # Main app
-│   ├── api-integration.js # API client
-│   └── ...
-└── .env                 # Environment variables (create from .env.example)
-```
-
-## 🔧 Environment Variables
+## Environment Variables
 
 See `.env.example` for all required variables:
 - `DATABASE_URL` - Neon Postgres connection string
@@ -71,13 +43,44 @@ See `.env.example` for all required variables:
 - `PORT` - Server port (default: 8080)
 - `APP_BASE_URL` - Base URL for email links
 
-## 📚 Documentation
+## API Endpoints
 
-- `SETUP.md` - Detailed setup guide
-- `DEPLOYMENT.md` - Deployment instructions
-- `API.md` - API endpoint documentation
+### Auth
+- `POST /auth/signup` - Create account
+- `POST /auth/login` - Login
+- `POST /auth/reset` - Request password reset
 
-## 🗄️ Database
+### Users
+- `GET /users/me` - Get current user
+- `PATCH /users/me` - Update current user
+
+### Jobs
+- `POST /jobs` - Create job (Customer)
+- `GET /jobs` - List jobs with filters
+- `GET /jobs/:id` - Get job details
+- `POST /jobs/:id/cancel` - Cancel job (Customer)
+
+### Offers
+- `POST /offers/jobs/:jobId/offers` - Create offer (Hustler)
+- `POST /offers/:id/accept` - Accept offer (Customer)
+- `POST /offers/:id/decline` - Decline offer (Customer)
+
+### Threads/Messages
+- `GET /threads` - List user's threads
+- `GET /threads/:id/messages` - Get thread messages
+- `POST /threads/:id/messages` - Send message
+
+### Payments
+- `POST /payments/jobs/:jobId/confirm` - Capture payment (Customer)
+- `GET /payments/receipts` - List receipts
+
+### R2 Uploads
+- `POST /r2/presign` - Get presigned upload URL
+
+### Webhooks
+- `POST /webhooks/stripe` - Stripe webhook handler
+
+## Database
 
 Uses Prisma with Neon Postgres. Run migrations with:
 ```bash
@@ -89,10 +92,3 @@ View database with:
 npm run db:studio
 ```
 
-## 🚢 Deployment
-
-Configured for Railway deployment. See `DEPLOYMENT.md` for details.
-
-## 📝 License
-
-ISC

@@ -36,6 +36,36 @@ router.get('/me', async (req, res) => {
   }
 });
 
+// GET /users/:id - Get public user profile
+router.get('/:id', async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        city: true,
+        zip: true,
+        photoUrl: true,
+        ratingAvg: true,
+        ratingCount: true,
+        idVerified: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // PATCH /users/me
 router.patch('/me', [
   body('name').optional().trim().notEmpty(),

@@ -190,6 +190,39 @@ router.post('/:id/messages', [
       data: { lastMessageAt: new Date() },
     });
 
+    // Send email notification to recipient (the other user in the thread)
+    try {
+      const recipientId = thread.userAId === req.user.id ? thread.userBId : thread.userAId;
+      
+      // Get recipient and job info for email
+      const recipient = await prisma.user.findUnique({
+        where: { id: recipientId },
+        select: { email: true, name: true },
+      });
+
+      const job = await prisma.job.findUnique({
+        where: { id: thread.jobId },
+        select: { title: true },
+      });
+
+      if (recipient && job) {
+        const { sendNewMessageEmail } = require('../services/email');
+        const messagePreview = body.length > 100 ? body.substring(0, 100) + '...' : body;
+        
+        await sendNewMessageEmail(
+          recipient.email,
+          recipient.name,
+          req.user.name,
+          job.title,
+          messagePreview,
+          thread.id
+        );
+      }
+    } catch (emailError) {
+      // Don't fail message creation if email fails
+      console.error('Error sending message notification email:', emailError);
+    }
+
     res.status(201).json(message);
   } catch (error) {
     console.error('Create message error:', error);
