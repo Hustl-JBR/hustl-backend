@@ -27,7 +27,15 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve static files from /public folder
 const publicPath = path.join(__dirname, "public");
-app.use(express.static(publicPath));
+app.use(express.static(publicPath, {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
+}));
 
 // Health check route
 app.get("/health", (_req, res) => {

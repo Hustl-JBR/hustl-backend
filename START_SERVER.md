@@ -1,40 +1,62 @@
-# How to Start the Backend Server
+# 🚀 EXACT POWERSHELL COMMANDS TO START SERVER
 
-## Quick Start
+## Step-by-Step Commands
 
-1. Open a terminal/command prompt
-2. Navigate to the project directory:
-   ```
-   cd "C:\Users\jbrea\OneDrive\Desktop\hustl-backend"
-   ```
+### 1. Open PowerShell
+- Press `Windows Key + X`
+- Click "Windows PowerShell" or "Terminal"
+- OR search for "PowerShell" in Start menu
 
-3. Start the server:
-   ```
-   npm start
-   ```
-   
-   OR for development with auto-reload:
-   ```
-   npm run dev
-   ```
+### 2. Navigate to Project Folder
+```powershell
+cd "C:\Users\jbrea\OneDrive\Desktop\hustl-backend"
+```
 
-4. You should see output like:
-   ```
-   Server running on http://localhost:8080
-   ```
+### 3. Start the Server
+```powershell
+npm start
+```
 
-5. Keep this terminal open - you'll see all the error logs here!
+## ✅ That's It!
 
-## If you get errors:
+You should see output like:
+```
+Server running on http://localhost:3000
+```
 
-- Make sure you have Node.js installed: `node --version`
-- Install dependencies: `npm install`
-- Check your `.env` file has the required variables
+## 🔄 If Server Won't Start
 
-## To see the error logs:
+### Check if Node.js is installed:
+```powershell
+node --version
+```
 
-When you enter the 6-digit code, watch the terminal where the server is running. You'll see detailed error messages like:
-- `[confirm-complete] Job marked as COMPLETED: ...`
-- `[confirm-complete] Error updating job status: ...`
+### Check if npm is installed:
+```powershell
+npm --version
+```
 
-This will help us identify exactly what's failing!
+### Install dependencies (if needed):
+```powershell
+npm install
+```
+
+### Check if port 3000 is already in use:
+```powershell
+netstat -ano | findstr :3000
+```
+
+If something is using port 3000, you can:
+- Stop that process
+- OR change PORT in `.env` file
+
+## 🛑 To Stop the Server
+
+Press `Ctrl + C` in PowerShell
+
+## 📝 Full Command Sequence (Copy & Paste)
+
+```powershell
+cd "C:\Users\jbrea\OneDrive\Desktop\hustl-backend"
+npm start
+```

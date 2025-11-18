@@ -89,6 +89,12 @@
       top: 0;
       z-index: 100;
     }
+    
+    @media (max-width: 768px) {
+      header {
+        padding: 0.5rem 0.75rem;
+      }
+    }
 
     .logo-row {
       display: flex;
@@ -148,9 +154,63 @@
       border-color: var(--primary);
     }
 
+    /* Notification badge for unread messages */
+    .nav-tab-badge {
+      position: relative;
+    }
+
+    .nav-tab-badge::after {
+      content: attr(data-badge-count);
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: #ef4444;
+      color: white;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.15rem 0.35rem;
+      border-radius: 999px;
+      min-width: 1.2rem;
+      text-align: center;
+      line-height: 1.2;
+      border: 2px solid var(--bg);
+      display: none;
+    }
+
+    .nav-tab-badge[data-badge-count]:not([data-badge-count="0"])::after {
+      display: block;
+    }
+
+    /* Mobile menu badge */
+    .mobile-menu-item-badge {
+      position: relative;
+    }
+
+    .mobile-menu-item-badge::after {
+      content: attr(data-badge-count);
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background: #ef4444;
+      color: white;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.15rem 0.35rem;
+      border-radius: 999px;
+      min-width: 1.2rem;
+      text-align: center;
+      line-height: 1.2;
+      border: 2px solid var(--bg);
+      display: none;
+    }
+
+    .mobile-menu-item-badge[data-badge-count]:not([data-badge-count="0"])::after {
+      display: block;
+    }
+
     /* Mobile Menu Button */
     .mobile-menu-btn {
-      display: none;
+      display: none; /* Hidden by default, shown on mobile */
       padding: 0.5rem 0.75rem;
       border: 1px solid var(--border);
       background: white;
@@ -159,6 +219,7 @@
       cursor: pointer;
       border-radius: 6px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-left: auto; /* Push to the right when visible */
     }
 
     .mobile-menu-btn:hover {
@@ -170,14 +231,27 @@
       display: none;
       position: absolute;
       top: calc(100% + 0.5rem);
-      right: 0;
+      right: 0.75rem;
       background: white;
       border: 1px solid var(--border);
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       z-index: 1001;
-      min-width: 150px;
+      min-width: 200px;
+      max-width: 90vw;
       overflow: hidden;
+    }
+    
+    @media (max-width: 768px) {
+      header {
+        position: relative; /* Make header a positioning context for the menu */
+      }
+      
+      .mobile-menu {
+        position: absolute;
+        top: calc(100% + 0.25rem);
+        right: 0.75rem;
+      }
     }
 
     .mobile-menu.show {
@@ -1207,6 +1281,85 @@
       margin-top: 0.3rem;
     }
 
+    @media (max-width: 768px) {
+      header {
+        padding: 0.5rem 0.75rem;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 0.5rem;
+        justify-content: space-between;
+        position: relative;
+      }
+      
+      .logo-row {
+        gap: 0.5rem;
+        flex-shrink: 0;
+        order: 0; /* Logo on the left */
+      }
+      
+      .logo-mark {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+      }
+      
+      .logo-text-main {
+        font-size: 0.95rem;
+      }
+      
+      .logo-sub {
+        display: none; /* Hide on mobile to save space */
+      }
+      
+      .nav-tabs {
+        display: none; /* Hide all nav tabs on mobile */
+      }
+      
+      /* Show hamburger menu button - make it more prominent */
+      .mobile-menu-btn {
+        display: block !important;
+        flex-shrink: 0;
+        padding: 0.5rem 0.75rem;
+        font-size: 1.2rem;
+        order: 999; /* Put it at the end (right side) */
+      }
+      
+      /* Show mode toggle on mobile, centered between logo and hamburger */
+      .mode-toggle {
+        display: flex !important;
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        order: 1; /* Put it in the middle */
+        z-index: 10;
+        padding: 0.1rem;
+        gap: 0.1rem;
+      }
+      
+      .mode-toggle button {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.65rem;
+        min-height: 24px;
+      }
+      
+      .mobile-menu-btn {
+        order: 2; /* Hamburger on the right */
+        margin-left: auto;
+      }
+      
+      .auth-pill {
+        display: none; /* Hide auth pill on mobile, show in hamburger */
+      }
+      
+      .layout-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      
+      .jobs-list {
+        max-height: none;
+      }
+    }
+    
     @media (max-width: 800px) {
       header {
         flex-wrap: wrap;
@@ -1298,27 +1451,37 @@
           <div class="logo-sub">Local help. Real hustle. All of Tennessee.</div>
         </div>
       </div>
+      <!-- Mode Toggle (shown when logged in, centered on mobile) -->
+      <div class="mode-toggle" id="modeToggle" style="display: none;">
+        <button id="modeCustomerBtn" class="active">Customer</button>
+        <button id="modeHustlerBtn">Hustler</button>
+      </div>
       <nav class="nav-tabs">
-        <!-- Mode Toggle (moved to nav, shown when logged in) -->
-        <div class="mode-toggle" id="modeToggle" style="display: none;">
-          <button id="modeCustomerBtn" class="active">Customer</button>
-          <button id="modeHustlerBtn">Hustler</button>
-        </div>
         <button class="nav-tab active" data-view="home">Home</button>
         <button class="nav-tab" data-view="jobs">Jobs</button>
         <button class="nav-tab" data-view="post">Post a job</button>
-        <button class="nav-tab" data-view="messages">Messages</button>
+        <button class="nav-tab nav-tab-badge" data-view="messages" title="Messages" data-badge-count="0">💬</button>
         <button class="nav-tab" data-view="profile">Profile</button>
         <button class="nav-tab" data-view="owner" id="ownerTab" style="display:none;">Owner</button>
         <button class="nav-tab" data-view="about">About</button>
-        <!-- Mobile Menu Button (shown on mobile only) -->
-        <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
-        <!-- Mobile Menu Dropdown -->
-        <div class="mobile-menu" id="mobileMenu" style="display: none;">
-          <button class="mobile-menu-item" data-view="profile">👤 Profile</button>
-          <button class="mobile-menu-item" data-view="about">ℹ️ About</button>
-        </div>
       </nav>
+      <!-- Mobile Menu Button (outside nav, shown on mobile only) -->
+      <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+      <!-- Mobile Menu Dropdown -->
+      <div class="mobile-menu" id="mobileMenu" style="display: none;">
+        <div id="mobileMenuAuth" style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--border);">
+          <div id="mobileMenuAuthText" style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">Not signed in</div>
+          <button id="mobileMenuAuthButton" class="btn btn-primary" style="width: 100%; padding: 0.5rem; font-size: 0.8rem;">Sign in / Create account</button>
+        </div>
+        <button class="mobile-menu-item" data-view="home">🏠 Home</button>
+        <button class="mobile-menu-item" data-view="jobs">💼 Find Jobs</button>
+        <button class="mobile-menu-item" data-view="post">➕ Post a job</button>
+        <button class="mobile-menu-item mobile-menu-item-badge" data-view="messages" data-badge-count="0">💬 Messages</button>
+        <button class="mobile-menu-item" data-view="profile">👤 Profile</button>
+        <button class="mobile-menu-item" data-view="feedback">💬 Feedback</button>
+        <button class="mobile-menu-item" data-view="owner" id="mobileMenuOwner" style="display: none;">⚙️ Owner</button>
+        <button class="mobile-menu-item" data-view="about">ℹ️ About</button>
+      </div>
       <div class="auth-pill" id="authPill">
         <span id="authPillText">Not signed in</span>
         <button id="openAuthButton">Sign in / Create account</button>
@@ -1866,6 +2029,9 @@
           </div>
           <div id="locationStatus" style="font-size: 0.85rem; color: #64748b; margin-top: 0.25rem;"></div>
           <div class="jobs-list" id="jobsList"></div>
+          <div id="loadMoreJobsContainer" style="text-align: center; margin-top: 1rem; display: none;">
+            <button id="loadMoreJobsBtn" class="btn outline" style="padding: 0.75rem 2rem;">Load More Jobs</button>
+          </div>
           <div id="jobDetailContainer"></div>
         </div>
       </section>
@@ -2307,6 +2473,11 @@
     let showArchivedConversations = false;
     let showDeletedConversations = false;
     let userMode = "customer"; // "customer" or "hustler" - simple toggle like Airbnb/Rover
+    
+    // Pagination state
+    let currentJobsPage = 1;
+    let allLoadedJobs = [];
+    let jobsPagination = { hasMore: false };
 
     /* ---------- Utilities ---------- */
 
@@ -2719,12 +2890,26 @@ async function renderAuthPill() {
   const modeToggle = document.getElementById("modeToggle");
   const authPillText = document.getElementById("authPillText");
   const openAuthButton = document.getElementById("openAuthButton");
+  const mobileMenuAuthText = document.getElementById("mobileMenuAuthText");
+  const mobileMenuAuthButton = document.getElementById("mobileMenuAuthButton");
   const user = await window.hustlAPI.auth.getCurrentUser();
 
   if (!user) {
     if (modeToggle) modeToggle.style.display = "none";
     if (authPillText) authPillText.textContent = "Not signed in";
     if (openAuthButton) openAuthButton.style.display = "inline-block";
+    if (mobileMenuAuthText) mobileMenuAuthText.textContent = "Not signed in";
+    if (mobileMenuAuthButton) {
+      mobileMenuAuthButton.textContent = "Sign in / Create account";
+      mobileMenuAuthButton.onclick = () => {
+        document.getElementById("openAuthButton")?.click();
+        const mobileMenu = document.getElementById("mobileMenu");
+        if (mobileMenu) {
+          mobileMenu.classList.remove("show");
+          mobileMenu.style.display = "none";
+        }
+      };
+    }
 
     const openBtn = document.getElementById("openAuthButton");
     if (openBtn) {
@@ -2742,6 +2927,23 @@ async function renderAuthPill() {
       authPillText.textContent = `Signed in as ${displayName}`;
     }
     if (openAuthButton) openAuthButton.style.display = "none";
+    if (mobileMenuAuthText) {
+      const displayName = user.name || user.email;
+      mobileMenuAuthText.textContent = `Signed in as ${displayName}`;
+    }
+    if (mobileMenuAuthButton) {
+      mobileMenuAuthButton.textContent = "Log out";
+      mobileMenuAuthButton.onclick = async () => {
+        await window.hustlAPI.auth.signOut();
+        showToast("Logged out.");
+        const mobileMenu = document.getElementById("mobileMenu");
+        if (mobileMenu) {
+          mobileMenu.classList.remove("show");
+          mobileMenu.style.display = "none";
+        }
+        renderAll();
+      };
+    }
     
     // Update mode toggle buttons and wire up click handlers
     const customerBtn = document.getElementById("modeCustomerBtn");
@@ -3287,10 +3489,19 @@ try {
     }
 
     
-async function renderJobs() {
+async function renderJobs(reset = false) {
   const jobsList = document.getElementById("jobsList");
   const jobsCardTitle = document.getElementById("jobsCardTitle");
   const jobsFilterSummary = document.getElementById("jobsFilterSummary");
+  const loadMoreContainer = document.getElementById("loadMoreJobsContainer");
+
+  // Reset pagination if needed
+  if (reset) {
+    currentJobsPage = 1;
+    allLoadedJobs = [];
+    if (jobsList) jobsList.innerHTML = "";
+    if (loadMoreContainer) loadMoreContainer.style.display = "none";
+  }
 
   // 1) Get logged-in user from token
   let user = null;
@@ -3339,7 +3550,10 @@ async function renderJobs() {
         statusFilter = statusUpper;
       }
     }
-    const listParams = {};
+    const listParams = {
+      page: currentJobsPage,
+      limit: 20,
+    };
     if (statusFilter) {
       listParams.status = statusFilter;
     }
@@ -3403,7 +3617,28 @@ async function renderJobs() {
       throw new Error(`Failed to load jobs: ${jobsResponse.statusText}`);
     }
     
-    jobs = await jobsResponse.json();
+    const jobsData = await jobsResponse.json();
+    // Handle paginated response format: { jobs: [], pagination: {} }
+    let newJobs = Array.isArray(jobsData) ? jobsData : (jobsData.jobs || []);
+    
+    // Ensure newJobs is always an array
+    if (!Array.isArray(newJobs)) {
+      console.warn('[renderJobs] newJobs is not an array, resetting to empty array');
+      newJobs = [];
+    }
+    
+    // Store pagination info
+    jobsPagination = jobsData.pagination || { hasMore: false };
+    
+    // Append new jobs to existing list (or replace if reset)
+    if (reset) {
+      allLoadedJobs = newJobs;
+    } else {
+      allLoadedJobs = [...allLoadedJobs, ...newJobs];
+    }
+    
+    // Use allLoadedJobs for filtering
+    jobs = allLoadedJobs;
     
     // Filter out COMPLETED jobs that are older than 48 hours OR allow immediate deletion
     // COMPLETED jobs should disappear from the main view
@@ -3646,7 +3881,7 @@ async function renderJobs() {
           // Add active to clicked
           btn.classList.add('active');
           activeJobsStatusFilter = btn.dataset.status;
-          renderJobs();
+          renderJobs(true); // Reset pagination when status filter changes
         });
       });
     } else {
@@ -3683,7 +3918,7 @@ async function renderJobs() {
       // The renderJobs function will handle resetting if needed
       
       // Re-render jobs with new filter (this will also update status filters)
-      renderJobs();
+      renderJobs(true); // Reset pagination when tab changes
     };
     
     // Attach handler
@@ -3861,12 +4096,29 @@ async function renderJobs() {
       const jobDate = new Date(job.date);
       const startTime = new Date(job.startTime);
       const endTime = new Date(job.endTime);
+      const now = new Date();
       
-      const dateStr = jobDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      const startStr = startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-      const endStr = endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      // Check if job date has passed and job is still OPEN (no one applied)
+      // Compare dates only (ignore time) - if the calendar date has passed, show "Flexible"
+      const jobStatus = (job.status || "").toUpperCase();
+      const jobDateOnly = new Date(jobDate.getFullYear(), jobDate.getMonth(), jobDate.getDate());
+      const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const dateHasPassed = jobDateOnly < todayOnly;
+      const isStillOpen = jobStatus === "OPEN";
       
-      dateTimeLine.textContent = `📅 ${dateStr} • ⏰ ${startStr} - ${endStr}`;
+      if (dateHasPassed && isStillOpen) {
+        // Date passed but job still needed - show "Flexible" like TaskRabbit/Handy
+        const startStr = startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        const endStr = endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        const originalDateStr = jobDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        dateTimeLine.innerHTML = `📅 <span style="color: #dc2626; font-weight: 600;">Flexible</span> • ⏰ ${startStr} - ${endStr} <span class="muted" style="font-size: 0.85em;">(originally ${originalDateStr})</span>`;
+      } else {
+        // Normal date display
+        const dateStr = jobDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const startStr = startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        const endStr = endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        dateTimeLine.textContent = `📅 ${dateStr} • ⏰ ${startStr} - ${endStr}`;
+      }
     } else {
       dateTimeLine.textContent = "Date/time TBD";
     }
@@ -4046,6 +4298,15 @@ async function renderJobs() {
 
     jobsList.appendChild(card);
   });
+  
+  // 9) Show/hide Load More button
+  if (loadMoreContainer) {
+    if (jobsPagination.hasMore) {
+      loadMoreContainer.style.display = "block";
+    } else {
+      loadMoreContainer.style.display = "none";
+    }
+  }
 }
 
     async function openJobDetails(jobId, options = {}) {
@@ -4428,28 +4689,68 @@ async function renderJobs() {
         const dateTimeContainer = document.createElement("div");
         dateTimeContainer.style.marginTop = "1rem";
         dateTimeContainer.style.padding = "0.75rem";
-        dateTimeContainer.style.background = "#eff6ff";
-        dateTimeContainer.style.borderRadius = "6px";
-        dateTimeContainer.style.border = "1px solid #bfdbfe";
         
         const jobDate = new Date(job.date);
         const startTime = new Date(job.startTime);
         const endTime = new Date(job.endTime);
+        const now = new Date();
         
-        const dateStr = jobDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-        const startStr = startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-        const endStr = endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        // Check if job date has passed and job is still OPEN
+        // Compare dates only (ignore time) - if the calendar date has passed, show "Flexible"
+        const jobStatus = (job.status || "").toUpperCase();
+        const jobDateOnly = new Date(jobDate.getFullYear(), jobDate.getMonth(), jobDate.getDate());
+        const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const dateHasPassed = jobDateOnly < todayOnly;
+        const isStillOpen = jobStatus === "OPEN";
         
-        const dateTimeText = document.createElement("div");
-        dateTimeText.style.fontWeight = "600";
-        dateTimeText.style.marginBottom = "0.25rem";
-        dateTimeText.textContent = `📅 ${dateStr}`;
-        dateTimeContainer.appendChild(dateTimeText);
-        
-        const timeText = document.createElement("div");
-        timeText.className = "muted";
-        timeText.textContent = `⏰ ${startStr} - ${endStr}`;
-        dateTimeContainer.appendChild(timeText);
+        if (dateHasPassed && isStillOpen) {
+          // Date passed but still needed - show with warning style
+          dateTimeContainer.style.background = "#fef3c7";
+          dateTimeContainer.style.borderRadius = "6px";
+          dateTimeContainer.style.border = "1px solid #fbbf24";
+          
+          const dateTimeText = document.createElement("div");
+          dateTimeText.style.fontWeight = "600";
+          dateTimeText.style.marginBottom = "0.25rem";
+          dateTimeText.style.color = "#92400e";
+          dateTimeText.innerHTML = `📅 <span style="color: #dc2626;">Flexible - Still Needed</span>`;
+          dateTimeContainer.appendChild(dateTimeText);
+          
+          const originalDateText = document.createElement("div");
+          originalDateText.className = "muted";
+          originalDateText.style.fontSize = "0.85rem";
+          originalDateText.style.marginBottom = "0.5rem";
+          const originalDateStr = jobDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+          originalDateText.textContent = `Originally scheduled for: ${originalDateStr}`;
+          dateTimeContainer.appendChild(originalDateText);
+          
+          const timeText = document.createElement("div");
+          timeText.className = "muted";
+          const startStr = startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+          const endStr = endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+          timeText.textContent = `⏰ Preferred time: ${startStr} - ${endStr}`;
+          dateTimeContainer.appendChild(timeText);
+        } else {
+          // Normal date display
+          dateTimeContainer.style.background = "#eff6ff";
+          dateTimeContainer.style.borderRadius = "6px";
+          dateTimeContainer.style.border = "1px solid #bfdbfe";
+          
+          const dateStr = jobDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+          const startStr = startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+          const endStr = endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+          
+          const dateTimeText = document.createElement("div");
+          dateTimeText.style.fontWeight = "600";
+          dateTimeText.style.marginBottom = "0.25rem";
+          dateTimeText.textContent = `📅 ${dateStr}`;
+          dateTimeContainer.appendChild(dateTimeText);
+          
+          const timeText = document.createElement("div");
+          timeText.className = "muted";
+          timeText.textContent = `⏰ ${startStr} - ${endStr}`;
+          dateTimeContainer.appendChild(timeText);
+        }
         
         detailsSection.appendChild(dateTimeContainer);
       }
@@ -4960,6 +5261,27 @@ async function renderJobs() {
             note.textContent = userOffer.note;
             applySection.appendChild(note);
           }
+          
+          // Add message button if accepted
+          if (offerStatus === "ACCEPTED" && job.customerId) {
+            const messageBtn = document.createElement("button");
+            messageBtn.className = "btn btn-primary";
+            messageBtn.style.marginTop = "0.75rem";
+            messageBtn.style.width = "100%";
+            messageBtn.textContent = "💬 Message Customer";
+            messageBtn.addEventListener("click", () => {
+              // Set active conversation and switch to messages view
+              activeConversationJobId = job.id;
+              overlay.remove();
+              document.body.style.overflow = "";
+              setView("messages");
+              // Small delay to ensure messages view is rendered
+              setTimeout(() => {
+                renderMessagesView();
+              }, 100);
+            });
+            applySection.appendChild(messageBtn);
+          }
         } else {
           const applyTitle = document.createElement("h3");
           applyTitle.style.margin = "0 0 1rem 0";
@@ -5251,13 +5573,18 @@ async function renderJobs() {
           const messageBtn = document.createElement("button");
           messageBtn.className = "btn btn-primary";
           messageBtn.style.marginTop = "0.5rem";
-          messageBtn.style.marginLeft = "0.5rem";
-          messageBtn.textContent = "Message";
+          messageBtn.style.width = "100%";
+          messageBtn.textContent = "💬 Message Customer";
           messageBtn.addEventListener("click", () => {
-            setView("messages");
+            // Set active conversation and switch to messages view
+            activeConversationJobId = job.id;
             overlay.remove();
             document.body.style.overflow = "";
-            // TODO: Open thread for this job
+            setView("messages");
+            // Small delay to ensure messages view is rendered
+            setTimeout(() => {
+              renderMessagesView();
+            }, 100);
           });
           customerCard.appendChild(messageBtn);
 
@@ -5358,6 +5685,46 @@ async function renderJobs() {
             ${statusUpdateDisplay}
             ${startCodeDisplay}
           `;
+          
+          // Add message button for customer to message hustler
+          const messageBtnRow = document.createElement("div");
+          messageBtnRow.style.display = "flex";
+          messageBtnRow.style.gap = "0.5rem";
+          messageBtnRow.style.marginTop = "0.75rem";
+          
+          const messageBtn = document.createElement("button");
+          messageBtn.className = "btn btn-primary";
+          messageBtn.style.flex = "1";
+          messageBtn.textContent = "💬 Message Hustler";
+          messageBtn.addEventListener("click", () => {
+            // Set active conversation and switch to messages view
+            activeConversationJobId = job.id;
+            overlay.remove();
+            document.body.style.overflow = "";
+            setView("messages");
+            // Small delay to ensure messages view is rendered
+            setTimeout(() => {
+              renderMessagesView();
+            }, 100);
+          });
+          messageBtnRow.appendChild(messageBtn);
+          
+          // Add view profile button
+          const viewProfileBtn = document.createElement("button");
+          viewProfileBtn.className = "btn";
+          viewProfileBtn.style.background = "#fff";
+          viewProfileBtn.style.color = "#059669";
+          viewProfileBtn.style.border = "1px solid #86efac";
+          viewProfileBtn.style.flex = "1";
+          viewProfileBtn.textContent = "View Profile & Reviews";
+          viewProfileBtn.addEventListener("click", () => {
+            overlay.remove();
+            document.body.style.overflow = "";
+            openUserProfile(job.hustlerId);
+          });
+          messageBtnRow.appendChild(viewProfileBtn);
+          
+          hustlerInfo.appendChild(messageBtnRow);
           actionsSection.appendChild(hustlerInfo);
           
           // Add regenerate start code button handler
@@ -5544,7 +5911,12 @@ async function renderJobs() {
           confirmBtn.textContent = "✓ Confirm & Release Payment";
           confirmBtn.addEventListener("click", async () => {
             const codeInput = confirmBanner.codeInput;
-            const enteredCode = codeInput ? codeInput.value.trim() : null;
+            let enteredCode = codeInput ? codeInput.value.trim() : null;
+            
+            // Remove any non-digit characters
+            if (enteredCode) {
+              enteredCode = enteredCode.replace(/\D/g, '');
+            }
             
             if (verificationCode && (!enteredCode || enteredCode.length !== 6)) {
               showToast("Please enter the 6-digit verification code from the hustler.");
@@ -5606,6 +5978,7 @@ async function renderJobs() {
           actionsSection.appendChild(confirmBanner);
         }
         
+        
         const canDelete = job.status === "OPEN" && !job.hustlerId;
         
         if (canDelete) {
@@ -5647,8 +6020,74 @@ async function renderJobs() {
         }
       }
 
-      // Hustler View: Start Code Input and Job Actions (show for ASSIGNED jobs)
+      // Review button for completed jobs - show for BOTH customers and hustlers
       const jobStatusUpper = (job.status || "").toUpperCase();
+      if (jobStatusUpper === "COMPLETED" && user) {
+        // Check if user is customer or hustler
+        const isCustomer = user.id === job.customerId;
+        const isHustler = user.id === job.hustlerId;
+        
+        if (isCustomer || isHustler) {
+          const revieweeId = isCustomer ? job.hustlerId : job.customerId;
+          const revieweeName = isCustomer 
+            ? (job.hustler?.name || job.hustler?.username || "Hustler")
+            : (job.customer?.name || job.customer?.username || "Customer");
+          
+          if (revieweeId) {
+            // Check if user has already reviewed
+            let hasReviewed = false;
+            try {
+              const existingReviews = await window.hustlAPI.reviews.getJobReviews(job.id);
+              hasReviewed = existingReviews.some(r => r.reviewerId === user.id && r.revieweeId === revieweeId);
+            } catch (error) {
+              console.error("Error checking reviews:", error);
+              // Continue to show button - let API handle duplicate check
+            }
+            
+            // Only show review section if user hasn't reviewed yet
+            if (!hasReviewed) {
+              const reviewSection = document.createElement("div");
+              reviewSection.style.marginTop = "1.5rem";
+              reviewSection.style.padding = "1rem";
+              reviewSection.style.background = "#f0fdf4";
+              reviewSection.style.borderRadius = "8px";
+              reviewSection.style.border = "1px solid #86efac";
+              
+              const reviewTitle = document.createElement("div");
+              reviewTitle.style.fontWeight = "600";
+              reviewTitle.style.marginBottom = "0.5rem";
+              reviewTitle.style.color = "#059669";
+              reviewTitle.textContent = "⭐ Leave a Review";
+              reviewSection.appendChild(reviewTitle);
+              
+              const reviewText = document.createElement("div");
+              reviewText.style.fontSize = "0.9rem";
+              reviewText.style.marginBottom = "0.75rem";
+              reviewText.style.color = "#047857";
+              reviewText.textContent = `Share your experience with ${revieweeName}. Your review helps build trust in the Hustl community.`;
+              reviewSection.appendChild(reviewText);
+              
+              const reviewBtn = document.createElement("button");
+              reviewBtn.className = "btn btn-primary";
+              reviewBtn.style.width = "100%";
+              reviewBtn.textContent = "💬 Leave Review";
+              reviewBtn.addEventListener("click", () => {
+                // Show review modal
+                overlay.remove();
+                document.body.style.overflow = "";
+                setTimeout(() => {
+                  showReviewModal(job.id, revieweeId, revieweeName);
+                }, 300);
+              });
+              reviewSection.appendChild(reviewBtn);
+              
+              content.appendChild(reviewSection);
+            }
+          }
+        }
+      }
+
+      // Hustler View: Start Code Input and Job Actions (show for ASSIGNED jobs)
       // requirements and startCodeUsed already declared above at lines 4066-4067, reuse them
       
       if (user && userMode === "hustler" && job.hustlerId === user.id && 
@@ -6418,6 +6857,86 @@ async function renderJobs() {
    
     /* ---------- Messages view ---------- */
 
+    // Track last viewed timestamp per thread to determine unread messages
+    function getLastViewedTimestamp(threadId) {
+      const key = `lastViewed_${threadId}`;
+      const timestamp = localStorage.getItem(key);
+      return timestamp ? parseInt(timestamp, 10) : 0;
+    }
+
+    function setLastViewedTimestamp(threadId) {
+      const key = `lastViewed_${threadId}`;
+      localStorage.setItem(key, Date.now().toString());
+    }
+
+    // Count conversations with unread messages (not total message count)
+    async function countUnreadMessages() {
+      try {
+        const user = await window.hustlAPI.auth.getCurrentUser();
+        if (!user) {
+          updateMessageBadge(0);
+          return;
+        }
+
+        const threads = await window.hustlAPI.messages.getThreads();
+        let conversationsWithUnread = 0;
+
+        for (const thread of threads) {
+          const lastViewed = getLastViewedTimestamp(thread.id);
+          const messages = await window.hustlAPI.messages.getMessages(thread.id);
+          
+          // Check if this conversation has any unread messages
+          const hasUnread = messages.some(m => {
+            const isFromMe = m.senderId === user.id || (m.sender && m.sender.id === user.id);
+            if (isFromMe) return false; // Don't count own messages
+            
+            const messageTime = m.createdAt ? new Date(m.createdAt).getTime() : 0;
+            return messageTime > lastViewed;
+          });
+
+          if (hasUnread) {
+            conversationsWithUnread++;
+          }
+        }
+
+        updateMessageBadge(conversationsWithUnread);
+      } catch (error) {
+        console.error("Error counting unread messages:", error);
+        updateMessageBadge(0);
+      }
+    }
+    
+    // Get unread count for a specific thread
+    async function getUnreadCountForThread(threadId, userId) {
+      try {
+        const lastViewed = getLastViewedTimestamp(threadId);
+        const messages = await window.hustlAPI.messages.getMessages(threadId);
+        
+        return messages.filter(m => {
+          const isFromMe = m.senderId === userId || (m.sender && m.sender.id === userId);
+          if (isFromMe) return false;
+          const messageTime = m.createdAt ? new Date(m.createdAt).getTime() : 0;
+          return messageTime > lastViewed;
+        }).length;
+      } catch (error) {
+        console.error("Error getting unread count for thread:", error);
+        return 0;
+      }
+    }
+
+    // Update the badge on Messages tab
+    function updateMessageBadge(count) {
+      const desktopTab = document.querySelector('.nav-tab[data-view="messages"]');
+      const mobileTab = document.querySelector('.mobile-menu-item[data-view="messages"]');
+      
+      if (desktopTab) {
+        desktopTab.setAttribute('data-badge-count', count);
+      }
+      if (mobileTab) {
+        mobileTab.setAttribute('data-badge-count', count);
+      }
+    }
+
     async function renderMessagesView() {
       const user = await window.hustlAPI.auth.getCurrentUser();
       const convList = document.getElementById("conversationList");
@@ -6472,11 +6991,52 @@ async function renderJobs() {
       }
 
       // Load jobs from API
+      // For messages, we need all jobs, so we'll fetch multiple pages if needed
       let allJobs = [];
       try {
-        allJobs = await window.hustlAPI.jobs.list();
+        // Fetch first page with a larger limit to get more jobs at once
+        let response = await window.hustlAPI.jobs.list({ page: 1, limit: 100 });
+        
+        // Handle paginated response
+        if (response && typeof response === 'object' && 'jobs' in response) {
+          allJobs = response.jobs || [];
+          
+          // If there are more pages, fetch them (up to a reasonable limit)
+          if (response.pagination && response.pagination.hasMore) {
+            let currentPage = 2;
+            const maxPages = 10; // Limit to prevent infinite loops
+            
+            while (currentPage <= maxPages) {
+              try {
+                const nextResponse = await window.hustlAPI.jobs.list({ page: currentPage, limit: 100 });
+                if (nextResponse && typeof nextResponse === 'object' && 'jobs' in nextResponse) {
+                  allJobs = allJobs.concat(nextResponse.jobs || []);
+                  if (!nextResponse.pagination || !nextResponse.pagination.hasMore) {
+                    break;
+                  }
+                } else {
+                  break;
+                }
+              } catch (pageError) {
+                console.error(`Error loading page ${currentPage} for messages:`, pageError);
+                break;
+              }
+              currentPage++;
+            }
+          }
+        } else if (Array.isArray(response)) {
+          // Fallback: if API returns array directly (old format)
+          allJobs = response;
+        }
+        
+        // Ensure allJobs is always an array
+        if (!Array.isArray(allJobs)) {
+          console.warn("jobs.list() did not return an array, defaulting to empty array");
+          allJobs = [];
+        }
       } catch (error) {
         console.error("Error loading jobs for messages:", error);
+        allJobs = []; // Ensure it's always an array
       }
 
       // Get threads from API
@@ -6638,7 +7198,23 @@ async function renderJobs() {
         applicationsSection.style.display = "none";
       }
 
-      jobsWithDetails.forEach((job) => {
+      // Check unread status for each conversation
+      const conversationsWithUnreadInfo = await Promise.all(
+        jobsWithDetails.map(async (job) => {
+          const thread = threads.find(t => t.jobId === job.id);
+          let unreadCount = 0;
+          let hasUnread = false;
+          
+          if (thread) {
+            unreadCount = await getUnreadCountForThread(thread.id, user.id);
+            hasUnread = unreadCount > 0;
+          }
+          
+          return { job, unreadCount, hasUnread };
+        })
+      );
+
+      conversationsWithUnreadInfo.forEach(({ job, unreadCount, hasUnread }) => {
         // Determine the other person
         const otherId = job.customerId === user.id ? job.hustlerId : job.customerId;
         let otherUser = job.customerId === user.id ? job.hustler : job.customer;
@@ -6703,7 +7279,12 @@ async function renderJobs() {
           }
         }
         
-        meta.textContent = `${metaText} · ${timeAgo(createdDate)}`;
+        // Add "New message" indicator if there are unread messages
+        if (hasUnread) {
+          metaText += ` · <span style="color: #ef4444; font-weight: 600;">New message</span>`;
+        }
+        
+        meta.innerHTML = `${metaText} · ${timeAgo(createdDate)}`;
         item.appendChild(meta);
 
         // Archive/Delete buttons
@@ -6795,6 +7376,9 @@ async function renderJobs() {
       
       // Re-initialize conversation input (in case it was re-rendered)
       initConversationInput();
+      
+      // Update unread count after rendering messages view
+      countUnreadMessages();
     }
 
 
@@ -6930,6 +7514,21 @@ async function renderJobs() {
       }
       
       convMessages.scrollTop = convMessages.scrollHeight;
+      
+      // Mark this thread as viewed (update last viewed timestamp)
+      if (activeConversationJobId) {
+        try {
+          const threads = await window.hustlAPI.messages.getThreads();
+          const thread = threads.find(t => t.jobId === activeConversationJobId);
+          if (thread) {
+            setLastViewedTimestamp(thread.id);
+            // Update unread count after marking as read
+            countUnreadMessages();
+          }
+        } catch (error) {
+          console.error("Error marking thread as viewed:", error);
+        }
+      }
     }
 
     async function initConversationInput() {
@@ -6972,6 +7571,9 @@ async function renderJobs() {
           
           // Refresh messages
           renderConversation();
+          
+          // Update unread count (in case recipient views it)
+          countUnreadMessages();
         } catch (error) {
           showToast("Error sending message: " + (error.message || "Unknown error"));
         }
@@ -7003,9 +7605,49 @@ async function renderJobs() {
   // Load jobs from API
   let allJobs = [];
   try {
-    allJobs = await window.hustlAPI.jobs.list();
+    // Fetch jobs for profile - we need all jobs related to this user
+    let response = await window.hustlAPI.jobs.list({ page: 1, limit: 100 });
+    
+    // Handle paginated response
+    if (response && typeof response === 'object' && 'jobs' in response) {
+      allJobs = response.jobs || [];
+      
+      // Fetch additional pages if needed (up to reasonable limit)
+      if (response.pagination && response.pagination.hasMore) {
+        let currentPage = 2;
+        const maxPages = 10;
+        
+        while (currentPage <= maxPages) {
+          try {
+            const nextResponse = await window.hustlAPI.jobs.list({ page: currentPage, limit: 100 });
+            if (nextResponse && typeof nextResponse === 'object' && 'jobs' in nextResponse) {
+              allJobs = allJobs.concat(nextResponse.jobs || []);
+              if (!nextResponse.pagination || !nextResponse.pagination.hasMore) {
+                break;
+              }
+            } else {
+              break;
+            }
+          } catch (pageError) {
+            console.error(`Error loading page ${currentPage} for profile:`, pageError);
+            break;
+          }
+          currentPage++;
+        }
+      }
+    } else if (Array.isArray(response)) {
+      // Fallback: if API returns array directly (old format)
+      allJobs = response;
+    }
+    
+    // Ensure allJobs is always an array
+    if (!Array.isArray(allJobs)) {
+      console.warn("jobs.list() did not return an array for profile, defaulting to empty array");
+      allJobs = [];
+    }
   } catch (error) {
     console.error("Error loading jobs for profile:", error);
+    allJobs = []; // Ensure it's always an array
   }
 
   // Filter jobs related to this user
@@ -8043,7 +8685,7 @@ setTimeout(() => {
     activeLink.addEventListener("click", () => {
       setView("jobs");
       activeJobsStatusFilter = "open";
-      renderJobs();
+      renderJobs(true); // Reset pagination when filter changes
     });
   }
 }
@@ -8469,6 +9111,9 @@ meta.textContent =
       } else if (activeView === "owner") {
         renderOwnerView();
       }
+      
+      // Always update unread message count (works even when not on messages view)
+      countUnreadMessages();
     }
 
     /* ---------- Mode Toggle ---------- */
@@ -8516,21 +9161,38 @@ meta.textContent =
       // Mobile menu button toggle
       const mobileMenuBtn = document.getElementById("mobileMenuBtn");
       const mobileMenu = document.getElementById("mobileMenu");
+      const ownerTab = document.getElementById("ownerTab");
+      const mobileMenuOwner = document.getElementById("mobileMenuOwner");
+      
+      // Sync owner tab visibility between desktop and mobile
+      function syncOwnerTab() {
+        if (ownerTab && mobileMenuOwner) {
+          mobileMenuOwner.style.display = ownerTab.style.display;
+        }
+      }
       
       if (mobileMenuBtn && mobileMenu) {
         // Show/hide mobile menu button based on screen size
         function updateMobileMenuVisibility() {
           if (window.innerWidth <= 768) {
             mobileMenuBtn.style.display = "block";
+            syncOwnerTab();
           } else {
             mobileMenuBtn.style.display = "none";
             mobileMenu.classList.remove("show");
           }
         }
         
-        // Initial check
+        // Initial check - run immediately and on load
         updateMobileMenuVisibility();
         window.addEventListener("resize", updateMobileMenuVisibility);
+        
+        // Also check on page load in case script runs before DOM is ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', updateMobileMenuVisibility);
+        } else {
+          updateMobileMenuVisibility();
+        }
         
         // Toggle menu on click
         mobileMenuBtn.addEventListener("click", (e) => {
@@ -8590,10 +9252,10 @@ meta.textContent =
         jobsTabs.querySelectorAll(".job-tab").forEach((tab) => {
           const newTab = tab.cloneNode(true);
           tab.parentNode.replaceChild(newTab, tab);
-          newTab.addEventListener("click", () => {
+            newTab.addEventListener("click", () => {
             jobsTabs.querySelectorAll(".job-tab").forEach((t) => t.classList.remove("active"));
             newTab.classList.add("active");
-            renderJobs();
+            renderJobs(true); // Reset pagination when changing tabs
           });
         });
       }
@@ -8603,12 +9265,12 @@ meta.textContent =
       const jobsTimeFilter = document.getElementById("jobsTimeFilter");
       if (jobsDateFilter) {
         jobsDateFilter.addEventListener("change", () => {
-          renderJobs();
+          renderJobs(true); // Reset pagination when filter changes
         });
       }
       if (jobsTimeFilter) {
         jobsTimeFilter.addEventListener("change", () => {
-          renderJobs();
+          renderJobs(true); // Reset pagination when filter changes
         });
       }
       
@@ -8637,7 +9299,7 @@ meta.textContent =
               locationStatus.textContent = `✓ Location set! Showing jobs within selected distance.`;
               setMyLocationBtn.disabled = false;
               setMyLocationBtn.textContent = "📍 Use My Location";
-              renderJobs();
+              renderJobs(true); // Reset pagination when location changes
             },
             (error) => {
               locationStatus.textContent = `Error: ${error.message}. Please enable location permissions.`;
@@ -8657,7 +9319,7 @@ meta.textContent =
             locationStatus.textContent = "⚠️ Please set your location first using 'Use My Location' button.";
           } else {
             locationStatus.textContent = "";
-            renderJobs();
+            renderJobs(true); // Reset pagination when filter changes
           }
         });
       }
@@ -8680,7 +9342,7 @@ meta.textContent =
               saveZipFilterBtn.style.background = "";
             }, 2000);
             // Apply filter and re-render jobs
-            renderJobs();
+            renderJobs(true); // Reset pagination when filter changes
           } else if (zipValue && zipValue.length > 0) {
             // Invalid zip code
             showToast("Please enter a valid 5-digit zip code.");
@@ -8693,7 +9355,7 @@ meta.textContent =
               saveZipFilterBtn.textContent = "Save";
               saveZipFilterBtn.style.background = "";
             }, 1500);
-            renderJobs();
+            renderJobs(true); // Reset pagination when filter changes
           }
         });
         
@@ -8707,6 +9369,25 @@ meta.textContent =
         jobsZipFilter.addEventListener("keypress", (e) => {
           if (e.key === "Enter") {
             saveZipFilterBtn.click();
+          }
+        });
+      }
+      
+      // Load More button handler
+      const loadMoreJobsBtn = document.getElementById("loadMoreJobsBtn");
+      if (loadMoreJobsBtn) {
+        loadMoreJobsBtn.addEventListener("click", () => {
+          if (jobsPagination.hasMore) {
+            currentJobsPage++;
+            loadMoreJobsBtn.disabled = true;
+            loadMoreJobsBtn.textContent = "Loading...";
+            renderJobs(false).then(() => {
+              loadMoreJobsBtn.disabled = false;
+              loadMoreJobsBtn.textContent = "Load More Jobs";
+            }).catch(() => {
+              loadMoreJobsBtn.disabled = false;
+              loadMoreJobsBtn.textContent = "Load More Jobs";
+            });
           }
         });
       }
@@ -9147,6 +9828,16 @@ try {
   handleStripeReturn();
   checkAutoCompleteJobs();
   setInterval(checkAutoCompleteJobs, 60 * 1000);
+  
+  // Periodically update unread message count (every 30 seconds)
+  setInterval(() => {
+    countUnreadMessages();
+  }, 30 * 1000);
+  
+  // Initial unread count check on page load
+  setTimeout(() => {
+    countUnreadMessages();
+  }, 1000);
   renderAll();
 } catch (error) {
   console.error("Initialization error:", error);

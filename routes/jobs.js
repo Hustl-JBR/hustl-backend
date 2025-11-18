@@ -251,6 +251,8 @@ router.get('/', optionalAuth, [
   query('radius').optional().isInt({ min: 1, max: 100 }),
   query('zip').optional().trim(),
   query('city').optional().trim(),
+  query('page').optional().isInt({ min: 1 }),
+  query('limit').optional().isInt({ min: 1, max: 100 }),
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -258,7 +260,7 @@ router.get('/', optionalAuth, [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { status, category, lat, lng, radius = 10, zip, city } = req.query;
+    const { status, category, lat, lng, radius = 10, zip, city, page = 1, limit = 20 } = req.query;
     const userId = req.user?.id;
 
     const where = {};
@@ -315,6 +317,14 @@ router.get('/', optionalAuth, [
     // NOTE: Show all jobs by default - no role-based filtering
     // Tab-based filtering (My Jobs, Available Jobs, My Hustles) is handled client-side
 
+    // Pagination
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 20;
+    const skip = (pageNum - 1) * limitNum;
+
+    // First, get total count for pagination metadata
+    const totalCount = await prisma.job.count({ where });
+
     const jobs = await prisma.job.findMany({
       where,
       include: {
@@ -345,7 +355,8 @@ router.get('/', optionalAuth, [
         },
       },
       orderBy: { createdAt: 'desc' },
-      take: 100,
+      skip,
+      take: limitNum,
     });
 
     // Post-process: Filter by zip code in job requirements if zip filter was provided
@@ -361,8 +372,21 @@ router.get('/', optionalAuth, [
       });
     }
 
-    // Always return array, even if empty
-    res.json(filteredJobs || []);
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(totalCount / limitNum);
+    const hasMore = pageNum < totalPages;
+
+    // Return paginated response
+    res.json({
+      jobs: filteredJobs || [],
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: totalCount,
+        totalPages,
+        hasMore,
+      },
+    });
   } catch (error) {
     console.error('List jobs error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -664,13 +688,32 @@ router.post('/:id/confirm-complete', authenticate, requireRole('CUSTOMER'), [
     }
 
     // Verify the 6-digit code
-    const storedCode = job.requirements?.verificationCode;
-    const providedCode = String(verificationCode).trim();
-    const storedCodeStr = storedCode ? String(storedCode).trim() : null;
+    // Handle requirements as JSON object (it might be stored as JSON string in DB)
+    let requirements = job.requirements;
+    if (typeof requirements === 'string') {
+      try {
+        requirements = JSON.parse(requirements);
+      } catch (e) {
+        console.error('[confirm-complete] Error parsing requirements:', e);
+        requirements = {};
+      }
+    }
+    
+    const storedCode = requirements?.verificationCode;
+    const providedCode = String(verificationCode).trim().replace(/\D/g, ''); // Remove non-digits
+    const storedCodeStr = storedCode ? String(storedCode).trim().replace(/\D/g, '') : null;
+    
+    console.log('[confirm-complete] Code comparison:', {
+      storedCode: storedCodeStr,
+      providedCode: providedCode,
+      match: storedCodeStr === providedCode,
+      jobId: req.params.id
+    });
     
     if (!storedCodeStr || storedCodeStr !== providedCode) {
       return res.status(400).json({ 
-        error: 'Invalid verification code'
+        error: 'Invalid verification code',
+        message: storedCodeStr ? 'The code you entered does not match. Please check with the hustler.' : 'No verification code found for this job. The hustler may need to mark the job as complete first.'
       });
     }
 

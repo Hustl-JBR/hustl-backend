@@ -34,6 +34,9 @@ async function apiRequest(endpoint, options = {}) {
       if (data.requiresStripe) {
         error.requiresStripe = true;
       }
+      // Store full error data for better error handling
+      error.details = data;
+      error.status = response.status;
       throw error;
     }
 
@@ -149,12 +152,16 @@ const apiJobs = {
     const query = params.toString();
     const endpoint = `/jobs${query ? `?${query}` : ''}`;
     const data = await apiRequest(endpoint);
-    // Backend returns array directly, not wrapped in object
+    // Backend now returns { jobs: [], pagination: {} } format
+    if (data && data.jobs && Array.isArray(data.jobs)) {
+      return data; // Return full object with pagination
+    }
+    // Fallback: if it's still an array (old format), wrap it
     if (Array.isArray(data)) {
-      return data;
+      return { jobs: data, pagination: { hasMore: false } };
     }
     // Fallback: check if wrapped in jobs property
-    return data.jobs || [];
+    return { jobs: data.jobs || [], pagination: data.pagination || { hasMore: false } };
   },
 
   async get(id) {
@@ -230,15 +237,25 @@ const apiJobs = {
   },
 
   async confirmComplete(id, verificationCode) {
-    // Ensure verification code is a string and trimmed
-    const code = verificationCode ? String(verificationCode).trim() : '';
-    if (!code) {
-      throw new Error('Verification code is required');
+    // Ensure verification code is a string and trimmed, remove non-digits
+    const code = verificationCode ? String(verificationCode).trim().replace(/\D/g, '') : '';
+    if (!code || code.length !== 6) {
+      throw new Error('Please enter a valid 6-digit verification code');
     }
-    return await apiRequest(`/jobs/${id}/confirm-complete`, {
-      method: 'POST',
-      body: JSON.stringify({ verificationCode: code }),
-    });
+    try {
+      return await apiRequest(`/jobs/${id}/confirm-complete`, {
+        method: 'POST',
+        body: JSON.stringify({ verificationCode: code }),
+      });
+    } catch (error) {
+      // Provide more helpful error message
+      if (error.message && (error.message.includes('Invalid verification code') || error.status === 400)) {
+        const errorData = error.details || {};
+        const helpfulMessage = errorData.message || errorData.error || 'The verification code does not match. Please check with the hustler and try again.';
+        throw new Error(helpfulMessage);
+      }
+      throw error;
+    }
   },
 
 

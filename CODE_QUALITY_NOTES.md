@@ -74,3 +74,5 @@ When page freezes or shows errors:
 - [ ] Check for duplicate variable declarations in the same scope
 
 
+
+
