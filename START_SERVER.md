@@ -1,58 +1,40 @@
-# How to Start the Server
+# How to Start the Backend Server
 
 ## Quick Start
 
-1. **Open Command Prompt or PowerShell**
-   - Press `Win + R`
-   - Type `cmd` or `powershell`
-   - Press Enter
-
-2. **Navigate to the project folder**
+1. Open a terminal/command prompt
+2. Navigate to the project directory:
    ```
-   cd C:\Users\jbrea\OneDrive\Desktop\hustl-backend
+   cd "C:\Users\jbrea\OneDrive\Desktop\hustl-backend"
    ```
 
-3. **Start the server**
+3. Start the server:
+   ```
+   npm start
+   ```
+   
+   OR for development with auto-reload:
    ```
    npm run dev
    ```
 
-4. **Wait for the message**
-   You should see:
+4. You should see output like:
    ```
-   🚀 Hustl backend running at http://localhost:8080
-   📁 Serving static files from: C:\Users\jbrea\OneDrive\Desktop\hustl-backend\public
+   Server running on http://localhost:8080
    ```
 
-5. **Open your browser**
-   - Go to: `http://localhost:8080`
-   - The app should load!
+5. Keep this terminal open - you'll see all the error logs here!
 
-## If You Get Errors
+## If you get errors:
 
-### "npm is not recognized"
-- Make sure Node.js is installed
-- Restart your terminal after installing Node.js
+- Make sure you have Node.js installed: `node --version`
+- Install dependencies: `npm install`
+- Check your `.env` file has the required variables
 
-### "Port 8080 already in use"
-- Another server might be running
-- Change the port in `.env` file: `PORT=8081`
-- Or close the other program using port 8080
+## To see the error logs:
 
-### "Cannot find module"
-- Run: `npm install`
-- This installs all dependencies
+When you enter the 6-digit code, watch the terminal where the server is running. You'll see detailed error messages like:
+- `[confirm-complete] Job marked as COMPLETED: ...`
+- `[confirm-complete] Error updating job status: ...`
 
-## What I Fixed
-
-- ✅ Fixed the `public` folder path in `server.js`
-- ✅ Server now correctly serves files from the `public` folder
-
-## Keep the Server Running
-
-- **Don't close the terminal window** while using the app
-- The server needs to stay running
-- To stop: Press `Ctrl + C` in the terminal
-
-
-
+This will help us identify exactly what's failing!

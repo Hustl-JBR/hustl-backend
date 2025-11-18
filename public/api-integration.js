@@ -29,7 +29,12 @@ async function apiRequest(endpoint, options = {}) {
       // Try to get detailed error message
       const errorMsg = data.error || data.message || `HTTP ${response.status}`;
       const details = data.details ? `: ${JSON.stringify(data.details)}` : '';
-      throw new Error(errorMsg + details);
+      const error = new Error(errorMsg + details);
+      // Preserve additional error flags (like requiresStripe)
+      if (data.requiresStripe) {
+        error.requiresStripe = true;
+      }
+      throw error;
     }
 
     return data;
@@ -144,6 +149,11 @@ const apiJobs = {
     const query = params.toString();
     const endpoint = `/jobs${query ? `?${query}` : ''}`;
     const data = await apiRequest(endpoint);
+    // Backend returns array directly, not wrapped in object
+    if (Array.isArray(data)) {
+      return data;
+    }
+    // Fallback: check if wrapped in jobs property
     return data.jobs || [];
   },
 
@@ -207,6 +217,12 @@ const apiJobs = {
     });
   },
 
+  async requestRefund(id) {
+    return await apiRequest(`/jobs/${id}/request-refund`, {
+      method: 'POST',
+    });
+  },
+
   async complete(id) {
     return await apiRequest(`/jobs/${id}/complete`, {
       method: 'POST',
@@ -214,13 +230,49 @@ const apiJobs = {
   },
 
   async confirmComplete(id, verificationCode) {
-    const body = {};
-    if (verificationCode) {
-      body.verificationCode = verificationCode;
+    // Ensure verification code is a string and trimmed
+    const code = verificationCode ? String(verificationCode).trim() : '';
+    if (!code) {
+      throw new Error('Verification code is required');
     }
     return await apiRequest(`/jobs/${id}/confirm-complete`, {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: JSON.stringify({ verificationCode: code }),
+    });
+  },
+
+
+  async endJob(id) {
+    return await apiRequest(`/jobs/${id}/end`, {
+      method: 'POST',
+    });
+  },
+
+  async reportIssue(id, reason, description) {
+    return await apiRequest(`/jobs/${id}/report-issue`, {
+      method: 'POST',
+      body: JSON.stringify({ reason, description }),
+    });
+  },
+
+  async updateStatus(id, status) {
+    return await apiRequest(`/jobs/${id}/update-status`, {
+      method: 'POST',
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  async getStartCode(id, regenerate = false) {
+    const url = `/jobs/${id}/start-code${regenerate ? '?regenerate=true' : ''}`;
+    return await apiRequest(url, {
+      method: 'GET',
+    });
+  },
+
+  async startJob(id, startCode) {
+    return await apiRequest(`/jobs/${id}/start`, {
+      method: 'POST',
+      body: JSON.stringify({ startCode }),
     });
   },
 };
@@ -228,7 +280,7 @@ const apiJobs = {
 // Offers functions
 const apiOffers = {
   async list(jobId) {
-    return await apiRequest(`/offers/jobs/${jobId}/offers`);
+    return await apiRequest(`/offers/${jobId}`);
   },
 
   async create(jobId, note = '', proposedAmount = null) {
@@ -236,7 +288,7 @@ const apiOffers = {
     if (proposedAmount !== null) {
       body.proposedAmount = proposedAmount;
     }
-    return await apiRequest(`/offers/jobs/${jobId}/offers`, {
+    return await apiRequest(`/offers/${jobId}`, {
       method: 'POST',
       body: JSON.stringify(body),
     });

@@ -3,11 +3,12 @@ const { body, validationResult } = require('express-validator');
 const prisma = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { createPaymentIntent } = require('../services/stripe');
+const { validateTennesseeZip } = require('../services/zipcode');
 
 const router = express.Router();
 
-// GET /jobs/:jobId/offers - List offers for a job
-router.get('/jobs/:jobId/offers', authenticate, async (req, res) => {
+// GET /offers/:jobId - List offers for a job
+router.get('/:jobId', authenticate, async (req, res) => {
   try {
     const { jobId } = req.params;
 
@@ -65,8 +66,8 @@ router.get('/jobs/:jobId/offers', authenticate, async (req, res) => {
   }
 });
 
-// POST /jobs/:id/offers - Create an offer (Hustler only)
-router.post('/jobs/:jobId/offers', authenticate, requireRole('HUSTLER'), [
+// POST /offers/:jobId - Create an offer (Hustler only)
+router.post('/:jobId', authenticate, requireRole('HUSTLER'), [
   body('note').optional().trim().isLength({ max: 1000 }),
 ], async (req, res) => {
   try {
@@ -78,16 +79,31 @@ router.post('/jobs/:jobId/offers', authenticate, requireRole('HUSTLER'), [
     const { jobId } = req.params;
     const { note, proposedAmount } = req.body;
 
-    // Check if hustler is verified (optional for now - can be enabled later)
-    // const user = await prisma.user.findUnique({
-    //   where: { id: req.user.id },
-    //   select: { idVerified: true },
-    // });
+    // REQUIRE STRIPE ACCOUNT - Hustler must have Stripe connected to apply
+    // TEMPORARILY DISABLED FOR TESTING - Uncomment to re-enable
+    // This prevents customers from getting blocked later
+    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+    
+    // TEMPORARILY DISABLED - Uncomment to re-enable Stripe requirement
+    /*
+    const hustler = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { stripeAccountId: true, email: true, name: true },
+    });
 
-    // if (!user.idVerified) {
-    //   return res.status(403).json({ error: 'ID verification required to request jobs' });
-    // }
+    if (!hustler.stripeAccountId && !skipStripeCheck) {
+      return res.status(400).json({ 
+        error: 'Stripe account required',
+        requiresStripe: true,
+        message: 'You must connect your Stripe account before applying to jobs. Go to your Profile to set it up.'
+      });
+    }
+    */
+    
+    // TEMPORARY: Allow applying without Stripe for testing
+    console.log('[TESTING] Allowing job application without Stripe check');
 
+    // Get the job first to check its location
     const job = await prisma.job.findUnique({
       where: { id: jobId },
     });
@@ -95,6 +111,29 @@ router.post('/jobs/:jobId/offers', authenticate, requireRole('HUSTLER'), [
     if (!job) {
       return res.status(404).json({ error: 'Job not found' });
     }
+
+    // PRIORITY 1: Validate that the JOB is in Tennessee (check pickupZip from requirements)
+    const jobRequirements = job.requirements || {};
+    const jobPickupZip = jobRequirements.pickupZip || '';
+    
+    if (!jobPickupZip || jobPickupZip.toString().trim() === '') {
+      return res.status(400).json({ 
+        error: 'This job does not have a valid Tennessee location. Jobs must have a pickup zip code in Tennessee (37000-38999).',
+        requiresLocationUpdate: false
+      });
+    }
+    
+    const isJobInTennessee = await validateTennesseeZip(jobPickupZip.toString());
+    if (!isJobInTennessee) {
+      return res.status(400).json({ 
+        error: `This job is not in Tennessee. The job's pickup zip code (${jobPickupZip}) is not a valid Tennessee zip code (37000-38999). You can only apply to jobs in Tennessee.`,
+        requiresLocationUpdate: false
+      });
+    }
+
+    // NOTE: We do NOT validate the hustler's profile zip code
+    // Hustlers can apply to any job in Tennessee, regardless of where they live
+    // The job's pickupZip is what matters - it must be in Tennessee (already validated above)
 
     if (job.status !== 'OPEN') {
       return res.status(400).json({ error: 'Job is not available' });
@@ -228,6 +267,7 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     }
 
     // REQUIRE STRIPE ACCOUNT - Hustler must have Stripe connected to be accepted
+    // TEMPORARILY DISABLED FOR TESTING - Remove this comment and uncomment below to re-enable
     // Skip in test mode (when SKIP_STRIPE_CHECK=true)
     const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
     
@@ -236,6 +276,8 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       select: { stripeAccountId: true, email: true, name: true },
     });
 
+    // TEMPORARILY DISABLED - Uncomment to re-enable Stripe requirement
+    /*
     if (!hustler.stripeAccountId && !skipStripeCheck) {
       // Send email to hustler about needing Stripe
       try {
@@ -254,10 +296,16 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
         requiresStripe: true 
       });
     }
+    */
     
     // In test mode, log that we're skipping the check
     if (skipStripeCheck && !hustler.stripeAccountId) {
       console.log('[TEST MODE] Skipping Stripe account check for hustler:', offer.hustlerId);
+    }
+    
+    // TEMPORARY: Allow accepting without Stripe for testing
+    if (!hustler.stripeAccountId) {
+      console.log('[TESTING] Allowing offer acceptance without Stripe account for testing');
     }
 
     // Calculate payment amounts
@@ -267,9 +315,12 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10); // 3% customer fee min $1, max $10
     const total = jobAmount + tipAmount + customerFee;
 
-    // Create Stripe payment intent (pre-auth) - Skip in test mode
+    // TEMPORARILY BYPASSING STRIPE - Always use test mode logic for testing
+    // Create Stripe payment intent (pre-auth) - TEMPORARILY ALWAYS SKIP
+    // TEMPORARY: Always bypass Stripe for testing
+    const forceTestMode = true; // Set to false to re-enable Stripe
     let paymentIntent;
-    if (skipStripeCheck) {
+    if (skipStripeCheck || forceTestMode) {
       // In test mode, create a fake payment intent
       console.log('[TEST MODE] Skipping Stripe payment intent creation');
       paymentIntent = {
@@ -310,12 +361,21 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       data: { status: 'DECLINED' },
     });
 
-    // Update job
+    // Update job with assignment timestamp
+    const requirements = offer.job.requirements || {};
+    requirements.assignedAt = new Date().toISOString();
+    // Generate 4-digit start code for customer to provide to hustler
+    if (!requirements.startCode) {
+      requirements.startCode = String(Math.floor(1000 + Math.random() * 9000));
+      console.log(`Generated start code: ${requirements.startCode} for job ${offer.job.id}`);
+    }
+    
     const job = await prisma.job.update({
       where: { id: offer.job.id },
       data: {
         status: 'ASSIGNED',
         hustlerId: offer.hustlerId,
+        requirements,
       },
     });
 

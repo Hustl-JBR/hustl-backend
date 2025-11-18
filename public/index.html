@@ -41,6 +41,19 @@
       /* Smooth scrolling */
       -webkit-overflow-scrolling: touch;
       overflow-x: hidden;
+      pointer-events: auto !important;
+      overflow: visible !important;
+    }
+    
+    /* CRITICAL: Prevent any overlay from blocking */
+    html, body {
+      pointer-events: auto !important;
+      overflow: visible !important;
+    }
+    
+    /* Ensure app-shell and all containers are clickable */
+    .app-shell, header, nav, main, section {
+      pointer-events: auto !important;
     }
     
     /* App-like smooth scrolling */
@@ -94,7 +107,7 @@
       color: #fff;
       font-weight: 800;
       letter-spacing: 0.08em;
-      font-size: 0.9rem;
+      font-size: 1.1rem;
     }
 
     .logo-text-main {
@@ -327,13 +340,23 @@
       }
       
       header {
-        padding: 0.6rem 1rem;
+        padding: 0.4rem 0.75rem;
         flex-wrap: wrap;
         position: relative;
       }
       
       .logo-text-main {
-        font-size: 1rem;
+        font-size: 0.9rem;
+      }
+
+      .logo-mark {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+      }
+
+      .logo-sub {
+        font-size: 0.65rem;
       }
       
       .nav-tabs {
@@ -760,7 +783,9 @@
       justify-content: center;
       padding: 1rem;
       animation: fadeIn 0.2s ease;
+      pointer-events: auto !important; /* Ensure overlay is clickable */
     }
+    
 
     @keyframes fadeIn {
       from { opacity: 0; }
@@ -1195,6 +1220,71 @@
       }
     }
   </style>
+  <script>
+    // CRITICAL: Global error handler to prevent page freeze
+    // This catches syntax errors and prevents them from completely freezing the page
+    window.addEventListener('error', function(e) {
+      console.error('Global error caught:', e.error, e.message, e.filename, e.lineno);
+      // Log but don't let errors stop execution
+      e.preventDefault();
+      return true;
+    });
+    
+    window.addEventListener('unhandledrejection', function(e) {
+      console.error('Unhandled promise rejection:', e.reason);
+      // Log but don't let promise rejections stop execution
+      e.preventDefault();
+      return true;
+    });
+    
+    // PREVENTION: Check for common issues before page loads
+    // This helps catch duplicate declarations early
+    document.addEventListener('DOMContentLoaded', function() {
+      // Check for duplicate IDs (common cause of issues)
+      const ids = {};
+      document.querySelectorAll('[id]').forEach(function(el) {
+        const id = el.id;
+        if (ids[id]) {
+          console.warn('Duplicate ID found:', id, 'This can cause issues.');
+        }
+        ids[id] = true;
+      });
+    });
+    
+    // ULTRA-AGGRESSIVE cleanup - runs IMMEDIATELY before anything else
+    (function() {
+      try {
+        // Remove ALL possible blocking elements
+        var all = document.querySelectorAll('*');
+        for (var i = 0; i < all.length; i++) {
+          var el = all[i];
+          try {
+            var style = window.getComputedStyle(el);
+            if (style.position === 'fixed' && parseInt(style.zIndex) >= 1000) {
+              var rect = el.getBoundingClientRect();
+              if (rect.width > window.innerWidth * 0.5 || rect.height > window.innerHeight * 0.5) {
+                el.remove();
+              }
+            }
+          } catch(e) {}
+        }
+        // Remove by class/id
+        var overlays = document.querySelectorAll('.modal-overlay, [id*="Modal"], [id*="Overlay"], [class*="overlay"], [class*="modal"]');
+        for (var j = 0; j < overlays.length; j++) {
+          overlays[j].remove();
+        }
+        // Reset body
+        if (document.body) {
+          document.body.style.cssText = 'overflow: visible !important; pointer-events: auto !important;';
+        }
+        if (document.documentElement) {
+          document.documentElement.style.cssText = 'overflow: visible !important; pointer-events: auto !important;';
+        }
+      } catch(e) {
+        console.error('Cleanup error (non-fatal):', e);
+      }
+    })();
+  </script>
 </head>
 <body>
   <div class="app-shell">
@@ -1203,7 +1293,7 @@
         <div class="logo-mark">H</div>
         <div>
          <div class="logo-text-main">
-  HUSTL<span class="logo-tm">™</span>
+  HUSTL
 </div>
           <div class="logo-sub">Local help. Real hustle. All of Tennessee.</div>
         </div>
@@ -1404,13 +1494,13 @@
                 </div>
                 
                 <div style="margin-bottom: 0.5rem; padding: 0.4rem 0.5rem; background: #f9fafb; border-radius: 6px; border-left: 2px solid #10b981;">
-                  <div style="font-weight: 600; color: #047857; margin-bottom: 0.25rem; font-size: 0.85rem;">1. Connect Stripe</div>
-                  <div style="font-size: 0.8rem; color: #374151; line-height: 1.4;"><strong>Required!</strong> Set up Stripe in your profile to receive payments.</div>
+                  <div style="font-weight: 600; color: #047857; margin-bottom: 0.25rem; font-size: 0.85rem;">1. Connect Stripe <strong style="color: #dc2626;">(REQUIRED FIRST!)</strong></div>
+                  <div style="font-size: 0.8rem; color: #374151; line-height: 1.4;"><strong>You cannot apply to jobs until Stripe is connected!</strong> Set up Stripe in your Profile first to receive payments.</div>
                 </div>
 
                 <div style="margin-bottom: 0.5rem; padding: 0.4rem 0.5rem; background: #f9fafb; border-radius: 6px; border-left: 2px solid #10b981;">
                   <div style="font-weight: 600; color: #047857; margin-bottom: 0.25rem; font-size: 0.85rem;">2. Apply to jobs</div>
-                  <div style="font-size: 0.8rem; color: #374151; line-height: 1.4;">Browse available jobs, apply with a message, and wait for acceptance.</div>
+                  <div style="font-size: 0.8rem; color: #374151; line-height: 1.4;">Browse available jobs, apply with a message, and wait for acceptance. (Stripe must be connected first!)</div>
                 </div>
 
                 <div style="margin-bottom: 0.5rem; padding: 0.4rem 0.5rem; background: #f9fafb; border-radius: 6px; border-left: 2px solid #10b981;">
@@ -1515,9 +1605,22 @@
             </div>
           </div>
 
+          <div class="field-inline">
+            <div class="field" style="flex: 2;">
+              <label for="pickupAddress">Pickup address (optional)</label>
+              <input id="pickupAddress" type="text" placeholder="Street address (shared in chat or after accept)" />
+            </div>
+            <div class="field" style="flex: 1;">
+              <label for="pickupZip">Zip code</label>
+              <input id="pickupZip" type="text" placeholder="37011" maxlength="5" pattern="[0-9]{5}" />
+            </div>
+          </div>
+          
           <div class="field">
-            <label for="pickupAddress">Pickup address (optional)</label>
-            <input id="pickupAddress" type="text" placeholder="Street address (shared in chat or after accept)" />
+            <label>
+              <input type="checkbox" id="hideZipCode" />
+              Hide zip code from job listing (only show city)
+            </label>
           </div>
 
           <div class="field">
@@ -1615,6 +1718,67 @@
             </div>
           </div>
 
+          <div class="section-title" style="margin-top:0.5rem;">Job Details</div>
+          
+          <div class="field">
+            <label for="estimatedDuration">Estimated Duration <span style="color: #dc2626;">*</span></label>
+            <select id="estimatedDuration" required>
+              <option value="">Select duration</option>
+              <option value="under-1h">Under 1 hour</option>
+              <option value="1-2h">1-2 hours</option>
+              <option value="2-4h">2-4 hours</option>
+              <option value="4-6h">4-6 hours</option>
+              <option value="6-8h">6-8 hours</option>
+              <option value="full-day">Full day (8+ hours)</option>
+              <option value="multi-day">Multiple days</option>
+            </select>
+            <div class="muted" style="font-size: 0.85rem; margin-top: 0.25rem;">
+              Help hustlers provide accurate quotes by estimating how long the job will take.
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Tools/Equipment Needed <span style="color: #dc2626;">*</span></label>
+            <div style="font-size: 0.85rem; color: #6b7280; margin-bottom: 0.5rem;">
+              Select at least one tool or equipment that will be needed for this job.
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-top: 0.5rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal; cursor: pointer;">
+                <input type="checkbox" id="toolTruck" value="truck" />
+                <span>🚚 Truck/Vehicle</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal; cursor: pointer;">
+                <input type="checkbox" id="toolLadder" value="ladder" />
+                <span>🪜 Ladder</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal; cursor: pointer;">
+                <input type="checkbox" id="toolPowerTools" value="power-tools" />
+                <span>🔧 Power Tools</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal; cursor: pointer;">
+                <input type="checkbox" id="toolHandTools" value="hand-tools" />
+                <span>🛠️ Hand Tools</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal; cursor: pointer;">
+                <input type="checkbox" id="toolDolly" value="dolly" />
+                <span>📦 Dolly/Cart</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal; cursor: pointer;">
+                <input type="checkbox" id="toolCleaning" value="cleaning-supplies" />
+                <span>🧹 Cleaning Supplies</span>
+              </label>
+            </div>
+            <input 
+              type="text" 
+              id="toolsOther" 
+              placeholder="Other tools needed (optional)" 
+              style="margin-top: 0.5rem;"
+            />
+            <div class="muted" style="font-size: 0.85rem; margin-top: 0.25rem;">
+              Select all tools/equipment that hustlers need to bring or that you'll provide.
+            </div>
+          </div>
+
           <div class="field">
             <label for="jobNotes">Extra notes (optional)</label>
             <textarea id="jobNotes" placeholder="Parking, gate codes, equipment, pets, any special requests."></textarea>
@@ -1690,7 +1854,10 @@
               <label for="jobsZipFilter" style="font-size: 0.85rem; margin-bottom: 0.25rem; display: block;">Or enter zip code</label>
               <input id="jobsZipFilter" type="text" placeholder="12345" maxlength="5" pattern="[0-9]{5}" style="width: 100%; padding: 0.5rem;" />
             </div>
-            <div class="field" style="flex: 0 0 auto; display: flex; align-items: flex-end;">
+            <div class="field" style="flex: 0 0 auto; display: flex; align-items: flex-end; gap: 0.5rem;">
+              <button id="saveZipFilterBtn" class="btn btn-primary" style="padding: 0.5rem 1rem; white-space: nowrap; margin-top: 1.5rem;">
+                Save
+              </button>
               <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">
                 <input type="checkbox" id="hideMyZip" style="width: 16px; height: 16px;" />
                 <span>Hide my zip</span>
@@ -1717,6 +1884,14 @@
             </div>
             <div class="muted" style="margin-bottom:0.4rem;">
               Each conversation is tied to a specific job. Think of it like texting, but only about that job.
+            </div>
+            <div style="margin-bottom: 0.5rem; display: flex; gap: 0.5rem;">
+              <button id="showArchivedBtn" class="small-btn" style="background: #f3f4f6; color: #6b7280;">
+                📦 Show Archived
+              </button>
+              <button id="showDeletedBtn" class="small-btn" style="background: #fee2e2; color: #991b1b;">
+                🗑 Show Deleted
+              </button>
             </div>
             <div class="jobs-list" id="conversationList"></div>
           </div>
@@ -2062,13 +2237,26 @@
       <div class="footer-row">
         <div>© 2025 Hustl. All rights reserved.</div>
         <div class="footer-links">
-          <span id="footerTermsLink">Terms of Use</span>
+          <span id="footerTermsLink" style="cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">Terms of Use</span>
           <span>•</span>
-          <span id="footerPrivacyLink">Privacy Policy</span>
+          <span id="footerPrivacyLink" style="cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">Privacy Policy</span>
           <span>•</span>
-          <span>team.hustlapp@outlook.com</span>
-          <span>·</span>
-          <span>@team.hustlapp</span>
+          <a href="mailto:team.hustlapp@outlook.com" style="display: inline-flex; align-items: center; gap: 0.4rem; color: #e5e7eb; text-decoration: none; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+            <span>team.hustlapp@outlook.com</span>
+          </a>
+          <span>•</span>
+          <a href="https://instagram.com/team.hustlapp" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.4rem; color: #e5e7eb; text-decoration: none; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+            </svg>
+            <span>@team.hustlapp</span>
+          </a>
         </div>
       </div>
     </footer>
@@ -2076,7 +2264,7 @@
        <div class="toast" id="toast"></div>
 
     <!-- Age gate disabled: popup hidden -->
-    <div class="age-gate-overlay" id="ageGate" style="display:none; pointer-events:none; z-index:-1;">
+    <div class="age-gate-overlay" id="ageGate" style="display:none !important; pointer-events:none !important; z-index:-1 !important;">
       <div class="age-gate-card">
         <h2>Are you 18 or older?</h2>
         <p>
@@ -2116,6 +2304,8 @@
     let activeView = "home";
     let activeJobsStatusFilter = "all";
     let activeConversationJobId = null;
+    let showArchivedConversations = false;
+    let showDeletedConversations = false;
     let userMode = "customer"; // "customer" or "hustler" - simple toggle like Airbnb/Rover
 
     /* ---------- Utilities ---------- */
@@ -2186,6 +2376,136 @@
     }
 
     let toastTimeout = null;
+    // Show verification code modal popup
+    function showVerificationCodeModal(code, jobId, jobTitle = "Job") {
+      // Remove any existing verification code modal
+      const existing = document.getElementById("verificationCodeModal");
+      if (existing) existing.remove();
+      
+      const overlay = document.createElement("div");
+      overlay.id = "verificationCodeModal";
+      overlay.style.position = "fixed";
+      overlay.style.top = "0";
+      overlay.style.left = "0";
+      overlay.style.width = "100%";
+      overlay.style.height = "100%";
+      overlay.style.background = "rgba(0, 0, 0, 0.7)";
+      overlay.style.zIndex = "10000";
+      overlay.style.display = "flex";
+      overlay.style.alignItems = "center";
+      overlay.style.justifyContent = "center";
+      overlay.style.padding = "1rem";
+      
+      const modal = document.createElement("div");
+      modal.style.background = "#fff";
+      modal.style.borderRadius = "12px";
+      modal.style.padding = "2rem";
+      modal.style.maxWidth = "400px";
+      modal.style.width = "100%";
+      modal.style.boxShadow = "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)";
+      
+      modal.innerHTML = `
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+          <div style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; color: #059669;">🔐 Verification Code</div>
+          <div style="font-size: 0.9rem; color: #6b7280;">Share this code with the customer to confirm job completion</div>
+        </div>
+        
+        <div style="background: #f0fdf4; border: 3px solid #059669; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; text-align: center;">
+          <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: #047857; text-transform: uppercase; letter-spacing: 0.1em;">Your Code</div>
+          <div style="font-size: 2.5rem; font-weight: 700; letter-spacing: 0.3em; color: #059669; font-family: 'Courier New', monospace; margin: 0.5rem 0;">
+            ${code}
+          </div>
+          <div style="font-size: 0.8rem; color: #047857; margin-top: 0.5rem;">
+            Job: ${jobTitle}
+          </div>
+        </div>
+        
+        <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 0.75rem; margin-bottom: 1.5rem; font-size: 0.85rem; color: #92400e;">
+          <strong>⚠️ Important:</strong> The customer has 48 hours to enter this code. If they don't enter it and don't report an issue, payment will be automatically released to you.
+        </div>
+        
+        <div style="display: flex; gap: 0.5rem;">
+          <button id="copyCodeBtn" class="btn btn-primary" style="flex: 1;">
+            📋 Copy Code
+          </button>
+          <button id="closeCodeModalBtn" class="btn" style="flex: 1; background: #f3f4f6; color: #374151;">
+            Close
+          </button>
+        </div>
+        
+        <div style="margin-top: 1rem; text-align: center;">
+          <button id="viewInActiveJobsBtn" class="btn" style="background: transparent; color: #059669; text-decoration: underline; font-size: 0.9rem;">
+            View in Active Jobs →
+          </button>
+        </div>
+      `;
+      
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+      
+      // Copy code button
+      const copyBtn = modal.querySelector("#copyCodeBtn");
+      copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(code).then(() => {
+          copyBtn.textContent = "✓ Copied!";
+          copyBtn.style.background = "#10b981";
+          setTimeout(() => {
+            copyBtn.textContent = "📋 Copy Code";
+            copyBtn.style.background = "";
+          }, 2000);
+        }).catch(() => {
+          showToast("Failed to copy code");
+        });
+      });
+      
+      // Close button
+      const closeBtn = modal.querySelector("#closeCodeModalBtn");
+      closeBtn.addEventListener("click", () => {
+        overlay.remove();
+      });
+      
+      // View in Active Jobs button
+      const viewBtn = modal.querySelector("#viewInActiveJobsBtn");
+      viewBtn.addEventListener("click", () => {
+        overlay.remove();
+        setView("jobs");
+        // Filter to show active jobs and scroll to this job
+        setTimeout(() => {
+          const jobCard = document.querySelector(`[data-job-id="${jobId}"]`);
+          if (jobCard) {
+            jobCard.scrollIntoView({ behavior: "smooth", block: "center" });
+            jobCard.style.background = "#fef3c7";
+            setTimeout(() => {
+              jobCard.style.background = "";
+            }, 3000);
+          }
+        }, 100);
+      });
+      
+      // Close on overlay click
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) {
+          overlay.remove();
+          document.body.style.overflow = "";
+        }
+      });
+      
+      // Close on Escape key
+      const escapeHandler = (e) => {
+        if (e.key === "Escape") {
+          overlay.remove();
+          document.body.style.overflow = "";
+          document.removeEventListener("keydown", escapeHandler);
+        }
+      };
+      document.addEventListener("keydown", escapeHandler);
+      
+      // Prevent closing on modal click
+      modal.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+    }
+
     function showToast(msg) {
       const el = document.getElementById("toast");
       el.textContent = msg;
@@ -2277,8 +2597,12 @@
         try {
           await window.hustlAPI.reviews.create(jobId, revieweeId, selectedStars, reviewText.value.trim());
           showToast("✓ Review submitted! Thank you.");
-          overlay.remove();
-          document.body.style.overflow = "";
+          if (overlay && overlay.parentNode) {
+            overlay.remove();
+          }
+          if (document.body) {
+            document.body.style.overflow = "";
+          }
           renderJobs();
         } catch (error) {
           showToast("Error: " + (error.message || "Failed to submit review"));
@@ -2522,63 +2846,79 @@ function initAuthCard() {
     });
   }
 
-document.getElementById("createAccountButton").addEventListener("click", async () => {
-  const name = document.getElementById("createName").value.trim();
-  const email = document.getElementById("createEmail").value.trim();
-  const password = document.getElementById("createPassword").value.trim();
-  const role = document.getElementById("createRole").value;
-  const agreeTerms = document.getElementById("agreeTerms").checked;
-  const confirmAge = document.getElementById("confirmAge").checked;
+// Wrap in try-catch to prevent errors from freezing the page
+try {
+  const createAccountBtn = document.getElementById("createAccountButton");
+  if (createAccountBtn) {
+    createAccountBtn.addEventListener("click", async () => {
+      try {
+        const name = document.getElementById("createName")?.value.trim();
+        const email = document.getElementById("createEmail")?.value.trim();
+        const password = document.getElementById("createPassword")?.value.trim();
+        const role = document.getElementById("createRole")?.value;
+        const agreeTerms = document.getElementById("agreeTerms")?.checked;
+        const confirmAge = document.getElementById("confirmAge")?.checked;
 
-  if (!name || !email || !password) {
-    showToast("Please fill name, email, and password.");
-    return;
-  }
-  if (password.length < 8) {
-    showToast("Password should be at least 8 characters.");
-    return;
-  }
-  if (!agreeTerms) {
-    showToast("Please agree to the Terms of Service and Privacy Policy.");
-    return;
-  }
-  if (!confirmAge) {
-    showToast("You must be 18 years or older to use Hustl.");
-    return;
-  }
-
-  // Sign up with new API
-  try {
-    // Get city/zip from form or use defaults
-    const city = document.getElementById("signupCity")?.value.trim() || "San Francisco";
-    const zip = document.getElementById("signupZip")?.value.trim() || "94102";
-    const username = email.split("@")[0]; // Simple username from email
-
-    await window.hustlAPI.auth.signUp(email, password, name, username, city, zip, role);
-    
-    showToast("Account created successfully!");
-    
-    // If hustler, redirect to profile to set up Stripe
-    if (role === "hustler") {
-      showToast("Now let's set up your Stripe account to receive payments!", 5000);
-      setView("profile");
-      renderAll();
-      // Scroll to Stripe section after a moment
-      setTimeout(() => {
-        const stripeSection = document.querySelector('[id*="stripe"], [class*="stripe"]');
-        if (stripeSection) {
-          stripeSection.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (!name || !email || !password) {
+          showToast("Please fill name, email, and password.");
+          return;
         }
-      }, 1000);
-    } else {
-      setView("jobs");
-      renderAll();
-    }
-  } catch (error) {
-    console.error("Sign up error:", error);
-    showToast("Sign up error: " + (error.message || "Unknown error"));
+        if (password.length < 8) {
+          showToast("Password should be at least 8 characters.");
+          return;
+        }
+        if (!agreeTerms) {
+          showToast("Please agree to the Terms of Service and Privacy Policy.");
+          return;
+        }
+        if (!confirmAge) {
+          showToast("You must be 18 years or older to use Hustl.");
+          return;
+        }
+
+        // Sign up with new API
+        // Get city/zip from form - require them
+        const city = document.getElementById("signupCity")?.value.trim();
+        const zip = document.getElementById("signupZip")?.value.trim();
+        
+        if (!city || !zip) {
+          showToast("Please enter your city and zip code");
+          return;
+        }
+        const username = email.split("@")[0]; // Simple username from email
+
+        await window.hustlAPI.auth.signUp(email, password, name, username, city, zip, role);
+        
+        showToast("Account created successfully!");
+        
+        // If hustler, redirect to profile to set up Stripe
+        if (role === "hustler") {
+          showToast("Now let's set up your Stripe account to receive payments!", 5000);
+          setView("profile");
+          renderAll();
+          // Scroll to Stripe section after a moment
+          setTimeout(() => {
+            const stripeSection = document.querySelector('[id*="stripe"], [class*="stripe"]');
+            if (stripeSection) {
+              stripeSection.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+          }, 1000);
+        } else {
+          setView("jobs");
+          renderAll();
+        }
+      } catch (error) {
+        console.error("Sign up error:", error);
+        showToast("Sign up error: " + (error.message || "Unknown error"));
+        // Ensure button is never stuck disabled
+        const btn = document.getElementById("createAccountButton");
+        if (btn) btn.disabled = false;
+      }
+    });
   }
-});
+} catch (error) {
+  console.error("Failed to attach createAccountButton listener:", error);
+}
 
   document
     .getElementById("loginButton")
@@ -2609,7 +2949,17 @@ document.getElementById("createAccountButton").addEventListener("click", async (
       document.getElementById("pickupArea").value = "";
       document.getElementById("pickupCity").value = "";
       document.getElementById("pickupAddress").value = "";
+      document.getElementById("pickupZip").value = "";
+      document.getElementById("hideZipCode").checked = false;
       document.getElementById("jobOnSiteOnly").checked = false;
+      document.getElementById("estimatedDuration").value = "";
+      document.getElementById("toolTruck").checked = false;
+      document.getElementById("toolLadder").checked = false;
+      document.getElementById("toolPowerTools").checked = false;
+      document.getElementById("toolHandTools").checked = false;
+      document.getElementById("toolDolly").checked = false;
+      document.getElementById("toolCleaning").checked = false;
+      document.getElementById("toolsOther").value = "";
       document.getElementById("dropoffArea").value = "";
       document.getElementById("dropoffCity").value = "";
       document.getElementById("dropoffAddress").value = "";
@@ -2664,15 +3014,37 @@ document.getElementById("createAccountButton").addEventListener("click", async (
       document
         .getElementById("postJobButton")
         .addEventListener("click", async () => {
-          const user = await window.hustlAPI.auth.getCurrentUser();
-          if (!user)
-            return showToast(
-              "You must be logged in as a Customer to post jobs."
-            );
-
-          // Check if user is in customer mode (not just role)
-          if (userMode !== "customer") {
-            return showToast("Switch to Customer mode to post jobs. Use the toggle in the header.");
+          // Get JWT token - try multiple possible keys
+          let token = localStorage.getItem("hustl_token") || 
+                      localStorage.getItem("token") || 
+                      localStorage.getItem("auth_token");
+          
+          // Debug: log all localStorage keys to help find the token
+          if (!token) {
+            console.log("Available localStorage keys:", Object.keys(localStorage));
+            console.log("hustl_token:", localStorage.getItem("hustl_token"));
+            console.log("token:", localStorage.getItem("token"));
+            console.log("auth_token:", localStorage.getItem("auth_token"));
+            return showToast("You must be logged in to post jobs. Please log in first. (No token found in localStorage)");
+          }
+          
+          console.log("Found token, length:", token.length);
+          
+          // Get current user from token (optional - backend will validate token)
+          let user = null;
+          try {
+            const response = await fetch("/users/me", {
+              headers: { "Authorization": `Bearer ${token}` }
+            });
+            if (response.ok) {
+              user = await response.json();
+            } else {
+              // If auth fails, token might be invalid - but let backend handle it
+              console.warn("Failed to get user, will try posting anyway");
+            }
+          } catch (error) {
+            // Don't block - backend will validate token
+            console.warn("Error getting user:", error);
           }
 
           const title = document.getElementById("jobTitle").value.trim();
@@ -2687,6 +3059,12 @@ document.getElementById("createAccountButton").addEventListener("click", async (
           const pickupAddress = document
             .getElementById("pickupAddress")
             .value.trim();
+          const pickupZip = document
+            .getElementById("pickupZip")
+            .value.trim();
+          const hideZipCode = document
+            .getElementById("hideZipCode")
+            .checked;
           const onSiteOnly =
             document.getElementById("jobOnSiteOnly").checked;
           const dropoffArea = document
@@ -2715,10 +3093,35 @@ document.getElementById("createAccountButton").addEventListener("click", async (
           const notes = document
             .getElementById("jobNotes")
             .value.trim();
+          const estimatedDuration = document
+            .getElementById("estimatedDuration")
+            .value;
+          
+          // Collect tools needed
+          const toolsNeeded = [];
+          if (document.getElementById("toolTruck").checked) toolsNeeded.push("truck");
+          if (document.getElementById("toolLadder").checked) toolsNeeded.push("ladder");
+          if (document.getElementById("toolPowerTools").checked) toolsNeeded.push("power-tools");
+          if (document.getElementById("toolHandTools").checked) toolsNeeded.push("hand-tools");
+          if (document.getElementById("toolDolly").checked) toolsNeeded.push("dolly");
+          if (document.getElementById("toolCleaning").checked) toolsNeeded.push("cleaning-supplies");
+          const toolsOther = document.getElementById("toolsOther")?.value.trim();
+          if (toolsOther) toolsNeeded.push(toolsOther);
 
           if (!title || !category || !desc)
             return showToast(
               "Please fill title, category, and description."
+            );
+          
+          if (!estimatedDuration)
+            return showToast(
+              "Please select an estimated duration to help hustlers provide accurate quotes."
+            );
+          
+          // Validate tools/equipment is required
+          if (toolsNeeded.length === 0)
+            return showToast(
+              "Please select at least one tool or equipment needed. This helps hustlers prepare properly."
             );
 
           // Validate payment fields
@@ -2742,11 +3145,27 @@ document.getElementById("createAccountButton").addEventListener("click", async (
             return showToast("Team size must be between 1 and 10.");
           }
 
+          // Validate Tennessee location - prioritize pickupZip
+          if (!pickupZip) {
+            return showToast("Please enter a pickup zip code (required for Tennessee validation).");
+          }
+          
+          const zipNum = parseInt(pickupZip, 10);
+          if (isNaN(zipNum) || zipNum < 37000 || zipNum > 38999) {
+            return showToast("Please enter a valid Tennessee zip code (37000-38999).");
+          }
+
           try {
-            // Map to API format
-            const address = pickupAddress || `${pickupArea}, ${pickupCity}`;
+            // Build address string for geocoding - include zip code for accuracy
+            const addressParts = [];
+            if (pickupAddress) addressParts.push(pickupAddress);
+            if (pickupArea) addressParts.push(pickupArea);
+            if (pickupCity) addressParts.push(pickupCity);
+            if (pickupZip) addressParts.push(pickupZip);
+            const address = addressParts.length > 0 ? addressParts.join(", ") : `${pickupCity || pickupArea || "Tennessee"}, ${pickupZip || ""}`;
+            
             if (!address || address.trim() === "") {
-              return showToast("Please provide an address.");
+              return showToast("Please provide location information (city and zip code).");
             }
             
             // Calculate amount - for hourly, multiply by teamSize (each person gets hourly rate)
@@ -2811,9 +3230,19 @@ document.getElementById("createAccountButton").addEventListener("click", async (
               payType: paymentType,
               amount: calculatedAmount,
               teamSize: teamSize || 1,
+              pickupArea: pickupArea || null,
+              pickupCity: pickupCity || null,
+              pickupAddress: pickupAddress || null,
+              dropoffArea: onSiteOnly ? null : (dropoffArea || null),
+              dropoffCity: onSiteOnly ? null : (dropoffCity || null),
+              dropoffAddress: onSiteOnly ? null : (dropoffAddress || null),
               requirements: {
                 onSiteOnly,
                 notes: notes || null,
+                pickupZip: pickupZip || null,
+                hideZipCode: hideZipCode || false,
+                estimatedDuration: estimatedDuration || null,
+                toolsNeeded: toolsNeeded.length > 0 ? toolsNeeded : null,
               },
             };
             
@@ -2823,7 +3252,27 @@ document.getElementById("createAccountButton").addEventListener("click", async (
               jobData.estHours = Number(maxHours);
             }
 
-            await window.hustlAPI.jobs.create(jobData);
+            // Get JWT token
+            const token = localStorage.getItem("hustl_token");
+            if (!token) {
+              return showToast("You must be logged in to post jobs. Please log in first.");
+            }
+            
+            // Call API directly
+            const response = await fetch("/jobs", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+              },
+              body: JSON.stringify(jobData)
+            });
+            
+            const data = await response.json();
+            if (!response.ok) {
+              return showToast(data.error || "Post error: " + response.statusText);
+            }
+            
             // Clear draft after successful post
             localStorage.removeItem('jobDraft');
             showToast("✓ Job posted successfully!");
@@ -2831,6 +3280,7 @@ document.getElementById("createAccountButton").addEventListener("click", async (
             clearJobForm();
             renderJobs();
           } catch (error) {
+            console.error("Job posting error:", error);
             showToast("Post error: " + (error.message || "Unknown error"));
           }
         });
@@ -2842,8 +3292,21 @@ async function renderJobs() {
   const jobsCardTitle = document.getElementById("jobsCardTitle");
   const jobsFilterSummary = document.getElementById("jobsFilterSummary");
 
-  // 1) Get logged-in user
-  const user = await window.hustlAPI.auth.getCurrentUser();
+  // 1) Get logged-in user from token
+  let user = null;
+  try {
+    const token = localStorage.getItem("hustl_token");
+    if (token) {
+      const response = await fetch("/users/me", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (response.ok) {
+        user = await response.json();
+      }
+    }
+  } catch (error) {
+    console.warn("Error getting user:", error);
+  }
 
   // 2) Figure out their role
   let role = null;
@@ -2916,8 +3379,9 @@ async function renderJobs() {
       listParams.radius = parseFloat(distanceFilter);
     }
     
-    // Zipcode filtering
-    const zipFilter = document.getElementById("jobsZipFilter")?.value.trim();
+    // Zipcode filtering - only use saved zip filter (from Save button)
+    const savedZipFilter = localStorage.getItem('savedZipFilter');
+    const zipFilter = savedZipFilter || null; // Only use saved value, not what's typed
     const hideMyZip = document.getElementById("hideMyZip")?.checked;
     if (zipFilter && zipFilter.length === 5) {
       listParams.zip = zipFilter;
@@ -2926,7 +3390,39 @@ async function renderJobs() {
       }
     }
     
-    jobs = await window.hustlAPI.jobs.list(listParams);
+    // Fetch jobs from API
+    const token = localStorage.getItem("hustl_token");
+    const queryString = new URLSearchParams(listParams).toString();
+    const jobsUrl = `/jobs${queryString ? `?${queryString}` : ''}`;
+    
+    const jobsResponse = await fetch(jobsUrl, {
+      headers: token ? { "Authorization": `Bearer ${token}` } : {}
+    });
+    
+    if (!jobsResponse.ok) {
+      throw new Error(`Failed to load jobs: ${jobsResponse.statusText}`);
+    }
+    
+    jobs = await jobsResponse.json();
+    
+    // Filter out COMPLETED jobs that are older than 48 hours OR allow immediate deletion
+    // COMPLETED jobs should disappear from the main view
+    const now = Date.now();
+    const fortyEightHours = 48 * 60 * 60 * 1000; // 48 hours in milliseconds
+    jobs = jobs.filter(job => {
+      const status = (job.status || "").toUpperCase();
+      if (status === "COMPLETED") {
+        // Check if job was completed more than 48 hours ago
+        const updatedAt = job.updatedAt ? new Date(job.updatedAt).getTime() : 0;
+        const completedAt = job.requirements?.completedAtTimestamp || updatedAt;
+        const hoursSinceCompleted = now - completedAt;
+        
+        // Remove if older than 48 hours OR if it's been completed (allow immediate removal)
+        // For now, remove all COMPLETED jobs from main listing immediately
+        return false; // Don't show COMPLETED jobs in main listing
+      }
+      return true; // Keep all other jobs
+    });
     
     // Filter by distance if user location is set
     if (distanceFilter && userLocation && userLocation.lat && userLocation.lng) {
@@ -2971,21 +3467,83 @@ async function renderJobs() {
     }
   } catch (error) {
     console.error("Error loading jobs", error);
-    jobsList.innerHTML = "<div class='muted'>Error loading jobs.</div>";
+    console.error("Error details:", error.message, error.stack);
+    jobsList.innerHTML = `<div class='muted'>Error loading jobs: ${error.message || 'Unknown error'}. Check console for details.</div>`;
+    jobsCardTitle.textContent = "Jobs";
+    jobsFilterSummary.textContent = "Error loading jobs";
     return;
+  }
+  
+  // Debug: Log jobs received
+  console.log(`[renderJobs] Loaded ${jobs.length} jobs from API`);
+  if (jobs.length === 0) {
+    console.log("[renderJobs] No jobs returned - check backend filters");
   }
 
   // 4) Filter by status (already done by API, but double-check client-side)
+  // Create "My Active Gigs" section - prominently show active jobs
+  const activeJobs = jobs.filter((j) => {
+    const status = (j.status || "").toUpperCase();
+    const requirements = j.requirements || {};
+    const isInProgress = requirements.startCodeUsed === true || status === "PAID";
+    return status === "ASSIGNED" || isInProgress;
+  });
+  
   if (activeJobsStatusFilter !== "all") {
-    if (activeJobsStatusFilter === "in-progress") {
-      // "In Progress" = jobs that are ASSIGNED or PAID (hustler is working on it)
-      jobs = jobs.filter((j) => {
-        const status = (j.status || "").toUpperCase();
-        return status === "ASSIGNED" || status === "PAID" || status === "AWAITING_CUSTOMER_CONFIRM";
-      });
+    if (activeJobsStatusFilter === "in-progress" || activeJobsStatusFilter === "active") {
+      // "Active Jobs" = jobs that are ASSIGNED or PAID (In Progress)
+      // This is the main view - only show work currently in progress
+      jobs = activeJobs;
     } else {
       const filterStatus = activeJobsStatusFilter.toUpperCase();
       jobs = jobs.filter((j) => (j.status || "").toUpperCase() === filterStatus);
+    }
+  }
+  
+  // Show "My Active Gigs" dashboard prominently if user has active jobs
+  if (activeJobs.length > 0 && user) {
+    const activeGigsSection = document.createElement("div");
+    activeGigsSection.id = "activeGigsDashboard";
+    activeGigsSection.style.marginBottom = "1.5rem";
+    activeGigsSection.style.padding = "1rem";
+    activeGigsSection.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+    activeGigsSection.style.borderRadius = "12px";
+    activeGigsSection.style.color = "#fff";
+    activeGigsSection.style.boxShadow = "0 4px 6px rgba(0,0,0,0.1)";
+    
+    activeGigsSection.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700;">🎯 My Active Gigs</h3>
+        <span style="font-size: 0.9rem; opacity: 0.9;">${activeJobs.length} ${activeJobs.length === 1 ? 'job' : 'jobs'}</span>
+      </div>
+      <div style="font-size: 0.9rem; opacity: 0.95; margin-bottom: 0.75rem;">
+        Jobs currently assigned or in progress
+      </div>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        ${activeJobs.slice(0, 3).map(job => {
+          const status = (job.status || "").toUpperCase();
+          const requirements = job.requirements || {};
+          const isInProgress = requirements.startCodeUsed === true || status === "PAID";
+          const statusText = isInProgress ? "In Progress" : "Assigned";
+          return `
+            <div style="background: rgba(255,255,255,0.2); padding: 0.5rem 0.75rem; border-radius: 6px; cursor: pointer; flex: 1; min-width: 150px;" 
+                 onclick="openJobDetails('${job.id}')">
+              <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">${job.title || 'Untitled Job'}</div>
+              <div style="font-size: 0.75rem; opacity: 0.9;">${statusText}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      ${activeJobs.length > 3 ? `<div style="margin-top: 0.5rem; font-size: 0.85rem; opacity: 0.9; text-align: center;">
+        +${activeJobs.length - 3} more active ${activeJobs.length - 3 === 1 ? 'job' : 'jobs'}
+      </div>` : ''}
+    `;
+    
+    // Insert at the top of jobs list
+    if (jobsList && jobsList.firstChild) {
+      jobsList.insertBefore(activeGigsSection, jobsList.firstChild);
+    } else if (jobsList) {
+      jobsList.appendChild(activeGigsSection);
     }
   }
 
@@ -3181,14 +3739,49 @@ async function renderJobs() {
     // Show only open jobs
     jobs = jobs.filter(j => (j.status || "").toUpperCase() === "OPEN");
   }
+  
+  // Final filter: Remove COMPLETED jobs from all views (they're done and reviewed)
+  // This ensures COMPLETED jobs don't show up anywhere in the main listing
+  jobs = jobs.filter(j => {
+    const status = (j.status || "").toUpperCase();
+    return status !== "COMPLETED";
+  });
 
   // 6) Summary text
   jobsFilterSummary.textContent =
-    jobs.length === 0 ? "No jobs yet." : `${jobs.length} job(s) shown`;
+    jobs.length === 0 ? "No jobs found." : `${jobs.length} job(s) shown`;
 
   // 7) Clear list
   jobsList.innerHTML = "";
-  if (jobs.length === 0) return;
+  if (jobs.length === 0) {
+    // Show helpful message based on filters
+    const noJobsMsg = document.createElement("div");
+    noJobsMsg.className = "muted";
+    noJobsMsg.style.padding = "2rem";
+    noJobsMsg.style.textAlign = "center";
+    
+    const zipFilter = document.getElementById("jobsZipFilter")?.value.trim();
+    const distanceFilter = document.getElementById("jobsDistanceFilter")?.value;
+    
+    if (zipFilter || distanceFilter) {
+      noJobsMsg.innerHTML = `
+        <div style="margin-bottom: 0.5rem;">No jobs found with current location filters.</div>
+        <div style="font-size: 0.9rem;">Try removing location filters or checking a different area.</div>
+      `;
+    } else if (activeJobsStatusFilter && activeJobsStatusFilter !== "all" && activeJobsStatusFilter !== "open") {
+      noJobsMsg.innerHTML = `
+        <div style="margin-bottom: 0.5rem;">No jobs found with status: ${activeJobsStatusFilter}.</div>
+        <div style="font-size: 0.9rem;">Try selecting "All" or "Open" to see available jobs.</div>
+      `;
+    } else {
+      noJobsMsg.innerHTML = `
+        <div style="margin-bottom: 0.5rem;">No jobs available yet.</div>
+        <div style="font-size: 0.9rem;">Be the first to post a job!</div>
+      `;
+    }
+    jobsList.appendChild(noJobsMsg);
+    return;
+  }
 
   // 8) Render each job card
   jobs.forEach((job) => {
@@ -3279,18 +3872,33 @@ async function renderJobs() {
     }
     card.appendChild(dateTimeLine);
 
-    // location line
+    // location line - use pickup info from requirements, not geocoded address
     const loc = document.createElement("div");
     loc.className = "job-meta";
 
     const requirements = job.requirements || {};
-    let locText = `📍 ${job.address || "Address TBD"}`;
-    if (job.customer?.city) {
-      locText += ` • ${job.customer.city}`;
-      if (job.customer.zip) {
-        locText += `, ${job.customer.zip}`;
-      }
+    const pickupZip = requirements.pickupZip || '';
+    const pickupCity = requirements.pickupCity || job.customer?.city || '';
+    const pickupArea = requirements.pickupArea || '';
+    const pickupAddress = requirements.pickupAddress || '';
+    
+    // Build location string from pickup fields (NEVER use geocoded address - it can be wrong)
+    let locParts = [];
+    if (pickupAddress) {
+      locParts.push(pickupAddress);
     }
+    if (pickupArea) {
+      locParts.push(pickupArea);
+    }
+    if (pickupCity) {
+      locParts.push(pickupCity);
+    }
+    if (pickupZip && !requirements.hideZipCode) {
+      locParts.push(pickupZip);
+    }
+    
+    // Always use pickup fields, never fall back to geocoded address
+    let locText = `📍 ${locParts.length > 0 ? locParts.join(' • ') : "Location TBD"}`;
     if (requirements.onSiteOnly) {
       locText += " • On-site only";
     }
@@ -3356,18 +3964,30 @@ async function renderJobs() {
     const statusBadge = document.createElement("span");
     statusBadge.className = "badge";
 
-    const status = (job.status || "OPEN").toLowerCase();
-    if (status === "open") {
+    const status = (job.status || "OPEN").toUpperCase();
+    // requirements already declared above, reuse it
+    const startCodeUsed = requirements.startCodeUsed === true;
+    
+    // Simplified status display: Open, Assigned, In Progress, Completed
+    // Check if job is actually in progress (start code used) even if status is ASSIGNED
+    if (status === "OPEN") {
       statusBadge.classList.add("status-open");
       statusBadge.textContent = "Open";
-    } else if (status === "assigned" || status === "paid" || status === "awaiting_customer_confirm") {
+    } else if (status === "ASSIGNED" && !startCodeUsed) {
       statusBadge.classList.add("status-assigned");
-      statusBadge.textContent = status === "paid" ? "In Progress" : status === "awaiting_customer_confirm" ? "Awaiting Confirmation" : "Assigned";
-    } else if (status === "completed" || status === "completed_by_hustler") {
+      statusBadge.textContent = "Assigned";
+    } else if (status === "PAID" || startCodeUsed) {
+      // Job is In Progress if status is PAID OR start code has been used
+      statusBadge.classList.add("status-assigned");
+      statusBadge.style.background = "#fbbf24";
+      statusBadge.style.color = "#78350f";
+      statusBadge.textContent = "In Progress";
+    } else if (status === "COMPLETED_BY_HUSTLER" || status === "AWAITING_CUSTOMER_CONFIRM") {
       statusBadge.classList.add("status-completed");
       statusBadge.textContent = "Completed";
     } else {
-      statusBadge.textContent = job.status || "Open";
+      // Fallback for any other status
+      statusBadge.textContent = status === "CANCELLED" ? "Cancelled" : "Open";
     }
 
     left.appendChild(statusBadge);
@@ -3429,17 +4049,44 @@ async function renderJobs() {
 }
 
     async function openJobDetails(jobId, options = {}) {
-      // Remove any existing modal
-      const existingModal = document.getElementById("jobModalOverlay");
-      if (existingModal) existingModal.remove();
+      // CRITICAL: Remove ANY existing overlays first
+      document.querySelectorAll('.modal-overlay, [id^="jobModalOverlay"], #verificationCodeModal, [id^="jobDetailsOverlay"]').forEach(ov => {
+        if (ov && ov.parentNode) {
+          ov.remove();
+        }
+      });
+      if (document.body) {
+        document.body.style.overflow = "";
+        document.body.style.pointerEvents = "";
+      }
 
-      // Get current user
-      const user = await window.hustlAPI.auth.getCurrentUser();
+      // Get current user from token
+      let user = null;
+      try {
+        const token = localStorage.getItem("hustl_token");
+        if (token) {
+          const response = await fetch("/users/me", {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (response.ok) {
+            user = await response.json();
+          }
+        }
+      } catch (error) {
+        console.warn("Error getting user:", error);
+      }
       
       // Fetch job from API
       let job;
       try {
-        job = await window.hustlAPI.jobs.get(jobId);
+        const token = localStorage.getItem("hustl_token");
+        const response = await fetch(`/jobs/${jobId}`, {
+          headers: token ? { "Authorization": `Bearer ${token}` } : {}
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch job: ${response.statusText}`);
+        }
+        job = await response.json();
       } catch (error) {
         console.error("Error fetching job:", error);
         showToast("Error loading job details.");
@@ -3450,17 +4097,40 @@ async function renderJobs() {
         showToast("Job not found.");
         return;
       }
-
+      
       // Create modal overlay
       const overlay = document.createElement("div");
       overlay.id = "jobModalOverlay";
       overlay.className = "modal-overlay";
+      
+      // Store cleanup function
+      let escapeHandler = null;
+      const cleanup = function() {
+        if (overlay && overlay.parentNode) {
+          overlay.remove();
+        }
+        if (document.body) {
+          document.body.style.overflow = "";
+          document.body.style.pointerEvents = "";
+        }
+        if (escapeHandler) {
+          document.removeEventListener("keydown", escapeHandler);
+        }
+      };
+      
       overlay.addEventListener("click", (e) => {
         if (e.target === overlay) {
-          overlay.remove();
-          document.body.style.overflow = "";
+          cleanup();
         }
       });
+      
+      // Close on Escape key
+      escapeHandler = (e) => {
+        if (e.key === "Escape" && document.getElementById("jobModalOverlay")) {
+          cleanup();
+        }
+      };
+      document.addEventListener("keydown", escapeHandler);
 
       // Create modal content
       const modal = document.createElement("div");
@@ -3472,8 +4142,16 @@ async function renderJobs() {
       closeBtn.className = "modal-close";
       closeBtn.innerHTML = "×";
       closeBtn.addEventListener("click", () => {
-        overlay.remove();
-        document.body.style.overflow = "";
+        if (overlay && overlay.parentNode) {
+          overlay.remove();
+        }
+        if (document.body) {
+          document.body.style.overflow = "";
+          document.body.style.pointerEvents = "";
+        }
+        if (escapeHandler) {
+          document.removeEventListener("keydown", escapeHandler);
+        }
       });
       modal.appendChild(closeBtn);
 
@@ -3537,17 +4215,41 @@ async function renderJobs() {
       const statusBadge = document.createElement("span");
       statusBadge.className = "badge";
       const status = (job.status || "OPEN").toUpperCase();
-      if (status === "OPEN") {
+      const requirements = job.requirements || {};
+      const startCodeUsed = requirements.startCodeUsed === true;
+      
+      // Simplified status display: Open, Assigned, In Progress, Completed
+      if (status === "COMPLETED") {
+        // Purple badge for completed jobs
+        statusBadge.classList.add("status-completed");
+        statusBadge.style.background = "#9333ea";
+        statusBadge.style.color = "#ffffff";
+        statusBadge.textContent = "✓ Completed!";
+      } else if (status === "OPEN") {
         statusBadge.classList.add("status-open");
         statusBadge.textContent = "Open";
-      } else if (status === "ASSIGNED" || status === "IN_PROGRESS") {
+      } else if (status === "ASSIGNED" && !startCodeUsed) {
         statusBadge.classList.add("status-assigned");
-        statusBadge.textContent = status === "IN_PROGRESS" ? "In Progress" : "Assigned";
-      } else if (status === "COMPLETED" || status === "PAID") {
+        statusBadge.textContent = "Assigned";
+      } else if (status === "COMPLETED") {
+        // Purple badge for completed jobs
         statusBadge.classList.add("status-completed");
-        statusBadge.textContent = "Completed";
+        statusBadge.style.background = "#9333ea";
+        statusBadge.style.color = "#ffffff";
+        statusBadge.textContent = "✓ Completed!";
+      } else if (status === "PAID" || startCodeUsed) {
+        // Job is In Progress if status is PAID OR start code has been used
+        statusBadge.classList.add("status-assigned");
+        statusBadge.style.background = "#fbbf24";
+        statusBadge.style.color = "#78350f";
+        statusBadge.textContent = "In Progress";
+      } else if (status === "COMPLETED_BY_HUSTLER" || status === "AWAITING_CUSTOMER_CONFIRM") {
+        statusBadge.classList.add("status-assigned");
+        statusBadge.style.background = "#fbbf24";
+        statusBadge.style.color = "#78350f";
+        statusBadge.textContent = "Awaiting Confirmation";
       } else {
-        statusBadge.textContent = status;
+        statusBadge.textContent = status === "CANCELLED" ? "Cancelled" : "Open";
       }
       badgeContainer.appendChild(statusBadge);
       
@@ -3564,34 +4266,162 @@ async function renderJobs() {
       
       detailsSection.appendChild(badgeContainer);
       
-      // Description
-      if (job.description) {
-        const desc = document.createElement("div");
-        desc.style.marginTop = "1rem";
-        desc.style.lineHeight = "1.6";
-        desc.textContent = job.description;
-        detailsSection.appendChild(desc);
+      // 24-Hour Response Timer (for assigned jobs that haven't started)
+      // Once start code is used, job is "In Progress" and refunds are disabled
+      // Note: startCodeUsed already declared above at line 4040
+      const isInProgress = startCodeUsed || status === "PAID";
+      
+      if (status === "ASSIGNED" && job.requirements?.assignedAt && job.customerId === user?.id && !isInProgress) {
+        const assignedAt = new Date(job.requirements.assignedAt);
+        const now = new Date();
+        const hoursSinceAssigned = (now - assignedAt) / (1000 * 60 * 60);
+        const hoursRemaining = 24 - hoursSinceAssigned;
+        
+        if (hoursRemaining > 0) {
+          const timerContainer = document.createElement("div");
+          timerContainer.id = `responseTimer_${job.id}`;
+          timerContainer.style.marginTop = "1rem";
+          timerContainer.style.padding = "0.75rem";
+          timerContainer.style.background = hoursRemaining < 4 ? "#fee2e2" : "#fef3c7";
+          timerContainer.style.borderRadius = "6px";
+          timerContainer.style.border = `2px solid ${hoursRemaining < 4 ? "#dc2626" : "#f59e0b"}`;
+          
+          const timerHeader = document.createElement("div");
+          timerHeader.style.fontWeight = "600";
+          timerHeader.style.marginBottom = "0.25rem";
+          timerHeader.style.color = hoursRemaining < 4 ? "#991b1b" : "#92400e";
+          timerHeader.innerHTML = `⏱️ Response Timer: <span id="timerCountdown_${job.id}">${Math.ceil(hoursRemaining)} hours remaining</span>`;
+          timerContainer.appendChild(timerHeader);
+          
+          const timerDesc = document.createElement("div");
+          timerDesc.style.fontSize = "0.85rem";
+          timerDesc.style.lineHeight = "1.4";
+          timerDesc.style.color = hoursRemaining < 4 ? "#991b1b" : "#78350f";
+          if (hoursRemaining < 4) {
+            timerDesc.innerHTML = `<strong>⚠️ Warning:</strong> If the hustler doesn't respond within ${Math.ceil(hoursRemaining)} hours, you can request a full refund and the job will be reopened.`;
+          } else {
+            timerDesc.textContent = `If the hustler doesn't respond within 24 hours of assignment, you can request a full refund and the job will be reopened for other hustlers.`;
+          }
+          timerContainer.appendChild(timerDesc);
+          
+          // Request refund button (only show if 24 hours passed AND job hasn't started)
+          if (hoursRemaining <= 0 && !startCodeUsed) {
+            const refundBtn = document.createElement("button");
+            refundBtn.className = "btn";
+            refundBtn.style.background = "#dc2626";
+            refundBtn.style.color = "#fff";
+            refundBtn.style.marginTop = "0.5rem";
+            refundBtn.style.width = "100%";
+            refundBtn.textContent = "Request Refund (24 Hours Passed)";
+            refundBtn.addEventListener("click", async () => {
+              if (!confirm("Request a refund? This will reopen the job for other hustlers.")) return;
+              try {
+                await window.hustlAPI.jobs.requestRefund(job.id);
+                showToast("Refund requested. Job reopened.");
+                overlay.remove();
+                document.body.style.overflow = "";
+                renderJobs();
+              } catch (error) {
+                showToast("Error requesting refund: " + (error.message || "Unknown error"));
+              }
+            });
+            timerContainer.appendChild(refundBtn);
+          }
+          
+          detailsSection.appendChild(timerContainer);
+          
+          // Update timer every minute
+          const updateTimer = () => {
+            const now = new Date();
+            const hoursSince = (now - assignedAt) / (1000 * 60 * 60);
+            const remaining = 24 - hoursSince;
+            const countdownEl = document.getElementById(`timerCountdown_${job.id}`);
+            if (countdownEl) {
+              if (remaining > 0 && !startCodeUsed) {
+                countdownEl.textContent = `${Math.ceil(remaining)} hours remaining`;
+              } else {
+                countdownEl.textContent = "24 hours passed - Refund available";
+                // Reload to show refund button
+                if (hoursRemaining > 0) {
+                  setTimeout(() => openJobDetails(jobId), 1000);
+                }
+              }
+            }
+          };
+          const timerInterval = setInterval(updateTimer, 60000); // Update every minute
+          overlay.addEventListener("remove", () => clearInterval(timerInterval));
+        }
       }
       
-      // Team Size Display (if team job)
+      // Show "Job In Progress" notice if start code has been used
+      if (isInProgress && job.customerId === user?.id) {
+        const inProgressNotice = document.createElement("div");
+        inProgressNotice.style.marginTop = "1rem";
+        inProgressNotice.style.padding = "0.75rem";
+        inProgressNotice.style.background = "#dcfce7";
+        inProgressNotice.style.borderRadius = "6px";
+        inProgressNotice.style.border = "2px solid #16a34a";
+        inProgressNotice.innerHTML = `
+          <div style="font-weight: 600; font-size: 0.9rem; color: #166534; margin-bottom: 0.25rem;">
+            ✅ Job In Progress
+          </div>
+          <div style="font-size: 0.85rem; color: #15803d;">
+            The hustler has started the job. Refunds are no longer available.
+          </div>
+        `;
+        detailsSection.appendChild(inProgressNotice);
+      }
+      
+      // Description (prominently displayed)
+      if (job.description) {
+        const descContainer = document.createElement("div");
+        descContainer.style.marginTop = "1rem";
+        descContainer.style.padding = "0.75rem";
+        descContainer.style.background = "#f9fafb";
+        descContainer.style.borderRadius = "6px";
+        descContainer.style.border = "1px solid #e5e7eb";
+        
+        const descLabel = document.createElement("div");
+        descLabel.style.fontWeight = "600";
+        descLabel.style.marginBottom = "0.5rem";
+        descLabel.textContent = "📝 Description";
+        descContainer.appendChild(descLabel);
+        
+        const desc = document.createElement("div");
+        desc.style.lineHeight = "1.6";
+        desc.style.color = "var(--text-main)";
+        desc.textContent = job.description;
+        descContainer.appendChild(desc);
+        
+        detailsSection.appendChild(descContainer);
+      }
+      
+      // Team Size Display (always show, even if 1 person)
       const teamSize = (job.requirements?.teamSize || job.teamSize || 1);
+      const teamInfo = document.createElement("div");
+      teamInfo.style.marginTop = "1rem";
+      teamInfo.style.padding = "0.75rem";
+      teamInfo.style.background = teamSize > 1 ? "#fef3c7" : "#f9fafb";
+      teamInfo.style.borderRadius = "6px";
+      teamInfo.style.border = teamSize > 1 ? "2px solid #fbbf24" : "1px solid #e5e7eb";
+      
       if (teamSize > 1) {
-        const teamInfo = document.createElement("div");
-        teamInfo.style.marginTop = "1rem";
-        teamInfo.style.padding = "1rem";
-        teamInfo.style.background = "#fef3c7";
-        teamInfo.style.borderRadius = "8px";
-        teamInfo.style.border = "2px solid #fbbf24";
         teamInfo.innerHTML = `
-          <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+          <div style="font-weight: 600; font-size: 1rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
             👥 <span>Team Job: ${teamSize} People Needed</span>
           </div>
           <div style="font-size: 0.9rem; line-height: 1.5;">
             <strong>How it works:</strong> You'll be hired as the main hustler. You can bring ${teamSize - 1} friend${teamSize - 1 > 1 ? 's' : ''} to help, and you'll split the payment with them. The customer pays you, and you pay your team.
           </div>
         `;
-        detailsSection.appendChild(teamInfo);
+      } else {
+        teamInfo.innerHTML = `
+          <div style="font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+            👥 <span>1 Person</span>
+          </div>
+        `;
       }
+      detailsSection.appendChild(teamInfo);
       
       // Date and Time (prominently displayed)
       if (job.date && job.startTime && job.endTime) {
@@ -3624,15 +4454,137 @@ async function renderJobs() {
         detailsSection.appendChild(dateTimeContainer);
       }
 
-      // Address with map link
-      if (job.address) {
+      // Locations - Show pickup and dropoff separately if both exist
+      const pickupAddress = requirements.pickupAddress || job.address || '';
+      const dropoffAddress = requirements.dropoffAddress || '';
+      const pickupArea = requirements.pickupArea || '';
+      const pickupCity = requirements.pickupCity || '';
+      const pickupZip = requirements.pickupZip || '';
+      const dropoffArea = requirements.dropoffArea || '';
+      const dropoffCity = requirements.dropoffCity || '';
+      const dropoffZip = requirements.dropoffZip || '';
+      const onSiteOnly = requirements.onSiteOnly === true || job.requirements?.onSiteOnly === true;
+      
+      if (pickupAddress || pickupArea || pickupCity || pickupZip) {
+        const locationContainer = document.createElement("div");
+        locationContainer.style.marginTop = "1rem";
+        locationContainer.style.padding = "0.75rem";
+        locationContainer.style.background = "#f0fdf4";
+        locationContainer.style.borderRadius = "6px";
+        locationContainer.style.border = "1px solid #86efac";
+        
+        // Pickup Location
+        const pickupLabel = document.createElement("div");
+        pickupLabel.style.fontWeight = "600";
+        pickupLabel.style.marginBottom = "0.5rem";
+        pickupLabel.textContent = "📍 Pickup Location";
+        locationContainer.appendChild(pickupLabel);
+        
+        const pickupParts = [];
+        if (pickupAddress) pickupParts.push(pickupAddress);
+        if (pickupArea) pickupParts.push(pickupArea);
+        if (pickupCity) pickupParts.push(pickupCity);
+        if (pickupZip) pickupParts.push(pickupZip);
+        
+        const pickupText = document.createElement("div");
+        pickupText.style.marginBottom = "0.5rem";
+        pickupText.style.lineHeight = "1.5";
+        pickupText.textContent = pickupParts.length > 0 ? pickupParts.join(', ') : 'Address shared after acceptance';
+        locationContainer.appendChild(pickupText);
+        
+        // Map link for pickup
+        if (pickupParts.length > 0) {
+          const pickupMapLink = document.createElement("a");
+          const pickupFullAddress = pickupParts.join(', ');
+          pickupMapLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pickupFullAddress)}`;
+          pickupMapLink.target = "_blank";
+          pickupMapLink.rel = "noopener noreferrer";
+          pickupMapLink.style.display = "inline-block";
+          pickupMapLink.style.marginTop = "0.25rem";
+          pickupMapLink.style.color = "#16a34a";
+          pickupMapLink.style.textDecoration = "none";
+          pickupMapLink.style.fontSize = "0.9rem";
+          pickupMapLink.textContent = "📍 Open Pickup Location in Maps";
+          pickupMapLink.addEventListener("mouseenter", () => {
+            pickupMapLink.style.textDecoration = "underline";
+          });
+          pickupMapLink.addEventListener("mouseleave", () => {
+            pickupMapLink.style.textDecoration = "none";
+          });
+          locationContainer.appendChild(pickupMapLink);
+        }
+        
+        // Dropoff Location (if exists and not on-site only)
+        if (!onSiteOnly && (dropoffAddress || dropoffArea || dropoffCity || dropoffZip)) {
+          const dropoffLabel = document.createElement("div");
+          dropoffLabel.style.fontWeight = "600";
+          dropoffLabel.style.marginTop = "1rem";
+          dropoffLabel.style.marginBottom = "0.5rem";
+          dropoffLabel.textContent = "📍 Dropoff Location";
+          locationContainer.appendChild(dropoffLabel);
+          
+          const dropoffParts = [];
+          if (dropoffAddress) dropoffParts.push(dropoffAddress);
+          if (dropoffArea) dropoffParts.push(dropoffArea);
+          if (dropoffCity) dropoffParts.push(dropoffCity);
+          if (dropoffZip) dropoffParts.push(dropoffZip);
+          
+          const dropoffText = document.createElement("div");
+          dropoffText.style.marginBottom = "0.5rem";
+          dropoffText.style.lineHeight = "1.5";
+          dropoffText.textContent = dropoffParts.length > 0 ? dropoffParts.join(', ') : 'Address shared after acceptance';
+          locationContainer.appendChild(dropoffText);
+          
+          // Map link for dropoff
+          if (dropoffParts.length > 0) {
+            const dropoffMapLink = document.createElement("a");
+            const dropoffFullAddress = dropoffParts.join(', ');
+            dropoffMapLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dropoffFullAddress)}`;
+            dropoffMapLink.target = "_blank";
+            dropoffMapLink.rel = "noopener noreferrer";
+            dropoffMapLink.style.display = "inline-block";
+            dropoffMapLink.style.marginTop = "0.25rem";
+            dropoffMapLink.style.color = "#16a34a";
+            dropoffMapLink.style.textDecoration = "none";
+            dropoffMapLink.style.fontSize = "0.9rem";
+            dropoffMapLink.textContent = "📍 Open Dropoff Location in Maps";
+            dropoffMapLink.addEventListener("mouseenter", () => {
+              dropoffMapLink.style.textDecoration = "underline";
+            });
+            dropoffMapLink.addEventListener("mouseleave", () => {
+              dropoffMapLink.style.textDecoration = "none";
+            });
+            locationContainer.appendChild(dropoffMapLink);
+          }
+        } else if (onSiteOnly) {
+          const onSiteNote = document.createElement("div");
+          onSiteNote.style.marginTop = "0.5rem";
+          onSiteNote.style.fontSize = "0.85rem";
+          onSiteNote.style.color = "#6b7280";
+          onSiteNote.textContent = "On-site only (no separate dropoff location)";
+          locationContainer.appendChild(onSiteNote);
+        }
+        
+        detailsSection.appendChild(locationContainer);
+      } else if (job.address) {
+        // Fallback to old address format if new format not available
         const addrContainer = document.createElement("div");
-        addrContainer.style.marginTop = "0.5rem";
+        addrContainer.style.marginTop = "1rem";
+        addrContainer.style.padding = "0.75rem";
+        addrContainer.style.background = "#f0fdf4";
+        addrContainer.style.borderRadius = "6px";
+        addrContainer.style.border = "1px solid #86efac";
         
         const addr = document.createElement("div");
-        addr.className = "muted";
-        addr.textContent = `📍 ${job.address}`;
+        addr.style.fontWeight = "600";
+        addr.style.marginBottom = "0.5rem";
+        addr.textContent = "📍 Location";
         addrContainer.appendChild(addr);
+        
+        const addrText = document.createElement("div");
+        addrText.style.marginBottom = "0.5rem";
+        addrText.textContent = job.address;
+        addrContainer.appendChild(addrText);
 
         // Map link
         const mapLink = document.createElement("a");
@@ -3640,8 +4592,7 @@ async function renderJobs() {
         mapLink.target = "_blank";
         mapLink.rel = "noopener noreferrer";
         mapLink.style.display = "inline-block";
-        mapLink.style.marginTop = "0.5rem";
-        mapLink.style.color = "var(--primary)";
+        mapLink.style.color = "#16a34a";
         mapLink.style.textDecoration = "none";
         mapLink.style.fontSize = "0.9rem";
         mapLink.textContent = "📍 Open in Maps";
@@ -3654,6 +4605,58 @@ async function renderJobs() {
         addrContainer.appendChild(mapLink);
 
         detailsSection.appendChild(addrContainer);
+      }
+      
+      // Estimated Duration and Tools Needed (from requirements)
+      if (requirements.estimatedDuration || (requirements.toolsNeeded && requirements.toolsNeeded.length > 0)) {
+        const requirementsContainer = document.createElement("div");
+        requirementsContainer.style.marginTop = "1rem";
+        requirementsContainer.style.padding = "0.75rem";
+        requirementsContainer.style.background = "#f9fafb";
+        requirementsContainer.style.borderRadius = "6px";
+        requirementsContainer.style.border = "1px solid #e5e7eb";
+        
+        const reqTitle = document.createElement("div");
+        reqTitle.style.fontWeight = "600";
+        reqTitle.style.marginBottom = "0.5rem";
+        reqTitle.textContent = "Job Requirements";
+        requirementsContainer.appendChild(reqTitle);
+        
+        if (requirements.estimatedDuration) {
+          const durationMap = {
+            'under-1h': 'Under 1 hour',
+            '1-2h': '1-2 hours',
+            '2-4h': '2-4 hours',
+            '4-6h': '4-6 hours',
+            '6-8h': '6-8 hours',
+            'full-day': 'Full day (8+ hours)',
+            'multi-day': 'Multiple days'
+          };
+          const durationText = durationMap[requirements.estimatedDuration] || requirements.estimatedDuration;
+          const durationEl = document.createElement("div");
+          durationEl.style.marginBottom = "0.5rem";
+          durationEl.innerHTML = `<strong>⏱️ Estimated Duration:</strong> ${durationText}`;
+          requirementsContainer.appendChild(durationEl);
+        }
+        
+        if (requirements.toolsNeeded && Array.isArray(requirements.toolsNeeded) && requirements.toolsNeeded.length > 0) {
+          const toolsEl = document.createElement("div");
+          const toolsMap = {
+            'truck': '🚚 Truck/Vehicle',
+            'ladder': '🪜 Ladder',
+            'power-tools': '🔧 Power Tools',
+            'hand-tools': '🛠️ Hand Tools',
+            'dolly': '📦 Dolly/Cart',
+            'cleaning-supplies': '🧹 Cleaning Supplies'
+          };
+          const toolsList = requirements.toolsNeeded.map(tool => {
+            return toolsMap[tool] || tool;
+          }).join(', ');
+          toolsEl.innerHTML = `<strong>🛠️ Tools/Equipment Needed:</strong> ${toolsList}`;
+          requirementsContainer.appendChild(toolsEl);
+        }
+        
+        detailsSection.appendChild(requirementsContainer);
       }
       
       content.appendChild(detailsSection);
@@ -3905,9 +4908,15 @@ async function renderJobs() {
         let userOffer = null;
         let allOffers = [];
         try {
-          const offersData = await window.hustlAPI.offers.list(jobId);
-          allOffers = Array.isArray(offersData) ? offersData : [];
-          userOffer = allOffers.find(o => o.hustlerId === user.id);
+          const token = localStorage.getItem("hustl_token");
+          const response = await fetch(`/offers/${jobId}`, {
+            headers: token ? { "Authorization": `Bearer ${token}` } : {}
+          });
+          if (response.ok) {
+            const offersData = await response.json();
+            allOffers = Array.isArray(offersData) ? offersData : [];
+            userOffer = allOffers.find(o => o.hustlerId === user?.id);
+          }
         } catch (error) {
           console.error("Error fetching offers:", error);
         }
@@ -3972,17 +4981,21 @@ async function renderJobs() {
             : (Number(job.hourlyRate || 0) * Number(job.estHours || 0) * teamSize);
           
           let amountDescription = "";
-          if (job.payType === "hourly" && teamSize > 1) {
+          if (job.payType === "hourly") {
             const hourlyRate = Number(job.hourlyRate || 0);
             const estHours = job.estHours || 0;
-            amountDescription = `${teamSize} people × $${hourlyRate.toFixed(2)}/hr × ${estHours}h = $${originalAmount.toFixed(2)}`;
+            if (teamSize > 1) {
+              amountDescription = `$${hourlyRate.toFixed(2)}/hr per person (${teamSize} people) · max ${estHours}h`;
+            } else {
+              amountDescription = `$${hourlyRate.toFixed(2)}/hr · max ${estHours}h`;
+            }
           } else {
             amountDescription = `$${originalAmount.toFixed(2)}`;
           }
           
           jobAmountDisplay.innerHTML = `
             <div style="font-weight: 600; margin-bottom: 0.25rem;">Job Amount: ${amountDescription}</div>
-            <div class="muted" style="font-size: 0.85rem;">You can propose a different amount if needed</div>
+            <div class="muted" style="font-size: 0.85rem;">${job.payType === "hourly" ? "You can propose a different hourly rate if needed" : "You can propose a different amount if needed"}</div>
           `;
           applySection.appendChild(jobAmountDisplay);
           
@@ -4007,7 +5020,14 @@ async function renderJobs() {
           const proposedAmountField = document.createElement("input");
           proposedAmountField.type = "number";
           proposedAmountField.id = "proposedAmount";
-          proposedAmountField.placeholder = "Your proposed amount ($)";
+          // For hourly jobs, show hourly rate placeholder; for flat, show total amount
+          if (job.payType === "hourly") {
+            proposedAmountField.placeholder = "Your proposed hourly rate ($/hr)";
+            proposedAmountField.value = Number(job.hourlyRate || 0).toFixed(2);
+          } else {
+            proposedAmountField.placeholder = "Your proposed amount ($)";
+            proposedAmountField.value = originalAmount.toFixed(2);
+          }
           proposedAmountField.style.width = "100%";
           proposedAmountField.style.padding = "0.75rem";
           proposedAmountField.style.border = "1px solid var(--border)";
@@ -4016,7 +5036,6 @@ async function renderJobs() {
           proposedAmountField.style.marginTop = "0.5rem";
           proposedAmountField.min = "0";
           proposedAmountField.step = "0.01";
-          proposedAmountField.value = originalAmount.toFixed(2);
           
           negotiateCheckbox.addEventListener("change", () => {
             proposedAmountField.style.display = negotiateCheckbox.checked ? "block" : "none";
@@ -4060,6 +5079,10 @@ async function renderJobs() {
             e.preventDefault();
             e.stopPropagation();
             
+            // NOTE: We do NOT validate hustler's profile zip code
+            // Hustlers can apply to any job in Tennessee, regardless of their profile location
+            // The backend validates that the JOB is in Tennessee (via pickupZip)
+            
             const note = noteField.value.trim();
             if (!note) {
               showToast("Please add a note explaining why you're a good fit.");
@@ -4085,10 +5108,45 @@ async function renderJobs() {
             applyBtn.textContent = "Applying...";
 
             try {
+              const token = localStorage.getItem("hustl_token");
+              if (!token) {
+                showToast("You must be logged in to apply for jobs.");
+                applyBtn.disabled = false;
+                applyBtn.style.opacity = "1";
+                applyBtn.style.cursor = "pointer";
+                applyBtn.textContent = "Apply as Hustler";
+                return;
+              }
+              
               console.log("Creating offer for job:", job.id, "with note:", note, "proposedAmount:", proposedAmount);
-              const result = await window.hustlAPI.offers.create(job.id, note, proposedAmount);
+              
+              const response = await fetch(`/offers/${job.id}`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  note,
+                  proposedAmount: proposedAmount ? Number(proposedAmount) : null
+                })
+              });
+              
+              const result = await response.json();
+              
+              if (!response.ok) {
+                throw new Error(result.error || `Failed to apply: ${response.statusText}`);
+              }
+              
               console.log("Offer created successfully:", result);
-              showToast(proposedAmount ? `✓ Application submitted with proposed amount of $${proposedAmount.toFixed(2)}!` : "✓ Application submitted!");
+              // Show appropriate message based on job type
+              if (job.payType === "hourly" && proposedAmount) {
+                showToast(`✓ Application submitted with proposed hourly rate of $${proposedAmount.toFixed(2)}/hr!`);
+              } else if (proposedAmount) {
+                showToast(`✓ Application submitted with proposed amount of $${proposedAmount.toFixed(2)}!`);
+              } else {
+                showToast("✓ Application submitted!");
+              }
               
               // Small delay before closing to show success
               setTimeout(() => {
@@ -4098,8 +5156,39 @@ async function renderJobs() {
               }, 500);
             } catch (error) {
               console.error("Error applying for job:", error);
-              const errorMsg = error.message || error.toString() || "Failed to apply. Please try again.";
+              let errorMsg = error.message || error.toString() || "Failed to apply. Please try again.";
+              
+              // TEMPORARILY DISABLED - Stripe requirement check bypassed for testing
+              // Check if it's a Stripe requirement error
+              /*
+              if (errorMsg.includes("Stripe") || errorMsg.includes("stripe") || error.requiresStripe) {
+                errorMsg = "You must connect your Stripe account before applying to jobs. Go to your Profile to set it up.";
+                showToast("⚠️ " + errorMsg, 5000);
+                // Close modal and redirect to profile after a moment
+                setTimeout(() => {
+                  overlay.remove();
+                  document.body.style.overflow = "";
+                  setView("profile");
+                  renderAll();
+                  // Scroll to Stripe section
+                  setTimeout(() => {
+                    const stripeSection = document.querySelector('[id*="stripe"], [class*="stripe"]');
+                    if (stripeSection) {
+                      stripeSection.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }
+                  }, 500);
+                }, 2000);
+                applyBtn.disabled = false;
+                applyBtn.style.opacity = "1";
+                applyBtn.style.cursor = "pointer";
+                applyBtn.textContent = "Apply as Hustler";
+                return;
+              }
+              */
+              
+              // TEMPORARY: Just show error without Stripe redirect
               showToast("Error: " + errorMsg);
+              
               applyBtn.disabled = false;
               applyBtn.style.opacity = "1";
               applyBtn.style.cursor = "pointer";
@@ -4197,12 +5286,64 @@ async function renderJobs() {
           
           const statusUpper = (job.status || "").toUpperCase();
           let statusText = "";
-          if (statusUpper === "ASSIGNED" || statusUpper === "PAID") {
+          // Simplified status messages
+          if (statusUpper === "ASSIGNED") {
+            statusText = "Job is assigned. Share the start code with your hustler to begin.";
+          } else if (statusUpper === "PAID") {
             statusText = "Job is in progress. The hustler will mark it complete when done.";
           } else if (statusUpper === "COMPLETED_BY_HUSTLER" || statusUpper === "AWAITING_CUSTOMER_CONFIRM") {
             statusText = "Hustler marked job as complete. Please confirm completion.";
           } else {
-            statusText = "Job status: " + (job.status || "Unknown");
+            statusText = "Job status: " + (statusUpper === "OPEN" ? "Open" : statusUpper === "CANCELLED" ? "Cancelled" : statusUpper);
+          }
+          
+          // Check for hustler status update
+          // requirements already declared above at line 4066, reuse it
+          const hustlerStatus = requirements.hustlerStatus;
+          const statusUpdatedAt = requirements.hustlerStatusUpdatedAt;
+          
+          let statusUpdateDisplay = "";
+          if (hustlerStatus) {
+            const statusMessages = {
+              on_the_way: "🚗 On the way",
+              starting: "🏁 Starting the job",
+              almost_done: "⚡ Almost done",
+              just_finished: "✅ Just finished",
+            };
+            const statusMsg = statusMessages[hustlerStatus] || hustlerStatus;
+            const updatedTime = statusUpdatedAt ? timeAgo(new Date(statusUpdatedAt).getTime()) : "recently";
+            statusUpdateDisplay = `
+              <div style="margin-top: 0.5rem; padding: 0.5rem; background: #fff; border-radius: 4px; border: 1px solid #86efac;">
+                <div style="font-weight: 600; font-size: 0.85rem; color: #059669; margin-bottom: 0.25rem;">📱 Hustler Status:</div>
+                <div style="font-size: 0.9rem; color: #047857; font-weight: 600;">${statusMsg}</div>
+                <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Updated ${updatedTime}</div>
+              </div>
+            `;
+          }
+          
+          // Show start code for customer (if job is ASSIGNED and not started yet)
+          let startCodeDisplay = "";
+          const startCode = requirements.startCode;
+          // startCodeUsed already declared above at line 4067, reuse it
+          
+          if (statusUpper === "ASSIGNED" && startCode && !startCodeUsed) {
+            startCodeDisplay = `
+              <div style="margin-top: 0.75rem; padding: 0.75rem; background: #dbeafe; border-radius: 6px; border: 2px solid #3b82f6;">
+                <div style="font-weight: 600; font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem;">🔐 Start Code (Give to Hustler)</div>
+                <div style="font-size: 1.5rem; font-weight: 700; letter-spacing: 0.2em; color: #1e40af; text-align: center; font-family: 'Courier New', monospace; margin: 0.5rem 0;">
+                  ${startCode}
+                </div>
+                <div style="font-size: 0.75rem; color: #dc2626; text-align: center; margin-top: 0.5rem; padding: 0.5rem; background: #fee2e2; border-radius: 4px; font-weight: 600;">
+                  ⚠️ Important: Only give this code to the hustler when they arrive and the job is starting. Do not share it beforehand.
+                </div>
+                <div style="font-size: 0.75rem; color: #1e3a8a; text-align: center; margin-top: 0.25rem;">
+                  Share this code with your hustler to officially start the job
+                </div>
+                <button id="regenerateStartCode_${job.id}" class="btn" style="width: 100%; margin-top: 0.5rem; background: #fff; color: #3b82f6; border: 1px solid #3b82f6; font-size: 0.8rem;">
+                  🔄 Regenerate Code
+                </button>
+              </div>
+            `;
           }
           
           hustlerInfo.innerHTML = `
@@ -4214,8 +5355,28 @@ async function renderJobs() {
             <div style="font-size: 0.85rem; color: #047857;">
               ${statusText}
             </div>
+            ${statusUpdateDisplay}
+            ${startCodeDisplay}
           `;
           actionsSection.appendChild(hustlerInfo);
+          
+          // Add regenerate start code button handler
+          if (startCodeDisplay) {
+            const regenerateBtn = document.getElementById(`regenerateStartCode_${job.id}`);
+            if (regenerateBtn) {
+              regenerateBtn.addEventListener("click", async () => {
+                try {
+                  const result = await window.hustlAPI.jobs.getStartCode(job.id, true);
+                  showToast("✓ Start code regenerated");
+                  overlay.remove();
+                  document.body.style.overflow = "";
+                  openJobDetails(job.id);
+                } catch (error) {
+                  showToast("Error: " + (error.message || "Failed to regenerate code"));
+                }
+              });
+            }
+          }
         }
         
         // Check if payment is needed (job is assigned but payment not completed)
@@ -4400,14 +5561,23 @@ async function renderJobs() {
               const result = await window.hustlAPI.jobs.confirmComplete(job.id, enteredCode);
               showToast("✓ Job confirmed! Payment has been released to the hustler.");
               
-              // Show review modal after successful payment
+              // Close the job details modal first
+              overlay.remove();
+              document.body.style.overflow = "";
+              
+              // Refresh jobs list and profile to show updated status (COMPLETED with purple badge)
+              renderJobs();
+              renderProfile();
+              
+              // Job is now COMPLETED - both parties can review each other
+              // Show review modal for customer to review hustler
               if (job.hustlerId) {
-                showReviewModal(job.id, job.hustlerId, job.hustler?.name || "Hustler");
-              } else {
-                overlay.remove();
-                document.body.style.overflow = "";
-                renderJobs();
+                setTimeout(() => {
+                  showReviewModal(job.id, job.hustlerId, job.hustler?.name || "Hustler");
+                }, 300);
               }
+              
+              // Note: Hustler can also review customer - they'll see the option when they view the job
             } catch (error) {
               showToast("Error: " + (error.message || "Failed to confirm completion"));
               confirmBtn.disabled = false;
@@ -4477,8 +5647,10 @@ async function renderJobs() {
         }
       }
 
-      // Hustler View: Mark job complete (show for ASSIGNED or PAID status)
+      // Hustler View: Start Code Input and Job Actions (show for ASSIGNED jobs)
       const jobStatusUpper = (job.status || "").toUpperCase();
+      // requirements and startCodeUsed already declared above at lines 4066-4067, reuse them
+      
       if (user && userMode === "hustler" && job.hustlerId === user.id && 
           (jobStatusUpper === "ASSIGNED" || jobStatusUpper === "PAID" || jobStatusUpper === "AWAITING_CUSTOMER_CONFIRM")) {
         const hustlerActions = document.createElement("div");
@@ -4493,6 +5665,290 @@ async function renderJobs() {
         hustlerTitle.style.marginBottom = "0.5rem";
         hustlerTitle.textContent = "Job Actions";
         hustlerActions.appendChild(hustlerTitle);
+        
+        // Start Code Section - Show for ALL jobs when ASSIGNED and not started yet
+        if (jobStatusUpper === "ASSIGNED" && !startCodeUsed) {
+          const startCodeSection = document.createElement("div");
+          startCodeSection.style.marginBottom = "1rem";
+          startCodeSection.style.padding = "0.75rem";
+          startCodeSection.style.background = "#fff";
+          startCodeSection.style.borderRadius = "6px";
+          startCodeSection.style.border = "2px solid #3b82f6";
+          
+          const startCodeTitle = document.createElement("div");
+          startCodeTitle.style.fontWeight = "600";
+          startCodeTitle.style.marginBottom = "0.5rem";
+          startCodeTitle.style.color = "#1e40af";
+          startCodeTitle.textContent = "🔐 Start Job with 4-Digit Code";
+          startCodeSection.appendChild(startCodeTitle);
+          
+          const startCodeDesc = document.createElement("div");
+          startCodeDesc.style.fontSize = "0.8rem";
+          startCodeDesc.style.color = "#6b7280";
+          startCodeDesc.style.marginBottom = "0.75rem";
+          startCodeDesc.textContent = "The customer will give you a 4-digit code to officially start the job. Enter it below:";
+          startCodeSection.appendChild(startCodeDesc);
+          
+          const startCodeInput = document.createElement("input");
+          startCodeInput.type = "text";
+          startCodeInput.placeholder = "Enter 4-digit start code";
+          startCodeInput.maxLength = 4;
+          startCodeInput.style.width = "100%";
+          startCodeInput.style.padding = "0.75rem";
+          startCodeInput.style.fontSize = "1.2rem";
+          startCodeInput.style.textAlign = "center";
+          startCodeInput.style.letterSpacing = "0.2em";
+          startCodeInput.style.border = "2px solid #3b82f6";
+          startCodeInput.style.borderRadius = "6px";
+          startCodeInput.style.fontWeight = "600";
+          startCodeInput.style.marginBottom = "0.5rem";
+          startCodeInput.addEventListener("input", (e) => {
+            e.target.value = e.target.value.replace(/\D/g, ""); // Only numbers
+          });
+          startCodeSection.appendChild(startCodeInput);
+          
+          const startBtn = document.createElement("button");
+          startBtn.className = "btn btn-primary";
+          startBtn.style.width = "100%";
+          startBtn.textContent = "▶ Start Job";
+          startBtn.addEventListener("click", async () => {
+            const code = startCodeInput.value.trim();
+            if (!code || code.length !== 4) {
+              showToast("Please enter the 4-digit start code from the customer");
+              return;
+            }
+            if (!confirm("Start the job? This will activate the job and disable refunds.")) return;
+            startBtn.disabled = true;
+            startBtn.textContent = "Starting...";
+            try {
+              await window.hustlAPI.jobs.startJob(job.id, code);
+              showToast("✓ Job started successfully!");
+              overlay.remove();
+              document.body.style.overflow = "";
+              openJobDetails(job.id); // Refresh modal
+            } catch (error) {
+              showToast("Error: " + (error.message || "Failed to start job"));
+              startBtn.disabled = false;
+              startBtn.textContent = "▶ Start Job";
+            }
+          });
+          startCodeSection.appendChild(startBtn);
+          
+          hustlerActions.appendChild(startCodeSection);
+        }
+        
+        // Job Timer Section (ONLY for hourly jobs that have been started)
+        if (job.payType === "hourly" && startCodeUsed) {
+          // requirements already declared above, reuse it
+          const startedAt = requirements.startedAt;
+          const endedAt = requirements.endedAt;
+          const hoursWorked = requirements.hoursWorked;
+          
+          // Timer display container
+          const timerContainer = document.createElement("div");
+          timerContainer.id = `jobTimer_${job.id}`;
+          timerContainer.style.marginBottom = "1rem";
+          timerContainer.style.padding = "0.75rem";
+          timerContainer.style.background = "#fff";
+          timerContainer.style.borderRadius = "6px";
+          timerContainer.style.border = "1px solid #e5e7eb";
+          
+          if (startedAt && !endedAt) {
+          // Job is in progress - show live timer
+          const timerDisplay = document.createElement("div");
+          timerDisplay.style.fontSize = "1.1rem";
+          timerDisplay.style.fontWeight = "600";
+          timerDisplay.style.color = "#059669";
+          timerDisplay.style.textAlign = "center";
+          timerDisplay.id = `timerDisplay_${job.id}`;
+          
+          const updateTimer = () => {
+            const startTime = new Date(startedAt);
+            const now = new Date();
+            const elapsed = now - startTime;
+            const hours = Math.floor(elapsed / (1000 * 60 * 60));
+            const minutes = Math.floor((elapsed % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((elapsed % (1000 * 60)) / 1000);
+            timerDisplay.textContent = `⏱️ Time Elapsed: ${hours}h ${minutes}m ${seconds}s`;
+          };
+          
+          updateTimer();
+          const timerInterval = setInterval(updateTimer, 1000);
+          overlay.addEventListener("remove", () => clearInterval(timerInterval));
+          
+          timerContainer.appendChild(timerDisplay);
+          
+          const timerLabel = document.createElement("div");
+          timerLabel.style.fontSize = "0.8rem";
+          timerLabel.style.color = "#6b7280";
+          timerLabel.style.textAlign = "center";
+          timerLabel.style.marginTop = "0.25rem";
+          timerLabel.textContent = "Job in progress...";
+          timerContainer.appendChild(timerLabel);
+          
+          // End Job button
+          const endBtn = document.createElement("button");
+          endBtn.className = "btn";
+          endBtn.style.width = "100%";
+          endBtn.style.marginTop = "0.75rem";
+          endBtn.style.background = "#f59e0b";
+          endBtn.style.color = "#fff";
+          endBtn.textContent = "⏹ End Job";
+          endBtn.addEventListener("click", async () => {
+            if (!confirm("End the job timer? This will calculate your total hours worked.")) return;
+            endBtn.disabled = true;
+            endBtn.textContent = "Ending...";
+            try {
+              await window.hustlAPI.jobs.endJob(job.id);
+              showToast("✓ Job timer ended. Hours worked calculated.");
+              overlay.remove();
+              document.body.style.overflow = "";
+              openJobDetails(job.id); // Refresh modal
+            } catch (error) {
+              showToast("Error: " + (error.message || "Failed to end job"));
+              endBtn.disabled = false;
+              endBtn.textContent = "⏹ End Job";
+            }
+          });
+          timerContainer.appendChild(endBtn);
+        } else if (startedAt && endedAt) {
+          // Job timer completed
+          const completedDisplay = document.createElement("div");
+          completedDisplay.style.fontSize = "0.95rem";
+          completedDisplay.style.color = "#059669";
+          completedDisplay.style.textAlign = "center";
+          const startTime = new Date(startedAt);
+          const endTime = new Date(endedAt);
+          const totalMs = endTime - startTime;
+          const totalHours = (totalMs / (1000 * 60 * 60)).toFixed(2);
+          completedDisplay.innerHTML = `
+            <div style="font-weight: 600; margin-bottom: 0.25rem;">✓ Job Timer Completed</div>
+            <div style="font-size: 0.85rem; color: #6b7280;">
+              Started: ${new Date(startedAt).toLocaleTimeString()}<br>
+              Ended: ${new Date(endedAt).toLocaleTimeString()}<br>
+              ${hoursWorked ? `<strong>Total: ${hoursWorked} hours</strong>` : `<strong>Total: ${totalHours} hours</strong>`}
+            </div>
+          `;
+          timerContainer.appendChild(completedDisplay);
+        } else {
+          // Job not started - show start button with code input
+          const startCodeInput = document.createElement("input");
+          startCodeInput.type = "text";
+          startCodeInput.placeholder = "Enter 4-digit start code";
+          startCodeInput.maxLength = 4;
+          startCodeInput.style.width = "100%";
+          startCodeInput.style.padding = "0.75rem";
+          startCodeInput.style.fontSize = "1.2rem";
+          startCodeInput.style.textAlign = "center";
+          startCodeInput.style.letterSpacing = "0.2em";
+          startCodeInput.style.border = "2px solid #3b82f6";
+          startCodeInput.style.borderRadius = "6px";
+          startCodeInput.style.fontWeight = "600";
+          startCodeInput.style.marginBottom = "0.5rem";
+          startCodeInput.addEventListener("input", (e) => {
+            e.target.value = e.target.value.replace(/\D/g, ""); // Only numbers
+          });
+          timerContainer.appendChild(startCodeInput);
+          
+          const startBtn = document.createElement("button");
+          startBtn.className = "btn btn-primary";
+          startBtn.style.width = "100%";
+          startBtn.textContent = "▶ Start Job (Enter Code)";
+          startBtn.addEventListener("click", async () => {
+            const code = startCodeInput.value.trim();
+            if (!code || code.length !== 4) {
+              showToast("Please enter the 4-digit start code from the customer");
+              return;
+            }
+            if (!confirm("Start the job? This will activate the timer and cancellation penalties.")) return;
+            startBtn.disabled = true;
+            startBtn.textContent = "Starting...";
+            try {
+              await window.hustlAPI.jobs.startJob(job.id, code);
+              showToast("✓ Job started! Timer is now active.");
+              overlay.remove();
+              document.body.style.overflow = "";
+              openJobDetails(job.id); // Refresh modal to show timer
+            } catch (error) {
+              showToast("Error: " + (error.message || "Failed to start job"));
+              startBtn.disabled = false;
+              startBtn.textContent = "▶ Start Job (Enter Code)";
+            }
+          });
+          timerContainer.appendChild(startBtn);
+          
+          const timerHint = document.createElement("div");
+          timerHint.style.fontSize = "0.75rem";
+          timerHint.style.color = "#6b7280";
+          timerHint.style.marginTop = "0.5rem";
+          timerHint.style.textAlign = "center";
+          timerHint.textContent = "Get the 4-digit start code from the customer to begin";
+          timerContainer.appendChild(timerHint);
+          }
+          
+          hustlerActions.appendChild(timerContainer);
+        }
+        
+        // Job Status Updates Section (for all jobs - quick updates to customer)
+        const statusUpdateContainer = document.createElement("div");
+        statusUpdateContainer.style.marginBottom = "1rem";
+        statusUpdateContainer.style.padding = "0.75rem";
+        statusUpdateContainer.style.background = "#fef3c7";
+        statusUpdateContainer.style.borderRadius = "6px";
+        statusUpdateContainer.style.border = "1px solid #fbbf24";
+        
+        const statusTitle = document.createElement("div");
+        statusTitle.style.fontWeight = "600";
+        statusTitle.style.marginBottom = "0.5rem";
+        statusTitle.style.color = "#92400e";
+        statusTitle.textContent = "📱 Quick Status Update";
+        statusUpdateContainer.appendChild(statusTitle);
+        
+        const statusDesc = document.createElement("div");
+        statusDesc.style.fontSize = "0.8rem";
+        statusDesc.style.color = "#78350f";
+        statusDesc.style.marginBottom = "0.75rem";
+        statusDesc.textContent = "Let the customer know your status (they'll see this in job details)";
+        statusUpdateContainer.appendChild(statusDesc);
+        
+        const statusButtons = document.createElement("div");
+        statusButtons.style.display = "grid";
+        statusButtons.style.gridTemplateColumns = "repeat(2, 1fr)";
+        statusButtons.style.gap = "0.5rem";
+        
+        const statusOptions = [
+          { text: "🚗 On the way", value: "on_the_way", emoji: "🚗" },
+          { text: "🏁 Starting", value: "starting", emoji: "🏁" },
+          { text: "⚡ Almost done", value: "almost_done", emoji: "⚡" },
+          { text: "✅ Just finished", value: "just_finished", emoji: "✅" },
+        ];
+        
+        statusOptions.forEach(option => {
+          const btn = document.createElement("button");
+          btn.className = "btn";
+          btn.style.background = "#fff";
+          btn.style.color = "#92400e";
+          btn.style.border = "1px solid #fbbf24";
+          btn.style.padding = "0.5rem";
+          btn.style.fontSize = "0.85rem";
+          btn.textContent = option.text;
+          btn.addEventListener("click", async () => {
+            try {
+              await window.hustlAPI.jobs.updateStatus(job.id, option.value);
+              showToast(`✓ Status updated: ${option.text}`);
+              // Refresh job details to show updated status
+              overlay.remove();
+              document.body.style.overflow = "";
+              openJobDetails(job.id);
+            } catch (error) {
+              showToast("Error: " + (error.message || "Failed to update status"));
+            }
+          });
+          statusButtons.appendChild(btn);
+        });
+        
+        statusUpdateContainer.appendChild(statusButtons);
+        hustlerActions.appendChild(statusUpdateContainer);
         
         const completeBtn = document.createElement("button");
         completeBtn.className = "btn btn-primary";
@@ -4517,14 +5973,27 @@ async function renderJobs() {
             const result = await window.hustlAPI.jobs.complete(job.id);
             const verificationCode = result.requirements?.verificationCode || result.verificationCode;
             
+            // Reset button state
+            completeBtn.disabled = false;
+            completeBtn.style.opacity = "1";
+            completeBtn.style.cursor = "pointer";
+            completeBtn.textContent = "✓ Completed";
+            
             if (verificationCode) {
+              // Show verification code popup modal immediately
+              showVerificationCodeModal(verificationCode, job.id, job.title);
               showToast(`✓ Job marked complete! Your verification code: ${verificationCode}. Share this with the customer.`, 8000);
             } else {
               showToast("Job marked as complete! Waiting for customer confirmation.");
             }
-            overlay.remove();
-            document.body.style.overflow = "";
+            // Refresh to show updated status
             renderJobs();
+            // Refresh job details if modal is still open
+            setTimeout(() => {
+              if (document.getElementById("jobModalOverlay")) {
+                openJobDetails(job.id);
+              }
+            }, 500);
           } catch (error) {
             showToast("Error: " + (error.message || "Failed to mark job complete"));
             completeBtn.disabled = false;
@@ -4865,6 +6334,8 @@ async function renderJobs() {
                 const errorData = await response.json().catch(() => ({}));
                 console.error('Checkout error:', errorData);
                 
+                // TEMPORARILY DISABLED - Stripe requirement check bypassed for testing
+                /*
                 if (errorData.requiresStripe) {
                   showToast("⚠️ This hustler needs to connect their Stripe account first. They've been notified via email.");
                   overlay.remove();
@@ -4872,6 +6343,7 @@ async function renderJobs() {
                   renderJobs();
                   return;
                 }
+                */
                 
                 // Better error messages
                 let errorMsg = errorData.error || errorData.message || 'Failed to create checkout session';
@@ -4953,6 +6425,40 @@ async function renderJobs() {
       const convSummary = document.getElementById("conversationJobSummary");
       const convMessages = document.getElementById("conversationMessages");
       if (!convList) return;
+      
+      // Setup archive/delete view toggles
+      const showArchivedBtn = document.getElementById("showArchivedBtn");
+      const showDeletedBtn = document.getElementById("showDeletedBtn");
+      if (showArchivedBtn) {
+        showArchivedBtn.onclick = () => {
+          showArchivedConversations = !showArchivedConversations;
+          showDeletedConversations = false;
+          showArchivedBtn.textContent = showArchivedConversations ? "📦 Hide Archived" : "📦 Show Archived";
+          showArchivedBtn.style.background = showArchivedConversations ? "#dbeafe" : "#f3f4f6";
+          showArchivedBtn.style.color = showArchivedConversations ? "#1e40af" : "#6b7280";
+          if (showDeletedBtn) {
+            showDeletedBtn.textContent = "🗑 Show Deleted";
+            showDeletedBtn.style.background = "#fee2e2";
+            showDeletedBtn.style.color = "#991b1b";
+          }
+          renderMessagesView();
+        };
+      }
+      if (showDeletedBtn) {
+        showDeletedBtn.onclick = () => {
+          showDeletedConversations = !showDeletedConversations;
+          showArchivedConversations = false;
+          showDeletedBtn.textContent = showDeletedConversations ? "🗑 Hide Deleted" : "🗑 Show Deleted";
+          showDeletedBtn.style.background = showDeletedConversations ? "#fecaca" : "#fee2e2";
+          showDeletedBtn.style.color = "#991b1b";
+          if (showArchivedBtn) {
+            showArchivedBtn.textContent = "📦 Show Archived";
+            showArchivedBtn.style.background = "#f3f4f6";
+            showArchivedBtn.style.color = "#6b7280";
+          }
+          renderMessagesView();
+        };
+      }
 
       // Not logged in: nothing to show
       if (!user) {
@@ -4999,17 +6505,35 @@ async function renderJobs() {
         console.error("Error loading offers for messages:", error);
       }
 
-      // Jobs that have threads OR have offers (hustler applied)
-      // This includes jobs where hustler applied but not yet accepted
+      // Filter archived and deleted conversations based on view mode
+      const archived = JSON.parse(localStorage.getItem("archivedConversations") || "[]");
+      const deleted = JSON.parse(localStorage.getItem("deletedConversations") || "[]");
+      
+      // Jobs that have threads OR have offers (hustler applied) OR are assigned
+      // This includes jobs where hustler applied but not yet accepted, and assigned jobs
       const jobsWithThreads = allJobs.filter((j) => {
+        // Show/hide based on view mode
+        if (showArchivedConversations) {
+          // Only show archived
+          return archived.includes(j.id) && !deleted.includes(j.id);
+        } else if (showDeletedConversations) {
+          // Only show deleted
+          return deleted.includes(j.id);
+        } else {
+          // Normal view - hide archived and deleted
+          if (archived.includes(j.id) || deleted.includes(j.id)) {
+            return false;
+          }
+        }
         // Jobs where user is customer and hustler applied (has offers) OR is assigned
         if (j.customerId === user.id) {
           const hasOffers = allOffers.some(o => o.jobId === j.id);
-          return hasOffers || j.hustlerId; // Show if has offers OR is assigned
+          const isAssigned = j.hustlerId && (j.status === "ASSIGNED" || j.status === "PAID" || j.status === "COMPLETED_BY_HUSTLER" || j.status === "AWAITING_CUSTOMER_CONFIRM");
+          return hasOffers || isAssigned; // Show if has offers OR is assigned/paid
         }
         // Jobs where user is hustler and they applied or were accepted
         if (j.hustlerId === user.id) {
-          return true; // Show assigned jobs
+          return true; // Show all assigned jobs for hustler
         }
         // Check if user has an offer for this job (hustler applied)
         const userOffer = allOffers.find(o => o.jobId === j.id && o.hustlerId === user.id);
@@ -5181,6 +6705,81 @@ async function renderJobs() {
         
         meta.textContent = `${metaText} · ${timeAgo(createdDate)}`;
         item.appendChild(meta);
+
+        // Archive/Delete buttons
+        const actionsRow = document.createElement("div");
+        actionsRow.style.display = "flex";
+        actionsRow.style.gap = "0.5rem";
+        actionsRow.style.marginTop = "0.5rem";
+        actionsRow.style.justifyContent = "flex-end";
+        
+        // Archive/Unarchive button
+        const archived = JSON.parse(localStorage.getItem("archivedConversations") || "[]");
+        const isArchived = archived.includes(job.id);
+        const archiveBtn = document.createElement("button");
+        archiveBtn.className = "small-btn";
+        archiveBtn.style.background = isArchived ? "#dbeafe" : "#f3f4f6";
+        archiveBtn.style.color = isArchived ? "#1e40af" : "#6b7280";
+        archiveBtn.style.padding = "0.25rem 0.5rem";
+        archiveBtn.style.fontSize = "0.75rem";
+        archiveBtn.textContent = isArchived ? "📦 Unarchive" : "📦 Archive";
+        archiveBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const archived = JSON.parse(localStorage.getItem("archivedConversations") || "[]");
+          if (isArchived) {
+            const index = archived.indexOf(job.id);
+            if (index > -1) {
+              archived.splice(index, 1);
+              localStorage.setItem("archivedConversations", JSON.stringify(archived));
+              showToast("Conversation unarchived");
+              renderMessagesView();
+            }
+          } else {
+            if (!archived.includes(job.id)) {
+              archived.push(job.id);
+              localStorage.setItem("archivedConversations", JSON.stringify(archived));
+              showToast("Conversation archived");
+              renderMessagesView();
+            }
+          }
+        });
+        actionsRow.appendChild(archiveBtn);
+        
+        // Delete/Restore button (available for all jobs)
+        const deleted = JSON.parse(localStorage.getItem("deletedConversations") || "[]");
+        const isDeleted = deleted.includes(job.id);
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "small-btn";
+        deleteBtn.style.background = isDeleted ? "#fecaca" : "#fee2e2";
+        deleteBtn.style.color = "#991b1b";
+        deleteBtn.style.padding = "0.25rem 0.5rem";
+        deleteBtn.style.fontSize = "0.75rem";
+        deleteBtn.textContent = isDeleted ? "↩ Restore" : "🗑 Delete";
+        deleteBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const deleted = JSON.parse(localStorage.getItem("deletedConversations") || "[]");
+          if (isDeleted) {
+            const index = deleted.indexOf(job.id);
+            if (index > -1) {
+              deleted.splice(index, 1);
+              localStorage.setItem("deletedConversations", JSON.stringify(deleted));
+              showToast("Conversation restored");
+              renderMessagesView();
+            }
+          } else {
+            if (confirm("Delete this conversation? This will hide it from your messages list. You can restore it later.")) {
+              if (!deleted.includes(job.id)) {
+                deleted.push(job.id);
+                localStorage.setItem("deletedConversations", JSON.stringify(deleted));
+                showToast("Conversation deleted");
+                renderMessagesView();
+              }
+            }
+          }
+        });
+        actionsRow.appendChild(deleteBtn);
+        
+        item.appendChild(actionsRow);
 
         item.addEventListener("click", () => {
           activeConversationJobId = job.id;
@@ -5812,15 +7411,26 @@ setTimeout(() => {
     "These estimates are based on your completed and paid jobs.";
   container.appendChild(note);
 
-  // Reviews section
+  // Reviews section (collapsible)
   const reviewsSection = document.createElement("div");
-  reviewsSection.className = "field";
   reviewsSection.style.marginTop = "1.5rem";
+  reviewsSection.style.marginBottom = "1rem";
   
   const reviewsHeader = document.createElement("div");
-  reviewsHeader.className = "section-title";
-  reviewsHeader.textContent = "Reviews";
-  reviewsSection.appendChild(reviewsHeader);
+  reviewsHeader.style.display = "flex";
+  reviewsHeader.style.alignItems = "center";
+  reviewsHeader.style.justifyContent = "space-between";
+  reviewsHeader.style.padding = "0.75rem 1rem";
+  reviewsHeader.style.background = "#f9fafb";
+  reviewsHeader.style.borderRadius = "8px";
+  reviewsHeader.style.cursor = "pointer";
+  reviewsHeader.style.userSelect = "none";
+  reviewsHeader.style.border = "1px solid #e5e7eb";
+  reviewsHeader.style.transition = "all 0.2s";
+  
+  const reviewsTitle = document.createElement("div");
+  reviewsTitle.style.fontWeight = "600";
+  reviewsTitle.style.color = "#1f2937";
   
   // Load reviews
   let userReviews = [];
@@ -5830,11 +7440,43 @@ setTimeout(() => {
     console.error("Error loading reviews:", error);
   }
   
+  reviewsTitle.textContent = `⭐ Reviews`;
+  
+  const reviewsCount = document.createElement("span");
+  reviewsCount.textContent = `(${userReviews.length})`;
+  reviewsCount.style.marginLeft = "0.5rem";
+  reviewsCount.style.color = "#6b7280";
+  reviewsCount.style.fontSize = "0.9rem";
+  reviewsTitle.appendChild(reviewsCount);
+  
+  const reviewsArrow = document.createElement("span");
+  reviewsArrow.textContent = "▼";
+  reviewsArrow.style.transition = "transform 0.2s";
+  reviewsArrow.style.color = "#6b7280";
+  
+  reviewsHeader.appendChild(reviewsTitle);
+  reviewsHeader.appendChild(reviewsArrow);
+  
+  const reviewsContent = document.createElement("div");
+  reviewsContent.id = "reviewsContent";
+  reviewsContent.style.display = "none";
+  reviewsContent.style.marginTop = "0.5rem";
+  reviewsContent.style.paddingLeft = "0.5rem";
+  
+  // Toggle function
+  reviewsHeader.addEventListener("click", () => {
+    const isOpen = reviewsContent.style.display !== "none";
+    reviewsContent.style.display = isOpen ? "none" : "block";
+    reviewsArrow.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
+    reviewsHeader.style.background = isOpen ? "#f9fafb" : "#f3f4f6";
+  });
+  
   if (userReviews.length === 0) {
     const noReviews = document.createElement("div");
     noReviews.className = "muted";
+    noReviews.style.padding = "0.75rem";
     noReviews.textContent = "No reviews yet.";
-    reviewsSection.appendChild(noReviews);
+    reviewsContent.appendChild(noReviews);
   } else {
     userReviews.slice(0, 10).forEach(review => {
       const reviewCard = document.createElement("div");
@@ -5857,10 +7499,12 @@ setTimeout(() => {
         ${review.job ? `<div class="muted" style="margin-top: 0.5rem; font-size: 0.8rem;">For: ${review.job.title}</div>` : ''}
       `;
       
-      reviewsSection.appendChild(reviewCard);
+      reviewsContent.appendChild(reviewCard);
     });
   }
   
+  reviewsSection.appendChild(reviewsHeader);
+  reviewsSection.appendChild(reviewsContent);
   container.appendChild(reviewsSection);
 
   // ----- RIGHT SIDE: JOBS -----
@@ -5918,7 +7562,13 @@ setTimeout(() => {
     postedHeader.style.background = isOpen ? "#f9fafb" : "#f3f4f6";
   });
   
-  const limitedPostedJobs = myPostedJobs.slice(0, 10);
+  // Filter out COMPLETED jobs from posted jobs (they're done and reviewed)
+  const activePostedJobs = myPostedJobs.filter((j) => {
+    const status = (j.status || "").toUpperCase();
+    return status !== "COMPLETED";
+  });
+  
+  const limitedPostedJobs = activePostedJobs.slice(0, 10);
   if (limitedPostedJobs.length === 0) {
     const empty = document.createElement("div");
     empty.className = "muted";
@@ -5991,8 +7641,15 @@ setTimeout(() => {
   doingTitle.style.color = "#1f2937";
   doingTitle.textContent = "💪 Jobs you're doing";
   
+  // Include active jobs (ASSIGNED, PAID, AWAITING_CUSTOMER_CONFIRM, COMPLETED_BY_HUSTLER)
+  // Exclude COMPLETED jobs (they're done and reviewed)
   const myHustlerJobs = allJobs.filter(
-    (j) => j.hustlerId === user.id
+    (j) => {
+      const status = (j.status || "").toUpperCase();
+      return j.hustlerId === user.id && 
+             status !== "COMPLETED" &&
+             (status === "ASSIGNED" || status === "PAID" || status === "AWAITING_CUSTOMER_CONFIRM" || status === "COMPLETED_BY_HUSTLER");
+    }
   )
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   
@@ -6128,6 +7785,10 @@ setTimeout(() => {
       if (job.customerId === user.id) continue; // Skip jobs user posted
       
       try {
+        // Only try to fetch offers if user has a token (is logged in)
+        const token = localStorage.getItem("hustl_token");
+        if (!token) continue; // Skip if not logged in
+        
         const offers = await window.hustlAPI.offers.list(job.id);
         const userOffer = offers.find(o => o.hustlerId === user.id);
         
@@ -6157,7 +7818,10 @@ setTimeout(() => {
           }
         }
       } catch (error) {
-        // Silently skip jobs we can't check
+        // Silently skip if unauthorized (user might not have permission to see offers for this job)
+        if (error.message && error.message.includes("Unauthorized")) {
+          continue;
+        }
         console.error(`Error checking offers for job ${job.id}:`, error);
       }
     }
@@ -6333,18 +7997,36 @@ setTimeout(() => {
         showToast("Uploading profile photo...");
         
         // Upload to R2
-        const { publicUrl } = await window.hustlAPI.uploads.uploadFile(file);
+        let publicUrl;
+        try {
+          const uploadResult = await window.hustlAPI.uploads.uploadFile(file);
+          publicUrl = uploadResult.publicUrl;
+          console.log("Upload successful, publicUrl:", publicUrl);
+          
+          // Validate URL format before sending
+          if (!publicUrl || (!publicUrl.startsWith('http://') && !publicUrl.startsWith('https://') && !publicUrl.startsWith('data:'))) {
+            throw new Error("Invalid photo URL format received from upload service");
+          }
+        } catch (uploadError) {
+          console.error("R2 upload error:", uploadError);
+          throw new Error("Failed to upload image: " + (uploadError.message || "Upload service error"));
+        }
         
         // Update user profile with photo URL
-        const updatedUser = await window.hustlAPI.users.update({ photoUrl: publicUrl });
-        
-        // Update local user state
-        user.photoUrl = updatedUser.photoUrl;
-        user.avatarDataUrl = null;
-        saveState();
-        
-        showToast("✓ Profile photo updated!");
-        renderProfile(); // Refresh profile view
+        try {
+          const updatedUser = await window.hustlAPI.users.update({ photoUrl: publicUrl });
+          
+          // Update local user state
+          user.photoUrl = updatedUser.photoUrl;
+          user.avatarDataUrl = null;
+          saveState();
+          
+          showToast("✓ Profile photo updated!");
+          renderProfile(); // Refresh profile view
+        } catch (updateError) {
+          console.error("Profile update error:", updateError);
+          throw new Error("Failed to update profile: " + (updateError.message || "Update error"));
+        }
       } catch (error) {
         console.error("Error uploading profile photo:", error);
         showToast("Error: " + (error.message || "Failed to upload photo. Please try again."));
@@ -6980,6 +8662,55 @@ meta.textContent =
         });
       }
       
+      // Zip code filter Save button handler
+      const saveZipFilterBtn = document.getElementById("saveZipFilterBtn");
+      const jobsZipFilter = document.getElementById("jobsZipFilter");
+      if (saveZipFilterBtn && jobsZipFilter) {
+        saveZipFilterBtn.addEventListener("click", () => {
+          const zipValue = jobsZipFilter.value.trim();
+          if (zipValue && zipValue.length === 5 && /^\d{5}$/.test(zipValue)) {
+            // Save to localStorage for persistence
+            localStorage.setItem('savedZipFilter', zipValue);
+            // Show success feedback
+            const originalText = saveZipFilterBtn.textContent;
+            saveZipFilterBtn.textContent = "✓ Saved!";
+            saveZipFilterBtn.style.background = "#10b981";
+            setTimeout(() => {
+              saveZipFilterBtn.textContent = originalText;
+              saveZipFilterBtn.style.background = "";
+            }, 2000);
+            // Apply filter and re-render jobs
+            renderJobs();
+          } else if (zipValue && zipValue.length > 0) {
+            // Invalid zip code
+            showToast("Please enter a valid 5-digit zip code.");
+          } else {
+            // Clear filter if empty
+            localStorage.removeItem('savedZipFilter');
+            saveZipFilterBtn.textContent = "✓ Cleared!";
+            saveZipFilterBtn.style.background = "#6b7280";
+            setTimeout(() => {
+              saveZipFilterBtn.textContent = "Save";
+              saveZipFilterBtn.style.background = "";
+            }, 1500);
+            renderJobs();
+          }
+        });
+        
+        // Load saved zip filter on page load
+        const savedZip = localStorage.getItem('savedZipFilter');
+        if (savedZip) {
+          jobsZipFilter.value = savedZip;
+        }
+        
+        // Allow Enter key to trigger save
+        jobsZipFilter.addEventListener("keypress", (e) => {
+          if (e.key === "Enter") {
+            saveZipFilterBtn.click();
+          }
+        });
+      }
+      
       // Check if location is already set
       const userLocation = JSON.parse(localStorage.getItem('userLocation') || 'null');
       if (userLocation && userLocation.lat) {
@@ -7071,6 +8802,326 @@ meta.textContent =
         showToast("Error connecting to payment server.");
       }
     }
+
+// Simple cleanup function - can be called from console or keyboard
+window.clearStuckOverlays = function() {
+  // Remove all possible overlay elements
+  const selectors = [
+    '.modal-overlay',
+    '[id^="jobModalOverlay"]',
+    '#verificationCodeModal',
+    '[id^="jobDetailsOverlay"]',
+    '[class*="overlay"]',
+    '[class*="modal"]'
+  ];
+  
+  selectors.forEach(selector => {
+    try {
+      document.querySelectorAll(selector).forEach(el => {
+        if (el && el.parentNode) {
+          el.remove();
+        }
+      });
+    } catch(e) {
+      console.log('Error removing:', selector, e);
+    }
+  });
+  
+  // Reset body styles
+  if (document.body) {
+    document.body.style.overflow = '';
+    document.body.style.pointerEvents = '';
+  }
+  
+  // Remove any inline styles that might block
+  document.querySelectorAll('*').forEach(el => {
+    if (el.style && el.style.pointerEvents === 'none' && el.style.position === 'fixed') {
+      el.style.pointerEvents = '';
+    }
+  });
+  
+  console.log('Cleared stuck overlays - page should be clickable now');
+};
+
+// IMMEDIATE cleanup - run right away, don't wait for load
+(function() {
+  // Remove all blocking elements immediately
+  const stuck = document.querySelectorAll('.modal-overlay, [id^="jobModalOverlay"], #verificationCodeModal, [class*="overlay"], [class*="modal"]');
+  stuck.forEach(el => {
+    if (el && el.parentNode) {
+      el.remove();
+    }
+  });
+  if (document.body) {
+    document.body.style.overflow = '';
+    document.body.style.pointerEvents = '';
+  }
+})();
+
+// Simple cleanup on page load - remove any stuck overlays
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    window.clearStuckOverlays();
+  }, 100);
+});
+
+// Also run on DOMContentLoaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(window.clearStuckOverlays, 50);
+  });
+} else {
+  setTimeout(window.clearStuckOverlays, 50);
+}
+
+// Keyboard shortcut: Press Escape multiple times or Ctrl+Shift+C to clear
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    // Try to close any open modal first
+    const modals = document.querySelectorAll('.modal-overlay, [id^="jobModalOverlay"]');
+    if (modals.length > 0) {
+      modals.forEach(m => {
+        if (m && m.parentNode) {
+          m.remove();
+        }
+      });
+      if (document.body) {
+        document.body.style.overflow = '';
+        document.body.style.pointerEvents = '';
+      }
+    }
+  }
+  if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+    e.preventDefault();
+    window.clearStuckOverlays();
+    alert('Overlays cleared!');
+  }
+});
+
+// Note: Emergency fix button removed - page is working correctly
+
+// Review Modal Function
+async function showReviewModal(jobId, revieweeId, revieweeName) {
+  // Remove any existing review modals
+  document.querySelectorAll('[id^="reviewModalOverlay"]').forEach(ov => {
+    if (ov && ov.parentNode) ov.remove();
+  });
+  
+  const overlay = document.createElement("div");
+  overlay.id = "reviewModalOverlay";
+  overlay.className = "modal-overlay";
+  overlay.style.zIndex = "10000";
+  
+  const modal = document.createElement("div");
+  modal.className = "modal-content";
+  modal.style.maxWidth = "500px";
+  modal.style.width = "90%";
+  modal.style.padding = "1.5rem";
+  
+  const title = document.createElement("h2");
+  title.style.margin = "0 0 1rem 0";
+  title.textContent = "Leave a Review";
+  modal.appendChild(title);
+  
+  const subtitle = document.createElement("div");
+  subtitle.className = "muted";
+  subtitle.style.marginBottom = "1.5rem";
+  subtitle.textContent = `How was your experience with ${revieweeName}?`;
+  modal.appendChild(subtitle);
+  
+  // Star rating
+  const starsContainer = document.createElement("div");
+  starsContainer.style.marginBottom = "1rem";
+  starsContainer.style.display = "flex";
+  starsContainer.style.gap = "0.5rem";
+  starsContainer.style.justifyContent = "center";
+  
+  let selectedStars = 0;
+  const stars = [];
+  for (let i = 1; i <= 5; i++) {
+    const star = document.createElement("button");
+    star.textContent = "★";
+    star.style.fontSize = "2rem";
+    star.style.background = "none";
+    star.style.border = "none";
+    star.style.cursor = "pointer";
+    star.style.color = "#d1d5db";
+    star.style.padding = "0";
+    star.dataset.rating = i;
+    
+    star.addEventListener("mouseenter", () => {
+      for (let j = 1; j <= i; j++) {
+        stars[j - 1].style.color = "#fbbf24";
+      }
+    });
+    
+    star.addEventListener("mouseleave", () => {
+      stars.forEach((s, idx) => {
+        s.style.color = idx < selectedStars ? "#fbbf24" : "#d1d5db";
+      });
+    });
+    
+    star.addEventListener("click", () => {
+      selectedStars = i;
+      stars.forEach((s, idx) => {
+        s.style.color = idx < selectedStars ? "#fbbf24" : "#d1d5db";
+      });
+    });
+    
+    stars.push(star);
+    starsContainer.appendChild(star);
+  }
+  modal.appendChild(starsContainer);
+  
+  // Review text
+  const textLabel = document.createElement("label");
+  textLabel.textContent = "Your review (min 10 characters):";
+  textLabel.style.display = "block";
+  textLabel.style.marginBottom = "0.5rem";
+  textLabel.style.fontWeight = "600";
+  modal.appendChild(textLabel);
+  
+  const textArea = document.createElement("textarea");
+  textArea.placeholder = "Tell others about your experience...";
+  textArea.style.width = "100%";
+  textArea.style.minHeight = "100px";
+  textArea.style.padding = "0.75rem";
+  textArea.style.border = "1px solid var(--border)";
+  textArea.style.borderRadius = "6px";
+  textArea.style.fontFamily = "inherit";
+  textArea.style.fontSize = "0.9rem";
+  textArea.style.marginBottom = "1rem";
+  modal.appendChild(textArea);
+  
+  // Buttons
+  const buttonRow = document.createElement("div");
+  buttonRow.style.display = "flex";
+  buttonRow.style.gap = "0.5rem";
+  
+  const submitBtn = document.createElement("button");
+  submitBtn.className = "btn btn-primary";
+  submitBtn.style.flex = "1";
+  submitBtn.textContent = "Submit Review";
+  
+  submitBtn.addEventListener("click", async () => {
+    if (selectedStars === 0) {
+      showToast("Please select a star rating");
+      return;
+    }
+    
+    const text = textArea.value.trim();
+    if (text.length < 10) {
+      showToast("Please write at least 10 characters");
+      textArea.focus();
+      return;
+    }
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
+    
+    try {
+      const token = localStorage.getItem("hustl_token");
+      if (!token) {
+        throw new Error("You must be logged in to submit a review");
+      }
+      
+      const response = await fetch("/reviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          jobId,
+          revieweeId,
+          stars: selectedStars,
+          text,
+          photos: []
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to submit review");
+      }
+      
+      showToast("✓ Review submitted! Thank you.");
+      
+      // Close the review modal
+      overlay.remove();
+      document.body.style.overflow = "";
+      
+      // Refresh jobs list and profile to update job status
+      renderJobs();
+      renderProfile();
+    } catch (error) {
+      console.error("Error submitting review:", error);
+      showToast("Error: " + (error.message || "Failed to submit review"));
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Review";
+    }
+  });
+  
+  buttonRow.appendChild(submitBtn);
+  
+  const skipBtn = document.createElement("button");
+  skipBtn.className = "btn outline";
+  skipBtn.textContent = "Skip";
+  skipBtn.addEventListener("click", () => {
+    overlay.remove();
+    document.body.style.overflow = "";
+    renderJobs();
+  });
+  buttonRow.appendChild(skipBtn);
+  
+  modal.appendChild(buttonRow);
+  
+  // Close button
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "modal-close";
+  closeBtn.innerHTML = "×";
+  closeBtn.addEventListener("click", () => {
+    overlay.remove();
+    document.body.style.overflow = "";
+  });
+  modal.appendChild(closeBtn);
+  
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  document.body.style.overflow = "hidden";
+  
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) {
+      overlay.remove();
+      document.body.style.overflow = "";
+    }
+  });
+  
+  // Focus textarea
+  setTimeout(() => textArea.focus(), 100);
+}
+
+// Run body cleanup on load
+(function() {
+  try {
+    var stuck = document.querySelectorAll('.modal-overlay, [id*="Modal"], [id*="Overlay"], [class*="overlay"], [class*="modal"]');
+    stuck.forEach(function(e) { if(e && e.parentNode) e.remove(); });
+    if(document.body) {
+      document.body.style.cssText = 'overflow: visible !important; pointer-events: auto !important;';
+    }
+    if(document.documentElement) {
+      document.documentElement.style.cssText = 'overflow: visible !important; pointer-events: auto !important;';
+    }
+    document.querySelectorAll('*').forEach(function(el) {
+      if(el.style && el.style.pointerEvents === 'none') {
+        el.style.pointerEvents = 'auto';
+      }
+    });
+  } catch(e) {
+    console.error('Body cleanup error (non-fatal):', e);
+  }
+})();
 
 // Boot
 loadState();

@@ -1,0 +1,24 @@
+[
+  {
+    "AllowedOrigins": [
+      "https://hustl-production.up.railway.app",
+      "http://localhost:8080"
+    ],
+    "AllowedMethods": [
+      "GET",
+      "PUT",
+      "POST",
+      "DELETE",
+      "HEAD"
+    ],
+    "AllowedHeaders": [
+      "*"
+    ],
+    "ExposeHeaders": [
+      "ETag"
+    ],
+    "MaxAgeSeconds": 3600
+  }
+]
+
+

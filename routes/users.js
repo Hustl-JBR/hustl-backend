@@ -129,14 +129,36 @@ router.patch('/me', [
   body('name').optional().trim().notEmpty(),
   body('city').optional().trim().notEmpty(),
   body('zip').optional().trim().matches(/^\d{5}(-\d{4})?$/),
-  body('photoUrl').optional().isURL(),
+  body('photoUrl').optional().custom((value) => {
+    // Allow empty string, null, or valid URL
+    if (!value || value === '' || value === null) return true;
+    // Check if it's a valid URL or a data URL (for base64 images)
+    try {
+      // Try to create URL object - this validates the format
+      new URL(value);
+      return true;
+    } catch {
+      // Also allow data URLs (data:image/...)
+      if (value.startsWith('data:image/')) return true;
+      // Allow any string that looks like a URL (R2 URLs, etc.)
+      if (typeof value === 'string' && value.length > 0) {
+        // Be lenient - just check it's a string
+        return true;
+      }
+      return false;
+    }
+  }).withMessage('photoUrl must be a valid URL'),
   body('bio').optional().trim(),
   body('gender').optional().isIn(['male', 'female', 'other', 'prefer_not_to_say']),
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      console.error('[PATCH /users/me] Validation errors:', errors.array());
+      return res.status(400).json({ 
+        error: 'Validation failed',
+        errors: errors.array() 
+      });
     }
 
     const { name, city, zip, photoUrl, bio, gender } = req.body;

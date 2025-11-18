@@ -59,10 +59,17 @@ async function generatePresignedUploadUrl(filename, contentType, fileSize) {
 
   const url = await getSignedUrl(r2Client, command, { expiresIn: 3600 }); // 1 hour
 
+  // Ensure publicUrl is a full URL (with protocol)
+  let publicUrl = `${PUBLIC_BASE}/${key}`;
+  if (!publicUrl.startsWith('http://') && !publicUrl.startsWith('https://')) {
+    // If PUBLIC_BASE doesn't have protocol, add https://
+    publicUrl = `https://${publicUrl.replace(/^\/+/, '')}`;
+  }
+  
   return {
     uploadUrl: url,
     fileKey: key,
-    publicUrl: `${PUBLIC_BASE}/${key}`, // If public, otherwise use signed URL
+    publicUrl: publicUrl,
   };
 }
 

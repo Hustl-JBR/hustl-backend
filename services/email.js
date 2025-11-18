@@ -198,6 +198,27 @@ async function sendPaymentCompleteEmail(email, name, jobTitle, amount) {
   }
 }
 
+async function sendJobCompletedEmail(email, name, jobTitle, hustlerName) {
+  if (!isEmailConfigured()) return;
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `Job Complete: "${jobTitle}"`,
+      html: `
+        <h1>Job Complete! 🎉</h1>
+        <p>Hi ${name},</p>
+        <p>Great news! The job <strong>${jobTitle}</strong> has been completed by ${hustlerName}.</p>
+        <p>Payment has been released to the hustler. Please take a moment to review your experience!</p>
+        <p><a href="${process.env.APP_BASE_URL || 'http://localhost:8080'}/jobs">Review Hustler</a></p>
+        <p>Thank you for using Hustl!</p>
+      `,
+    });
+  } catch (error) {
+    console.error('Send job completed email error:', error);
+  }
+}
+
 async function sendAutoCompleteEmail(email, name, jobTitle) {
   if (!isEmailConfigured()) return;
   try {
@@ -318,6 +339,48 @@ async function sendFeedbackEmail(feedbackName, feedbackEmail, feedbackMessage) {
   }
 }
 
+async function sendDisputeEmail(email, name, jobTitle, reason, description) {
+  if (!isEmailConfigured()) return;
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `Issue reported for "${jobTitle}"`,
+      html: `
+        <h1>Issue Reported</h1>
+        <p>Hi ${name},</p>
+        <p>An issue has been reported for the job <strong>${jobTitle}</strong>.</p>
+        <p><strong>Reason:</strong> ${reason}</p>
+        ${description ? `<p><strong>Description:</strong> ${description}</p>` : ''}
+        <p>Payment will not be automatically released while this dispute is pending. Please review the issue and contact support if needed.</p>
+        <p><a href="${process.env.APP_BASE_URL || 'http://localhost:8080'}/jobs">View Job Details</a></p>
+      `,
+    });
+  } catch (error) {
+    console.error('Send dispute email error:', error);
+  }
+}
+
+async function sendStatusUpdateEmail(email, name, jobTitle, statusMessage) {
+  if (!isEmailConfigured()) return;
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `Status update for "${jobTitle}"`,
+      html: `
+        <h1>Status Update</h1>
+        <p>Hi ${name},</p>
+        <p>Your hustler has updated the status for the job <strong>${jobTitle}</strong>.</p>
+        <p><strong>Status:</strong> ${statusMessage}</p>
+        <p><a href="${process.env.APP_BASE_URL || 'http://localhost:8080'}/jobs">View Job Details</a></p>
+      `,
+    });
+  } catch (error) {
+    console.error('Send status update email error:', error);
+  }
+}
+
 module.exports = {
   sendSignupEmail,
   sendPasswordResetEmail,
@@ -327,9 +390,12 @@ module.exports = {
   sendPaymentReceiptEmail,
   sendPayoutSentEmail,
   sendPaymentCompleteEmail,
+  sendJobCompletedEmail,
   sendAutoCompleteEmail,
   sendRefundEmail,
   sendStripeRequiredEmail,
   sendFeedbackEmail,
   sendNewMessageEmail,
+  sendDisputeEmail,
+  sendStatusUpdateEmail,
 };

@@ -138,4 +138,22 @@ app.listen(PORT, host, () => {
     console.log(`📱 Development mode - Access from your phone: http://[your-ip]:${PORT}`);
     console.log(`   (Make sure your phone is on the same WiFi network)`);
   }
+  
+  // Start cleanup job scheduler
+  const { cleanupOldJobs } = require('./services/cleanup');
+  
+  // Run cleanup immediately on startup (optional)
+  cleanupOldJobs().catch(err => {
+    console.error('[Startup] Cleanup error (non-fatal):', err);
+  });
+  
+  // Run cleanup every 6 hours
+  const CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
+  setInterval(() => {
+    cleanupOldJobs().catch(err => {
+      console.error('[Scheduled Cleanup] Error (non-fatal):', err);
+    });
+  }, CLEANUP_INTERVAL_MS);
+  
+  console.log(`🧹 Cleanup job scheduled: runs every 6 hours (deletes all jobs older than 2 weeks)`);
 });
