@@ -127,6 +127,16 @@ const apiAuth = {
 
 // Jobs functions
 const apiJobs = {
+  async listMyJobs(filters = {}) {
+    const params = new URLSearchParams();
+    if (filters.status) params.append('status', filters.status);
+    if (filters.limit) params.append('limit', filters.limit);
+    
+    const query = params.toString();
+    const endpoint = `/jobs/my-jobs${query ? `?${query}` : ''}`;
+    return await apiRequest(endpoint);
+  },
+
   async list(filters = {}) {
     const params = new URLSearchParams();
     // Map frontend status values to backend status values
@@ -317,6 +327,10 @@ const apiJobs = {
 const apiOffers = {
   async list(jobId) {
     return await apiRequest(`/offers/${jobId}`);
+  },
+
+  async listUserOffers() {
+    return await apiRequest(`/offers/user/me`);
   },
 
   async create(jobId, note = '', proposedAmount = null) {

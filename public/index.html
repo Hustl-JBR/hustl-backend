@@ -8110,48 +8110,27 @@ async function renderJobs(reset = false) {
     return;
   }
 
-  // Load jobs from API
+  // Load jobs from API - OPTIMIZED: Use /my-jobs endpoint (only fetches user's jobs, not all jobs!)
   let allJobs = [];
   try {
-    // Fetch jobs for profile - we need all jobs related to this user
-    let response = await window.hustlAPI.jobs.list({ page: 1, limit: 100 });
-    
-    // Handle paginated response
-    if (response && typeof response === 'object' && 'jobs' in response) {
-      allJobs = response.jobs || [];
+    // Use optimized endpoint that only returns jobs for this user (much faster with thousands of jobs!)
+    if (window.hustlAPI.jobs.listMyJobs) {
+      allJobs = await window.hustlAPI.jobs.listMyJobs({ limit: 100 });
       
-      // Fetch additional pages if needed (up to reasonable limit)
-      if (response.pagination && response.pagination.hasMore) {
-        let currentPage = 2;
-        const maxPages = 10;
-        
-        while (currentPage <= maxPages) {
-          try {
-            const nextResponse = await window.hustlAPI.jobs.list({ page: currentPage, limit: 100 });
-            if (nextResponse && typeof nextResponse === 'object' && 'jobs' in nextResponse) {
-              allJobs = allJobs.concat(nextResponse.jobs || []);
-              if (!nextResponse.pagination || !nextResponse.pagination.hasMore) {
-                break;
-              }
-            } else {
-              break;
-            }
-          } catch (pageError) {
-            console.error(`Error loading page ${currentPage} for profile:`, pageError);
-            break;
-          }
-          currentPage++;
-        }
+      // Ensure it's an array
+      if (!Array.isArray(allJobs)) {
+        console.warn("jobs.listMyJobs() did not return an array, defaulting to empty array");
+        allJobs = [];
       }
-    } else if (Array.isArray(response)) {
-      // Fallback: if API returns array directly (old format)
-      allJobs = response;
-    }
-    
-    // Ensure allJobs is always an array
-    if (!Array.isArray(allJobs)) {
-      console.warn("jobs.list() did not return an array for profile, defaulting to empty array");
-      allJobs = [];
+    } else {
+      // Fallback: Use regular list with filters (less efficient but works)
+      console.warn("listMyJobs not available, using fallback");
+      const response = await window.hustlAPI.jobs.list({ page: 1, limit: 100 });
+      if (response && typeof response === 'object' && 'jobs' in response) {
+        allJobs = response.jobs || [];
+      } else if (Array.isArray(response)) {
+        allJobs = response;
+      }
     }
   } catch (error) {
     console.error("Error loading jobs for profile:", error);
@@ -9031,20 +9010,27 @@ setTimeout(() => {
       appliedHeader.style.background = isOpen ? "#f9fafb" : "#f3f4f6";
     });
 
-    // Fetch all jobs and check for offers
+    // Fetch all user offers in ONE API call (optimized - was making 20+ separate calls!)
     const appliedJobsData = [];
-    for (const job of allJobs) {
-      if (job.customerId === user.id) continue; // Skip jobs user posted
-      
-      try {
-        // Only try to fetch offers if user has a token (is logged in)
-        const token = localStorage.getItem("hustl_token");
-        if (!token) continue; // Skip if not logged in
+    try {
+      const token = localStorage.getItem("hustl_token");
+      if (token && window.hustlAPI.offers.listUserOffers) {
+        // Use optimized endpoint - get all user offers in one call
+        const userOffers = await window.hustlAPI.offers.listUserOffers();
         
-        const offers = await window.hustlAPI.offers.list(job.id);
-        const userOffer = offers.find(o => o.hustlerId === user.id);
+        // Create a map of jobId -> offer for quick lookup
+        const offersByJobId = new Map();
+        userOffers.forEach(offer => {
+          offersByJobId.set(offer.jobId, offer);
+        });
         
-        if (userOffer) {
+        // Match offers with jobs
+        for (const job of allJobs) {
+          if (job.customerId === user.id) continue; // Skip jobs user posted
+          
+          const userOffer = offersByJobId.get(job.id);
+          if (!userOffer) continue; // No offer for this job
+          
           // Only show if:
           // 1. Offer is PENDING or ACCEPTED (not declined)
           // 2. Job is still OPEN or user was accepted (not assigned to someone else)
@@ -9069,13 +9055,10 @@ setTimeout(() => {
             appliedJobsData.push({ job, offer: userOffer });
           }
         }
-      } catch (error) {
-        // Silently skip if unauthorized (user might not have permission to see offers for this job)
-        if (error.message && error.message.includes("Unauthorized")) {
-          continue;
-        }
-        console.error(`Error checking offers for job ${job.id}:`, error);
       }
+    } catch (error) {
+      console.error('Error fetching user offers:', error);
+      // Fallback: silently fail, don't show applied jobs section
     }
 
     // Sort and limit to 10 most recent

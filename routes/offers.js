@@ -7,6 +7,33 @@ const { validateTennesseeZip } = require('../services/zipcode');
 
 const router = express.Router();
 
+// GET /offers/user/me - Get all offers for the current user (optimized for profile page)
+router.get('/user/me', authenticate, async (req, res) => {
+  try {
+    const offers = await prisma.offer.findMany({
+      where: { hustlerId: req.user.id },
+      include: {
+        job: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            customerId: true,
+            hustlerId: true,
+            createdAt: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(offers);
+  } catch (error) {
+    console.error('Get user offers error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET /offers/:jobId - List offers for a job
 router.get('/:jobId', authenticate, async (req, res) => {
   try {

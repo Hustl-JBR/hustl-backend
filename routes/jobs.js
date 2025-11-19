@@ -36,6 +36,68 @@ const optionalAuth = async (req, res, next) => {
   }
 };
 
+// GET /jobs/my-jobs - Get jobs for the current user (optimized for profile page)
+router.get('/my-jobs', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { status, limit = 50 } = req.query;
+    
+    // Build where clause for user's jobs
+    const where = {
+      OR: [
+        { customerId: userId },
+        { hustlerId: userId },
+      ],
+    };
+    
+    // Filter by status if provided
+    if (status) {
+      where.status = status;
+    }
+    
+    const jobs = await prisma.job.findMany({
+      where,
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+          },
+        },
+        hustler: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+          },
+        },
+        payment: {
+          select: {
+            id: true,
+            amount: true,
+            status: true,
+          },
+        },
+        _count: {
+          select: {
+            offers: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: parseInt(limit, 10),
+    });
+    
+    res.json(jobs);
+  } catch (error) {
+    console.error('Get my jobs error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /jobs - Create a job (Customer only)
 router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) => {
   // Check email verification before allowing job posting

@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 8080;
 // IMPORTANT: Limits are PER IP ADDRESS, so different users from different IPs each get their own limits
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // Limit each IP to 300 requests per 15 minutes (supports high traffic from different IPs)
+  max: 500, // Limit each IP to 500 requests per 15 minutes (increased to handle profile page loading)
   message: { error: 'Too many requests from this IP, please try again later.' },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
