@@ -11,28 +11,41 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY || "");
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Rate limiting
+// Rate limiting - Production-ready limits (can handle hundreds of concurrent users)
+// IMPORTANT: Limits are PER IP ADDRESS, so different users from different IPs each get their own limits
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 300, // Limit each IP to 300 requests per 15 minutes (supports high traffic from different IPs)
   message: { error: 'Too many requests from this IP, please try again later.' },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  skip: (req) => {
+    // Skip rate limiting for health checks
+    return req.path === '/health';
+  },
 });
 
-// Stricter rate limiting for auth endpoints
+// Rate limiting for auth endpoints (supports hundreds of signups from different IPs)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 auth requests per windowMs
-  message: { error: 'Too many authentication attempts, please try again later.' },
+  max: 50, // Limit each IP to 50 auth requests per 15 minutes (allows for many signups from different IPs)
+  message: { error: 'Too many authentication attempts from this IP, please wait a few minutes and try again.' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for health checks
+    return req.path === '/health';
+  },
 });
 
-// Apply rate limiting to all API routes (except static files)
+// Apply rate limiting to all API routes (except static files and health checks)
 app.use((req, res, next) => {
   // Skip rate limiting for static files
   if (req.path.startsWith('/public/') || req.path.includes('.')) {
+    return next();
+  }
+  // Skip rate limiting for health check (handled in limiter config, but double-check)
+  if (req.path === '/health') {
     return next();
   }
   limiter(req, res, next);
