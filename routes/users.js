@@ -128,7 +128,11 @@ router.get('/:id', async (req, res) => {
 router.patch('/me', [
   body('name').optional().trim().notEmpty(),
   body('city').optional().trim().notEmpty(),
-  body('zip').optional().trim().matches(/^\d{5}(-\d{4})?$/),
+  body('zip').optional().custom((value) => {
+    // Allow null, empty string, or valid zip format (5 digits or 5+4)
+    if (!value || value === '' || value === null) return true;
+    return /^\d{5}(-\d{4})?$/.test(value);
+  }),
   body('photoUrl').optional().custom((value) => {
     // Allow empty string, null, or valid URL
     if (!value || value === '' || value === null) return true;
@@ -166,7 +170,10 @@ router.patch('/me', [
 
     if (name) updateData.name = name;
     if (city) updateData.city = city;
-    if (zip) updateData.zip = zip;
+    if (zip !== undefined) {
+      // Allow clearing zip by setting to null or empty string
+      updateData.zip = (zip === '' || zip === null) ? null : zip;
+    }
     if (photoUrl) updateData.photoUrl = photoUrl;
     
     // Handle bio and gender - only include if columns exist

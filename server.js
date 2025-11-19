@@ -2,6 +2,7 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 
 const Stripe = require("stripe");
@@ -9,6 +10,33 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY || "");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: { error: 'Too many requests from this IP, please try again later.' },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+// Stricter rate limiting for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 auth requests per windowMs
+  message: { error: 'Too many authentication attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiting to all API routes (except static files)
+app.use((req, res, next) => {
+  // Skip rate limiting for static files
+  if (req.path.startsWith('/public/') || req.path.includes('.')) {
+    return next();
+  }
+  limiter(req, res, next);
+});
 
 // CORS: allow all origins in development, configure for production
 app.use(
@@ -28,8 +56,9 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files from /public folder
 const publicPath = path.join(__dirname, "public");
 app.use(express.static(publicPath, {
-  setHeaders: (res, path) => {
-    if (path.endsWith('.html')) {
+  setHeaders: (res, filePath) => {
+    // Disable caching for HTML and JS files to ensure updates are picked up
+    if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
@@ -54,9 +83,11 @@ const r2Router = require("./routes/r2");
 const stripeConnectRouter = require("./routes/stripe-connect");
 const reviewsRouter = require("./routes/reviews");
 const feedbackRouter = require("./routes/feedback");
+const adminRouter = require("./routes/admin");
+const notificationsRouter = require("./routes/notifications");
 
-// API Routes
-app.use("/auth", authRouter);
+// API Routes with rate limiting
+app.use("/auth", authLimiter, authRouter); // Stricter rate limiting for auth
 app.use("/users", usersRouter);
 app.use("/jobs", jobsRouter);
 app.use("/offers", offersRouter);
@@ -67,6 +98,8 @@ app.use("/r2", r2Router);
 app.use("/stripe-connect", stripeConnectRouter);
 app.use("/reviews", reviewsRouter);
 app.use("/feedback", feedbackRouter);
+app.use("/admin", adminRouter);
+app.use("/notifications", notificationsRouter);
 
 // Legacy Stripe Checkout session creation (keep for backward compatibility)
 app.post("/create-checkout-session", async (req, res) => {

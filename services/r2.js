@@ -87,8 +87,56 @@ function getPublicUrl(fileKey) {
   return `${PUBLIC_BASE}/${fileKey}`;
 }
 
+// Upload file directly to R2 (server-side upload to avoid CORS)
+async function uploadFileToR2(fileBuffer, filename, contentType) {
+  // Validate file type
+  const allowed = Object.values(ALLOWED_TYPES).flat();
+  const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
+  
+  if (!allowed.includes(ext)) {
+    throw new Error('File type not allowed');
+  }
+
+  // Validate file size
+  const isVideo = contentType.startsWith('video/');
+  const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_FILE_SIZE;
+  
+  if (fileBuffer.length > maxSize) {
+    throw new Error(`File size exceeds ${maxSize / 1024 / 1024}MB limit`);
+  }
+
+  // Generate unique filename
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 15);
+  const key = `uploads/${timestamp}-${random}-${filename}`;
+
+  const command = new PutObjectCommand({
+    Bucket: BUCKET,
+    Key: key,
+    Body: fileBuffer,
+    ContentType: contentType,
+    // Make public if needed
+    // ACL: 'public-read', // Uncomment if you want public access
+  });
+
+  await r2Client.send(command);
+
+  // Ensure publicUrl is a full URL (with protocol)
+  let publicUrl = `${PUBLIC_BASE}/${key}`;
+  if (!publicUrl.startsWith('http://') && !publicUrl.startsWith('https://')) {
+    // If PUBLIC_BASE doesn't have protocol, add https://
+    publicUrl = `https://${publicUrl.replace(/^\/+/, '')}`;
+  }
+  
+  return {
+    fileKey: key,
+    publicUrl: publicUrl,
+  };
+}
+
 module.exports = {
   generatePresignedUploadUrl,
   getPresignedDownloadUrl,
   getPublicUrl,
+  uploadFileToR2,
 };

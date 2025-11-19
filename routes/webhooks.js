@@ -37,6 +37,18 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
       case 'payment_intent.canceled':
         await handlePaymentIntentCanceled(event.data.object);
         break;
+      case 'charge.refunded':
+        await handleChargeRefunded(event.data.object);
+        break;
+      case 'transfer.created':
+        await handleTransferCreated(event.data.object);
+        break;
+      case 'transfer.paid':
+        await handleTransferPaid(event.data.object);
+        break;
+      case 'transfer.failed':
+        await handleTransferFailed(event.data.object);
+        break;
       default:
         console.log(`Unhandled event type: ${event.type}`);
     }
@@ -167,6 +179,182 @@ async function handlePaymentIntentCanceled(paymentIntent) {
       where: { id: payment.id },
       data: { status: 'VOIDED' },
     });
+  }
+}
+
+// Handle refund webhook
+async function handleChargeRefunded(charge) {
+  const paymentIntentId = charge.payment_intent;
+  if (!paymentIntentId) return;
+
+  const payment = await prisma.payment.findFirst({
+    where: { providerId: paymentIntentId },
+    include: {
+      job: true,
+      customer: true,
+      hustler: true,
+    },
+  });
+
+  if (payment && payment.status !== 'REFUNDED') {
+    const refundAmount = charge.amount_refunded / 100; // Convert from cents
+
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: 'REFUNDED',
+        refundAmount,
+        refundReason: 'Refunded via Stripe',
+      },
+    });
+
+    // Log audit
+    await prisma.auditLog.create({
+      data: {
+        actorId: payment.customerId, // System/customer
+        actionType: 'REFUND',
+        resourceType: 'PAYMENT',
+        resourceId: payment.id,
+        details: {
+          amount: refundAmount,
+          reason: 'Stripe webhook',
+          chargeId: charge.id,
+        },
+      },
+    }).catch(err => console.error('Error creating audit log:', err));
+
+    // Send admin notification
+    const { sendAdminRefundNotification } = require('../services/email');
+    try {
+      await sendAdminRefundNotification(
+        payment,
+        refundAmount,
+        'Refunded via Stripe',
+        'System'
+      );
+    } catch (error) {
+      console.error('Error sending admin refund notification:', error);
+    }
+
+    console.log(`Refund processed via webhook: ${payment.id}, amount: $${refundAmount}`);
+  }
+}
+
+// Handle transfer created (payout initiated)
+async function handleTransferCreated(transfer) {
+  const jobId = transfer.metadata?.jobId;
+  if (!jobId) return;
+
+  const payment = await prisma.payment.findFirst({
+    where: { jobId },
+    include: { hustler: true, job: true },
+  });
+
+  if (!payment || !payment.hustlerId) return;
+
+  const transferAmount = transfer.amount / 100; // Convert from cents
+  const platformFee = transferAmount * 0.16; // 16% platform fee
+  const netAmount = transferAmount - platformFee;
+
+  // Create or update payout record
+  await prisma.payout.upsert({
+    where: { jobId },
+    create: {
+      hustlerId: payment.hustlerId,
+      jobId,
+      amount: transferAmount,
+      platformFee,
+      netAmount,
+      status: 'PROCESSING',
+      payoutProviderId: transfer.id,
+      payoutMethod: 'STRIPE_TRANSFER',
+    },
+    update: {
+      status: 'PROCESSING',
+      payoutProviderId: transfer.id,
+    },
+  });
+
+  // Send admin notification
+  const payout = await prisma.payout.findUnique({
+    where: { jobId },
+    include: { hustler: true },
+  });
+
+  const { sendAdminPayoutNotification } = require('../services/email');
+  try {
+    await sendAdminPayoutNotification(payout, payment.hustler);
+  } catch (error) {
+    console.error('Error sending admin payout notification:', error);
+  }
+
+  console.log(`Payout initiated via webhook: ${payout.id}, amount: $${transferAmount}`);
+}
+
+// Handle transfer paid (payout completed)
+async function handleTransferPaid(transfer) {
+  const payout = await prisma.payout.findFirst({
+    where: { payoutProviderId: transfer.id },
+    include: { hustler: true },
+  });
+
+  if (payout && payout.status !== 'COMPLETED') {
+    await prisma.payout.update({
+      where: { id: payout.id },
+      data: {
+        status: 'COMPLETED',
+        completedAt: new Date(),
+      },
+    });
+
+    // Send email to hustler
+    const { sendPayoutSentEmail } = require('../services/email');
+    try {
+      await sendPayoutSentEmail(
+        payout.hustler.email,
+        payout.hustler.name,
+        Number(payout.netAmount)
+      );
+    } catch (error) {
+      console.error('Error sending payout email:', error);
+    }
+
+    // Send admin notification
+    const { sendAdminPayoutNotification } = require('../services/email');
+    try {
+      await sendAdminPayoutNotification(payout, payout.hustler);
+    } catch (error) {
+      console.error('Error sending admin payout notification:', error);
+    }
+
+    console.log(`Payout completed via webhook: ${payout.id}`);
+  }
+}
+
+// Handle transfer failed (payout failed)
+async function handleTransferFailed(transfer) {
+  const payout = await prisma.payout.findFirst({
+    where: { payoutProviderId: transfer.id },
+    include: { hustler: true },
+  });
+
+  if (payout && payout.status !== 'FAILED') {
+    await prisma.payout.update({
+      where: { id: payout.id },
+      data: {
+        status: 'FAILED',
+      },
+    });
+
+    // Send admin notification
+    const { sendAdminPayoutNotification } = require('../services/email');
+    try {
+      await sendAdminPayoutNotification(payout, payout.hustler);
+    } catch (error) {
+      console.error('Error sending admin payout notification:', error);
+    }
+
+    console.log(`Payout failed via webhook: ${payout.id}`);
   }
 }
 

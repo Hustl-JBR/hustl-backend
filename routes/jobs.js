@@ -5,6 +5,7 @@ const prisma = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { geocodeAddress } = require('../services/mapbox');
 const { validateTennesseeZip } = require('../services/zipcode');
+const { calculateDistance, getBoundingBox, formatDistance } = require('../services/location');
 
 const router = express.Router();
 
@@ -36,7 +37,27 @@ const optionalAuth = async (req, res, next) => {
 };
 
 // POST /jobs - Create a job (Customer only)
-router.post('/', authenticate, requireRole('CUSTOMER'), [
+router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) => {
+  // Check email verification before allowing job posting
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { emailVerified: true },
+    });
+
+    if (!user || !user.emailVerified) {
+      return res.status(403).json({ 
+        error: 'Email verification required',
+        message: 'Please verify your email address before posting jobs. Check your email for a verification code.',
+        requiresEmailVerification: true,
+      });
+    }
+  } catch (error) {
+    console.error('Email verification check error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+  next();
+}, [
   body('title').trim().notEmpty().isLength({ max: 200 }),
   body('category').trim().notEmpty(),
   body('description').trim().notEmpty(),
@@ -260,58 +281,120 @@ router.get('/', optionalAuth, [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { status, category, lat, lng, radius = 10, zip, city, page = 1, limit = 20 } = req.query;
+    const { status, category, lat, lng, radius = 25, zip, city, page = 1, limit = 20, sortBy = 'distance', search } = req.query;
     const userId = req.user?.id;
 
     const where = {};
     if (status) where.status = status;
     if (category) where.category = category;
-
-    // Location-based filtering: Only apply if explicitly requested (zip or lat/lng provided)
-    // Don't auto-filter by user location - show all jobs by default, filter only when user requests it
-    let locationFilter = null;
-    let shouldFilterByLocation = false;
     
-    if (zip) {
-      // User explicitly provided zip code - filter by it
-      shouldFilterByLocation = true;
-      const usersWithZip = await prisma.user.findMany({
-        where: { zip: zip },
-        select: { id: true },
+    // Search functionality - search in title and description
+    if (search && search.trim()) {
+      const searchTerm = search.trim();
+      where.OR = [
+        { title: { contains: searchTerm, mode: 'insensitive' } },
+        { description: { contains: searchTerm, mode: 'insensitive' } },
+      ];
+    }
+
+    // 72-hour cleanup: Hide OPEN jobs older than 72 hours with no accepted offers
+    const seventyTwoHoursAgo = new Date(Date.now() - 72 * 60 * 60 * 1000);
+
+    // Location-based filtering: Auto-filter by user location if available
+    let userLat = null;
+    let userLng = null;
+    let userZip = null;
+    let searchRadius = parseInt(radius, 10) || 25; // Default 25 miles
+    
+    // Try to get user's location from their profile or request
+    if (req.user) {
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { zip: true, city: true },
       });
-      const userIds = usersWithZip.map(u => u.id);
       
-      if (userIds.length > 0) {
-        locationFilter = { customerId: { in: userIds } };
-      } else {
-        // No users with this zip - will filter in post-processing by requirements.pickupZip
-        locationFilter = null;
+      if (user?.zip) {
+        userZip = user.zip;
       }
-    } else if (lat && lng) {
-      // User explicitly provided lat/lng - filter by radius
+    }
+    
+    // Use provided lat/lng or zip, or fall back to user's profile
+    if (lat && lng) {
+      userLat = parseFloat(lat);
+      userLng = parseFloat(lng);
+    } else if (zip) {
+      userZip = zip;
+      // Try to geocode zip to get lat/lng (with caching and error handling)
+      try {
+        const geo = await geocodeAddress(`${zip}, Tennessee`, { useCache: true, timeout: 3000 });
+        if (geo && geo.lat && geo.lng) {
+          userLat = geo.lat;
+          userLng = geo.lng;
+        } else {
+          console.warn(`[Jobs] Could not geocode zip ${zip}, will use zip-based filtering`);
+        }
+      } catch (error) {
+        console.warn(`[Jobs] Geocoding zip ${zip} failed:`, error.message);
+        // Continue without coordinates - will use zip-based filtering
+      }
+    } else if (userZip) {
+      // Try to geocode user's profile zip (with caching and error handling)
+      try {
+        const geo = await geocodeAddress(`${userZip}, Tennessee`, { useCache: true, timeout: 3000 });
+        if (geo && geo.lat && geo.lng) {
+          userLat = geo.lat;
+          userLng = geo.lng;
+        } else {
+          console.warn(`[Jobs] Could not geocode user zip ${userZip}, will use zip-based filtering`);
+        }
+      } catch (error) {
+        console.warn(`[Jobs] Geocoding user zip ${userZip} failed:`, error.message);
+        // Continue without coordinates - will use zip-based filtering
+      }
+    }
+
+    // Apply location filtering if we have coordinates
+    let shouldFilterByLocation = false;
+    if (userLat && userLng) {
       shouldFilterByLocation = true;
-      // Use lat/lng with radius (in miles, convert to approximate degrees)
-      // 1 degree latitude ≈ 69 miles
-      // 1 degree longitude ≈ 69 * cos(latitude) miles
-      const latDelta = radius / 69;
-      const lngDelta = radius / (69 * Math.cos(parseFloat(lat) * Math.PI / 180));
+      const bbox = getBoundingBox(userLat, userLng, searchRadius);
       
       where.lat = {
-        gte: parseFloat(lat) - latDelta,
-        lte: parseFloat(lat) + latDelta,
+        gte: bbox.minLat,
+        lte: bbox.maxLat,
       };
       where.lng = {
-        gte: parseFloat(lng) - lngDelta,
-        lte: parseFloat(lng) + lngDelta,
+        gte: bbox.minLng,
+        lte: bbox.maxLng,
       };
+    } else if (userZip || zip) {
+      // Fall back to zip-based filtering if no coordinates
+      shouldFilterByLocation = true;
+      const searchZip = zip || userZip;
+      
+      // Find jobs by customer zip or job pickup zip
+      // This will be filtered in post-processing
     }
-    // NOTE: Removed auto-filtering by user profile location - show all jobs by default
-    // Users can manually filter using zip code or location if they want
 
-    // Only apply location filter if user explicitly requested it
-    if (shouldFilterByLocation && locationFilter) {
-      // Merge location filter into where clause
-      Object.assign(where, locationFilter);
+    // 72-hour cleanup: Only hide OPEN jobs older than 72 hours with no accepted offers
+    // Don't filter if status is already set to something other than OPEN
+    if (!status || status === 'OPEN') {
+      // Add condition: Exclude old OPEN jobs with no accepted offers
+      // We'll filter these out: status=OPEN AND age>72h AND no accepted offers
+      where.AND = where.AND || [];
+      where.AND.push({
+        OR: [
+          { status: { not: 'OPEN' } }, // Not OPEN status (already assigned/completed)
+          { createdAt: { gte: seventyTwoHoursAgo } }, // Less than 72 hours old
+          {
+            offers: {
+              some: {
+                status: 'ACCEPTED',
+              },
+            },
+          }, // Has at least one accepted offer
+        ],
+      });
     }
 
     // NOTE: Show all jobs by default - no role-based filtering
@@ -322,7 +405,7 @@ router.get('/', optionalAuth, [
     const limitNum = parseInt(limit, 10) || 20;
     const skip = (pageNum - 1) * limitNum;
 
-    // First, get total count for pagination metadata
+    // First, get total count for pagination metadata (apply same filters)
     const totalCount = await prisma.job.count({ where });
 
     const jobs = await prisma.job.findMany({
@@ -354,38 +437,112 @@ router.get('/', optionalAuth, [
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take: limitNum,
+      // We'll sort by distance after calculating - get enough jobs to filter and sort
+      // Note: We need to fetch more initially to properly filter by distance, then paginate
+      skip: 0,
+      take: Math.max(limitNum * 5, 100), // Fetch enough to filter and sort, but limit to avoid performance issues
     });
 
-    // Post-process: Filter by zip code in job requirements if zip filter was provided
+    // Post-process: Filter by zip code and calculate distances
     let filteredJobs = jobs;
-    if (zip && shouldFilterByLocation) {
+    
+    // Filter by zip code if needed (when we don't have coordinates)
+    if ((zip || userZip) && shouldFilterByLocation && !userLat) {
+      const searchZip = zip || userZip;
       filteredJobs = jobs.filter(job => {
         // Check customer zip
-        if (job.customer?.zip === zip) return true;
+        if (job.customer?.zip === searchZip) return true;
         // Check job requirements.pickupZip
         const reqZip = job.requirements?.pickupZip;
-        if (reqZip && reqZip.toString() === zip.toString()) return true;
+        if (reqZip && reqZip.toString() === searchZip.toString()) return true;
         return false;
       });
     }
+    
+    // Calculate distance for each job and add to response
+    if (userLat && userLng && !isNaN(userLat) && !isNaN(userLng)) {
+      filteredJobs = filteredJobs.map(job => {
+        // Only calculate distance if job has valid coordinates
+        let distance = null;
+        if (job.lat && job.lng && !isNaN(job.lat) && !isNaN(job.lng)) {
+          try {
+            distance = calculateDistance(userLat, userLng, job.lat, job.lng);
+            
+            // Validate distance is reasonable (not NaN or Infinity)
+            if (isNaN(distance) || !isFinite(distance)) {
+              distance = null;
+            }
+          } catch (error) {
+            console.warn(`[Jobs] Error calculating distance for job ${job.id}:`, error.message);
+            distance = null;
+          }
+        }
+        
+        // Filter out jobs beyond radius (double-check, since bounding box is approximate)
+        if (distance !== null && distance > searchRadius) {
+          return null; // Will be filtered out
+        }
+        
+        return {
+          ...job,
+          distance,
+          distanceFormatted: formatDistance(distance),
+        };
+      }).filter(job => job !== null); // Remove jobs beyond radius
+      
+      // Sort by distance (default) or by creation date
+      if (sortBy === 'distance' || !sortBy) {
+        filteredJobs.sort((a, b) => {
+          if (a.distance === null && b.distance === null) {
+            // Both have no distance - sort by creation date (newest first)
+            return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+          }
+          if (a.distance === null) return 1; // Jobs without distance go to end
+          if (b.distance === null) return -1;
+          return a.distance - b.distance; // Closest first
+        });
+      } else if (sortBy === 'newest') {
+        // Sort by newest first
+        filteredJobs.sort((a, b) => {
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        });
+      }
+    } else {
+      // No location - just add null distances and sort by date
+      filteredJobs = filteredJobs.map(job => ({
+        ...job,
+        distance: null,
+        distanceFormatted: 'Distance unknown',
+      }));
+      
+      // Sort by newest first if no location
+      filteredJobs.sort((a, b) => {
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      });
+    }
 
-    // Calculate pagination metadata
-    const totalPages = Math.ceil(totalCount / limitNum);
-    const hasMore = pageNum < totalPages;
+    // Apply pagination after filtering and sorting
+    const totalFilteredCount = filteredJobs.length;
+    const paginatedJobs = filteredJobs.slice(skip, skip + limitNum);
+    const totalPages = Math.ceil(totalFilteredCount / limitNum);
+    const hasMore = (skip + limitNum) < totalFilteredCount;
 
     // Return paginated response
     res.json({
-      jobs: filteredJobs || [],
+      jobs: paginatedJobs || [],
       pagination: {
         page: pageNum,
         limit: limitNum,
-        total: totalCount,
+        total: totalFilteredCount,
         totalPages,
         hasMore,
       },
+      location: userLat && userLng ? {
+        lat: userLat,
+        lng: userLng,
+        radius: searchRadius,
+        zip: userZip || zip,
+      } : null,
     });
   } catch (error) {
     console.error('List jobs error:', error);
@@ -498,10 +655,28 @@ router.post('/:id/cancel', authenticate, requireRole('CUSTOMER'), async (req, re
         // Payment is pre-authorized but not captured - void it
         try {
           await voidPaymentIntent(job.payment.providerId);
-          await prisma.payment.update({
-            where: { id: job.payment.id },
-            data: { status: 'VOIDED' },
-          });
+        await prisma.payment.update({
+          where: { id: job.payment.id },
+          data: { 
+            status: 'VOIDED',
+            refundReason: 'Job cancelled - payment voided',
+          },
+        });
+
+        // Log audit
+        await prisma.auditLog.create({
+          data: {
+            actorId: req.user.id,
+            actionType: 'VOID',
+            resourceType: 'PAYMENT',
+            resourceId: job.payment.id,
+            details: {
+              reason: 'Job cancelled - payment voided',
+              jobId: job.id,
+            },
+            ipAddress: req.ip,
+          },
+        }).catch(err => console.error('Error creating audit log:', err));
         } catch (error) {
           console.error('Error voiding payment:', error);
           // Continue with cancellation even if void fails
@@ -511,19 +686,55 @@ router.post('/:id/cancel', authenticate, requireRole('CUSTOMER'), async (req, re
         try {
           const refundAmount = Math.round(Number(job.payment.total) * 100); // Convert to cents
           await createRefund(job.payment.providerId, refundAmount);
-          await prisma.payment.update({
+        await prisma.payment.update({
+          where: { id: job.payment.id },
+          data: { 
+            status: 'REFUNDED',
+            refundAmount: Number(job.payment.total),
+            refundReason: 'Job cancelled by customer',
+          },
+        });
+
+        // Log audit
+        await prisma.auditLog.create({
+          data: {
+            actorId: req.user.id,
+            actionType: 'REFUND',
+            resourceType: 'PAYMENT',
+            resourceId: job.payment.id,
+            details: {
+              amount: Number(job.payment.total),
+              reason: 'Job cancelled by customer',
+              jobId: job.id,
+            },
+            ipAddress: req.ip,
+          },
+        }).catch(err => console.error('Error creating audit log:', err));
+        
+        // Send email to customer about refund
+        const { sendRefundEmail, sendAdminRefundNotification } = require('../services/email');
+        await sendRefundEmail(
+          req.user.email,
+          req.user.name,
+          job.title,
+          Number(job.payment.total)
+        );
+
+        // Send admin notification
+        try {
+          const payment = await prisma.payment.findUnique({
             where: { id: job.payment.id },
-            data: { status: 'REFUNDED' },
+            include: { customer: true, hustler: true, job: true },
           });
-          
-          // Send email to customer about refund
-          const { sendRefundEmail } = require('../services/email');
-          await sendRefundEmail(
-            req.user.email,
-            req.user.name,
-            job.title,
-            Number(job.payment.total)
+          await sendAdminRefundNotification(
+            payment,
+            Number(job.payment.total),
+            'Job cancelled by customer',
+            req.user.name
           );
+        } catch (adminError) {
+          console.error('Error sending admin refund notification:', adminError);
+        }
         } catch (error) {
           console.error('Error processing refund:', error);
           // Continue with cancellation even if refund fails
@@ -791,13 +1002,47 @@ router.post('/:id/confirm-complete', authenticate, requireRole('CUSTOMER'), [
 
         if (hustler && hustler.stripeAccountId) {
           const { transferToHustler } = require('../services/stripe');
-          const hustlerAmount = job.payment.amount ? Number(job.payment.amount) * 0.84 : 0; // 84% after 16% fee
-          await transferToHustler(
+          const jobAmount = Number(job.payment.amount) || 0;
+          const platformFee = jobAmount * 0.16; // 16% platform fee
+          const hustlerAmount = jobAmount - platformFee; // 84% after 16% fee
+
+          const transfer = await transferToHustler(
             hustler.stripeAccountId,
             hustlerAmount,
             job.id,
             `Payment for job: ${job.title}`
           );
+
+          // Create payout record
+          await prisma.payout.upsert({
+            where: { jobId: job.id },
+            create: {
+              hustlerId: job.hustlerId,
+              jobId: job.id,
+              amount: jobAmount,
+              platformFee,
+              netAmount: hustlerAmount,
+              status: 'PROCESSING', // Will be updated by webhook
+              payoutProviderId: transfer.id,
+              payoutMethod: 'STRIPE_TRANSFER',
+            },
+            update: {
+              status: 'PROCESSING',
+              payoutProviderId: transfer.id,
+            },
+          });
+
+          // Send admin notification
+          const { sendAdminPayoutNotification } = require('../services/email');
+          try {
+            const payout = await prisma.payout.findUnique({
+              where: { jobId: job.id },
+              include: { hustler: true },
+            });
+            await sendAdminPayoutNotification(payout, hustler);
+          } catch (notifError) {
+            console.error('Error sending admin payout notification:', notifError);
+          }
         } else {
           console.log(`Hustler ${job.hustlerId} does not have Stripe Connect account set up yet`);
         }
@@ -1017,8 +1262,26 @@ router.post('/:id/request-refund', authenticate, requireRole('CUSTOMER'), async 
         
         await prisma.payment.update({
           where: { id: job.payment.id },
-          data: { status: 'VOIDED' },
+          data: { 
+            status: 'VOIDED',
+            refundReason: 'Job cancelled - payment voided',
+          },
         });
+
+        // Log audit
+        await prisma.auditLog.create({
+          data: {
+            actorId: req.user.id,
+            actionType: 'VOID',
+            resourceType: 'PAYMENT',
+            resourceId: job.payment.id,
+            details: {
+              reason: 'Job cancelled - payment voided',
+              jobId: job.id,
+            },
+            ipAddress: req.ip,
+          },
+        }).catch(err => console.error('Error creating audit log:', err));
       } else if (job.payment.status === 'CAPTURED') {
         // Refund captured payment
         if (!skipStripeCheck && !forceTestMode) {
@@ -1050,13 +1313,30 @@ router.post('/:id/request-refund', authenticate, requireRole('CUSTOMER'), async 
     // Send email to customer about refund
     if (job.payment) {
       try {
-        const { sendRefundEmail } = require('../services/email');
+        const { sendRefundEmail, sendAdminRefundNotification } = require('../services/email');
+        const refundAmount = Number(job.payment.amount + (job.payment.tip || 0));
         await sendRefundEmail(
           req.user.email,
           req.user.name,
           job.title,
-          Number(job.payment.amount + (job.payment.tip || 0))
+          refundAmount
         );
+
+        // Send admin notification
+        try {
+          const payment = await prisma.payment.findUnique({
+            where: { id: job.payment.id },
+            include: { customer: true, hustler: true, job: true },
+          });
+          await sendAdminRefundNotification(
+            payment,
+            refundAmount,
+            'Refund requested - hustler non-responsive',
+            req.user.name
+          );
+        } catch (adminError) {
+          console.error('Error sending admin refund notification:', adminError);
+        }
       } catch (emailError) {
         console.error('Error sending refund email:', emailError);
       }
@@ -1382,12 +1662,43 @@ router.post('/auto-release', async (req, res) => {
           if (job.hustler.stripeAccountId && !skipStripeCheck && !forceTestMode) {
             try {
               const { transferToHustler } = require('../services/stripe');
-              await transferToHustler(
+              const transfer = await transferToHustler(
                 job.hustler.stripeAccountId,
                 hustlerAmount,
                 job.id,
                 `Payment for job: ${job.title}`
               );
+
+              // Create payout record
+              await prisma.payout.upsert({
+                where: { jobId: job.id },
+                create: {
+                  hustlerId: job.hustlerId,
+                  jobId: job.id,
+                  amount: jobAmount,
+                  platformFee,
+                  netAmount: hustlerAmount,
+                  status: 'PROCESSING', // Will be updated by webhook
+                  payoutProviderId: transfer.id,
+                  payoutMethod: 'STRIPE_TRANSFER',
+                },
+                update: {
+                  status: 'PROCESSING',
+                  payoutProviderId: transfer.id,
+                },
+              });
+
+              // Send admin notification
+              const { sendAdminPayoutNotification } = require('../services/email');
+              try {
+                const payout = await prisma.payout.findUnique({
+                  where: { jobId: job.id },
+                  include: { hustler: true },
+                });
+                await sendAdminPayoutNotification(payout, job.hustler);
+              } catch (notifError) {
+                console.error('Error sending admin payout notification:', notifError);
+              }
             } catch (transferError) {
               console.error('Transfer error (non-fatal):', transferError);
             }

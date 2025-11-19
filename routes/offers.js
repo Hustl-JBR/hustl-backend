@@ -67,7 +67,27 @@ router.get('/:jobId', authenticate, async (req, res) => {
 });
 
 // POST /offers/:jobId - Create an offer (Hustler only)
-router.post('/:jobId', authenticate, requireRole('HUSTLER'), [
+router.post('/:jobId', authenticate, requireRole('HUSTLER'), async (req, res, next) => {
+  // Check email verification before allowing offers
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { emailVerified: true },
+    });
+
+    if (!user || !user.emailVerified) {
+      return res.status(403).json({ 
+        error: 'Email verification required',
+        message: 'Please verify your email address before applying to jobs. Check your email for a verification code.',
+        requiresEmailVerification: true,
+      });
+    }
+  } catch (error) {
+    console.error('Email verification check error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+  next();
+}, [
   body('note').optional().trim().isLength({ max: 1000 }),
 ], async (req, res) => {
   try {
@@ -404,13 +424,20 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       },
     });
 
-    // Send email to hustler
+    // Send notification email to hustler
     const { sendJobAssignedEmail } = require('../services/email');
-    await sendJobAssignedEmail(
-      offer.hustler.email,
-      offer.hustler.name,
-      job.title
-    );
+    try {
+      await sendJobAssignedEmail(
+        offer.hustler.email,
+        offer.hustler.name,
+        job.title,
+        job.id,
+        req.user.name // Customer name
+      );
+    } catch (emailError) {
+      console.error('Error sending job assigned email:', emailError);
+      // Don't fail the request if email fails
+    }
 
     res.json({
       job,

@@ -1,23 +1,806 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Admin Dashboard</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Hustl</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f9fafb;
+      color: #111827;
+      padding: 1rem;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .header h1 {
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .header .subtitle {
+      color: #6b7280;
+      font-size: 0.95rem;
+    }
+    
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      background: white;
+      padding: 0.5rem;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .tab {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: #6b7280;
+      transition: all 0.2s;
+    }
+    
+    .tab.active {
+      background: #2563eb;
+      color: white;
+    }
+    
+    .tab:hover:not(.active) {
+      background: #f3f4f6;
+    }
+    
+    .panel {
+      display: none;
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .panel.active {
+      display: block;
+    }
+    
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .panel-header h2 {
+      font-size: 1.5rem;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+    }
+    
+    .stat-card.revenue {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    }
+    
+    .stat-card.refunds {
+      background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+    }
+    
+    .stat-card.payouts {
+      background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
+    }
+    
+    .stat-label {
+      font-size: 0.85rem;
+      opacity: 0.9;
+      margin-bottom: 0.5rem;
+    }
+    
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+    }
+    
+    .filters {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    
+    .filter-group label {
+      font-size: 0.85rem;
+      color: #6b7280;
+      font-weight: 500;
+    }
+    
+    .filter-group input,
+    .filter-group select {
+      padding: 0.5rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+    
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .table th,
+    .table td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .table th {
+      background: #f9fafb;
+      font-weight: 600;
+      color: #374151;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .table tr:hover {
+      background: #f9fafb;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .badge.refunded {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    
+    .badge.voided {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .badge.pending {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    
+    .badge.processing {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .badge.completed {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    
+    .badge.failed {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #1d4ed8;
+    }
+    
+    .btn-danger {
+      background: #dc2626;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #b91c1c;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: #6b7280;
+    }
+    
+    .empty {
+      text-align: center;
+      padding: 3rem;
+      color: #6b7280;
+    }
+    
+    .error {
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      color: #991b1b;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    
+    .success {
+      background: #d1fae5;
+      border: 1px solid #6ee7b7;
+      color: #065f46;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal-overlay.active {
+      display: flex;
+    }
+    
+    .modal {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .modal h3 {
+      margin-bottom: 1rem;
+    }
+    
+    .modal .field {
+      margin-bottom: 1rem;
+    }
+    
+    .modal .field label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    
+    .modal .field input,
+    .modal .field textarea {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+    }
+    
+    .modal .field textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    
+    .modal-actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      margin-top: 1.5rem;
+    }
+  </style>
 </head>
 <body>
-  <h1>Admin Payouts</h1>
-  <section>
-    <h2>Unpaid Completed Jobs</h2>
-    <div id="unpaid-jobs"></div>
-  </section>
-
-  <section>
-    <h2>Paid Jobs</h2>
-    <div id="paid-jobs"></div>
-  </section>
-
-  <script src="all.js"></script>
-  <script src="admin.js"></script>
+  <div class="container">
+    <div class="header">
+      <h1>🔐 Admin Dashboard</h1>
+      <div class="subtitle">Manage refunds, payouts, and view financial stats</div>
+    </div>
+    
+    <div id="errorMessage" class="error" style="display: none;"></div>
+    <div id="successMessage" class="success"></div>
+    
+    <div class="tabs">
+      <button class="tab active" data-tab="stats">📊 Stats</button>
+      <button class="tab" data-tab="refunds">🔴 Refunds</button>
+      <button class="tab" data-tab="payouts">💰 Payouts</button>
+      <button class="tab" data-tab="payments">💳 All Payments</button>
+    </div>
+    
+    <!-- Stats Panel -->
+    <div id="statsPanel" class="panel active">
+      <div class="panel-header">
+        <h2>Financial Overview</h2>
+        <button class="btn btn-primary" onclick="loadStats()">🔄 Refresh</button>
+      </div>
+      <div id="statsContent" class="loading">Loading stats...</div>
+    </div>
+    
+    <!-- Refunds Panel -->
+    <div id="refundsPanel" class="panel">
+      <div class="panel-header">
+        <h2>Refunds</h2>
+        <button class="btn btn-primary" onclick="loadRefunds()">🔄 Refresh</button>
+      </div>
+      <div class="filters">
+        <div class="filter-group">
+          <label>Status</label>
+          <select id="refundStatusFilter" onchange="loadRefunds()">
+            <option value="">All</option>
+            <option value="REFUNDED">Refunded</option>
+            <option value="VOIDED">Voided</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>From Date</label>
+          <input type="date" id="refundDateFrom" onchange="loadRefunds()" />
+        </div>
+        <div class="filter-group">
+          <label>To Date</label>
+          <input type="date" id="refundDateTo" onchange="loadRefunds()" />
+        </div>
+      </div>
+      <div id="refundsContent" class="loading">Loading refunds...</div>
+    </div>
+    
+    <!-- Payouts Panel -->
+    <div id="payoutsPanel" class="panel">
+      <div class="panel-header">
+        <h2>Payouts</h2>
+        <button class="btn btn-primary" onclick="loadPayouts()">🔄 Refresh</button>
+      </div>
+      <div class="filters">
+        <div class="filter-group">
+          <label>Status</label>
+          <select id="payoutStatusFilter" onchange="loadPayouts()">
+            <option value="">All</option>
+            <option value="PENDING">Pending</option>
+            <option value="PROCESSING">Processing</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="FAILED">Failed</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>From Date</label>
+          <input type="date" id="payoutDateFrom" onchange="loadPayouts()" />
+        </div>
+        <div class="filter-group">
+          <label>To Date</label>
+          <input type="date" id="payoutDateTo" onchange="loadPayouts()" />
+        </div>
+      </div>
+      <div id="payoutsContent" class="loading">Loading payouts...</div>
+    </div>
+    
+    <!-- Payments Panel -->
+    <div id="paymentsPanel" class="panel">
+      <div class="panel-header">
+        <h2>All Payments</h2>
+        <button class="btn btn-primary" onclick="loadPayments()">🔄 Refresh</button>
+      </div>
+      <div class="filters">
+        <div class="filter-group">
+          <label>Status</label>
+          <select id="paymentStatusFilter" onchange="loadPayments()">
+            <option value="">All</option>
+            <option value="PREAUTHORIZED">Pre-authorized</option>
+            <option value="CAPTURED">Captured</option>
+            <option value="REFUNDED">Refunded</option>
+            <option value="VOIDED">Voided</option>
+          </select>
+        </div>
+      </div>
+      <div id="paymentsContent" class="loading">Loading payments...</div>
+    </div>
+  </div>
+  
+  <!-- Refund Modal -->
+  <div id="refundModal" class="modal-overlay">
+    <div class="modal">
+      <h3>Process Refund</h3>
+      <div class="field">
+        <label>Payment ID</label>
+        <input type="text" id="refundPaymentId" readonly />
+      </div>
+      <div class="field">
+        <label>Current Amount</label>
+        <input type="text" id="refundCurrentAmount" readonly />
+      </div>
+      <div class="field">
+        <label>Refund Amount (leave empty for full refund)</label>
+        <input type="number" id="refundAmount" step="0.01" min="0.01" placeholder="Enter amount or leave empty for full" />
+      </div>
+      <div class="field">
+        <label>Reason *</label>
+        <textarea id="refundReason" placeholder="Why are you processing this refund?" required></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeRefundModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="processRefund()">Process Refund</button>
+      </div>
+    </div>
+  </div>
+  
+  <script src="/api-integration.js?v=3"></script>
+  <script>
+    const API_BASE = window.location.origin;
+    let authToken = localStorage.getItem('hustl_token');
+    
+    // Check auth
+    if (!authToken) {
+      window.location.href = '/';
+    }
+    
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab + 'Panel').classList.add('active');
+        
+        // Load data when switching tabs
+        if (tab.dataset.tab === 'stats') loadStats();
+        else if (tab.dataset.tab === 'refunds') loadRefunds();
+        else if (tab.dataset.tab === 'payouts') loadPayouts();
+        else if (tab.dataset.tab === 'payments') loadPayments();
+      });
+    });
+    
+    async function apiRequest(endpoint, options = {}) {
+      const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+      };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      
+      const response = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers
+      });
+      
+      if (response.status === 401) {
+        localStorage.removeItem('hustl_token');
+        window.location.href = '/';
+        return null;
+      }
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Request failed' }));
+        throw new Error(error.error || 'Request failed');
+      }
+      
+      return response.json();
+    }
+    
+    function showError(message) {
+      const el = document.getElementById('errorMessage');
+      el.textContent = message;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 5000);
+    }
+    
+    function showSuccess(message) {
+      const el = document.getElementById('successMessage');
+      el.textContent = message;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 5000);
+    }
+    
+    // Load Stats
+    async function loadStats() {
+      try {
+        const content = document.getElementById('statsContent');
+        content.innerHTML = '<div class="loading">Loading stats...</div>';
+        
+        const data = await apiRequest('/admin/stats');
+        
+        content.innerHTML = `
+          <div class="stats-grid">
+            <div class="stat-card revenue">
+              <div class="stat-label">Total Revenue</div>
+              <div class="stat-value">$${Number(data.revenue?.total || 0).toFixed(2)}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Platform Fees</div>
+              <div class="stat-value">$${Number(data.revenue?.platformFees || 0).toFixed(2)}</div>
+            </div>
+            <div class="stat-card refunds">
+              <div class="stat-label">Total Refunds</div>
+              <div class="stat-value">$${Number(data.refunds?.total || 0).toFixed(2)}</div>
+            </div>
+            <div class="stat-card payouts">
+              <div class="stat-label">Total Payouts</div>
+              <div class="stat-value">$${Number(data.payouts?.total || 0).toFixed(2)}</div>
+            </div>
+          </div>
+          <div style="margin-top: 2rem;">
+            <h3 style="margin-bottom: 1rem;">Recent Activity (Last 7 Days)</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+              <div style="background: #f9fafb; padding: 1rem; border-radius: 8px;">
+                <div style="font-size: 0.85rem; color: #6b7280;">Refunds</div>
+                <div style="font-size: 1.5rem; font-weight: 700;">${data.refunds?.recent || 0}</div>
+              </div>
+              <div style="background: #f9fafb; padding: 1rem; border-radius: 8px;">
+                <div style="font-size: 0.85rem; color: #6b7280;">Payouts</div>
+                <div style="font-size: 1.5rem; font-weight: 700;">${data.payouts?.recent || 0}</div>
+              </div>
+              <div style="background: #f9fafb; padding: 1rem; border-radius: 8px;">
+                <div style="font-size: 0.85rem; color: #6b7280;">Pending Payouts</div>
+                <div style="font-size: 1.5rem; font-weight: 700;">$${Number(data.payouts?.pending || 0).toFixed(2)}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      } catch (error) {
+        document.getElementById('statsContent').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+        showError(error.message);
+      }
+    }
+    
+    // Load Refunds
+    async function loadRefunds() {
+      try {
+        const content = document.getElementById('refundsContent');
+        content.innerHTML = '<div class="loading">Loading refunds...</div>';
+        
+        const status = document.getElementById('refundStatusFilter').value;
+        const dateFrom = document.getElementById('refundDateFrom').value;
+        const dateTo = document.getElementById('refundDateTo').value;
+        
+        let url = '/admin/refunds?page=1&limit=50';
+        if (status) url += `&status=${status}`;
+        if (dateFrom) url += `&dateFrom=${dateFrom}T00:00:00Z`;
+        if (dateTo) url += `&dateTo=${dateTo}T23:59:59Z`;
+        
+        const data = await apiRequest(url);
+        
+        if (!data.refunds || data.refunds.length === 0) {
+          content.innerHTML = '<div class="empty">No refunds found</div>';
+          return;
+        }
+        
+        content.innerHTML = `
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Job</th>
+                <th>Customer</th>
+                <th>Amount</th>
+                <th>Reason</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.refunds.map(refund => `
+                <tr>
+                  <td>${new Date(refund.updatedAt || refund.createdAt).toLocaleDateString()}</td>
+                  <td>${refund.job?.title || 'N/A'}</td>
+                  <td>${refund.customer?.name || 'N/A'}<br><small style="color: #6b7280;">${refund.customer?.email || ''}</small></td>
+                  <td>$${Number(refund.refundAmount || refund.total || 0).toFixed(2)}</td>
+                  <td>${refund.refundReason || 'N/A'}</td>
+                  <td><span class="badge ${refund.status.toLowerCase()}">${refund.status}</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      } catch (error) {
+        document.getElementById('refundsContent').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+        showError(error.message);
+      }
+    }
+    
+    // Load Payouts
+    async function loadPayouts() {
+      try {
+        const content = document.getElementById('payoutsContent');
+        content.innerHTML = '<div class="loading">Loading payouts...</div>';
+        
+        const status = document.getElementById('payoutStatusFilter').value;
+        const dateFrom = document.getElementById('payoutDateFrom').value;
+        const dateTo = document.getElementById('payoutDateTo').value;
+        
+        let url = '/admin/payouts?page=1&limit=50';
+        if (status) url += `&status=${status}`;
+        if (dateFrom) url += `&dateFrom=${dateFrom}T00:00:00Z`;
+        if (dateTo) url += `&dateTo=${dateTo}T23:59:59Z`;
+        
+        const data = await apiRequest(url);
+        
+        if (!data.payouts || data.payouts.length === 0) {
+          content.innerHTML = '<div class="empty">No payouts found</div>';
+          return;
+        }
+        
+        content.innerHTML = `
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Hustler</th>
+                <th>Job</th>
+                <th>Amount</th>
+                <th>Platform Fee</th>
+                <th>Net Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.payouts.map(payout => `
+                <tr>
+                  <td>${new Date(payout.createdAt).toLocaleDateString()}</td>
+                  <td>${payout.hustler?.name || 'N/A'}<br><small style="color: #6b7280;">${payout.hustler?.email || ''}</small></td>
+                  <td>${payout.job?.title || 'N/A'}</td>
+                  <td>$${Number(payout.amount || 0).toFixed(2)}</td>
+                  <td>$${Number(payout.platformFee || 0).toFixed(2)}</td>
+                  <td><strong>$${Number(payout.netAmount || 0).toFixed(2)}</strong></td>
+                  <td><span class="badge ${payout.status.toLowerCase()}">${payout.status}</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      } catch (error) {
+        document.getElementById('payoutsContent').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+        showError(error.message);
+      }
+    }
+    
+    // Load Payments
+    async function loadPayments() {
+      try {
+        const content = document.getElementById('paymentsContent');
+        content.innerHTML = '<div class="loading">Loading payments...</div>';
+        
+        const status = document.getElementById('paymentStatusFilter').value;
+        
+        let url = '/admin/payments?page=1&limit=50';
+        if (status) url += `&status=${status}`;
+        
+        const data = await apiRequest(url);
+        
+        if (!data.payments || data.payments.length === 0) {
+          content.innerHTML = '<div class="empty">No payments found</div>';
+          return;
+        }
+        
+        content.innerHTML = `
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Job</th>
+                <th>Customer</th>
+                <th>Hustler</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.payments.map(payment => `
+                <tr>
+                  <td>${new Date(payment.createdAt).toLocaleDateString()}</td>
+                  <td>${payment.job?.title || 'N/A'}</td>
+                  <td>${payment.customer?.name || 'N/A'}</td>
+                  <td>${payment.hustler?.name || 'N/A'}</td>
+                  <td>$${Number(payment.total || 0).toFixed(2)}</td>
+                  <td><span class="badge ${payment.status.toLowerCase()}">${payment.status}</span></td>
+                  <td>
+                    ${payment.status === 'CAPTURED' ? `<button class="btn btn-danger" onclick="openRefundModal('${payment.id}', ${Number(payment.total || 0)})">Refund</button>` : '-'}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      } catch (error) {
+        document.getElementById('paymentsContent').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+        showError(error.message);
+      }
+    }
+    
+    // Refund Modal
+    function openRefundModal(paymentId, amount) {
+      document.getElementById('refundPaymentId').value = paymentId;
+      document.getElementById('refundCurrentAmount').value = `$${amount.toFixed(2)}`;
+      document.getElementById('refundAmount').value = '';
+      document.getElementById('refundReason').value = '';
+      document.getElementById('refundModal').classList.add('active');
+    }
+    
+    function closeRefundModal() {
+      document.getElementById('refundModal').classList.remove('active');
+    }
+    
+    async function processRefund() {
+      const paymentId = document.getElementById('refundPaymentId').value;
+      const amount = document.getElementById('refundAmount').value;
+      const reason = document.getElementById('refundReason').value.trim();
+      
+      if (!reason) {
+        showError('Reason is required');
+        return;
+      }
+      
+      try {
+        const body = { reason };
+        if (amount) body.amount = parseFloat(amount);
+        
+        await apiRequest(`/admin/refunds/${paymentId}`, {
+          method: 'POST',
+          body: JSON.stringify(body)
+        });
+        
+        showSuccess('Refund processed successfully');
+        closeRefundModal();
+        loadRefunds();
+        loadPayments();
+        loadStats();
+      } catch (error) {
+        showError(error.message);
+      }
+    }
+    
+    // Load initial data
+    loadStats();
+  </script>
 </body>
 </html>

@@ -208,6 +208,117 @@
       display: block;
     }
 
+    /* Notifications Bell */
+    #notificationsBell:hover {
+      background: #f3f4f6;
+      border-color: #d1d5db;
+    }
+
+    #notificationsDropdown {
+      animation: slideDown 0.2s ease-out;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .notification-item {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #f3f4f6;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .notification-item:hover {
+      background: #f9fafb;
+    }
+
+    .notification-item.unread {
+      background: #eff6ff;
+      border-left: 3px solid #2563eb;
+    }
+
+    .notification-item .notification-icon {
+      font-size: 1.5rem;
+      margin-right: 0.75rem;
+    }
+
+    .notification-item .notification-content {
+      flex: 1;
+    }
+
+    .notification-item .notification-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.25rem;
+      color: #111827;
+    }
+
+    .notification-item .notification-message {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-bottom: 0.25rem;
+    }
+
+    .notification-item .notification-time {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+
+    /* Loading spinner */
+    .btn-loading {
+      position: relative;
+      color: transparent !important;
+      pointer-events: none;
+    }
+
+    .btn-loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ffffff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    /* Error messages */
+    .error-message {
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      color: #991b1b;
+      padding: 0.75rem;
+      border-radius: 8px;
+      margin: 0.75rem 0;
+      font-size: 0.9rem;
+    }
+
+    .error-message .retry-btn {
+      margin-top: 0.5rem;
+      background: #dc2626;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
     /* Mobile Menu Button */
     .mobile-menu-btn {
       display: none; /* Hidden by default, shown on mobile */
@@ -967,6 +1078,14 @@
       transition: all 0.2s;
     }
 
+    @media (max-width: 768px) {
+      .modal-close {
+        top: 4rem;
+        width: 36px;
+        height: 36px;
+      }
+    }
+
     .modal-close:hover {
       background: #fff;
       transform: scale(1.1);
@@ -1590,13 +1709,35 @@
         <button class="mobile-menu-item" data-view="post">➕ Post a job</button>
         <button class="mobile-menu-item mobile-menu-item-badge" data-view="messages" data-badge-count="0">💬 Messages</button>
         <button class="mobile-menu-item" data-view="profile">👤 Profile</button>
-        <button class="mobile-menu-item" data-view="feedback">💬 Feedback</button>
         <button class="mobile-menu-item" data-view="owner" id="mobileMenuOwner" style="display: none;">⚙️ Owner</button>
         <button class="mobile-menu-item" data-view="about">ℹ️ About</button>
       </div>
-      <div class="auth-pill" id="authPill">
-        <span id="authPillText">Not signed in</span>
-        <button id="openAuthButton">Sign in / Create account</button>
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <!-- Notifications Bell -->
+        <div id="notificationsContainer" style="position: relative; display: none;">
+          <button 
+            id="notificationsBell" 
+            style="position: relative; background: transparent; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.5rem 0.75rem; cursor: pointer; font-size: 1.2rem; color: #374151; transition: all 0.2s;"
+          >
+            🔔
+            <span id="notificationsBadge" style="position: absolute; top: -4px; right: -4px; background: #ef4444; color: white; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.35rem; border-radius: 999px; min-width: 1.2rem; text-align: center; display: none;">0</span>
+          </button>
+          <!-- Notifications Dropdown -->
+          <div id="notificationsDropdown" style="display: none; position: absolute; top: 100%; right: 0; margin-top: 0.5rem; background: white; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); min-width: 320px; max-width: 400px; max-height: 500px; overflow-y: auto; z-index: 1000;">
+            <div style="padding: 1rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+              <div style="font-weight: 600; font-size: 1rem;">Notifications</div>
+              <button onclick="markAllNotificationsRead()" style="background: transparent; border: none; color: #2563eb; font-size: 0.85rem; cursor: pointer; padding: 0.25rem 0.5rem;">Mark all read</button>
+            </div>
+            <div id="notificationsList" style="padding: 0.5rem;">
+              <div class="loading" style="text-align: center; padding: 2rem; color: #6b7280;">Loading notifications...</div>
+            </div>
+            <div id="notificationsEmpty" style="display: none; text-align: center; padding: 2rem; color: #6b7280; font-size: 0.9rem;">No notifications yet</div>
+          </div>
+        </div>
+        <div class="auth-pill" id="authPill">
+          <span id="authPillText">Not signed in</span>
+          <button id="openAuthButton">Sign in / Create account</button>
+        </div>
       </div>
     </header>
 
@@ -1728,6 +1869,12 @@
               <div class="pill">🌿 Yard work</div>
               <div class="pill">🧹 Clean-up & organizing</div>
               <div class="pill">🛠 Furniture & set-up</div>
+              <div class="pill">🔧 Handyman & repairs</div>
+              <div class="pill">🎨 Painting</div>
+              <div class="pill">🌳 Landscaping</div>
+              <div class="pill">🐕 Pet care</div>
+              <div class="pill">🎉 Event help</div>
+              <div class="pill">💻 Tech support</div>
               <div class="pill">⭐ Other odd jobs</div>
             </div>
           </div>
@@ -1860,6 +2007,12 @@
               <option value="yard">🌿 Yard work / Outdoor</option>
               <option value="cleaning">🧹 Cleaning / Organizing</option>
               <option value="furniture">🛠 Furniture / Assembly</option>
+              <option value="handyman">🔧 Handyman / Repairs</option>
+              <option value="painting">🎨 Painting</option>
+              <option value="landscaping">🌳 Landscaping / Lawn Care</option>
+              <option value="petcare">🐕 Pet Care / Dog Walking</option>
+              <option value="event">🎉 Event Help / Setup</option>
+              <option value="tech">💻 Tech Support / Setup</option>
               <option value="other">⭐ Other</option>
             </select>
           </div>
@@ -1891,11 +2044,10 @@
             </div>
           </div>
           
-          <div class="field">
-            <label>
-              <input type="checkbox" id="hideZipCode" />
-              Hide zip code from job listing (only show city)
-            </label>
+          <div class="field" style="background: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.75rem; margin-top: 0.5rem;">
+            <div style="font-size: 0.9rem; color: #1e40af;">
+              <strong>📍 Zip Code Info:</strong> Your zip code is required and will always be visible to hustlers. This helps them find jobs in their area and personalize their job feed.
+            </div>
           </div>
 
           <div class="field">
@@ -2088,6 +2240,26 @@
           <div class="job-status-group" id="jobsStatusFilter" style="display: none;">
             <!-- Status filters will be dynamically shown based on mode and tab -->
           </div>
+          <!-- Search Bar -->
+          <div class="field" style="margin: 0.75rem 0;">
+            <label for="jobsSearchInput" style="font-size: 0.9rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem; display: block;">🔍 Search Jobs</label>
+            <div style="position: relative;">
+              <input 
+                id="jobsSearchInput" 
+                type="text" 
+                placeholder="Search by title or description (e.g., 'moving', 'yard work')" 
+                style="width: 100%; padding: 0.75rem; padding-right: 3rem; font-size: 0.95rem; border: 1px solid #e5e7eb; border-radius: 8px;" 
+              />
+              <button 
+                id="clearSearchBtn" 
+                style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: transparent; border: none; cursor: pointer; font-size: 1.2rem; color: #9ca3af; display: none; padding: 0.25rem;"
+                onclick="clearJobSearch()"
+              >×</button>
+            </div>
+            <div style="font-size: 0.8rem; color: #6b7280; margin-top: 0.25rem;">
+              Search through job titles and descriptions to find what you're looking for
+            </div>
+          </div>
           <div class="field-inline" style="margin: 0.75rem 0; gap: 0.5rem;">
             <div class="field" style="flex: 1;">
               <select id="jobsDateFilter" style="width: 100%; padding: 0.5rem;">
@@ -2106,37 +2278,32 @@
               </select>
             </div>
           </div>
+          <!-- Location Controls -->
+          <div id="locationControls" style="margin: 0.75rem 0; padding: 0.75rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+              <label for="jobsRadiusFilter" style="font-size: 0.9rem; font-weight: 600; color: #374151;">📍 Search radius</label>
+              <span id="currentRadiusDisplay" style="font-size: 0.85rem; color: #6b7280;">25 miles</span>
+            </div>
+            <select id="jobsRadiusFilter" style="width: 100%; padding: 0.5rem; font-size: 0.9rem;">
+              <option value="5">5 miles (very local)</option>
+              <option value="10">10 miles (local)</option>
+              <option value="25" selected>25 miles (nearby) - Default</option>
+              <option value="50">50 miles (expanded)</option>
+              <option value="100">100 miles (all Tennessee)</option>
+            </select>
+            <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #6b7280; line-height: 1.4;">
+              Jobs are sorted by closest first. Adjust the radius to see more or fewer jobs.
+            </div>
+          </div>
           <div class="field-inline" style="margin: 0.5rem 0; gap: 0.5rem; align-items: flex-end;">
             <div class="field" style="flex: 1;">
-              <label for="jobsDistanceFilter" style="font-size: 0.85rem; margin-bottom: 0.25rem; display: block;">Distance from you</label>
-              <select id="jobsDistanceFilter" style="width: 100%; padding: 0.5rem;">
-                <option value="">All distances</option>
-                <option value="5">5 miles</option>
-                <option value="10">10 miles</option>
-                <option value="20">20 miles</option>
-                <option value="50">50 miles</option>
-                <option value="100">100 miles</option>
-              </select>
+              <label for="jobsZipFilter" style="font-size: 0.85rem; margin-bottom: 0.25rem; display: block;">Or search by zip code (optional)</label>
+              <input id="jobsZipFilter" type="text" placeholder="37011" maxlength="5" pattern="[0-9]{5}" style="width: 100%; padding: 0.5rem;" />
             </div>
             <div class="field" style="flex: 0 0 auto;">
               <button id="setMyLocationBtn" class="btn outline" style="padding: 0.5rem 1rem; white-space: nowrap; margin-top: 1.5rem;">
                 📍 Use My Location
               </button>
-            </div>
-          </div>
-          <div class="field-inline" style="margin: 0.5rem 0; gap: 0.5rem; align-items: flex-end;">
-            <div class="field" style="flex: 1;">
-              <label for="jobsZipFilter" style="font-size: 0.85rem; margin-bottom: 0.25rem; display: block;">Or enter zip code</label>
-              <input id="jobsZipFilter" type="text" placeholder="12345" maxlength="5" pattern="[0-9]{5}" style="width: 100%; padding: 0.5rem;" />
-            </div>
-            <div class="field" style="flex: 0 0 auto; display: flex; align-items: flex-end; gap: 0.5rem;">
-              <button id="saveZipFilterBtn" class="btn btn-primary" style="padding: 0.5rem 1rem; white-space: nowrap; margin-top: 1.5rem;">
-                Save
-              </button>
-              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">
-                <input type="checkbox" id="hideMyZip" style="width: 16px; height: 16px;" />
-                <span>Hide my zip</span>
-              </label>
             </div>
           </div>
           <div id="locationStatus" style="font-size: 0.85rem; color: #64748b; margin-top: 0.25rem;"></div>
@@ -2308,7 +2475,7 @@
                   <ul style="margin: 0; padding-left: 1.25rem; color: #374151; line-height: 1.6; font-size: 0.85rem;">
                     <li>Go to "Post a job" tab</li>
                     <li>Fill in job title, description, category, location, date, and budget</li>
-                    <li>Add zip code (optional: you can hide it for privacy)</li>
+                    <li>Add zip code (required for location matching - will be visible to hustlers)</li>
                     <li>Upload photos if helpful</li>
                     <li>Click "Post job" - it will appear in the Jobs list for hustlers to see</li>
                   </ul>
@@ -2565,7 +2732,7 @@
     </div>
   </div>
 
-<script src="/api-integration.js"></script>
+<script src="/api-integration.js?v=3"></script>
   <script>
 // ==== API Integration (replaces Supabase) ====
 // All API calls now go through window.hustlAPI
@@ -2989,6 +3156,13 @@ if (job.acceptedHustlerId) {
       }
 
       renderAll();
+      
+      // Check for accepted offers when switching to jobs view
+      if (view === "jobs" && typeof checkForAcceptedOffers === 'function') {
+        setTimeout(() => {
+          checkForAcceptedOffers();
+        }, 1500); // Wait for jobs to load first
+      }
     }
 
     /* ---------- Auth visibility ---------- */
@@ -3278,7 +3452,7 @@ try {
       document.getElementById("pickupCity").value = "";
       document.getElementById("pickupAddress").value = "";
       document.getElementById("pickupZip").value = "";
-      document.getElementById("hideZipCode").checked = false;
+      // Zip code visibility is now always on - no checkbox to reset
       document.getElementById("jobOnSiteOnly").checked = false;
       document.getElementById("estimatedDuration").value = "";
       document.getElementById("toolTruck").checked = false;
@@ -3390,9 +3564,8 @@ try {
           const pickupZip = document
             .getElementById("pickupZip")
             .value.trim();
-          const hideZipCode = document
-            .getElementById("hideZipCode")
-            .checked;
+          // Zip code must always be visible - required for location matching
+          const hideZipCode = false;
           const onSiteOnly =
             document.getElementById("jobOnSiteOnly").checked;
           const dropoffArea = document
@@ -3568,7 +3741,7 @@ try {
                 onSiteOnly,
                 notes: notes || null,
                 pickupZip: pickupZip || null,
-                hideZipCode: hideZipCode || false,
+                hideZipCode: false, // Always false - zip code must be visible for location matching
                 estimatedDuration: estimatedDuration || null,
                 toolsNeeded: toolsNeeded.length > 0 ? toolsNeeded : null,
               },
@@ -3679,6 +3852,7 @@ async function renderJobs(reset = false) {
     const listParams = {
       page: currentJobsPage,
       limit: 20,
+      sortBy: 'distance', // Sort by closest first
     };
     if (statusFilter) {
       listParams.status = statusFilter;
@@ -3709,25 +3883,66 @@ async function renderJobs(reset = false) {
       }
     }
     
-    // Distance-based filtering
-    const distanceFilter = document.getElementById("jobsDistanceFilter")?.value;
+    // Location-based filtering: Auto-filter by user location with default radius (25 miles)
+    // Production-ready with validation and fallbacks
+    const radiusFilter = document.getElementById("jobsRadiusFilter")?.value || '25'; // Default 25 miles
+    const radiusNum = parseInt(radiusFilter, 10) || 25;
     const userLocation = JSON.parse(localStorage.getItem('userLocation') || 'null');
+    const zipFilterInput = document.getElementById("jobsZipFilter")?.value.trim();
+    const savedZipFilter = localStorage.getItem('savedZipFilter');
     
-    if (distanceFilter && userLocation && userLocation.lat && userLocation.lng) {
-      listParams.lat = userLocation.lat;
-      listParams.lng = userLocation.lng;
-      listParams.radius = parseFloat(distanceFilter);
+    // Priority order: zip filter input > saved zip > user profile zip > geolocation > default
+    if (zipFilterInput && zipFilterInput.length === 5 && /^\d{5}$/.test(zipFilterInput)) {
+      listParams.zip = zipFilterInput;
+      listParams.radius = radiusNum;
+    } else if (savedZipFilter && savedZipFilter.length === 5 && /^\d{5}$/.test(savedZipFilter)) {
+      listParams.zip = savedZipFilter;
+      listParams.radius = radiusNum;
+    } else if (user && user.zip && user.zip.length === 5 && /^\d{5}$/.test(user.zip)) {
+      // Use user's profile zip code (validated)
+      listParams.zip = user.zip;
+      listParams.radius = radiusNum;
+    } else if (userLocation && userLocation.lat && userLocation.lng) {
+      // Validate geolocation coordinates
+      const lat = parseFloat(userLocation.lat);
+      const lng = parseFloat(userLocation.lng);
+      
+      if (!isNaN(lat) && !isNaN(lng) && 
+          lat >= -90 && lat <= 90 && 
+          lng >= -180 && lng <= 180) {
+        // Check if location is recent (within 1 hour) for accuracy
+        const locationAge = userLocation.timestamp ? Date.now() - userLocation.timestamp : Infinity;
+        if (locationAge < 60 * 60 * 1000) { // 1 hour
+          listParams.lat = lat;
+          listParams.lng = lng;
+          listParams.radius = radiusNum;
+        } else {
+          // Location too old, fall back to profile zip or default
+          if (user && user.zip && user.zip.length === 5) {
+            listParams.zip = user.zip;
+            listParams.radius = radiusNum;
+          } else {
+            listParams.radius = radiusNum;
+          }
+        }
+      } else {
+        // Invalid coordinates, use profile zip or default
+        if (user && user.zip && user.zip.length === 5) {
+          listParams.zip = user.zip;
+          listParams.radius = radiusNum;
+        } else {
+          listParams.radius = radiusNum;
+        }
+      }
+    } else {
+      // Default: use radius, backend will use user's profile location if available
+      listParams.radius = radiusNum;
     }
     
-    // Zipcode filtering - only use saved zip filter (from Save button)
-    const savedZipFilter = localStorage.getItem('savedZipFilter');
-    const zipFilter = savedZipFilter || null; // Only use saved value, not what's typed
-    const hideMyZip = document.getElementById("hideMyZip")?.checked;
-    if (zipFilter && zipFilter.length === 5) {
-      listParams.zip = zipFilter;
-      if (hideMyZip) {
-        listParams.hideZip = true;
-      }
+    // Add search term if provided
+    const searchInput = document.getElementById("jobsSearchInput");
+    if (searchInput && searchInput.value.trim()) {
+      listParams.search = searchInput.value.trim();
     }
     
     // Fetch jobs from API
@@ -3785,20 +4000,9 @@ async function renderJobs(reset = false) {
       return true; // Keep all other jobs
     });
     
-    // Filter by distance if user location is set
-    if (distanceFilter && userLocation && userLocation.lat && userLocation.lng) {
-      const maxDistance = parseFloat(distanceFilter);
-      jobs = jobs.filter(job => {
-        if (!job.lat || !job.lng) return false;
-        const distance = calculateDistance(
-          userLocation.lat, 
-          userLocation.lng, 
-          job.lat, 
-          job.lng
-        );
-        return distance <= maxDistance;
-      });
-    }
+    // Note: Distance filtering is now handled on the backend
+    // The backend already filters by radius and calculates distances
+    // We don't need client-side distance filtering anymore
     
     // Filter by time if needed (client-side for now)
     const timeFilter = document.getElementById("jobsTimeFilter")?.value;
@@ -4183,20 +4387,32 @@ async function renderJobs(reset = false) {
     titleRow.appendChild(pay);
     card.appendChild(titleRow);
 
-    // category + time
+    // category + time + distance
     const meta = document.createElement("div");
     meta.className = "job-meta";
 
-    const cat =
-      job.category === "moving"
-        ? "🚚 moving"
-        : job.category === "yard"
-        ? "🌿 yard"
-        : job.category === "cleaning"
-        ? "🧹 cleaning"
-        : job.category === "furniture"
-        ? "🛠 furniture"
-        : "⭐ other";
+      const cat =
+        job.category === "moving"
+          ? "🚚 moving"
+          : job.category === "yard"
+          ? "🌿 yard"
+          : job.category === "cleaning"
+          ? "🧹 cleaning"
+          : job.category === "furniture"
+          ? "🛠 furniture"
+          : job.category === "handyman"
+          ? "🔧 handyman"
+          : job.category === "painting"
+          ? "🎨 painting"
+          : job.category === "landscaping"
+          ? "🌳 landscaping"
+          : job.category === "petcare"
+          ? "🐕 pet care"
+          : job.category === "event"
+          ? "🎉 event help"
+          : job.category === "tech"
+          ? "💻 tech support"
+          : "⭐ other";
 
     const createdMs = job.createdAt
       ? new Date(job.createdAt).getTime()
@@ -4264,6 +4480,10 @@ async function renderJobs(reset = false) {
     const pickupArea = requirements.pickupArea || '';
     const pickupAddress = requirements.pickupAddress || '';
     
+    // Add distance if available
+    const distance = job.distance !== null && job.distance !== undefined ? job.distance : null;
+    const distanceText = job.distanceFormatted || (distance !== null ? `${distance.toFixed(1)} mi` : '');
+    
     // Build location string from pickup fields (NEVER use geocoded address - it can be wrong)
     let locParts = [];
     if (pickupAddress) {
@@ -4275,12 +4495,16 @@ async function renderJobs(reset = false) {
     if (pickupCity) {
       locParts.push(pickupCity);
     }
-    if (pickupZip && !requirements.hideZipCode) {
+    // Always show zip code - required for location matching
+    if (pickupZip) {
       locParts.push(pickupZip);
     }
     
     // Always use pickup fields, never fall back to geocoded address
     let locText = `📍 ${locParts.length > 0 ? locParts.join(' • ') : "Location TBD"}`;
+    if (distanceText && distanceText !== 'Distance unknown') {
+      locText += ` • ${distanceText} away`;
+    }
     if (requirements.onSiteOnly) {
       locText += " • On-site only";
     }
@@ -4548,6 +4772,37 @@ async function renderJobs(reset = false) {
       });
       modal.appendChild(closeBtn);
 
+      // Back arrow button for mobile (below header)
+      const backBtn = document.createElement("button");
+      backBtn.innerHTML = "← Back";
+      backBtn.style.display = "none";
+      backBtn.style.marginBottom = "1rem";
+      backBtn.style.padding = "0.5rem 1rem";
+      backBtn.style.background = "#f3f4f6";
+      backBtn.style.border = "1px solid #e5e7eb";
+      backBtn.style.borderRadius = "6px";
+      backBtn.style.cursor = "pointer";
+      backBtn.style.fontSize = "0.9rem";
+      backBtn.style.color = "#374151";
+      backBtn.style.width = "100%";
+      backBtn.addEventListener("click", () => {
+        if (overlay && overlay.parentNode) {
+          overlay.remove();
+        }
+        if (document.body) {
+          document.body.style.overflow = "";
+          document.body.style.pointerEvents = "";
+        }
+        if (escapeHandler) {
+          document.removeEventListener("keydown", escapeHandler);
+        }
+      });
+      // Show back button on mobile
+      if (window.innerWidth <= 768) {
+        backBtn.style.display = "block";
+      }
+      modal.appendChild(backBtn);
+
       // Build modal content
       const content = document.createElement("div");
       content.style.padding = "0.5rem 0";
@@ -4571,6 +4826,12 @@ async function renderJobs(reset = false) {
         yard: "🌿",
         cleaning: "🧹",
         furniture: "🛠",
+        handyman: "🔧",
+        painting: "🎨",
+        landscaping: "🌳",
+        petcare: "🐕",
+        event: "🎉",
+        tech: "💻",
       };
       const catText = categoryEmoji[job.category] || "⭐";
       // Payment display - for hourly, show per person rate and team size
@@ -4925,10 +5186,14 @@ async function renderJobs(reset = false) {
         pickupText.textContent = pickupParts.length > 0 ? pickupParts.join(', ') : 'Address shared after acceptance';
         locationContainer.appendChild(pickupText);
         
-        // Map link for pickup
-        if (pickupParts.length > 0) {
+        // Map link for pickup - only use address and zipcode
+        const pickupMapParts = [];
+        if (pickupAddress) pickupMapParts.push(pickupAddress);
+        if (pickupZip) pickupMapParts.push(pickupZip);
+        
+        if (pickupMapParts.length > 0) {
           const pickupMapLink = document.createElement("a");
-          const pickupFullAddress = pickupParts.join(', ');
+          const pickupFullAddress = pickupMapParts.join(', ');
           pickupMapLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pickupFullAddress)}`;
           pickupMapLink.target = "_blank";
           pickupMapLink.rel = "noopener noreferrer";
@@ -4968,10 +5233,14 @@ async function renderJobs(reset = false) {
           dropoffText.textContent = dropoffParts.length > 0 ? dropoffParts.join(', ') : 'Address shared after acceptance';
           locationContainer.appendChild(dropoffText);
           
-          // Map link for dropoff
-          if (dropoffParts.length > 0) {
+          // Map link for dropoff - only use address and zipcode
+          const dropoffMapParts = [];
+          if (dropoffAddress) dropoffMapParts.push(dropoffAddress);
+          if (dropoffZip) dropoffMapParts.push(dropoffZip);
+          
+          if (dropoffMapParts.length > 0) {
             const dropoffMapLink = document.createElement("a");
-            const dropoffFullAddress = dropoffParts.join(', ');
+            const dropoffFullAddress = dropoffMapParts.join(', ');
             dropoffMapLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dropoffFullAddress)}`;
             dropoffMapLink.target = "_blank";
             dropoffMapLink.rel = "noopener noreferrer";
@@ -5373,15 +5642,37 @@ async function renderJobs(reset = false) {
           appliedStatus.style.marginBottom = "0.5rem";
           const offerStatus = (userOffer.status || "PENDING").toUpperCase();
           if (offerStatus === "ACCEPTED") {
-            appliedStatus.innerHTML = "🎉 <strong>Your application was accepted!</strong> You've been assigned to this job.";
-            appliedStatus.style.color = "#059669";
+            appliedStatus.innerHTML = `
+              <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; color: #047857;">
+                🎉 Congratulations! You were picked!
+              </div>
+              <div style="font-size: 0.95rem; color: #065f46; line-height: 1.6;">
+                You've been selected as the Hustler for <strong>"${job.title}"</strong>! 
+                Check your email for details and view the job to get started.
+              </div>
+            `;
+            appliedStatus.style.color = "#047857";
             appliedStatus.style.fontWeight = "600";
-            appliedStatus.style.fontSize = "1rem";
-            appliedStatus.style.padding = "0.75rem";
-            appliedStatus.style.background = "#d1fae5";
-            appliedStatus.style.borderRadius = "8px";
-            appliedStatus.style.border = "2px solid #10b981";
-            appliedStatus.style.marginBottom = "0.75rem";
+            appliedStatus.style.padding = "1.25rem";
+            appliedStatus.style.background = "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)";
+            appliedStatus.style.borderRadius = "12px";
+            appliedStatus.style.border = "3px solid #10b981";
+            appliedStatus.style.marginBottom = "1rem";
+            
+            // Add "View Job Details" button
+            const viewJobBtn = document.createElement("button");
+            viewJobBtn.className = "btn btn-primary";
+            viewJobBtn.style.width = "100%";
+            viewJobBtn.style.marginTop = "0.75rem";
+            viewJobBtn.textContent = "👉 View Job Details & Get Started";
+            viewJobBtn.addEventListener("click", () => {
+              overlay.remove();
+              document.body.style.overflow = "";
+              setTimeout(() => {
+                openJobDetails(job.id);
+              }, 100);
+            });
+            appliedStatus.appendChild(viewJobBtn);
           } else if (offerStatus === "DECLINED") {
             appliedStatus.textContent = "Your application was declined.";
             appliedStatus.style.color = "#dc2626";
@@ -7588,6 +7879,12 @@ async function renderJobs(reset = false) {
         yard: "🌿",
         cleaning: "🧹",
         furniture: "🛠",
+        handyman: "🔧",
+        painting: "🎨",
+        landscaping: "🌳",
+        petcare: "🐕",
+        event: "🎉",
+        tech: "💻",
       };
       const catText = categoryEmoji[job.category] || "⭐";
       const payText = job.payType === "flat" 
@@ -7795,8 +8092,13 @@ async function renderJobs(reset = false) {
 
     /* ---------- Profile ---------- */
 
-    async function renderProfile() {
-  const user = await window.hustlAPI.auth.getCurrentUser();
+    async function renderProfile(userOverride = null) {
+  // Use provided user or fetch from API
+  let user = userOverride;
+  if (!user) {
+    user = await window.hustlAPI.auth.getCurrentUser();
+  }
+  
   const container = document.getElementById("profileContent");
   const jobsList = document.getElementById("profileJobsList");
   if (!container || !jobsList) return;
@@ -7909,12 +8211,21 @@ async function renderJobs(reset = false) {
   avatar.style.margin = "0 auto";
   avatar.style.overflow = "hidden";
   
+  // Display photo - prioritize photoUrl from API, fallback to avatarDataUrl
+  // Add cache-busting query parameter to ensure fresh image loads after upload
   if (user.photoUrl) {
     const img = document.createElement("img");
-    img.src = user.photoUrl;
+    // Add timestamp to force browser to reload image (cache busting)
+    const separator = user.photoUrl.includes('?') ? '&' : '?';
+    const photoUrlWithCacheBust = user.photoUrl + separator + '_cb=' + Date.now();
+    img.src = photoUrlWithCacheBust;
     img.style.width = "100%";
     img.style.height = "100%";
     img.style.objectFit = "cover";
+    img.onerror = function() {
+      // If image fails to load with cache bust, try original URL
+      this.src = user.photoUrl;
+    };
     avatar.appendChild(img);
   } else if (user.avatarDataUrl) {
     const img = document.createElement("img");
@@ -7986,6 +8297,62 @@ async function renderJobs(reset = false) {
   
   container.appendChild(profileHeader);
 
+  // Profile completion reminder (for Hustlers)
+  const hasHustlerRole = user.roles?.some(r => r.toUpperCase() === 'HUSTLER');
+  const hasPhoto = !!(user.photoUrl || user.avatarDataUrl);
+  const hasBio = !!(user.bio && user.bio.trim().length > 0);
+  const hasZip = !!(user.zip && user.zip.trim().length === 5);
+  const profileComplete = hasPhoto && hasBio && hasZip;
+  
+  if (hasHustlerRole && !profileComplete) {
+    const reminderCard = document.createElement("div");
+    reminderCard.style.background = "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)";
+    reminderCard.style.border = "2px solid #fbbf24";
+    reminderCard.style.borderRadius = "12px";
+    reminderCard.style.padding = "1.25rem";
+    reminderCard.style.marginBottom = "1.5rem";
+    reminderCard.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
+    
+    const reminderTitle = document.createElement("div");
+    reminderTitle.style.fontSize = "1.1rem";
+    reminderTitle.style.fontWeight = "700";
+    reminderTitle.style.color = "#78350f";
+    reminderTitle.style.marginBottom = "0.75rem";
+    reminderTitle.innerHTML = "💡 Complete Your Profile to Get More Jobs!";
+    reminderCard.appendChild(reminderTitle);
+    
+    const reminderList = document.createElement("div");
+    reminderList.style.fontSize = "0.95rem";
+    reminderList.style.color = "#92400e";
+    reminderList.style.lineHeight = "1.7";
+    
+    const items = [];
+    if (!hasPhoto) {
+      items.push("📷 <strong>Add a profile photo</strong> - Customers are more likely to hire hustlers with photos");
+    }
+    if (!hasBio) {
+      items.push("✍️ <strong>Write a bio</strong> - Tell customers about your experience, skills, and what jobs you like");
+    }
+    if (!hasZip) {
+      items.push("📍 <strong>Set your location</strong> - Add your zip code so we can show you nearby jobs first");
+    }
+    
+    if (items.length > 0) {
+      reminderList.innerHTML = `
+        <div style="margin-bottom: 0.5rem;"><strong>Complete these to increase your chances:</strong></div>
+        <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+          ${items.map(item => `<li style="margin-bottom: 0.4rem;">${item}</li>`).join('')}
+        </ul>
+        <div style="margin-top: 0.75rem; font-size: 0.9rem; font-weight: 600;">
+          Studies show that hustlers with complete profiles get 3x more job offers!
+        </div>
+      `;
+    }
+    
+    reminderCard.appendChild(reminderList);
+    container.appendChild(reminderCard);
+  }
+
   // Profile form section
   const formSection = document.createElement("div");
   formSection.style.background = "white";
@@ -8053,6 +8420,43 @@ async function renderJobs(reset = false) {
   genderField.appendChild(genderSelect);
   formSection.appendChild(genderField);
   
+  // Location/Zipcode field (for default location filtering)
+  const locationField = document.createElement("div");
+  locationField.style.marginBottom = "1.25rem";
+  const locationLabel = document.createElement("label");
+  locationLabel.style.display = "block";
+  locationLabel.style.fontWeight = "600";
+  locationLabel.style.marginBottom = "0.5rem";
+  locationLabel.style.color = "#1f2937";
+  locationLabel.textContent = "📍 Your Location (Zip Code)";
+  locationLabel.htmlFor = "profileZipInput";
+  locationField.appendChild(locationLabel);
+  const locationHelper = document.createElement("div");
+  locationHelper.style.fontSize = "0.85rem";
+  locationHelper.style.color = "#6b7280";
+  locationHelper.style.marginBottom = "0.5rem";
+  locationHelper.style.lineHeight = "1.5";
+  locationHelper.innerHTML = `
+    <div style="margin-bottom: 0.25rem;">This helps us show you nearby jobs first. Your zip code is used as the default location for job filtering.</div>
+    <div style="color: #059669; font-weight: 500;">✓ Make sure your zip code is accurate for the best job matches!</div>
+  `;
+  locationField.appendChild(locationHelper);
+  const zipInput = document.createElement("input");
+  zipInput.id = "profileZipInput";
+  zipInput.type = "text";
+  zipInput.placeholder = "37011";
+  zipInput.maxLength = 5;
+  zipInput.pattern = "[0-9]{5}";
+  zipInput.style.width = "100%";
+  zipInput.style.padding = "0.75rem";
+  zipInput.style.border = "1px solid #e5e7eb";
+  zipInput.style.borderRadius = "8px";
+  zipInput.style.fontSize = "1rem";
+  zipInput.style.fontFamily = "inherit";
+  zipInput.value = user.zip || "";
+  locationField.appendChild(zipInput);
+  formSection.appendChild(locationField);
+  
   // Bio field
   const bioField = document.createElement("div");
   bioField.style.marginBottom = "1.25rem";
@@ -8110,7 +8514,7 @@ async function renderJobs(reset = false) {
     }
   }, 0);
 // --- Stripe Connect (for hustlers) ---
-const hasHustlerRole = user.roles?.some(r => r.toUpperCase() === 'HUSTLER');
+// hasHustlerRole already declared above for profile reminder card
 if (hasHustlerRole) {
   const stripeConnectWrap = document.createElement("div");
   stripeConnectWrap.className = "field";
@@ -8756,6 +9160,7 @@ setTimeout(() => {
   const nameInputEl = document.getElementById("profileNameInput");
   const bioInputEl = document.getElementById("profileBioInput");
   const genderInputEl = document.getElementById("profileGenderInput");
+  const zipInputEl = document.getElementById("profileZipInput");
   const saveProfileBtn = document.getElementById("saveProfileButton");
   const saveStatusEl = document.getElementById("saveStatus");
   
@@ -8764,9 +9169,17 @@ setTimeout(() => {
       const name = nameInputEl?.value.trim() || "";
       const bio = bioInputEl?.value.trim() || "";
       const gender = genderInputEl?.value || "";
+      const zip = zipInputEl?.value.trim() || "";
       
       if (!name) {
         saveStatusEl.textContent = "⚠️ Please enter your name";
+        saveStatusEl.style.color = "#dc2626";
+        return;
+      }
+      
+      // Validate zip code if provided
+      if (zip && (zip.length !== 5 || !/^\d{5}$/.test(zip))) {
+        saveStatusEl.textContent = "⚠️ Please enter a valid 5-digit zip code";
         saveStatusEl.style.color = "#dc2626";
         return;
       }
@@ -8778,10 +9191,12 @@ setTimeout(() => {
       saveStatusEl.textContent = "";
       
       try {
-        // Update via API - include bio and gender
+        // Update via API - include bio, gender, and zip
         const updateData = { name };
         if (bio) updateData.bio = bio;
         if (gender) updateData.gender = gender;
+        if (zip) updateData.zip = zip;
+        else if (zip === "") updateData.zip = null; // Allow clearing zip
         
         const updatedUser = await window.hustlAPI.users.update(updateData);
         
@@ -8789,12 +9204,18 @@ setTimeout(() => {
         user.name = updatedUser.name;
         user.bio = updatedUser.bio || bio;
         user.gender = updatedUser.gender || gender;
+        user.zip = updatedUser.zip || zip || null;
         saveState();
         
         // Show success
         saveProfileBtn.textContent = "✓ Saved!";
         saveStatusEl.textContent = "Profile saved successfully";
         saveStatusEl.style.color = "#059669";
+        
+        // Update local state with zip
+        if (updatedUser.zip !== undefined) {
+          user.zip = updatedUser.zip;
+        }
         
         // Refresh profile to show updates
         setTimeout(() => {
@@ -8864,13 +9285,36 @@ setTimeout(() => {
         try {
           const updatedUser = await window.hustlAPI.users.update({ photoUrl: publicUrl });
           
-          // Update local user state
-          user.photoUrl = updatedUser.photoUrl;
-          user.avatarDataUrl = null;
+          // Update local user state - update the user in the state array
+          const currentUser = getCurrentUser();
+          if (currentUser) {
+            currentUser.photoUrl = updatedUser.photoUrl;
+            currentUser.avatarDataUrl = null;
+            // Also update in state.users array
+            const userIndex = state.users.findIndex(u => u.id === currentUser.id);
+            if (userIndex !== -1) {
+              state.users[userIndex].photoUrl = updatedUser.photoUrl;
+              state.users[userIndex].avatarDataUrl = null;
+            }
+          }
           saveState();
           
           showToast("✓ Profile photo updated!");
-          renderProfile(); // Refresh profile view
+          
+          // Force refresh profile view with updated user immediately
+          // Use the updatedUser from API to ensure we have the latest data
+          setTimeout(() => {
+            renderProfile(updatedUser); // Pass updated user directly
+            // Also refresh if currently viewing profile
+            if (document.getElementById("view-profile")?.style.display !== "none") {
+              renderProfile(updatedUser); // Pass updated user directly
+            }
+          }, 100);
+          
+          // Also do a full refresh after a delay to sync with API
+          setTimeout(() => {
+            renderProfile(); // Fetch fresh from API to ensure sync
+          }, 500);
         } catch (updateError) {
           console.error("Profile update error:", updateError);
           throw new Error("Failed to update profile: " + (updateError.message || "Update error"));
@@ -9605,68 +10049,222 @@ meta.textContent =
         });
       }
       
-      // Distance filter change handler
+      // Radius filter change handler
+      const jobsRadiusFilter = document.getElementById("jobsRadiusFilter");
+      const currentRadiusDisplay = document.getElementById("currentRadiusDisplay");
+      if (jobsRadiusFilter) {
+        jobsRadiusFilter.addEventListener("change", () => {
+          const radius = jobsRadiusFilter.value || '25';
+          if (currentRadiusDisplay) {
+            currentRadiusDisplay.textContent = `${radius} miles`;
+          }
+          renderJobs(true); // Reset pagination when radius changes
+        });
+        
+        // Set initial display value
+        if (currentRadiusDisplay && jobsRadiusFilter.value) {
+          currentRadiusDisplay.textContent = `${jobsRadiusFilter.value} miles`;
+        }
+      }
+      
+      // Distance filter change handler (legacy - keep for backwards compatibility)
       const jobsDistanceFilter = document.getElementById("jobsDistanceFilter");
       if (jobsDistanceFilter) {
         jobsDistanceFilter.addEventListener("change", () => {
           const userLocation = JSON.parse(localStorage.getItem('userLocation') || 'null');
           if (jobsDistanceFilter.value && (!userLocation || !userLocation.lat)) {
-            locationStatus.textContent = "⚠️ Please set your location first using 'Use My Location' button.";
+            if (locationStatus) locationStatus.textContent = "⚠️ Please set your location first using 'Use My Location' button.";
           } else {
-            locationStatus.textContent = "";
+            if (locationStatus) locationStatus.textContent = "";
             renderJobs(true); // Reset pagination when filter changes
           }
         });
       }
       
-      // Zip code filter Save button handler
-      const saveZipFilterBtn = document.getElementById("saveZipFilterBtn");
+      // Zip filter change handler - apply immediately on change
       const jobsZipFilter = document.getElementById("jobsZipFilter");
-      if (saveZipFilterBtn && jobsZipFilter) {
-        saveZipFilterBtn.addEventListener("click", () => {
+      if (jobsZipFilter) {
+        jobsZipFilter.addEventListener("blur", () => {
+          // Apply filter when user leaves the field
           const zipValue = jobsZipFilter.value.trim();
           if (zipValue && zipValue.length === 5 && /^\d{5}$/.test(zipValue)) {
-            // Save to localStorage for persistence
             localStorage.setItem('savedZipFilter', zipValue);
-            // Show success feedback
-            const originalText = saveZipFilterBtn.textContent;
-            saveZipFilterBtn.textContent = "✓ Saved!";
-            saveZipFilterBtn.style.background = "#10b981";
-            setTimeout(() => {
-              saveZipFilterBtn.textContent = originalText;
-              saveZipFilterBtn.style.background = "";
-            }, 2000);
-            // Apply filter and re-render jobs
-            renderJobs(true); // Reset pagination when filter changes
-          } else if (zipValue && zipValue.length > 0) {
-            // Invalid zip code
-            showToast("Please enter a valid 5-digit zip code.");
-          } else {
+            renderJobs(true); // Reset pagination when zip changes
+          } else if (!zipValue) {
             // Clear filter if empty
             localStorage.removeItem('savedZipFilter');
-            saveZipFilterBtn.textContent = "✓ Cleared!";
-            saveZipFilterBtn.style.background = "#6b7280";
-            setTimeout(() => {
-              saveZipFilterBtn.textContent = "Save";
-              saveZipFilterBtn.style.background = "";
-            }, 1500);
-            renderJobs(true); // Reset pagination when filter changes
+            renderJobs(true);
+          }
+        });
+        
+        jobsZipFilter.addEventListener("keypress", (e) => {
+          if (e.key === "Enter") {
+            jobsZipFilter.blur(); // Trigger blur event to apply filter
           }
         });
         
         // Load saved zip filter on page load
         const savedZip = localStorage.getItem('savedZipFilter');
-        if (savedZip) {
+        if (savedZip && jobsZipFilter) {
           jobsZipFilter.value = savedZip;
         }
+      }
+      
+      // Check for newly accepted offers and show notification to Hustlers
+      async function checkForAcceptedOffers() {
+        try {
+          const user = await window.hustlAPI.auth.getCurrentUser();
+          if (!user) return;
+          
+          // Only check for Hustlers
+          const isHustler = user.roles?.some(r => r.toUpperCase() === 'HUSTLER');
+          if (!isHustler) return;
+          
+          // Get user's jobs where they are the hustler
+          const token = localStorage.getItem("hustl_token");
+          const response = await fetch("/jobs?status=ASSIGNED", {
+            headers: token ? { "Authorization": `Bearer ${token}` } : {}
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            const jobs = Array.isArray(data) ? data : (data.jobs || []);
+            
+            // Find jobs where this user is the hustler and was recently assigned (within last 24 hours)
+            const now = Date.now();
+            const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000;
+            
+            const newlyAcceptedJobs = jobs.filter(job => {
+              if (job.hustlerId !== user.id) return false;
+              if (!job.updatedAt) return false;
+              
+              const updatedAt = new Date(job.updatedAt).getTime();
+              return updatedAt > twentyFourHoursAgo;
+            });
+            
+            // Check if we've already shown notification for these jobs
+            const shownNotifications = JSON.parse(localStorage.getItem('shownJobNotifications') || '[]');
+            const unshownJobs = newlyAcceptedJobs.filter(job => !shownNotifications.includes(job.id));
+            
+            // Show notification for the most recent one
+            if (unshownJobs.length > 0) {
+              const job = unshownJobs[0]; // Most recent
+              showHustlerPickedNotification(job);
+              
+              // Mark as shown
+              shownNotifications.push(job.id);
+              localStorage.setItem('shownJobNotifications', JSON.stringify(shownNotifications));
+            }
+          }
+        } catch (error) {
+          console.error('Error checking for accepted offers:', error);
+        }
+      }
+      
+      // Show notification when Hustler is picked
+      async function showHustlerPickedNotification(job) {
+        const overlay = document.createElement("div");
+        overlay.style.position = "fixed";
+        overlay.style.inset = "0";
+        overlay.style.background = "rgba(15,23,42,0.85)";
+        overlay.style.display = "flex";
+        overlay.style.alignItems = "center";
+        overlay.style.justifyContent = "center";
+        overlay.style.zIndex = "10000";
+        overlay.style.padding = "1rem";
         
-        // Allow Enter key to trigger save
-        jobsZipFilter.addEventListener("keypress", (e) => {
-          if (e.key === "Enter") {
-            saveZipFilterBtn.click();
+        const modal = document.createElement("div");
+        modal.className = "card";
+        modal.style.maxWidth = "500px";
+        modal.style.width = "100%";
+        modal.style.background = "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)";
+        modal.style.border = "3px solid #10b981";
+        modal.style.boxShadow = "0 20px 25px -5px rgba(0,0,0,0.3)";
+        
+        const header = document.createElement("div");
+        header.className = "card-header";
+        header.style.background = "transparent";
+        header.style.borderBottom = "none";
+        
+        const title = document.createElement("div");
+        title.className = "card-title";
+        title.style.fontSize = "1.5rem";
+        title.style.color = "#047857";
+        title.innerHTML = "🎉 Congratulations!";
+        header.appendChild(title);
+        modal.appendChild(header);
+        
+        const content = document.createElement("div");
+        content.style.padding = "1.5rem";
+        
+        const message = document.createElement("div");
+        message.style.marginBottom = "1.5rem";
+        message.style.lineHeight = "1.7";
+        message.style.color = "#065f46";
+        message.innerHTML = `
+          <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.75rem;">
+            You were picked as the Hustler for this job!
+          </div>
+          <div style="font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; color: #047857;">
+            "${job.title || 'Job'}"
+          </div>
+          <div style="font-size: 0.95rem; color: #065f46;">
+            Check your email for details. You can now view the job details, message the customer, and get started!
+          </div>
+        `;
+        content.appendChild(message);
+        
+        const buttonRow = document.createElement("div");
+        buttonRow.style.display = "flex";
+        buttonRow.style.gap = "0.75rem";
+        buttonRow.style.flexDirection = "column";
+        
+        const viewJobBtn = document.createElement("button");
+        viewJobBtn.className = "btn btn-primary";
+        viewJobBtn.style.width = "100%";
+        viewJobBtn.style.background = "#047857";
+        viewJobBtn.style.border = "none";
+        viewJobBtn.textContent = "👉 View Job Details";
+        viewJobBtn.addEventListener("click", () => {
+          overlay.remove();
+          document.body.style.overflow = "";
+          setTimeout(() => {
+            setView("jobs");
+            openJobDetails(job.id);
+          }, 100);
+        });
+        buttonRow.appendChild(viewJobBtn);
+        
+        const closeBtn = document.createElement("button");
+        closeBtn.className = "btn outline";
+        closeBtn.style.width = "100%";
+        closeBtn.textContent = "Got it!";
+        closeBtn.addEventListener("click", () => {
+          overlay.remove();
+          document.body.style.overflow = "";
+        });
+        buttonRow.appendChild(closeBtn);
+        
+        content.appendChild(buttonRow);
+        modal.appendChild(content);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        document.body.style.overflow = "hidden";
+        
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) {
+            overlay.remove();
+            document.body.style.overflow = "";
           }
         });
       }
+      
+      // Check for accepted offers when jobs view loads
+      setTimeout(() => {
+        if (activeView === "jobs") {
+          checkForAcceptedOffers();
+        }
+      }, 1000);
       
       // Load More button handler
       const loadMoreJobsBtn = document.getElementById("loadMoreJobsBtn");
@@ -9820,35 +10418,82 @@ window.clearStuckOverlays = function() {
 };
 
 // IMMEDIATE cleanup - run right away, don't wait for load
+// Run immediately to prevent stuck overlays from blocking the page
 (function() {
-  // Remove all blocking elements immediately
-  const stuck = document.querySelectorAll('.modal-overlay, [id^="jobModalOverlay"], #verificationCodeModal, [class*="overlay"], [class*="modal"]');
-  stuck.forEach(el => {
-    if (el && el.parentNode) {
-      el.remove();
+  try {
+    // Remove all blocking elements immediately
+    const selectors = [
+      '.modal-overlay',
+      '[id^="jobModalOverlay"]',
+      '#verificationCodeModal',
+      '[id^="jobDetailsOverlay"]',
+      '.overlay',
+      '[class*="overlay"]',
+      '[class*="modal-backdrop"]'
+    ];
+    
+    selectors.forEach(selector => {
+      try {
+        document.querySelectorAll(selector).forEach(el => {
+          if (el && el.parentNode) {
+            el.remove();
+          }
+        });
+      } catch(e) {
+        // Ignore errors
+      }
+    });
+    
+    // Reset body styles immediately
+    if (document.body) {
+      document.body.style.overflow = '';
+      document.body.style.pointerEvents = '';
+      document.body.style.position = '';
     }
-  });
-  if (document.body) {
-    document.body.style.overflow = '';
-    document.body.style.pointerEvents = '';
+    
+    // Also reset html element
+    if (document.documentElement) {
+      document.documentElement.style.overflow = '';
+    }
+  } catch(e) {
+    // Ignore errors during cleanup
   }
 })();
 
-// Simple cleanup on page load - remove any stuck overlays
+// Aggressive cleanup on page load - remove any stuck overlays
 window.addEventListener('load', function() {
   setTimeout(function() {
     window.clearStuckOverlays();
   }, 100);
+  // Run again after a longer delay to catch any late-loading overlays
+  setTimeout(function() {
+    window.clearStuckOverlays();
+  }, 500);
 });
 
 // Also run on DOMContentLoaded
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', function() {
     setTimeout(window.clearStuckOverlays, 50);
+    setTimeout(window.clearStuckOverlays, 200);
   });
 } else {
   setTimeout(window.clearStuckOverlays, 50);
+  setTimeout(window.clearStuckOverlays, 200);
 }
+
+// Periodic cleanup every 5 seconds to catch any stuck overlays
+setInterval(function() {
+  // Only cleanup if no active modals should be open
+  // Check if there are any modals that shouldn't be there
+  const overlays = document.querySelectorAll('.modal-overlay, [id^="jobModalOverlay"]');
+  const bodyOverflow = document.body.style.overflow;
+  
+  // If body is set to hidden overflow but there are no visible modals, something is stuck
+  if (bodyOverflow === 'hidden' && overlays.length === 0) {
+    window.clearStuckOverlays();
+  }
+}, 5000);
 
 // Keyboard shortcut: Press Escape multiple times or Ctrl+Shift+C to clear
 document.addEventListener('keydown', function(e) {
@@ -10165,12 +10810,463 @@ try {
   setTimeout(() => {
     countUnreadMessages();
   }, 1000);
+  
+  // Initialize notifications
+  initNotifications();
+  
+  // Initialize search
+  initJobSearch();
+  
+  // Initialize onboarding tour
+  checkOnboardingTour();
+  
+  // Initialize error handling
+  initErrorHandling();
+  
   renderAll();
 } catch (error) {
   console.error("Initialization error:", error);
   // Still try to render even if some init fails
   renderAll();
 }
+
+// ========== NOTIFICATIONS SYSTEM ==========
+let notificationsPollInterval = null;
+let readNotificationIds = JSON.parse(localStorage.getItem('readNotificationIds') || '[]');
+
+function initNotifications() {
+  const user = getCurrentUser();
+  const container = document.getElementById('notificationsContainer');
+  
+  if (!user || !container) {
+    if (container) container.style.display = 'none';
+    return;
+  }
+  
+  container.style.display = 'block';
+  loadNotifications();
+  
+  // Poll for new notifications every 30 seconds
+  notificationsPollInterval = setInterval(() => {
+    loadNotifications();
+  }, 30 * 1000);
+}
+
+async function loadNotifications() {
+  try {
+    const data = await window.hustlAPI.notifications.list();
+    if (!data || !data.notifications) return;
+    
+    const notifications = data.notifications || [];
+    const unreadCount = notifications.filter(n => !readNotificationIds.includes(n.id)).length;
+    
+    // Update badge
+    const badge = document.getElementById('notificationsBadge');
+    if (badge) {
+      if (unreadCount > 0) {
+        badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+        badge.style.display = 'block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+    
+    // Store notifications for dropdown
+    window.currentNotifications = notifications;
+    
+    // Render dropdown if open
+    const dropdown = document.getElementById('notificationsDropdown');
+    if (dropdown && dropdown.style.display !== 'none') {
+      renderNotificationsDropdown();
+    }
+  } catch (error) {
+    console.error('Error loading notifications:', error);
+  }
+}
+
+function toggleNotificationsDropdown() {
+  const dropdown = document.getElementById('notificationsDropdown');
+  if (!dropdown) return;
+  
+  if (dropdown.style.display === 'none' || !dropdown.style.display) {
+    dropdown.style.display = 'block';
+    renderNotificationsDropdown();
+  } else {
+    dropdown.style.display = 'none';
+  }
+}
+
+function renderNotificationsDropdown() {
+  const list = document.getElementById('notificationsList');
+  const empty = document.getElementById('notificationsEmpty');
+  if (!list || !empty) return;
+  
+  const notifications = window.currentNotifications || [];
+  
+  if (notifications.length === 0) {
+    list.style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+  
+  list.style.display = 'block';
+  empty.style.display = 'none';
+  
+  list.innerHTML = notifications.map(notif => {
+    const isRead = readNotificationIds.includes(notif.id);
+    const timeAgo = formatTimeAgo(new Date(notif.createdAt));
+    return `
+      <div class="notification-item ${!isRead ? 'unread' : ''}" onclick="handleNotificationClick('${notif.id}', '${(notif.link || '').replace(/'/g, "\\'")}')">
+        <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+          <div class="notification-icon">${notif.icon || '🔔'}</div>
+          <div class="notification-content" style="flex: 1;">
+            <div class="notification-title">${escapeHtml(notif.title)}</div>
+            <div class="notification-message">${escapeHtml(notif.message || '')}</div>
+            <div class="notification-time">${timeAgo}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function handleNotificationClick(notificationId, link) {
+  // Mark as read
+  if (!readNotificationIds.includes(notificationId)) {
+    readNotificationIds.push(notificationId);
+    localStorage.setItem('readNotificationIds', JSON.stringify(readNotificationIds));
+    
+    try {
+      await window.hustlAPI.notifications.markRead(notificationId);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+    
+    // Reload notifications to update badge
+    loadNotifications();
+    renderNotificationsDropdown();
+  }
+  
+  // Navigate if link provided
+  if (link && link !== 'undefined') {
+    if (link.startsWith('/')) {
+      // Internal link - extract view name
+      const match = link.match(/\/(\w+)/);
+      if (match) {
+        setView(match[1]);
+      }
+    } else if (link.startsWith('http')) {
+      window.location.href = link;
+    }
+  }
+  
+  // Close dropdown
+  const dropdown = document.getElementById('notificationsDropdown');
+  if (dropdown) dropdown.style.display = 'none';
+}
+
+async function markAllNotificationsRead() {
+  try {
+    await window.hustlAPI.notifications.markAllRead();
+    
+    // Mark all current notifications as read locally
+    const notifications = window.currentNotifications || [];
+    notifications.forEach(n => {
+      if (!readNotificationIds.includes(n.id)) {
+        readNotificationIds.push(n.id);
+      }
+    });
+    
+    localStorage.setItem('readNotificationIds', JSON.stringify(readNotificationIds));
+    loadNotifications();
+    renderNotificationsDropdown();
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+  }
+}
+
+function formatTimeAgo(date) {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return diffMins + 'm ago';
+  if (diffHours < 24) return diffHours + 'h ago';
+  if (diffDays < 7) return diffDays + 'd ago';
+  return date.toLocaleDateString();
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Close notifications dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const container = document.getElementById('notificationsContainer');
+  const dropdown = document.getElementById('notificationsDropdown');
+  if (container && dropdown && !container.contains(e.target)) {
+    dropdown.style.display = 'none';
+  }
+});
+
+// Wire up notifications bell click
+document.addEventListener('DOMContentLoaded', () => {
+  const bell = document.getElementById('notificationsBell');
+  if (bell) {
+    bell.addEventListener('click', toggleNotificationsDropdown);
+  }
+});
+
+// ========== SEARCH FUNCTIONALITY ==========
+let searchDebounceTimeout = null;
+
+function initJobSearch() {
+  const searchInput = document.getElementById('jobsSearchInput');
+  const clearBtn = document.getElementById('clearSearchBtn');
+  
+  if (!searchInput) return;
+  
+  // Search on input with debounce
+  searchInput.addEventListener('input', (e) => {
+    clearTimeout(searchDebounceTimeout);
+    searchDebounceTimeout = setTimeout(() => {
+      const value = e.target.value.trim();
+      
+      // Show/hide clear button
+      if (clearBtn) {
+        clearBtn.style.display = value ? 'block' : 'none';
+      }
+      
+      // Trigger job reload if we're on jobs view
+      if (document.getElementById('view-jobs')?.style.display !== 'none') {
+        renderJobs(true); // Reset and reload
+      }
+    }, 300); // 300ms debounce
+  });
+  
+  // Search on Enter key
+  searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      clearTimeout(searchDebounceTimeout);
+      if (document.getElementById('view-jobs')?.style.display !== 'none') {
+        renderJobs(true);
+      }
+    }
+  });
+}
+
+function clearJobSearch() {
+  const searchInput = document.getElementById('jobsSearchInput');
+  const clearBtn = document.getElementById('clearSearchBtn');
+  
+  if (searchInput) {
+    searchInput.value = '';
+  }
+  if (clearBtn) {
+    clearBtn.style.display = 'none';
+  }
+  
+  // Reload jobs
+  if (document.getElementById('view-jobs')?.style.display !== 'none') {
+    renderJobs(true);
+  }
+}
+
+// ========== ERROR HANDLING HELPERS ==========
+function initErrorHandling() {
+  // Enhanced error messages already added via showToast override below
+  // Loading states handled via button clicks
+}
+
+function setButtonLoading(button, loading) {
+  if (!button) return;
+  
+  if (loading) {
+    button.classList.add('btn-loading');
+    button.disabled = true;
+    button.dataset.originalText = button.textContent;
+    button.textContent = 'Loading...';
+  } else {
+    button.classList.remove('btn-loading');
+    button.disabled = false;
+    if (button.dataset.originalText) {
+      button.textContent = button.dataset.originalText;
+      delete button.dataset.originalText;
+    }
+  }
+}
+
+// Override showToast to use better error handling
+const originalShowToast = showToast;
+window.showToast = function(msg) {
+  // Convert errors to user-friendly messages
+  if (typeof msg === 'string') {
+    const lowerMsg = msg.toLowerCase();
+    if (lowerMsg.includes('network') || lowerMsg.includes('fetch')) {
+      msg = 'Connection error. Please check your internet and try again.';
+    } else if (lowerMsg.includes('unauthorized') || lowerMsg.includes('401')) {
+      msg = 'Please log in to continue.';
+    } else if (lowerMsg.includes('forbidden') || lowerMsg.includes('403')) {
+      msg = 'You don\'t have permission to do that.';
+    } else if (lowerMsg.includes('not found') || lowerMsg.includes('404')) {
+      msg = 'Item not found.';
+    } else if (lowerMsg.includes('server error') || lowerMsg.includes('500')) {
+      msg = 'Server error. Please try again later.';
+    }
+  }
+  
+  originalShowToast(msg);
+};
+
+// ========== USER ONBOARDING TOUR ==========
+function checkOnboardingTour() {
+  const tourCompleted = localStorage.getItem('onboardingTourCompleted');
+  const user = getCurrentUser();
+  
+  if (!user || tourCompleted === 'true') {
+    return; // Don't show tour if completed or not logged in
+  }
+  
+  // Show tour on first login if not completed
+  setTimeout(() => {
+    showOnboardingTour();
+  }, 2000); // Wait 2 seconds after page load
+}
+
+function showOnboardingTour() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 1rem;';
+  
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background: white; border-radius: 12px; padding: 2rem; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);';
+  
+  let currentStep = 0;
+  const steps = [
+    {
+      title: '👋 Welcome to Hustl!',
+      content: `
+        <p style="margin: 1rem 0; line-height: 1.6;">
+          Hustl connects customers who need help with hustlers ready to work. Let's take a quick tour of the main features!
+        </p>
+      `,
+    },
+    {
+      title: '🏠 Home',
+      content: `
+        <p style="margin: 1rem 0; line-height: 1.6;">
+          Start here! The home page shows an overview of how Hustl works. You can switch between <strong>Customer</strong> mode (to post jobs) and <strong>Hustler</strong> mode (to find jobs).
+        </p>
+      `,
+    },
+    {
+      title: '💼 Jobs',
+      content: `
+        <p style="margin: 1rem 0; line-height: 1.6;">
+          Browse available jobs in your area. Jobs are sorted by distance, so the closest ones appear first. Use the search bar to find specific types of work.
+        </p>
+      `,
+    },
+    {
+      title: '➕ Post a Job',
+      content: `
+        <p style="margin: 1rem 0; line-height: 1.6;">
+          As a customer, post jobs you need done. Be specific about what you need, when you need it, and how much you'll pay. Hustlers will apply!
+        </p>
+      `,
+    },
+    {
+      title: '💬 Messages',
+      content: `
+        <p style="margin: 1rem 0; line-height: 1.6;">
+          Communicate with hustlers or customers directly in the app. Each conversation is tied to a specific job.
+        </p>
+      `,
+    },
+    {
+      title: '👤 Profile',
+      content: `
+        <p style="margin: 1rem 0; line-height: 1.6;">
+          Complete your profile! Add a photo, bio, and location. Complete profiles get 3x more job offers. The bell icon shows your notifications.
+        </p>
+      `,
+    },
+  ];
+  
+  function renderStep() {
+    const step = steps[currentStep];
+    modal.innerHTML = `
+      <h2 style="margin: 0 0 1rem 0; font-size: 1.5rem;">${step.title}</h2>
+      ${step.content}
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; gap: 1rem;">
+        <button id="skipTourBtn" style="background: transparent; border: 1px solid #e5e7eb; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem;">Skip Tour</button>
+        <div style="display: flex; gap: 0.5rem;">
+          <button id="prevTourBtn" style="background: #f3f4f6; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; ${currentStep === 0 ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${currentStep === 0 ? 'disabled' : ''}>Previous</button>
+          <button id="nextTourBtn" style="background: #2563eb; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem;">
+            ${currentStep === steps.length - 1 ? 'Get Started!' : 'Next'}
+          </button>
+        </div>
+      </div>
+      <div style="text-align: center; margin-top: 1rem; font-size: 0.85rem; color: #6b7280;">
+        ${currentStep + 1} of ${steps.length}
+      </div>
+    `;
+    
+    overlay.innerHTML = '';
+    overlay.appendChild(modal);
+    if (!document.body.contains(overlay)) {
+      document.body.appendChild(overlay);
+    }
+    
+    // Event listeners
+    document.getElementById('skipTourBtn').onclick = () => {
+      localStorage.setItem('onboardingTourCompleted', 'true');
+      overlay.remove();
+    };
+    
+    const prevBtn = document.getElementById('prevTourBtn');
+    if (prevBtn) {
+      prevBtn.onclick = () => {
+        if (currentStep > 0) {
+          currentStep--;
+          renderStep();
+        }
+      };
+    }
+    
+    document.getElementById('nextTourBtn').onclick = () => {
+      if (currentStep < steps.length - 1) {
+        currentStep++;
+        renderStep();
+      } else {
+        localStorage.setItem('onboardingTourCompleted', 'true');
+        overlay.remove();
+      }
+    };
+  }
+  
+  renderStep();
+  
+  // Close on overlay click
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      localStorage.setItem('onboardingTourCompleted', 'true');
+      overlay.remove();
+    }
+  });
+}
+
+// Expose functions globally
+window.clearJobSearch = clearJobSearch;
+window.toggleNotificationsDropdown = toggleNotificationsDropdown;
+window.markAllNotificationsRead = markAllNotificationsRead;
+window.handleNotificationClick = handleNotificationClick;
   </script>
 </body>
 </html>

@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const prisma = require('../db');
-const { sendSignupEmail, sendPasswordResetEmail } = require('../services/email');
+const { sendSignupEmail, sendEmailVerificationEmail, sendPasswordResetEmail } = require('../services/email');
 
 const router = express.Router();
 
@@ -43,17 +43,25 @@ router.post('/signup', [
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
+    // Generate 6-digit verification code
+    const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
+    const verificationCodeExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+
     // Create user - simple signup, no city/zip required
+    // Store verification code in a JSON field or separate field (we'll use a simple approach for now)
     const userData = {
       email,
       passwordHash,
       name,
       username,
       roles: ['CUSTOMER', 'HUSTLER'], // All users can be both
+      emailVerified: false, // Email not verified yet
+      emailVerificationCode: verificationCode, // Store code temporarily
+      emailVerificationExpiry: verificationCodeExpiry, // Code expires in 24 hours
       // city and zip are NOT included - they are optional
     };
     
-    console.log('[signup] Creating user with data (no city/zip):', { ...userData, passwordHash: '[HIDDEN]' });
+    console.log('[signup] Creating user with data (no city/zip):', { ...userData, passwordHash: '[HIDDEN]', emailVerificationCode: '[HIDDEN]' });
     
     const user = await prisma.user.create({
       data: userData,
@@ -63,21 +71,38 @@ router.post('/signup', [
         name: true,
         username: true,
         roles: true,
+        emailVerified: true,
         createdAt: true,
       },
     });
 
     // Send welcome email
     await sendSignupEmail(user.email, user.name);
+    
+    // Send email verification email with code
+    try {
+      await sendEmailVerificationEmail(user.email, user.name, verificationCode);
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Don't fail signup if email fails, but log it
+    }
 
-    // Generate token
+    // Generate token (but user won't be able to post jobs until verified)
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    res.status(201).json({ user, token });
+    res.status(201).json({ 
+      user: {
+        ...user,
+        emailVerified: false, // Always false on signup
+      },
+      token,
+      requiresEmailVerification: true,
+      message: 'Account created! Please check your email for a verification code.'
+    });
   } catch (error) {
     console.error('Signup error full details:', {
       message: error.message,
@@ -153,6 +178,7 @@ router.post('/login', [
         username: user.username,
         roles: user.roles,
         idVerified: user.idVerified,
+        emailVerified: user.emailVerified || false,
       },
       token,
     });
@@ -194,6 +220,140 @@ router.post('/reset', [
     res.json({ message: 'If an account exists, a password reset link has been sent' });
   } catch (error) {
     console.error('Reset error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /auth/verify-email - Verify email with 6-digit code
+router.post('/verify-email', [
+  body('code').trim().notEmpty().isLength({ min: 6, max: 6 }),
+  body('email').optional().isEmail().normalizeEmail(),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        error: 'Validation failed',
+        details: errors.array() 
+      });
+    }
+
+    const { code, email } = req.body;
+    const providedCode = String(code).trim().replace(/\D/g, ''); // Remove non-digits
+
+    if (providedCode.length !== 6) {
+      return res.status(400).json({ error: 'Verification code must be 6 digits' });
+    }
+
+    // Try to find user by email (if provided) or by code in database
+    // For simplicity, we'll search users with matching verification code
+    const user = await prisma.user.findFirst({
+      where: email 
+        ? { 
+            email,
+            emailVerified: false,
+          }
+        : {
+            emailVerified: false,
+          },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found or already verified' });
+    }
+
+    // Check if code matches and hasn't expired
+    const storedCode = String(user.emailVerificationCode || '').trim();
+    const codeExpired = user.emailVerificationExpiry 
+      ? new Date(user.emailVerificationExpiry) < new Date()
+      : true;
+
+    if (!storedCode || storedCode !== providedCode) {
+      return res.status(400).json({ error: 'Invalid verification code' });
+    }
+
+    if (codeExpired) {
+      return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
+    }
+
+    // Verify email
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        emailVerificationCode: null, // Clear code after verification
+        emailVerificationExpiry: null,
+      },
+    });
+
+    // Generate new token with verified status
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      message: 'Email verified successfully!',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        username: user.username,
+        roles: user.roles,
+        emailVerified: true,
+      },
+      token,
+    });
+  } catch (error) {
+    console.error('Verify email error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /auth/resend-verification - Resend verification email
+router.post('/resend-verification', [
+  body('email').isEmail().normalizeEmail(),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    // Don't reveal if user exists (security best practice)
+    if (user && !user.emailVerified) {
+      // Generate new verification code
+      const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
+      const verificationCodeExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+      // Update user with new code
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerificationCode: verificationCode,
+          emailVerificationExpiry: verificationCodeExpiry,
+        },
+      });
+
+      // Send verification email
+      try {
+        await sendEmailVerificationEmail(user.email, user.name, verificationCode);
+      } catch (emailError) {
+        console.error('Failed to send verification email:', emailError);
+        return res.status(500).json({ error: 'Failed to send verification email' });
+      }
+    }
+
+    res.json({ message: 'If an account exists and is not verified, a verification code has been sent' });
+  } catch (error) {
+    console.error('Resend verification error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

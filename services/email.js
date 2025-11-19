@@ -42,6 +42,37 @@ async function sendSignupEmail(email, name) {
   }
 }
 
+async function sendEmailVerificationEmail(email, name, verificationCode) {
+  if (!isEmailConfigured()) return;
+  try {
+    const verifyUrl = `${process.env.APP_BASE_URL || 'http://localhost:8080'}/verify-email?code=${verificationCode}&email=${encodeURIComponent(email)}`;
+    
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: 'Verify your Hustl email address',
+      html: `
+        <h1>Verify Your Email</h1>
+        <p>Hi ${name},</p>
+        <p>Thanks for signing up for Hustl! Please verify your email address to get started.</p>
+        <div style="background: #f0f9ff; border: 2px solid #0ea5e9; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; text-align: center;">
+          <div style="font-size: 2rem; font-weight: 700; color: #0ea5e9; letter-spacing: 0.5rem; margin-bottom: 0.5rem;">${verificationCode}</div>
+          <p style="margin: 0; color: #64748b; font-size: 0.9rem;">Enter this code on the verification page, or click the link below</p>
+        </div>
+        <p style="margin-top: 1.5rem;">
+          <a href="${verifyUrl}" style="display: inline-block; padding: 0.75rem 1.5rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px;">Verify Email Address</a>
+        </p>
+        <p style="color: #64748b; font-size: 0.85rem; margin-top: 1.5rem;">
+          This code will expire in 24 hours. If you didn't create an account, you can safely ignore this email.
+        </p>
+      `,
+    });
+  } catch (error) {
+    console.error('Send email verification error:', error);
+    throw error; // This is important, so we should know if it fails
+  }
+}
+
 async function sendPasswordResetEmail(email, name, resetUrl) {
   if (!isEmailConfigured()) return;
   try {
@@ -84,19 +115,55 @@ async function sendOfferReceivedEmail(email, name, jobTitle, offerNote) {
   }
 }
 
-async function sendJobAssignedEmail(email, name, jobTitle) {
+async function sendJobAssignedEmail(email, name, jobTitle, jobId, customerName) {
   if (!isEmailConfigured()) return;
   try {
+    const jobUrl = `${process.env.APP_BASE_URL || 'http://localhost:8080'}/jobs/${jobId}`;
+    
     await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
-      subject: `You've been assigned to "${jobTitle}"`,
+      subject: `🎉 Congratulations! You were picked for "${jobTitle}"`,
       html: `
-        <h1>Job Assigned!</h1>
-        <p>Hi ${name},</p>
-        <p>Great news! You've been assigned to the job: <strong>${jobTitle}</strong></p>
-        <p>You can now message the customer and view the job details.</p>
-        <p><a href="${process.env.APP_BASE_URL}/jobs/${jobTitle}">View Job</a></p>
+        <div style="max-width: 600px; margin: 0 auto; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <h1 style="color: #059669; font-size: 1.75rem; margin-bottom: 1rem;">🎉 Congratulations!</h1>
+          <p style="font-size: 1.1rem; color: #1f2937; margin-bottom: 1.5rem;">Hi <strong>${name}</strong>,</p>
+          
+          <div style="background: #f0fdf4; border: 2px solid #10b981; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
+            <p style="font-size: 1.05rem; color: #065f46; margin: 0 0 0.5rem 0; font-weight: 600;">
+              You were picked as the Hustler for this job:
+            </p>
+            <h2 style="color: #047857; font-size: 1.5rem; margin: 0.5rem 0;">
+              ${jobTitle}
+            </h2>
+            ${customerName ? `<p style="color: #065f46; margin: 0.5rem 0 0 0;">by ${customerName}</p>` : ''}
+          </div>
+          
+          <p style="color: #374151; line-height: 1.6; margin: 1.5rem 0;">
+            Great news! The customer has selected you for this job. You can now:
+          </p>
+          
+          <ul style="color: #374151; line-height: 1.8; margin: 1rem 0; padding-left: 1.5rem;">
+            <li>View the full job details</li>
+            <li>Message the customer directly</li>
+            <li>Get the exact address and contact information</li>
+            <li>Start working on the job</li>
+          </ul>
+          
+          <div style="margin: 2rem 0; text-align: center;">
+            <a href="${jobUrl}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+              View Job Details →
+            </a>
+          </div>
+          
+          <p style="color: #6b7280; font-size: 0.9rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+            Questions? Reply to this email or contact support through the app.
+          </p>
+          
+          <p style="color: #6b7280; font-size: 0.85rem; margin-top: 1rem;">
+            Good luck with the job! 💪
+          </p>
+        </div>
       `,
     });
   } catch (error) {
@@ -259,6 +326,78 @@ async function sendRefundEmail(email, name, jobTitle, amount) {
   }
 }
 
+// Admin notification for refunds
+async function sendAdminRefundNotification(payment, refundAmount, reason, adminName) {
+  if (!isEmailConfigured()) return;
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.FROM_EMAIL;
+  if (!adminEmail) {
+    console.warn('Admin email not configured - skipping admin refund notification');
+    return;
+  }
+  
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: adminEmail,
+      subject: `🔴 REFUND PROCESSED: $${refundAmount.toFixed(2)} - Job #${payment.jobId}`,
+      html: `
+        <h1>Refund Processed</h1>
+        <p><strong>Processed by:</strong> ${adminName}</p>
+        <p><strong>Refund Amount:</strong> $${refundAmount.toFixed(2)}</p>
+        <p><strong>Reason:</strong> ${reason}</p>
+        <hr>
+        <h2>Payment Details</h2>
+        <p><strong>Payment ID:</strong> ${payment.id}</p>
+        <p><strong>Job ID:</strong> ${payment.jobId}</p>
+        <p><strong>Original Amount:</strong> $${Number(payment.total).toFixed(2)}</p>
+        <p><strong>Customer:</strong> ${payment.customer?.name || 'N/A'} (${payment.customer?.email || 'N/A'})</p>
+        <p><strong>Hustler:</strong> ${payment.hustler?.name || 'N/A'} (${payment.hustler?.email || 'N/A'})</p>
+        <p><strong>Job Title:</strong> ${payment.job?.title || 'N/A'}</p>
+        <hr>
+        <p><a href="${process.env.APP_BASE_URL}/admin/refunds">View All Refunds</a></p>
+      `,
+    });
+  } catch (error) {
+    console.error('Send admin refund notification error:', error);
+  }
+}
+
+// Admin notification for payouts
+async function sendAdminPayoutNotification(payout, hustler) {
+  if (!isEmailConfigured()) return;
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.FROM_EMAIL;
+  if (!adminEmail) {
+    console.warn('Admin email not configured - skipping admin payout notification');
+    return;
+  }
+  
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: adminEmail,
+      subject: `💰 PAYOUT ${payout.status}: $${Number(payout.netAmount).toFixed(2)} - ${hustler.name}`,
+      html: `
+        <h1>Payout ${payout.status}</h1>
+        <p><strong>Payout ID:</strong> ${payout.id}</p>
+        <p><strong>Status:</strong> ${payout.status}</p>
+        <p><strong>Amount:</strong> $${Number(payout.amount).toFixed(2)}</p>
+        <p><strong>Platform Fee:</strong> $${Number(payout.platformFee).toFixed(2)}</p>
+        <p><strong>Net Amount:</strong> $${Number(payout.netAmount).toFixed(2)}</p>
+        <hr>
+        <h2>Hustler Details</h2>
+        <p><strong>Name:</strong> ${hustler.name}</p>
+        <p><strong>Email:</strong> ${hustler.email}</p>
+        <p><strong>Job ID:</strong> ${payout.jobId}</p>
+        <p><strong>Provider ID:</strong> ${payout.payoutProviderId || 'N/A'}</p>
+        <hr>
+        <p><a href="${process.env.APP_BASE_URL}/admin/payouts">View All Payouts</a></p>
+      `,
+    });
+  } catch (error) {
+    console.error('Send admin payout notification error:', error);
+  }
+}
+
 async function sendStripeRequiredEmail(email, name, jobTitle) {
   if (!isEmailConfigured()) return;
   try {
@@ -383,6 +522,7 @@ async function sendStatusUpdateEmail(email, name, jobTitle, statusMessage) {
 
 module.exports = {
   sendSignupEmail,
+  sendEmailVerificationEmail,
   sendPasswordResetEmail,
   sendOfferReceivedEmail,
   sendJobAssignedEmail,
@@ -393,6 +533,8 @@ module.exports = {
   sendJobCompletedEmail,
   sendAutoCompleteEmail,
   sendRefundEmail,
+  sendAdminRefundNotification,
+  sendAdminPayoutNotification,
   sendStripeRequiredEmail,
   sendFeedbackEmail,
   sendNewMessageEmail,

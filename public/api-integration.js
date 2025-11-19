@@ -1,5 +1,6 @@
 // API Integration Layer for Hustl
 // This file replaces Supabase calls with our Express API
+// Version: 3.0 - Updated upload to use backend endpoint (no CORS)
 
 const API_BASE_URL = window.location.origin; // Use same origin (backend serves frontend)
 let authToken = localStorage.getItem('hustl_token') || null;
@@ -147,13 +148,25 @@ const apiJobs = {
     if (filters.category) params.append('category', filters.category);
     if (filters.minPay) params.append('minPay', filters.minPay);
     if (filters.payType) params.append('payType', filters.payType);
-    if (filters.lat) params.append('lat', filters.lat);
-    if (filters.lng) params.append('lng', filters.lng);
-    if (filters.radius) params.append('radius', filters.radius);
+    
+    // Location filtering - default radius is 25 miles
+    const defaultRadius = 25;
+    const radius = filters.radius || defaultRadius;
+    params.append('radius', radius);
+    
+    // Use provided lat/lng, or zip, or fall back to user's profile zip
+    if (filters.lat && filters.lng) {
+      params.append('lat', filters.lat);
+      params.append('lng', filters.lng);
+    } else if (filters.zip) {
+      params.append('zip', filters.zip);
+    }
+    // If no location provided, backend will use user's profile location
+    
     if (filters.city) params.append('city', filters.city);
-    if (filters.zip) params.append('zip', filters.zip);
     if (filters.page) params.append('page', filters.page);
     if (filters.limit) params.append('limit', filters.limit);
+    if (filters.sortBy) params.append('sortBy', filters.sortBy);
 
     const query = params.toString();
     const endpoint = `/jobs${query ? `?${query}` : ''}`;
@@ -382,21 +395,58 @@ const apiUploads = {
   },
 
   async uploadFile(file) {
-    // Get presigned URL
-    const { uploadUrl, fileKey, publicUrl } = await this.getPresignedUrl(
-      file.name,
-      file.type,
-      file.size
-    );
+    // Upload through backend API to avoid CORS issues
+    // This is the preferred method as it doesn't require CORS configuration on R2
+    console.log('[Upload] Starting file upload through backend API...', file.name, file.type, file.size);
+    
+    const formData = new FormData();
+    formData.append('file', file);
 
-    // Upload to R2
-    await fetch(uploadUrl, {
-      method: 'PUT',
-      body: file,
-      headers: { 'Content-Type': file.type },
-    });
+    // Get auth token from localStorage (use the same token key as apiRequest)
+    const token = authToken || localStorage.getItem('hustl_token');
+    console.log('[Upload] Auth token present:', !!token);
 
-    return { fileKey, publicUrl };
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    // Don't set Content-Type header - let browser set it with boundary for multipart/form-data
+
+    const uploadUrl = `${API_BASE_URL}/r2/upload`;
+    console.log('[Upload] Uploading to:', uploadUrl);
+
+    try {
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: headers,
+        body: formData,
+      });
+
+      console.log('[Upload] Response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Upload] Error response:', errorText);
+        let error;
+        try {
+          error = JSON.parse(errorText);
+        } catch {
+          error = { error: errorText || 'Upload failed' };
+        }
+        throw new Error(error.error || error.message || 'Failed to upload file');
+      }
+
+      const result = await response.json();
+      console.log('[Upload] Success!', result);
+      return { fileKey: result.fileKey, publicUrl: result.publicUrl };
+    } catch (error) {
+      console.error('[Upload] Upload error:', error);
+      // If it's a network error, provide helpful message
+      if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
+        throw new Error('Upload failed. Please check your connection and try again.');
+      }
+      throw error;
+    }
   },
 };
 
@@ -481,6 +531,24 @@ const apiFeedback = {
   },
 };
 
+const apiNotifications = {
+  async list() {
+    return await apiRequest('/notifications');
+  },
+  
+  async markRead(notificationId) {
+    return await apiRequest(`/notifications/${notificationId}/read`, {
+      method: 'POST',
+    });
+  },
+  
+  async markAllRead() {
+    return await apiRequest('/notifications/read-all', {
+      method: 'POST',
+    });
+  },
+};
+
 window.hustlAPI = {
   auth: apiAuth,
   jobs: apiJobs,
@@ -492,5 +560,6 @@ window.hustlAPI = {
   users: apiUsers,
   reviews: apiReviews,
   feedback: apiFeedback,
+  notifications: apiNotifications,
 };
 
