@@ -3195,18 +3195,21 @@ try {
           return;
         }
 
-        // Sign up with new API
-        // Get city/zip from form - require them
-        const city = document.getElementById("signupCity")?.value.trim();
-        const zip = document.getElementById("signupZip")?.value.trim();
-        
-        if (!city || !zip) {
-          showToast("Please enter your city and zip code");
-          return;
+        // Sign up with new API - NO city/zip required
+        // Generate username from email (take part before @, make alphanumeric)
+        let username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+        // Ensure it's at least 3 characters and max 20
+        if (username.length < 3) {
+          username = username + '123';
         }
-        const username = email.split("@")[0]; // Simple username from email
+        if (username.length > 20) {
+          username = username.substring(0, 20);
+        }
+        // Add random suffix to ensure uniqueness
+        const randomSuffix = Math.floor(Math.random() * 1000);
+        username = username + randomSuffix;
 
-        await window.hustlAPI.auth.signUp(email, password, name, username, city, zip, role);
+        await window.hustlAPI.auth.signUp(email, password, name, username, role);
         
         showToast("Account created successfully!");
         
@@ -3228,7 +3231,13 @@ try {
         }
       } catch (error) {
         console.error("Sign up error:", error);
-        showToast("Sign up error: " + (error.message || "Unknown error"));
+        // Filter out any city/zip related error messages
+        let errorMsg = error.message || "Unknown error";
+        const lowerMsg = errorMsg.toLowerCase();
+        if (lowerMsg.includes('zip') || lowerMsg.includes('city') || lowerMsg.includes('location')) {
+          errorMsg = "Account creation failed. Please try again.";
+        }
+        showToast("Sign up error: " + errorMsg);
         // Ensure button is never stuck disabled
         const btn = document.getElementById("createAccountButton");
         if (btn) btn.disabled = false;

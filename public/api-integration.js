@@ -27,8 +27,15 @@ async function apiRequest(endpoint, options = {}) {
 
     if (!response.ok) {
       // Try to get detailed error message
-      const errorMsg = data.error || data.message || `HTTP ${response.status}`;
+      let errorMsg = data.error || data.message || `HTTP ${response.status}`;
       const details = data.details ? `: ${JSON.stringify(data.details)}` : '';
+      
+      // Filter out any city/zip related error messages - they shouldn't be shown
+      const lowerMsg = errorMsg.toLowerCase();
+      if (lowerMsg.includes('zip') || lowerMsg.includes('city') || lowerMsg.includes('location')) {
+        errorMsg = 'Account creation failed. Please try again.';
+      }
+      
       const error = new Error(errorMsg + details);
       // Preserve additional error flags (like requiresStripe)
       if (data.requiresStripe) {
@@ -49,7 +56,8 @@ async function apiRequest(endpoint, options = {}) {
 
 // Auth functions
 const apiAuth = {
-  async signUp(email, password, name, username, city, zip, role = 'CUSTOMER') {
+  async signUp(email, password, name, username, role = 'CUSTOMER') {
+    // City and zip are not required - completely removed from signup
     const data = await apiRequest('/auth/signup', {
       method: 'POST',
       body: JSON.stringify({
@@ -57,8 +65,6 @@ const apiAuth = {
         password,
         name,
         username,
-        city,
-        zip,
         role: role.toUpperCase(),
       }),
     });

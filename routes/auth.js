@@ -13,8 +13,6 @@ router.post('/signup', [
   body('password').isLength({ min: 8 }),
   body('name').trim().notEmpty(),
   body('username').trim().isAlphanumeric().isLength({ min: 3, max: 20 }),
-  body('city').trim().notEmpty(),
-  body('zip').trim().matches(/^\d{5}(-\d{4})?$/),
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -27,7 +25,9 @@ router.post('/signup', [
       });
     }
 
-    const { email, password, name, username, city, zip, role } = req.body;
+    const { email, password, name, username, role } = req.body;
+    
+    console.log('[signup] Request body:', { email, name, username, role, hasCity: !!req.body.city, hasZip: !!req.body.zip });
 
     // Check if user exists
     const existing = await prisma.user.findFirst({
@@ -43,17 +43,20 @@ router.post('/signup', [
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create user with both roles (users can be both customer and hustler)
+    // Create user - simple signup, no city/zip required
+    const userData = {
+      email,
+      passwordHash,
+      name,
+      username,
+      roles: ['CUSTOMER', 'HUSTLER'], // All users can be both
+      // city and zip are NOT included - they are optional
+    };
+    
+    console.log('[signup] Creating user with data (no city/zip):', { ...userData, passwordHash: '[HIDDEN]' });
+    
     const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        name,
-        username,
-        city,
-        zip,
-        roles: ['CUSTOMER', 'HUSTLER'], // All users can be both
-      },
+      data: userData,
       select: {
         id: true,
         email: true,
@@ -76,8 +79,28 @@ router.post('/signup', [
 
     res.status(201).json({ user, token });
   } catch (error) {
-    console.error('Signup error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Signup error full details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+      stack: error.stack
+    });
+    
+    // Provide more detailed error message
+    let errorMessage = 'Account creation failed. Please try again.';
+    if (error.code === 'P2002') {
+      errorMessage = 'Email or username already exists';
+    } else if (error.message) {
+      // Completely hide any city/zip related errors
+      const lowerMsg = error.message.toLowerCase();
+      if (lowerMsg.includes('city') || lowerMsg.includes('zip') || lowerMsg.includes('location')) {
+        console.error('BLOCKED city/zip error from reaching user:', error.message);
+        errorMessage = 'Account creation failed. Please try again or contact support.';
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    res.status(500).json({ error: errorMessage });
   }
 });
 
