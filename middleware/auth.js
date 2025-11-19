@@ -5,11 +5,22 @@ const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized - no token provided' });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      console.error('[Auth] JWT_SECRET is not set in environment variables!');
+      return res.status(500).json({ error: 'Server configuration error' });
     }
 
     const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtError) {
+      console.error('[Auth] JWT verification failed:', jwtError.message);
+      return res.status(401).json({ error: 'Invalid token' });
+    }
     
     let user = await prisma.user.findUnique({
       where: { id: decoded.userId },
@@ -59,7 +70,18 @@ const authenticate = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
+    console.error('[Auth] Authentication error:', error.message);
+    console.error('[Auth] Error stack:', error.stack);
+    
+    // More specific error messages
+    if (error.message && error.message.includes('JWT')) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    if (error.message && error.message.includes('prisma')) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    return res.status(401).json({ error: 'Authentication failed' });
   }
 };
 

@@ -95,24 +95,45 @@ router.get('/:jobId', authenticate, async (req, res) => {
 
 // POST /offers/:jobId - Create an offer (Hustler only)
 router.post('/:jobId', authenticate, requireRole('HUSTLER'), async (req, res, next) => {
-  // Check email verification before allowing offers
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: { emailVerified: true },
-    });
+    // Check email verification before allowing offers
+    // TEMPORARILY DISABLED: Email verification field doesn't exist in production database yet
+    // TODO: Re-enable after running migration to add emailVerified field
+    try {
+      const emailVerificationRequired = process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
+      
+      if (emailVerificationRequired) {
+        try {
+          // Don't select specific fields - get all and check if emailVerified exists
+          const user = await prisma.user.findUnique({
+            where: { id: req.user.id },
+          });
 
-    if (!user || !user.emailVerified) {
-      return res.status(403).json({ 
-        error: 'Email verification required',
-        message: 'Please verify your email address before applying to jobs. Check your email for a verification code.',
-        requiresEmailVerification: true,
-      });
+          if (!user) {
+            return res.status(401).json({ error: 'User not found' });
+          }
+
+          // Check if emailVerified exists and is false
+          if (user.emailVerified !== undefined && !user.emailVerified) {
+            return res.status(403).json({ 
+              error: 'Email verification required',
+              message: 'Please verify your email address before applying to jobs. Check your email for a verification code.',
+              requiresEmailVerification: true,
+            });
+          }
+        } catch (schemaError) {
+          // If emailVerified field doesn't exist, log warning and continue
+          if (schemaError.message && schemaError.message.includes('emailVerified')) {
+            console.warn('[POST /offers/:jobId] emailVerified field not found in schema, skipping verification check');
+            // Continue without email verification check
+          } else {
+            throw schemaError; // Re-throw other errors
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Email verification check error:', error);
+      return res.status(500).json({ error: 'Internal server error' });
     }
-  } catch (error) {
-    console.error('Email verification check error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
   next();
 }, [
   body('note').optional().trim().isLength({ max: 1000 }),
