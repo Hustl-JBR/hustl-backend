@@ -91,10 +91,19 @@ router.get('/my-jobs', authenticate, async (req, res) => {
       take: parseInt(limit, 10),
     });
     
-    // Log performance for debugging
-    console.log(`[Jobs] Fetched ${jobs.length} jobs for user in ${Date.now() - (req.startTime || Date.now())}ms`);
+    // Filter out archived jobs (unless includeArchived is true)
+    let filteredJobs = jobs;
+    if (!req.query.includeArchived) {
+      filteredJobs = jobs.filter(job => {
+        const requirements = job.requirements || {};
+        return requirements.archived !== true;
+      });
+    }
     
-    res.json(jobs);
+    // Log performance for debugging
+    console.log(`[Jobs] Fetched ${filteredJobs.length} jobs for user in ${Date.now() - (req.startTime || Date.now())}ms`);
+    
+    res.json(filteredJobs);
   } catch (error) {
     console.error('Get my jobs error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -556,10 +565,19 @@ router.get('/', optionalAuth, [
     // Post-process: Filter by zip code and calculate distances
     let filteredJobs = jobs;
     
+    // Filter out archived jobs (unless includeArchived is true)
+    // Archived jobs have requirements.archived === true
+    if (!req.query.includeArchived) {
+      filteredJobs = filteredJobs.filter(job => {
+        const requirements = job.requirements || {};
+        return requirements.archived !== true;
+      });
+    }
+    
     // Filter by zip code if needed (when we don't have coordinates)
     if ((zip || userZip) && shouldFilterByLocation && !userLat) {
       const searchZip = zip || userZip;
-      filteredJobs = jobs.filter(job => {
+      filteredJobs = filteredJobs.filter(job => {
         // Check customer zip
         if (job.customer?.zip === searchZip) return true;
         // Check job requirements.pickupZip
@@ -1318,6 +1336,78 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
     res.json({ message: 'Job deleted successfully' });
   } catch (error) {
     console.error('Delete job error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /jobs/:id/archive - Archive a job (soft delete, hides from feeds but keeps data)
+router.post('/:id/archive', authenticate, async (req, res) => {
+  try {
+    const job = await prisma.job.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    // Only customer or hustler who owns the job can archive it
+    const isOwner = job.customerId === req.user.id || job.hustlerId === req.user.id;
+    if (!isOwner) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Store archived status in requirements JSON field
+    const requirements = job.requirements || {};
+    requirements.archived = true;
+    requirements.archivedAt = new Date().toISOString();
+    requirements.archivedBy = req.user.id;
+
+    // Update job with archived status
+    await prisma.job.update({
+      where: { id: req.params.id },
+      data: { requirements },
+    });
+
+    res.json({ message: 'Job archived successfully' });
+  } catch (error) {
+    console.error('Archive job error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /jobs/:id/unarchive - Unarchive a job (restore from archive)
+router.post('/:id/unarchive', authenticate, async (req, res) => {
+  try {
+    const job = await prisma.job.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    // Only customer or hustler who owns the job can unarchive it
+    const isOwner = job.customerId === req.user.id || job.hustlerId === req.user.id;
+    if (!isOwner) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Remove archived status from requirements
+    const requirements = job.requirements || {};
+    delete requirements.archived;
+    delete requirements.archivedAt;
+    delete requirements.archivedBy;
+
+    // Update job
+    await prisma.job.update({
+      where: { id: req.params.id },
+      data: { requirements },
+    });
+
+    res.json({ message: 'Job unarchived successfully' });
+  } catch (error) {
+    console.error('Unarchive job error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

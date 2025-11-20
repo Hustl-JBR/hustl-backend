@@ -334,6 +334,26 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       return res.status(400).json({ error: 'Job is not available' });
     }
 
+    // CHECK ACTIVE JOBS LIMIT - Hustlers can only have 2 active jobs at once
+    // Active = ASSIGNED status where hustler has received start code (status = PAID) OR status = ASSIGNED
+    const activeJobsCount = await prisma.job.count({
+      where: {
+        hustlerId: offer.hustlerId,
+        status: {
+          in: ['ASSIGNED', 'PAID', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM']
+        }
+      }
+    });
+    
+    const MAX_ACTIVE_JOBS = 2;
+    if (activeJobsCount >= MAX_ACTIVE_JOBS) {
+      return res.status(400).json({ 
+        error: `You already have ${MAX_ACTIVE_JOBS} active jobs. Complete one to take another.`,
+        maxActiveJobs: MAX_ACTIVE_JOBS,
+        currentActiveJobs: activeJobsCount
+      });
+    }
+
     // REQUIRE STRIPE ACCOUNT - Hustler must have Stripe connected to be accepted
     // TEMPORARILY DISABLED FOR TESTING - Remove this comment and uncomment below to re-enable
     // Skip in test mode (when SKIP_STRIPE_CHECK=true)

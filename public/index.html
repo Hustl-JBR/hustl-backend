@@ -2414,14 +2414,20 @@
             <button class="filter-btn" data-filter="highest-pay" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 20px; background: white; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: #374151; transition: all 0.2s;">
               💰 Highest Pay
             </button>
-            <!-- Collapsible "More Filters" button -->
-            <button id="showMoreFiltersBtn" class="filter-btn" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 20px; background: white; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: #374151; transition: all 0.2s;">
-              ⋯ More
+            <!-- Collapsible "More Filters" button with arrow icon -->
+            <button id="showMoreFiltersBtn" class="filter-btn" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 20px; background: white; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: #374151; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.4rem; -webkit-tap-highlight-color: transparent;">
+              <span id="showMoreFiltersText">More Filters</span>
+              <span id="showMoreFiltersArrow" style="transition: transform 0.3s ease; font-size: 0.9rem;">▼</span>
             </button>
           </div>
           
+          <!-- Filters Applied Label -->
+          <div id="filtersAppliedLabel" style="display: none; margin-bottom: 0.75rem; padding: 0.5rem 0.75rem; background: #dcfce7; border: 1px solid #16a34a; border-radius: 6px; font-size: 0.85rem; color: #166534; font-weight: 500;">
+            <span>✓</span> <span id="filtersAppliedText"></span>
+          </div>
+          
           <!-- Hidden Advanced Filters (shown when "More" is clicked) -->
-          <div id="advancedFiltersContainer" style="display: none; margin-bottom: 1rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+          <div id="advancedFiltersContainer" style="display: none; margin-bottom: 1rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; opacity: 0; transform: translateY(-10px); transition: opacity 0.3s ease, transform 0.3s ease, max-height 0.3s ease; max-height: 0; overflow: hidden;">
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
               <button class="filter-btn" data-filter="hourly" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 20px; background: white; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: #374151; transition: all 0.2s;">
                 ⏱ Hourly
@@ -2430,26 +2436,46 @@
                 💵 Flat Rate
               </button>
             </div>
-            <!-- Compact Location Controls -->
-            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <!-- Compact Location Controls with Mobile-Friendly Slider -->
+            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.75rem;">
               <div style="flex: 1; min-width: 120px;">
-                <label for="jobsRadiusFilter" style="font-size: 0.8rem; color: #6b7280; margin-right: 0.5rem;">📍 Radius:</label>
-                <select id="jobsRadiusFilter" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; border: 1px solid #d1d5db; border-radius: 6px;">
+                <label for="jobsRadiusFilter" style="font-size: 0.8rem; color: #6b7280; margin-bottom: 0.5rem; display: block;">📍 Radius: <span id="radiusValueDisplay" style="font-weight: 600; color: #2563eb;">10 mi</span></label>
+                <input type="range" id="jobsRadiusSlider" min="5" max="50" step="5" value="10" style="width: 100%; height: 8px; border-radius: 4px; background: #e5e7eb; outline: none; cursor: pointer; -webkit-appearance: none;" />
+                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #9ca3af; margin-top: 0.25rem;">
+                  <span>5mi</span>
+                  <span>50mi</span>
+                </div>
+                <!-- Hidden select for backward compatibility -->
+                <select id="jobsRadiusFilter" style="display: none;">
                   <option value="5">5 mi</option>
                   <option value="10" selected>10 mi</option>
+                  <option value="15">15 mi</option>
+                  <option value="20">20 mi</option>
                   <option value="25">25 mi</option>
+                  <option value="30">30 mi</option>
+                  <option value="40">40 mi</option>
                   <option value="50">50 mi</option>
-                  <option value="100">100 mi</option>
                 </select>
               </div>
               <div style="flex: 1; min-width: 120px;">
-                <input id="jobsZipFilter" type="text" placeholder="ZIP code" maxlength="5" pattern="[0-9]{5}" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; border: 1px solid #d1d5db; border-radius: 6px;" />
+                <label for="jobsZipFilter" style="font-size: 0.8rem; color: #6b7280; margin-bottom: 0.5rem; display: block;">📍 ZIP Code:</label>
+                <input id="jobsZipFilter" type="text" placeholder="Enter ZIP" maxlength="5" pattern="[0-9]{5}" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; border: 1px solid #d1d5db; border-radius: 6px;" />
               </div>
-              <button id="setMyLocationBtn" class="btn outline" style="padding: 0.5rem 1rem; white-space: nowrap; font-size: 0.85rem;">
+              <button id="setMyLocationBtn" class="btn outline" style="padding: 0.5rem 1rem; white-space: nowrap; font-size: 0.85rem; min-height: 44px;">
                 📍 My Location
               </button>
             </div>
-            <div id="locationStatus" style="font-size: 0.75rem; color: #64748b; margin-top: 0.5rem;"></div>
+            <div id="locationStatus" style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem;"></div>
+            
+            <!-- Apply Filters and Reset Buttons -->
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;">
+              <button id="applyFiltersBtn" class="btn btn-primary" style="flex: 1; padding: 0.6rem 1rem; font-size: 0.9rem; font-weight: 600; min-height: 44px;">
+                ✓ Apply Filters
+              </button>
+              <button id="resetFiltersBtn" class="btn outline" style="padding: 0.6rem 1rem; font-size: 0.85rem; white-space: nowrap; min-height: 44px;">
+                Reset
+              </button>
+            </div>
           </div>
           
           <!-- Hidden date/time filters (removed from main view, kept for backward compatibility) -->
@@ -4263,7 +4289,10 @@ async function renderJobs(reset = false) {
     
     // Location-based filtering: Auto-filter by user location with default radius (10 miles)
     // Production-ready with validation and fallbacks
-    const radiusFilter = document.getElementById("jobsRadiusFilter")?.value || '10'; // Default 10 miles
+    // Check slider first (preferred for mobile), then select (backward compatibility)
+    const radiusSlider = document.getElementById("jobsRadiusSlider");
+    const radiusSelect = document.getElementById("jobsRadiusFilter");
+    const radiusFilter = radiusSlider?.value || radiusSelect?.value || '10'; // Default 10 miles
     const radiusNum = parseInt(radiusFilter, 10) || 10;
     const userLocation = JSON.parse(localStorage.getItem('userLocation') || 'null');
     const zipFilterInput = document.getElementById("jobsZipFilter")?.value.trim();
@@ -5183,15 +5212,201 @@ async function renderJobs(reset = false) {
     }
   }
   
-  // Wire up "More Filters" toggle button
+  // Wire up "More Filters" toggle button with smooth animations
   const showMoreFiltersBtn = document.getElementById('showMoreFiltersBtn');
   const advancedFiltersContainer = document.getElementById('advancedFiltersContainer');
+  const showMoreFiltersArrow = document.getElementById('showMoreFiltersArrow');
+  const showMoreFiltersText = document.getElementById('showMoreFiltersText');
+  const filtersAppliedLabel = document.getElementById('filtersAppliedLabel');
+  
   if (showMoreFiltersBtn && advancedFiltersContainer) {
-    showMoreFiltersBtn.addEventListener('click', () => {
-      const isHidden = advancedFiltersContainer.style.display === 'none' || !advancedFiltersContainer.style.display;
-      advancedFiltersContainer.style.display = isHidden ? 'block' : 'none';
-      showMoreFiltersBtn.textContent = isHidden ? '⋯ Less' : '⋯ More';
+    // Single-tap toggle (no double-tap) - use preventDefault/stopPropagation
+    showMoreFiltersBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const isHidden = advancedFiltersContainer.style.display === 'none' || !advancedFiltersContainer.style.display || 
+                       window.getComputedStyle(advancedFiltersContainer).display === 'none';
+      
+      if (isHidden) {
+        // Opening: Show with animation
+        advancedFiltersContainer.style.display = 'block';
+        // Force reflow for animation
+        advancedFiltersContainer.offsetHeight;
+        advancedFiltersContainer.style.opacity = '1';
+        advancedFiltersContainer.style.transform = 'translateY(0)';
+        advancedFiltersContainer.style.maxHeight = '600px'; // Enough for all filters
+        
+        // Update button appearance
+        showMoreFiltersBtn.style.background = '#eff6ff';
+        showMoreFiltersBtn.style.borderColor = '#3b82f6';
+        showMoreFiltersText.textContent = 'Less Filters';
+        if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(180deg)';
+        
+        // Auto-scroll into view on mobile to avoid bottom nav blocking
+        setTimeout(() => {
+          advancedFiltersContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+      } else {
+        // Closing: Hide with animation
+        advancedFiltersContainer.style.opacity = '0';
+        advancedFiltersContainer.style.transform = 'translateY(-10px)';
+        advancedFiltersContainer.style.maxHeight = '0';
+        
+        // Update button appearance
+        showMoreFiltersBtn.style.background = 'white';
+        showMoreFiltersBtn.style.borderColor = '#d1d5db';
+        showMoreFiltersText.textContent = 'More Filters';
+        if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(0deg)';
+        
+        // Hide after animation completes
+        setTimeout(() => {
+          advancedFiltersContainer.style.display = 'none';
+        }, 300);
+      }
+    }, { passive: false }); // Not passive so we can preventDefault
+    
+    // Wire up radius slider (sync with hidden select for backward compatibility)
+    const radiusSlider = document.getElementById('jobsRadiusSlider');
+    const radiusSelect = document.getElementById('jobsRadiusFilter');
+    const radiusValueDisplay = document.getElementById('radiusValueDisplay');
+    
+    if (radiusSlider && radiusValueDisplay) {
+      radiusSlider.addEventListener('input', (e) => {
+        const value = e.target.value;
+        radiusValueDisplay.textContent = `${value} mi`;
+        if (radiusSelect) {
+          // Update select value if slider value matches an option
+          const matchingOption = Array.from(radiusSelect.options).find(opt => opt.value === value);
+          if (matchingOption) {
+            radiusSelect.value = value;
+          } else {
+            // If no exact match, set closest value
+            radiusSelect.value = value <= 10 ? '10' : value <= 25 ? '25' : '50';
+          }
+        }
+      }, { passive: true });
+      
+      // Sync slider with select on load
+      if (radiusSelect) {
+        radiusSlider.value = radiusSelect.value || '10';
+        radiusValueDisplay.textContent = `${radiusSlider.value} mi`;
+      }
+    }
+    
+    // Wire up Apply Filters button
+    const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+    if (applyFiltersBtn) {
+      applyFiltersBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        renderJobs(true); // Re-render with new filters
+        updateFiltersAppliedLabel();
+        // Close filters panel after applying
+        if (showMoreFiltersBtn && advancedFiltersContainer.style.display !== 'none') {
+          showMoreFiltersBtn.click(); // Trigger close animation
+        }
+      }, { passive: false });
+    }
+    
+    // Wire up Reset Filters button
+    const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+    if (resetFiltersBtn) {
+      resetFiltersBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Reset all filters to defaults
+        if (radiusSelect) radiusSelect.value = '10';
+        if (radiusSlider) {
+          radiusSlider.value = '10';
+          if (radiusValueDisplay) radiusValueDisplay.textContent = '10 mi';
+        }
+        const zipFilter = document.getElementById('jobsZipFilter');
+        if (zipFilter) zipFilter.value = '';
+        
+        // Reset filter buttons
+        document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+          if (btn.id !== 'showMoreFiltersBtn') {
+            btn.classList.remove('active');
+            btn.style.borderColor = '#d1d5db';
+            btn.style.background = 'white';
+            btn.style.color = '#374151';
+          }
+        });
+        
+        // Set default filter
+        const newestBtn = document.querySelector('[data-filter="newest"]');
+        if (newestBtn) {
+          newestBtn.classList.add('active');
+          newestBtn.style.borderColor = '#3b82f6';
+          newestBtn.style.background = '#3b82f6';
+          newestBtn.style.color = 'white';
+          activeJobFilter = 'newest';
+        }
+        
+        renderJobs(true);
+        updateFiltersAppliedLabel();
+      }, { passive: false });
+    }
+    
+    // Function to update "Filters Applied" label
+    function updateFiltersAppliedLabel() {
+      if (!filtersAppliedLabel) return;
+      
+      const activeFilters = [];
+      const activeFilterBtns = document.querySelectorAll('.filter-btn.active[data-filter]');
+      activeFilterBtns.forEach(btn => {
+        const filter = btn.dataset.filter;
+        if (filter === 'near-me') activeFilters.push('Near Me');
+        else if (filter === 'newest') activeFilters.push('Newest');
+        else if (filter === 'highest-pay') activeFilters.push('Highest Pay');
+        else if (filter === 'hourly') activeFilters.push('Hourly');
+        else if (filter === 'flat') activeFilters.push('Flat Rate');
+      });
+      
+      const radius = radiusSelect?.value || radiusSlider?.value || '10';
+      if (radius !== '10') {
+        activeFilters.push(`${radius} mi radius`);
+      }
+      
+      const zip = document.getElementById('jobsZipFilter')?.value?.trim();
+      if (zip && zip.length === 5) {
+        activeFilters.push(`ZIP ${zip}`);
+      }
+      
+      if (activeFilters.length > 0) {
+        filtersAppliedLabel.style.display = 'block';
+        const filtersText = activeFilters.length === 1 
+          ? `Filtering by ${activeFilters[0]}`
+          : `${activeFilters.length} filters applied`;
+        document.getElementById('filtersAppliedText').textContent = filtersText;
+      } else {
+        filtersAppliedLabel.style.display = 'none';
+      }
+    }
+    
+    // Update label when filters change
+    document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+      if (btn.id !== 'showMoreFiltersBtn') {
+        btn.addEventListener('click', () => {
+          setTimeout(updateFiltersAppliedLabel, 100);
+        });
+      }
     });
+    
+    if (radiusSelect || radiusSlider) {
+      (radiusSelect || radiusSlider).addEventListener('change', updateFiltersAppliedLabel);
+      (radiusSelect || radiusSlider).addEventListener('input', updateFiltersAppliedLabel);
+    }
+    
+    const zipFilter = document.getElementById('jobsZipFilter');
+    if (zipFilter) {
+      zipFilter.addEventListener('input', updateFiltersAppliedLabel);
+      zipFilter.addEventListener('blur', updateFiltersAppliedLabel);
+    }
+    
+    // Initial update
+    setTimeout(updateFiltersAppliedLabel, 500);
   }
   
   // Wire up advanced filter buttons (hourly/flat) if they exist
@@ -5414,6 +5629,76 @@ async function renderJobs(reset = false) {
       
       metaInfo.textContent = `${catText} ${job.category || "other"} • ${payText} • posted ${timeAgo(createdDate)}`;
       titleSection.appendChild(metaInfo);
+      
+      // Show Customer/Hustler names after hiring (prominently at top)
+      if (job.status && (job.status.toUpperCase() === "ASSIGNED" || job.status.toUpperCase() === "PAID" || 
+          job.status.toUpperCase() === "COMPLETED_BY_HUSTLER" || job.status.toUpperCase() === "AWAITING_CUSTOMER_CONFIRM" ||
+          job.status.toUpperCase() === "COMPLETED")) {
+        const participantsSection = document.createElement("div");
+        participantsSection.style.marginTop = "1rem";
+        participantsSection.style.padding = "1rem";
+        participantsSection.style.background = "#f0f9ff";
+        participantsSection.style.borderRadius = "8px";
+        participantsSection.style.border = "2px solid #bae6fd";
+        
+        const participantsTitle = document.createElement("div");
+        participantsTitle.style.fontWeight = "700";
+        participantsTitle.style.fontSize = "1.1rem";
+        participantsTitle.style.marginBottom = "0.75rem";
+        participantsTitle.style.color = "#1e40af";
+        participantsTitle.textContent = "👥 Job Participants";
+        participantsSection.appendChild(participantsTitle);
+        
+        // Customer info
+        if (job.customer) {
+          const customerRow = document.createElement("div");
+          customerRow.style.display = "flex";
+          customerRow.style.alignItems = "center";
+          customerRow.style.gap = "0.75rem";
+          customerRow.style.marginBottom = "0.5rem";
+          
+          const customerLabel = document.createElement("span");
+          customerLabel.style.fontWeight = "600";
+          customerLabel.style.color = "#64748b";
+          customerLabel.textContent = "Customer:";
+          customerRow.appendChild(customerLabel);
+          
+          const customerName = document.createElement("span");
+          customerName.style.fontWeight = "600";
+          customerName.style.color = "#1f2937";
+          customerName.style.fontSize = "1.05rem";
+          customerName.textContent = job.customer.name || job.customer.username || "Customer";
+          customerRow.appendChild(customerName);
+          
+          participantsSection.appendChild(customerRow);
+        }
+        
+        // Hustler info
+        if (job.hustler) {
+          const hustlerRow = document.createElement("div");
+          hustlerRow.style.display = "flex";
+          hustlerRow.style.alignItems = "center";
+          hustlerRow.style.gap = "0.75rem";
+          
+          const hustlerLabel = document.createElement("span");
+          hustlerLabel.style.fontWeight = "600";
+          hustlerLabel.style.color = "#64748b";
+          hustlerLabel.textContent = "Hustler:";
+          hustlerRow.appendChild(hustlerLabel);
+          
+          const hustlerName = document.createElement("span");
+          hustlerName.style.fontWeight = "600";
+          hustlerName.style.color = "#1f2937";
+          hustlerName.style.fontSize = "1.05rem";
+          hustlerName.textContent = job.hustler.name || job.hustler.username || "Hustler";
+          hustlerRow.appendChild(hustlerName);
+          
+          participantsSection.appendChild(hustlerRow);
+        }
+        
+        titleSection.appendChild(participantsSection);
+      }
+      
       content.appendChild(titleSection);
 
       // Job Details Section
@@ -5606,38 +5891,59 @@ async function renderJobs(reset = false) {
         desc.style.lineHeight = "1.6";
         desc.style.color = "var(--text-main)";
         
-        const isLong = job.description.length > 200;
+        // Show more lines on mobile (4-6 lines ≈ 160-200px) before collapsing
+        const isLong = job.description.length > 250;
         const descId = `job-desc-${job.id}`;
         desc.id = descId;
+        desc.textContent = job.description;
+        desc.style.transition = "max-height 0.3s ease, opacity 0.3s ease";
         
         if (isLong) {
-          // Show truncated version initially
-          desc.style.maxHeight = "120px";
+          // Show 4-6 lines initially (≈160px for mobile-friendly reading)
+          const initialHeight = window.innerWidth <= 768 ? "200px" : "160px";
+          desc.style.maxHeight = initialHeight;
           desc.style.overflow = "hidden";
-          desc.textContent = job.description;
+          desc.style.position = "relative";
+          
+          // Add fade gradient at bottom when collapsed
+          desc.style.setProperty("--mask-image", "linear-gradient(to bottom, black 0%, black 90%, transparent 100%)");
           
           const toggleBtn = document.createElement("button");
-          toggleBtn.style.cssText = "margin-top: 0.5rem; padding: 0.4rem 0.8rem; background: #e5e7eb; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #374151; -webkit-tap-highlight-color: transparent; user-select: none;";
-          toggleBtn.textContent = "Show More";
+          toggleBtn.style.cssText = "margin-top: 0.75rem; padding: 0.5rem 1rem; background: #e5e7eb; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #374151; display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s; -webkit-tap-highlight-color: transparent; user-select: none; min-height: 44px;";
+          toggleBtn.innerHTML = '<span class="toggle-text">Show More</span> <span class="toggle-arrow" style="transition: transform 0.3s ease; font-size: 0.9rem;">▼</span>';
           toggleBtn.dataset.expanded = "false";
           
-          // Single-tap toggle (no double-tap needed)
+          // Single-tap toggle with smooth animation (no double-tap)
           toggleBtn.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
             const expanded = toggleBtn.dataset.expanded === "true";
+            const toggleArrow = toggleBtn.querySelector('.toggle-arrow');
+            const toggleText = toggleBtn.querySelector('.toggle-text');
+            
             if (expanded) {
-              desc.style.maxHeight = "120px";
+              // Collapsing
+              desc.style.maxHeight = initialHeight;
               desc.style.overflow = "hidden";
-              toggleBtn.textContent = "Show More";
+              toggleText.textContent = "Show More";
+              if (toggleArrow) toggleArrow.style.transform = "rotate(0deg)";
               toggleBtn.dataset.expanded = "false";
+              toggleBtn.style.background = "#e5e7eb";
             } else {
+              // Expanding
               desc.style.maxHeight = "none";
               desc.style.overflow = "visible";
-              toggleBtn.textContent = "Show Less";
+              toggleText.textContent = "Show Less";
+              if (toggleArrow) toggleArrow.style.transform = "rotate(180deg)";
               toggleBtn.dataset.expanded = "true";
+              toggleBtn.style.background = "#dbeafe";
+              
+              // Auto-scroll description into view on mobile so bottom nav doesn't block
+              setTimeout(() => {
+                desc.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }, 150);
             }
-          }, { passive: true }); // Use passive listener for better performance
+          }, { passive: false }); // Not passive so we can preventDefault
           
           descContainer.appendChild(desc);
           descContainer.appendChild(toggleBtn);
@@ -5765,6 +6071,45 @@ async function renderJobs(reset = false) {
         locationContainer.style.background = "#f0fdf4";
         locationContainer.style.borderRadius = "6px";
         locationContainer.style.border = "1px solid #86efac";
+        
+        // Map Preview (move higher - right after location label)
+        if (job.lat && job.lng) {
+          const mapPreview = document.createElement("div");
+          mapPreview.style.marginBottom = "0.75rem";
+          mapPreview.style.borderRadius = "8px";
+          mapPreview.style.overflow = "hidden";
+          mapPreview.style.height = "200px";
+          mapPreview.style.background = "#e5e7eb";
+          mapPreview.style.cursor = "pointer";
+          mapPreview.style.border = "2px solid #86efac";
+          
+          // Use Mapbox Static Image API for preview
+          const mapboxToken = "pk.eyJ1IjoiaHVzdGxtYXAiLCJhIjoiY21qNGUzc2pqMGVxbzJrcjhuYm1icGNueSJ9.YzIpkBWGqqn0dEHz-n_puQ";
+          const mapImageUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+2563eb(${job.lng},${job.lat})/${job.lng},${job.lat},14,0/400x200@2x?access_token=${mapboxToken}`;
+          
+          const mapImg = document.createElement("img");
+          mapImg.loading = "lazy"; // Lazy load map images
+          mapImg.src = mapImageUrl;
+          mapImg.style.cssText = "width: 100%; height: 100%; object-fit: cover;";
+          mapImg.alt = "Job location map";
+          // Add error handling for failed image loads
+          mapImg.onerror = function() {
+            this.style.display = "none";
+            mapPreview.innerHTML = '<div style="padding: 2rem; text-align: center; color: #6b7280;">Map preview unavailable</div>';
+          };
+          
+          mapPreview.appendChild(mapImg);
+          
+          mapPreview.addEventListener("click", () => {
+            const address = pickupAddress || (pickupCity && pickupZip ? `${pickupCity}, ${pickupZip}` : pickupZip || '');
+            if (address) {
+              const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+              window.open(mapUrl, "_blank");
+            }
+          });
+          
+          locationContainer.appendChild(mapPreview);
+        }
         
         // Pickup Location
         const pickupLabel = document.createElement("div");
@@ -5958,6 +6303,73 @@ async function renderJobs(reset = false) {
         }
         
         detailsSection.appendChild(requirementsContainer);
+      }
+      
+      // Job Photos Carousel (mobile-friendly horizontal scroll)
+      if (job.photos && Array.isArray(job.photos) && job.photos.length > 0) {
+        const photosSection = document.createElement("div");
+        photosSection.style.marginTop = "1rem";
+        photosSection.style.marginBottom = "1rem";
+        
+        const photosLabel = document.createElement("div");
+        photosLabel.style.fontWeight = "600";
+        photosLabel.style.marginBottom = "0.75rem";
+        photosLabel.style.fontSize = "1rem";
+        photosLabel.textContent = `📸 Job Photos (${job.photos.length})`;
+        photosSection.appendChild(photosLabel);
+        
+        const photosCarousel = document.createElement("div");
+        photosCarousel.style.cssText = "display: flex; gap: 0.75rem; overflow-x: auto; padding: 0.5rem 0; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory;";
+        photosCarousel.style.scrollSnapType = "x mandatory";
+        
+        job.photos.forEach((photoUrl, index) => {
+          const photoWrapper = document.createElement("div");
+          photoWrapper.style.cssText = "flex-shrink: 0; width: 280px; height: 200px; border-radius: 8px; overflow: hidden; border: 2px solid #e5e7eb; cursor: pointer; scroll-snap-align: start; position: relative;";
+          
+          const img = document.createElement("img");
+          img.loading = "lazy"; // Lazy load job photos
+          img.src = photoUrl;
+          img.style.cssText = "width: 100%; height: 100%; object-fit: cover;";
+          img.alt = `Job photo ${index + 1}`;
+          // Add error handling for failed image loads
+          img.onerror = function() {
+            this.style.display = "none";
+          };
+          
+          img.addEventListener("click", () => {
+            // Open photo in fullscreen modal
+            const photoModal = document.createElement("div");
+            photoModal.style.cssText = "position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem;";
+            
+            const fullImg = document.createElement("img");
+            // Don't lazy load fullscreen images - they're loaded on demand
+            fullImg.src = photoUrl;
+            fullImg.style.cssText = "max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;";
+            // Add error handling for failed image loads
+            fullImg.onerror = function() {
+              photoModal.innerHTML = '<div style="padding: 2rem; text-align: center; color: white;">Failed to load image</div>';
+            };
+            
+            const closeBtn = document.createElement("button");
+            closeBtn.innerHTML = "×";
+            closeBtn.style.cssText = "position: absolute; top: 1rem; right: 1rem; background: rgba(255,255,255,0.9); border: none; width: 48px; height: 48px; border-radius: 50%; font-size: 2rem; cursor: pointer; color: #1f2937; font-weight: 700; display: flex; align-items: center; justify-content: center;";
+            closeBtn.addEventListener("click", () => photoModal.remove());
+            
+            photoModal.appendChild(fullImg);
+            photoModal.appendChild(closeBtn);
+            photoModal.addEventListener("click", (e) => {
+              if (e.target === photoModal) photoModal.remove();
+            });
+            
+            document.body.appendChild(photoModal);
+          });
+          
+          photoWrapper.appendChild(img);
+          photosCarousel.appendChild(photoWrapper);
+        });
+        
+        photosSection.appendChild(photosCarousel);
+        detailsSection.appendChild(photosSection);
       }
       
       content.appendChild(detailsSection);
@@ -6721,10 +7133,15 @@ async function renderJobs(reset = false) {
           messageBtnRow.style.gap = "0.5rem";
           messageBtnRow.style.marginTop = "0.75rem";
           
+          // Big Action Buttons (Message, Directions, etc.) - bigger, more prominent
           const messageBtn = document.createElement("button");
           messageBtn.className = "btn btn-primary";
-          messageBtn.style.flex = "1";
-          messageBtn.textContent = "💬 Message Hustler";
+          messageBtn.style.width = "100%";
+          messageBtn.style.minHeight = "56px";
+          messageBtn.style.fontSize = "1.1rem";
+          messageBtn.style.fontWeight = "700";
+          messageBtn.style.marginBottom = "0.75rem";
+          messageBtn.innerHTML = "💬 Message Hustler";
           messageBtn.addEventListener("click", () => {
             // Set active conversation and switch to messages view
             activeConversationJobId = job.id;
@@ -6738,14 +7155,41 @@ async function renderJobs(reset = false) {
           });
           messageBtnRow.appendChild(messageBtn);
           
+          // Directions button (big, prominent)
+          if (pickupAddress || pickupZip) {
+            const directionsBtn = document.createElement("button");
+            directionsBtn.className = "btn outline";
+            directionsBtn.style.width = "100%";
+            directionsBtn.style.minHeight = "56px";
+            directionsBtn.style.fontSize = "1.1rem";
+            directionsBtn.style.fontWeight = "700";
+            directionsBtn.style.border = "2px solid #2563eb";
+            directionsBtn.style.color = "#2563eb";
+            directionsBtn.style.marginBottom = "0.75rem";
+            directionsBtn.innerHTML = "📍 Get Directions";
+            directionsBtn.addEventListener("click", () => {
+              const address = pickupAddress || (pickupCity && pickupZip ? `${pickupCity}, ${pickupZip}` : pickupZip || '');
+              if (address) {
+                const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+                window.open(mapUrl, "_blank");
+              } else {
+                showToast("Address not available");
+              }
+            });
+            messageBtnRow.appendChild(directionsBtn);
+          }
+          
           // Add view profile button
           const viewProfileBtn = document.createElement("button");
           viewProfileBtn.className = "btn";
           viewProfileBtn.style.background = "#fff";
           viewProfileBtn.style.color = "#059669";
           viewProfileBtn.style.border = "1px solid #86efac";
-          viewProfileBtn.style.flex = "1";
-          viewProfileBtn.textContent = "View Profile & Reviews";
+          viewProfileBtn.style.width = "100%";
+          viewProfileBtn.style.minHeight = "48px";
+          viewProfileBtn.style.fontSize = "1rem";
+          viewProfileBtn.style.fontWeight = "600";
+          viewProfileBtn.textContent = "👤 View Profile & Reviews";
           viewProfileBtn.addEventListener("click", () => {
             overlay.remove();
             document.body.style.overflow = "";
@@ -6753,6 +7197,7 @@ async function renderJobs(reset = false) {
           });
           messageBtnRow.appendChild(viewProfileBtn);
           
+          messageBtnRow.style.flexDirection = "column";
           hustlerInfo.appendChild(messageBtnRow);
           actionsSection.appendChild(hustlerInfo);
           
@@ -6862,18 +7307,42 @@ async function renderJobs(reset = false) {
             
             const codeInput = document.createElement("input");
             codeInput.type = "text";
-            codeInput.placeholder = "Enter 6-digit code from hustler";
+            codeInput.id = "verificationCodeInput";
+            codeInput.placeholder = "Enter 6-digit code";
             codeInput.maxLength = 6;
             codeInput.style.width = "100%";
-            codeInput.style.padding = "0.75rem";
-            codeInput.style.fontSize = "1.2rem";
+            codeInput.style.padding = "1.25rem";
+            codeInput.style.fontSize = "1.8rem";
             codeInput.style.textAlign = "center";
-            codeInput.style.letterSpacing = "0.2em";
-            codeInput.style.border = "2px solid #93c5fd";
-            codeInput.style.borderRadius = "6px";
-            codeInput.style.fontWeight = "600";
+            codeInput.style.letterSpacing = "0.3em";
+            codeInput.style.border = "3px solid #93c5fd";
+            codeInput.style.borderRadius = "12px";
+            codeInput.style.fontWeight = "700";
+            codeInput.style.fontFamily = "monospace";
+            codeInput.style.minHeight = "64px";
+            codeInput.style.background = "#f0f9ff";
             codeInput.addEventListener("input", (e) => {
               e.target.value = e.target.value.replace(/\D/g, ""); // Only numbers
+              // Auto-submit when 6 digits entered
+              if (e.target.value.length === 6) {
+                e.target.style.borderColor = "#10b981";
+                e.target.style.background = "#f0fdf4";
+                // Trigger confirm button click after brief delay
+                setTimeout(() => {
+                  const confirmBtn = confirmBanner.querySelector('.btn-primary');
+                  if (confirmBtn) confirmBtn.click();
+                }, 300);
+              } else {
+                e.target.style.borderColor = "#93c5fd";
+                e.target.style.background = "#f0f9ff";
+              }
+            });
+            codeInput.addEventListener("focus", (e) => {
+              e.target.style.borderColor = "#3b82f6";
+              e.target.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.1)";
+            });
+            codeInput.addEventListener("blur", (e) => {
+              e.target.style.boxShadow = "none";
             });
             codeSection.appendChild(codeInput);
             
@@ -6914,12 +7383,17 @@ async function renderJobs(reset = false) {
             
             job.requirements.completionPhotos.forEach(photoUrl => {
               const img = document.createElement("img");
+              img.loading = "lazy"; // Lazy load completion photos
               img.src = photoUrl;
               img.style.width = "100%";
               img.style.height = "100px";
               img.style.objectFit = "cover";
               img.style.borderRadius = "4px";
               img.style.cursor = "pointer";
+              // Add error handling for failed image loads
+              img.onerror = function() {
+                this.style.display = "none";
+              };
               img.addEventListener("click", () => {
                 window.open(photoUrl, "_blank");
               });
@@ -6960,26 +7434,75 @@ async function renderJobs(reset = false) {
             
             try {
               const result = await window.hustlAPI.jobs.confirmComplete(job.id, enteredCode);
-              showToast("✓ Job confirmed! Payment has been released to the hustler.");
+              
+              // Show green check animation
+              const codeInputElement = codeInput;
+              codeInputElement.style.borderColor = "#10b981";
+              codeInputElement.style.background = "#d1fae5";
+              codeInputElement.style.color = "#059669";
+              
+              // Add checkmark icon
+              const checkIcon = document.createElement("div");
+              checkIcon.style.cssText = "position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); font-size: 2rem; color: #10b981; animation: scaleIn 0.3s ease-out;";
+              checkIcon.textContent = "✓";
+              checkIcon.style.position = "absolute";
+              checkIcon.style.right = "1rem";
+              checkIcon.style.top = "50%";
+              checkIcon.style.transform = "translateY(-50%)";
+              checkIcon.style.fontSize = "2rem";
+              checkIcon.style.color = "#10b981";
+              
+              // Add scale animation
+              if (!document.getElementById('checkAnimationStyle')) {
+                const style = document.createElement('style');
+                style.id = 'checkAnimationStyle';
+                style.textContent = `
+                  @keyframes scaleIn {
+                    0% { transform: translateY(-50%) scale(0); }
+                    50% { transform: translateY(-50%) scale(1.2); }
+                    100% { transform: translateY(-50%) scale(1); }
+                  }
+                `;
+                document.head.appendChild(style);
+              }
+              
+              codeSection.style.position = "relative";
+              if (!codeSection.querySelector('.check-icon')) {
+                checkIcon.className = "check-icon";
+                codeSection.appendChild(checkIcon);
+              }
+              
+              showToast("✓ Job confirmed! Payment has been released to the hustler.", 5000);
               
               // Close the job details modal first
-              overlay.remove();
-              document.body.style.overflow = "";
-              
-              // Refresh jobs list and profile to show updated status (COMPLETED with purple badge)
-              renderJobs();
-              renderProfile();
-              
-              // Job is now COMPLETED - both parties can review each other
-              // Show review modal for customer to review hustler
-              if (job.hustlerId) {
-                setTimeout(() => {
-                  showReviewModal(job.id, job.hustlerId, job.hustler?.name || "Hustler");
-                }, 300);
-              }
+              setTimeout(() => {
+                overlay.remove();
+                document.body.style.overflow = "";
+                
+                // Refresh jobs list and profile to show updated status (COMPLETED with purple badge)
+                renderJobs();
+                renderProfile();
+                
+                // Job is now COMPLETED - both parties can review each other
+                // Auto-open review modal for customer to review hustler
+                if (job.hustlerId) {
+                  setTimeout(() => {
+                    showReviewModal(job.id, job.hustlerId, job.hustler?.name || "Hustler");
+                  }, 500);
+                }
+              }, 1500);
               
               // Note: Hustler can also review customer - they'll see the option when they view the job
             } catch (error) {
+              // Reset code input on error
+              if (codeInput) {
+                codeInput.style.borderColor = "#ef4444";
+                codeInput.style.background = "#fef2f2";
+                setTimeout(() => {
+                  codeInput.style.borderColor = "#93c5fd";
+                  codeInput.style.background = "#f0f9ff";
+                }, 2000);
+              }
               showToast("Error: " + (error.message || "Failed to confirm completion"));
               confirmBtn.disabled = false;
               confirmBtn.textContent = "✓ Confirm & Release Payment";
@@ -7496,17 +8019,61 @@ async function renderJobs(reset = false) {
             Waiting for customer to confirm completion. Once they confirm, your payment will be immediately released.
           </div>
           ${verificationCode ? `
-            <div style="margin-top: 0.75rem; padding: 0.75rem; background: #fff; border-radius: 6px; border: 2px solid #059669;">
-              <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: #047857;">🔐 Your Verification Code:</div>
-              <div style="font-size: 1.5rem; font-weight: 700; text-align: center; letter-spacing: 0.2em; color: #059669; font-family: monospace; padding: 0.5rem; background: #f0fdf4; border-radius: 4px;">
+            <div style="margin-top: 0.75rem; padding: 1rem; background: #fff; border-radius: 8px; border: 3px solid #059669; position: relative;">
+              <div style="font-size: 0.9rem; font-weight: 700; margin-bottom: 0.75rem; color: #047857; text-align: center;">🔐 Your Verification Code:</div>
+              <div id="hustlerCodeDisplay_${job.id}" style="font-size: 2rem; font-weight: 700; text-align: center; letter-spacing: 0.3em; color: #059669; font-family: monospace; padding: 1rem; background: #f0fdf4; border-radius: 6px; margin-bottom: 0.75rem;">
                 ${verificationCode}
               </div>
-              <div style="font-size: 0.8rem; margin-top: 0.5rem; color: #047857; text-align: center;">
-                Share this code with the customer so they can confirm completion
+              <button id="copyCodeBtn_${job.id}" class="btn btn-primary" style="width: 100%; min-height: 48px; font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem;">
+                📋 Copy Code
+              </button>
+              <div style="font-size: 0.8rem; color: #047857; text-align: center; line-height: 1.5;">
+                Share this code with the customer so they can confirm completion and release your payment
               </div>
             </div>
           ` : ''}
         `;
+        
+        // Add copy code functionality
+        if (verificationCode) {
+          const copyBtn = statusMsg.querySelector(`#copyCodeBtn_${job.id}`);
+          if (copyBtn) {
+            copyBtn.addEventListener("click", async () => {
+              try {
+                await navigator.clipboard.writeText(verificationCode);
+                copyBtn.textContent = "✓ Copied!";
+                copyBtn.style.background = "#10b981";
+                showToast("✓ Code copied to clipboard!");
+                setTimeout(() => {
+                  copyBtn.textContent = "📋 Copy Code";
+                  copyBtn.style.background = "";
+                }, 2000);
+              } catch (error) {
+                // Fallback for older browsers
+                const textArea = document.createElement("textarea");
+                textArea.value = verificationCode;
+                textArea.style.position = "fixed";
+                textArea.style.opacity = "0";
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                  document.execCommand('copy');
+                  copyBtn.textContent = "✓ Copied!";
+                  copyBtn.style.background = "#10b981";
+                  showToast("✓ Code copied to clipboard!");
+                  setTimeout(() => {
+                    copyBtn.textContent = "📋 Copy Code";
+                    copyBtn.style.background = "";
+                  }, 2000);
+                } catch (err) {
+                  showToast("Failed to copy. Please copy manually: " + verificationCode);
+                }
+                document.body.removeChild(textArea);
+              }
+            });
+          }
+        }
+        
         content.appendChild(statusMsg);
       }
 
@@ -7813,13 +8380,22 @@ async function renderJobs(reset = false) {
                 }
                 */
                 
-                // Better error messages
+                // Better error messages - check for active jobs limit
                 let errorMsg = errorData.error || errorData.message || 'Failed to create checkout session';
                 if (response.status === 403) {
                   errorMsg = "You don't have permission to checkout this offer. Make sure you're logged in as the customer who posted this job.";
                 } else if (response.status === 401) {
                   errorMsg = "Please log in to continue.";
                 } else if (response.status === 400) {
+                  // Check for active jobs limit error
+                  if (errorData.error && errorData.error.includes('active jobs') || 
+                      errorData.currentActiveJobs !== undefined) {
+                    // Show special popup for active jobs limit
+                    overlay.remove();
+                    document.body.style.overflow = "";
+                    showActiveJobsLimitModal(errorData.currentActiveJobs || 2, errorData.maxActiveJobs || 2);
+                    return;
+                  }
                   errorMsg = errorData.message || errorData.error || "Invalid request. The offer may have already been accepted or declined.";
                 } else if (response.status === 500) {
                   errorMsg = "Server error. Please check the console for details and try again.";
@@ -7881,6 +8457,67 @@ async function renderJobs(reset = false) {
       } catch (error) {
         showToast("Error loading payment: " + (error.message || "Unknown error"));
       }
+    }
+
+    // Show active jobs limit modal (when hustler has 2 active jobs)
+    function showActiveJobsLimitModal(currentActive, maxActive) {
+      const overlay = document.createElement("div");
+      overlay.style.position = "fixed";
+      overlay.style.inset = "0";
+      overlay.style.background = "rgba(15,23,42,0.75)";
+      overlay.style.display = "flex";
+      overlay.style.alignItems = "center";
+      overlay.style.justifyContent = "center";
+      overlay.style.zIndex = "10000";
+      overlay.style.padding = "1rem";
+      
+      const modal = document.createElement("div");
+      modal.style.background = "white";
+      modal.style.borderRadius = "16px";
+      modal.style.padding = "2rem";
+      modal.style.maxWidth = "500px";
+      modal.style.width = "100%";
+      modal.style.boxShadow = "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)";
+      
+      modal.innerHTML = `
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+          <div style="font-size: 3rem; margin-bottom: 0.5rem;">⚠️</div>
+          <h2 style="font-size: 1.5rem; font-weight: 700; color: #1f2937; margin-bottom: 0.5rem;">
+            Active Jobs Limit Reached
+          </h2>
+          <p style="font-size: 1rem; color: #6b7280; line-height: 1.5;">
+            You already have ${currentActive} active job${currentActive !== 1 ? 's' : ''}. Complete one to take another.
+          </p>
+        </div>
+        <div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+          <div style="font-weight: 600; color: #92400e; margin-bottom: 0.5rem;">💡 How to continue:</div>
+          <ul style="text-align: left; color: #78350f; margin: 0; padding-left: 1.25rem; line-height: 1.6;">
+            <li>Go to your profile and find your active jobs</li>
+            <li>Complete one of your current jobs</li>
+            <li>Once completed and paid, you can accept new jobs</li>
+          </ul>
+        </div>
+        <button id="activeJobsLimitCloseBtn" class="btn btn-primary" style="width: 100%; min-height: 48px; font-size: 1rem; font-weight: 600;">
+          Got it
+        </button>
+      `;
+      
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+      document.body.style.overflow = "hidden";
+      
+      const closeBtn = modal.querySelector('#activeJobsLimitCloseBtn');
+      const closeModal = () => {
+        overlay.remove();
+        document.body.style.overflow = "";
+        // Redirect to profile to see active jobs
+        setView('profile');
+      };
+      
+      closeBtn.addEventListener('click', closeModal);
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeModal();
+      });
     }
 
    
@@ -8874,6 +9511,7 @@ async function renderJobs(reset = false) {
   // Add cache-busting query parameter to ensure fresh image loads after upload
   if (user.photoUrl) {
     const img = document.createElement("img");
+    img.loading = "lazy"; // Lazy load profile photos
     // Add timestamp to force browser to reload image (cache busting)
     const separator = user.photoUrl.includes('?') ? '&' : '?';
     const photoUrlWithCacheBust = user.photoUrl + separator + '_cb=' + Date.now();
@@ -8888,6 +9526,7 @@ async function renderJobs(reset = false) {
     avatar.appendChild(img);
   } else if (user.avatarDataUrl) {
     const img = document.createElement("img");
+    img.loading = "lazy"; // Lazy load avatar
     img.src = user.avatarDataUrl;
     img.style.width = "100%";
     img.style.height = "100%";
@@ -9632,7 +10271,42 @@ setTimeout(() => {
       meta.textContent = "You're the Hustler · " + timeAgo(job.createdAt);
       card.appendChild(meta);
 
-      card.addEventListener("click", () => {
+      // Action buttons (Archive)
+      const actionsRow = document.createElement("div");
+      actionsRow.style.display = "flex";
+      actionsRow.style.gap = "0.5rem";
+      actionsRow.style.marginTop = "0.5rem";
+      actionsRow.style.justifyContent = "flex-end";
+      
+      // Archive button (soft delete - hides from feeds)
+      const archiveBtn = document.createElement("button");
+      archiveBtn.className = "btn outline btn-small";
+      archiveBtn.style.fontSize = "0.85rem";
+      archiveBtn.style.padding = "0.4rem 0.75rem";
+      archiveBtn.textContent = "📦 Archive";
+      archiveBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!confirm(`Archive "${job.title}"? It will be hidden from feeds but can be restored later.`)) return;
+        
+        archiveBtn.disabled = true;
+        archiveBtn.textContent = "Archiving...";
+        try {
+          await window.hustlAPI.jobs.archive(job.id);
+          showToast("✓ Job archived");
+          renderProfile(); // Refresh profile to remove archived job
+        } catch (error) {
+          showToast("Error: " + (error.message || "Failed to archive job"));
+          archiveBtn.disabled = false;
+          archiveBtn.textContent = "📦 Archive";
+        }
+      });
+      actionsRow.appendChild(archiveBtn);
+      
+      card.appendChild(actionsRow);
+      
+      card.addEventListener("click", (e) => {
+        // Don't open details if clicking action buttons
+        if (e.target.closest('button')) return;
         setView("jobs");
         setTimeout(() => openJobDetails(job.id), 20);
       });
@@ -9924,8 +10598,34 @@ setTimeout(() => {
       }
       
       try {
-        // Show loading state
+        // Show loading state with spinner
         avatarInput.disabled = true;
+        
+        // Create and show loading spinner overlay
+        const loadingOverlay = document.createElement("div");
+        loadingOverlay.id = "photoUploadLoading";
+        loadingOverlay.style.cssText = "position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 10000;";
+        loadingOverlay.innerHTML = `
+          <div style="background: white; border-radius: 12px; padding: 2rem; text-align: center; max-width: 300px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+            <div style="width: 48px; height: 48px; border: 4px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem;"></div>
+            <div style="font-weight: 600; color: #1f2937; margin-bottom: 0.5rem;">Uploading photo...</div>
+            <div style="font-size: 0.9rem; color: #6b7280;">Please wait</div>
+          </div>
+        `;
+        
+        // Add spin animation if not already in style
+        if (!document.getElementById('photoUploadSpinnerStyle')) {
+          const style = document.createElement('style');
+          style.id = 'photoUploadSpinnerStyle';
+          style.textContent = `
+            @keyframes spin {
+              to { transform: rotate(360deg); }
+            }
+          `;
+          document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(loadingOverlay);
         showToast("Uploading profile photo...");
         
         // Upload to R2
@@ -9992,12 +10692,25 @@ setTimeout(() => {
           
           // Also refresh auth pill to show updated photo
           renderAuthPill();
+          
+          // Remove loading overlay
+          const loadingOverlay = document.getElementById("photoUploadLoading");
+          if (loadingOverlay) loadingOverlay.remove();
+          
+          // Show success message
+          showToast("✓ Profile photo updated successfully!");
         } catch (updateError) {
           console.error("Profile update error:", updateError);
+          // Remove loading overlay on error
+          const loadingOverlay = document.getElementById("photoUploadLoading");
+          if (loadingOverlay) loadingOverlay.remove();
           throw new Error("Failed to update profile: " + (updateError.message || "Update error"));
         }
       } catch (error) {
         console.error("Error uploading profile photo:", error);
+        // Remove loading overlay on error
+        const loadingOverlay = document.getElementById("photoUploadLoading");
+        if (loadingOverlay) loadingOverlay.remove();
         showToast("Error: " + (error.message || "Failed to upload photo. Please try again."));
         e.target.value = "";
       } finally {
@@ -10559,12 +11272,19 @@ meta.textContent =
       // If user has photo URL, add image
       if (user.photoUrl) {
         const img = document.createElement('img');
-        img.src = user.photoUrl;
+        img.loading = "lazy"; // Lazy load profile photos
+        // Add cache-busting for profile photos
+        const separator = user.photoUrl.includes('?') ? '&' : '?';
+        img.src = user.photoUrl + separator + '_cb=' + Date.now();
         img.alt = name;
         img.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
         img.onerror = () => {
-          // If image fails to load, show initial
-          img.style.display = 'none';
+          // If image fails to load, show initial (fallback to original URL first)
+          if (img.src !== user.photoUrl) {
+            img.src = user.photoUrl;
+          } else {
+            img.style.display = 'none';
+          }
         };
         photo.appendChild(img);
       }
