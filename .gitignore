@@ -41,3 +41,6 @@ users-log.json
 # Prisma - keep migrations for deployment
 # prisma/migrations/ (commented out - Railway needs these)
 
+# Untracked directories
+Hustl/
+
