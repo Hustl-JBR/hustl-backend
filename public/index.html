@@ -2990,6 +2990,7 @@
     let activeView = "home";
     let activeJobsStatusFilter = "all";
     let activeJobFilter = 'newest'; // Default filter: newest jobs first
+    let filtersDrawerOpen = false; // Track if filters drawer is open
     let activeConversationJobId = null;
     let showArchivedConversations = false;
     let showDeletedConversations = false;
@@ -5267,54 +5268,86 @@ async function renderJobs(reset = false) {
   }
   
   // Wire up "More Filters" toggle button with smooth animations
+  // Use a persistent state variable to track if filters are open
+  if (!window.filtersDrawerState) {
+    window.filtersDrawerState = { isOpen: false };
+  }
+  
   const showMoreFiltersBtn = document.getElementById('showMoreFiltersBtn');
   const advancedFiltersContainer = document.getElementById('advancedFiltersContainer');
   const showMoreFiltersArrow = document.getElementById('showMoreFiltersArrow');
   const showMoreFiltersText = document.getElementById('showMoreFiltersText');
   const filtersAppliedLabel = document.getElementById('filtersAppliedLabel');
   
-  // SIMPLIFIED: Just toggle the filters panel - clean drawer behavior
-  if (showMoreFiltersBtn && advancedFiltersContainer) {
+  // Function to toggle filters drawer state
+  function toggleFiltersDrawer(open) {
+    if (!showMoreFiltersBtn || !advancedFiltersContainer) return;
+    
+    // Determine if we should open or close
+    if (open === undefined) {
+      open = !filtersDrawerOpen;
+    }
+    
+    filtersDrawerOpen = open;
+    
+    if (open) {
+      // Open it - expand drawer
+      advancedFiltersContainer.style.display = 'block';
+      // Force reflow
+      advancedFiltersContainer.offsetHeight;
+      const isMobile = window.innerWidth <= 768;
+      advancedFiltersContainer.style.height = isMobile ? '250px' : 'auto';
+      advancedFiltersContainer.style.opacity = '1';
+      advancedFiltersContainer.style.transform = 'translateY(0)';
+      if (showMoreFiltersText) showMoreFiltersText.textContent = 'Less Filters';
+      if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(180deg)';
+      showMoreFiltersBtn.style.background = '#eff6ff';
+      showMoreFiltersBtn.style.borderColor = '#3b82f6';
+      // Auto-scroll into view on mobile
+      if (isMobile) {
+        setTimeout(() => {
+          advancedFiltersContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+      }
+    } else {
+      // Close it - collapse drawer
+      advancedFiltersContainer.style.opacity = '0';
+      advancedFiltersContainer.style.transform = 'translateY(-10px)';
+      advancedFiltersContainer.style.height = '0';
+      setTimeout(() => {
+        advancedFiltersContainer.style.display = 'none';
+      }, 300);
+      if (showMoreFiltersText) showMoreFiltersText.textContent = 'More Filters';
+      if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(0deg)';
+      showMoreFiltersBtn.style.background = 'white';
+      showMoreFiltersBtn.style.borderColor = '#d1d5db';
+    }
+  }
+  
+  // Don't restore state here - let the click listener handle it
+  // Just ensure it starts closed if state says closed
+  if (!filtersDrawerOpen && advancedFiltersContainer) {
+    advancedFiltersContainer.style.display = 'none';
+    advancedFiltersContainer.style.opacity = '0';
+    advancedFiltersContainer.style.height = '0';
+  }
+  
+  // Initial attach of click listener (only once using data attribute)
+  if (showMoreFiltersBtn && advancedFiltersContainer && !showMoreFiltersBtn.dataset.listenerAttached) {
+    showMoreFiltersBtn.dataset.listenerAttached = 'true';
     showMoreFiltersBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      
-      const isCurrentlyVisible = advancedFiltersContainer.style.display === 'block' && 
-                                 advancedFiltersContainer.style.opacity !== '0';
-      
-      if (isCurrentlyVisible) {
-        // Close it - collapse drawer
-        advancedFiltersContainer.style.opacity = '0';
-        advancedFiltersContainer.style.transform = 'translateY(-10px)';
-        advancedFiltersContainer.style.height = '0';
-        setTimeout(() => {
-          advancedFiltersContainer.style.display = 'none';
-        }, 300);
-        showMoreFiltersText.textContent = 'More Filters';
-        if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(0deg)';
-        showMoreFiltersBtn.style.background = 'white';
-        showMoreFiltersBtn.style.borderColor = '#d1d5db';
-      } else {
-        // Open it - expand drawer
-        advancedFiltersContainer.style.display = 'block';
-        // Force reflow
-        advancedFiltersContainer.offsetHeight;
-        const isMobile = window.innerWidth <= 768;
-        advancedFiltersContainer.style.height = isMobile ? '250px' : 'auto';
-        advancedFiltersContainer.style.opacity = '1';
-        advancedFiltersContainer.style.transform = 'translateY(0)';
-        showMoreFiltersText.textContent = 'Less Filters';
-        if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(180deg)';
-        showMoreFiltersBtn.style.background = '#eff6ff';
-        showMoreFiltersBtn.style.borderColor = '#3b82f6';
-        // Auto-scroll into view on mobile
-        if (isMobile) {
-          setTimeout(() => {
-            advancedFiltersContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }, 100);
-        }
+      filtersDrawerOpen = !filtersDrawerOpen;
+      toggleFiltersDrawer(filtersDrawerOpen);
+    }, { once: false, passive: false });
+    
+    // Restore state after a brief delay to ensure DOM is ready
+    setTimeout(() => {
+      if (filtersDrawerOpen && advancedFiltersContainer.style.display !== 'block') {
+        toggleFiltersDrawer(true);
       }
-    });
+    }, 100);
     
     // Wire up radius slider (sync with hidden select for backward compatibility)
     const radiusSlider = document.getElementById('jobsRadiusSlider');
@@ -5350,72 +5383,33 @@ async function renderJobs(reset = false) {
       applyFiltersBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        renderJobs(true); // Re-render with new filters
+        // Close filters panel first
+        filtersDrawerOpen = false;
+        toggleFiltersDrawer(false);
+        // Then re-render with new filters
         updateFiltersAppliedLabel();
-        // Close filters panel after applying (with animation)
-        if (showMoreFiltersBtn && advancedFiltersContainer) {
-          advancedFiltersContainer.style.opacity = '0';
-          advancedFiltersContainer.style.transform = 'translateY(-10px)';
-          advancedFiltersContainer.style.height = '0';
-          setTimeout(() => {
-            advancedFiltersContainer.style.display = 'none';
-          }, 300);
-          showMoreFiltersText.textContent = 'More Filters';
-          if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(0deg)';
-          showMoreFiltersBtn.style.background = 'white';
-          showMoreFiltersBtn.style.borderColor = '#d1d5db';
+        setTimeout(() => {
+          renderJobs(true);
           // Scroll job list into view on mobile
           if (window.innerWidth <= 768) {
             setTimeout(() => {
               const jobsList = document.getElementById('jobsList');
               if (jobsList) jobsList.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 350);
+            }, 100);
           }
-        }
+        }, 350);
       }, { passive: false });
     }
     
-    // Make "Filters Applied" label tappable to toggle filters panel (SIMPLIFIED)
-    if (filtersAppliedLabel && showMoreFiltersBtn && advancedFiltersContainer) {
+    // Make "Filters Applied" label tappable to toggle filters panel (only attach once)
+    if (filtersAppliedLabel && !filtersAppliedLabel.dataset.listenerAttached) {
+      filtersAppliedLabel.dataset.listenerAttached = 'true';
       filtersAppliedLabel.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
-        // Same simple toggle as More Filters button
-        const isCurrentlyVisible = advancedFiltersContainer.style.display === 'block' && 
-                                   advancedFiltersContainer.style.opacity !== '0';
-        
-        if (isCurrentlyVisible) {
-          // Close it
-          advancedFiltersContainer.style.opacity = '0';
-          advancedFiltersContainer.style.transform = 'translateY(-10px)';
-          advancedFiltersContainer.style.height = '0';
-          setTimeout(() => {
-            advancedFiltersContainer.style.display = 'none';
-          }, 300);
-          showMoreFiltersText.textContent = 'More Filters';
-          if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(0deg)';
-          showMoreFiltersBtn.style.background = 'white';
-          showMoreFiltersBtn.style.borderColor = '#d1d5db';
-        } else {
-          // Open it
-          advancedFiltersContainer.style.display = 'block';
-          advancedFiltersContainer.offsetHeight; // Force reflow
-          const isMobile = window.innerWidth <= 768;
-          advancedFiltersContainer.style.height = isMobile ? '250px' : 'auto';
-          advancedFiltersContainer.style.opacity = '1';
-          advancedFiltersContainer.style.transform = 'translateY(0)';
-          showMoreFiltersText.textContent = 'Less Filters';
-          if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(180deg)';
-          showMoreFiltersBtn.style.background = '#eff6ff';
-          showMoreFiltersBtn.style.borderColor = '#3b82f6';
-          if (isMobile) {
-            setTimeout(() => {
-              advancedFiltersContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }, 100);
-          }
-        }
-      });
+        filtersDrawerOpen = true;
+        toggleFiltersDrawer(true); // Always open when clicking the label
+      }, { once: false, passive: false });
     }
     
     // Wire up Reset Filters button
