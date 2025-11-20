@@ -4,7 +4,6 @@
 
 const prisma = require('../db');
 const { sendJobExpiringEmail } = require('./email');
-const { sendJobExpiringEmail } = require('./email');
 
 /**
  * Clean up old OPEN jobs that have no accepted offers (72 hour rule)
