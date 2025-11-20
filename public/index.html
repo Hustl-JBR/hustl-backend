@@ -1675,6 +1675,22 @@
     // This catches syntax errors and prevents them from completely freezing the page
     window.addEventListener('error', function(e) {
       console.error('Global error caught:', e.error, e.message, e.filename, e.lineno);
+      
+      // CRITICAL: If error might have broken UI, try to recover
+      if (e.message && (
+        e.message.includes('Cannot read') ||
+        e.message.includes('is not defined') ||
+        e.message.includes('null') ||
+        e.message.includes('undefined')
+      )) {
+        console.warn('[Error Recovery] Detected potential UI-breaking error, attempting recovery...');
+        setTimeout(() => {
+          if (window.forceUIRecovery) {
+            window.forceUIRecovery();
+          }
+        }, 500);
+      }
+      
       // Log but don't let errors stop execution
       e.preventDefault();
       return true;
@@ -1682,6 +1698,20 @@
     
     window.addEventListener('unhandledrejection', function(e) {
       console.error('Unhandled promise rejection:', e.reason);
+      
+      // CRITICAL: If promise rejection might have broken UI, try to recover
+      if (e.reason && typeof e.reason === 'object' && e.reason.message) {
+        const msg = e.reason.message.toLowerCase();
+        if (msg.includes('failed') || msg.includes('error') || msg.includes('404')) {
+          console.warn('[Promise Recovery] Detected potential UI-breaking rejection, attempting recovery...');
+          setTimeout(() => {
+            if (window.forceUIRecovery) {
+              window.forceUIRecovery();
+            }
+          }, 500);
+        }
+      }
+      
       // Log but don't let promise rejections stop execution
       e.preventDefault();
       return true;
@@ -12522,22 +12552,89 @@ window.clearStuckOverlays = function() {
 
 // CRITICAL: Always ensure clicks are enabled on page load
 function ensureClicksEnabled() {
-  // Always set pointer-events to auto on body and html
-  if (document.body) {
-    document.body.style.pointerEvents = 'auto';
-  }
-  if (document.documentElement) {
-    document.documentElement.style.pointerEvents = 'auto';
-  }
-  
-  // Remove any blocking overlays
-  document.querySelectorAll('.modal-overlay, [id^="jobModalOverlay"], #verificationCodeModal, [id^="jobDetailsOverlay"]').forEach(ov => {
-    if (ov && ov.parentNode) {
-      ov.remove();
+  try {
+    // Always set pointer-events to auto on body and html
+    if (document.body) {
+      document.body.style.pointerEvents = 'auto';
+      document.body.style.overflow = '';
     }
-  });
-  
-  console.log('✅ Clicks enabled - page should be fully clickable');
+    if (document.documentElement) {
+      document.documentElement.style.pointerEvents = 'auto';
+      document.documentElement.style.overflow = '';
+    }
+    
+    // Remove ALL blocking overlays and modals
+    const blockingSelectors = [
+      '.modal-overlay',
+      '[id^="jobModalOverlay"]',
+      '#verificationCodeModal',
+      '[id^="jobDetailsOverlay"]',
+      '[id^="hiredBannerOverlay"]',
+      '#photoUploadLoading',
+      '.overlay',
+      '[class*="overlay"]',
+      '[class*="modal-backdrop"]',
+      '[style*="z-index"][style*="10000"]',
+      '[style*="z-index"][style*="2000"]'
+    ];
+    
+    blockingSelectors.forEach(selector => {
+      try {
+        document.querySelectorAll(selector).forEach(ov => {
+          if (ov && ov.parentNode) {
+            ov.remove();
+          }
+        });
+      } catch (e) {
+        // Ignore selector errors
+      }
+    });
+    
+    // Remove any elements with pointer-events: none that might be blocking
+    document.querySelectorAll('*').forEach(el => {
+      try {
+        if (el.style && el.style.pointerEvents === 'none' && 
+            (el.style.position === 'fixed' || el.style.position === 'absolute') &&
+            (el.style.zIndex && parseInt(el.style.zIndex) > 1000)) {
+          // This might be a blocking overlay
+          if (el.classList.contains('modal-overlay') || 
+              el.id && (el.id.includes('Overlay') || el.id.includes('Modal'))) {
+            el.remove();
+          } else {
+            // Just fix pointer-events
+            el.style.pointerEvents = 'auto';
+          }
+        }
+      } catch (e) {
+        // Ignore errors
+      }
+    });
+    
+    console.log('✅ Clicks enabled - page should be fully clickable');
+  } catch (e) {
+    console.error('Error in ensureClicksEnabled:', e);
+  }
+}
+
+// CRITICAL: Force re-initialize navigation if it failed
+function forceReinitNavigation() {
+  try {
+    console.log('[Force Reinit] Re-initializing navigation...');
+    
+    // Re-initialize nav
+    if (typeof initNav === 'function') {
+      initNav();
+    }
+    
+    // Re-initialize other critical functions
+    if (typeof initAuthCard === 'function') {
+      initAuthCard();
+    }
+    
+    console.log('[Force Reinit] Navigation re-initialized');
+  } catch (e) {
+    console.error('[Force Reinit] Error re-initializing:', e);
+  }
 }
 
 // Run immediately when script loads
@@ -12545,13 +12642,35 @@ ensureClicksEnabled();
 
 // Also run after DOM is ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', ensureClicksEnabled);
+  document.addEventListener('DOMContentLoaded', () => {
+    ensureClicksEnabled();
+    setTimeout(forceReinitNavigation, 100);
+  });
 } else {
   ensureClicksEnabled();
+  setTimeout(forceReinitNavigation, 100);
 }
 
 // Run on window load as well
-window.addEventListener('load', ensureClicksEnabled);
+window.addEventListener('load', () => {
+  ensureClicksEnabled();
+  setTimeout(forceReinitNavigation, 200);
+});
+
+// CRITICAL: Global recovery function - call this if UI is stuck
+window.forceUIRecovery = function() {
+  console.log('[Recovery] Forcing UI recovery...');
+  ensureClicksEnabled();
+  forceReinitNavigation();
+  if (typeof renderAll === 'function') {
+    try {
+      renderAll();
+    } catch (e) {
+      console.error('[Recovery] Error in renderAll:', e);
+    }
+  }
+  console.log('[Recovery] UI recovery complete');
+};
 
 // IMMEDIATE cleanup - run right away, don't wait for load
 // Run immediately to prevent stuck overlays from blocking the page
@@ -12920,22 +13039,101 @@ if (savedMode === "customer" || savedMode === "hustler") {
   userMode = savedMode;
 }
 // Initialize everything - wrapped in try/catch to prevent blocking errors
+// CRITICAL: Each initialization is wrapped separately so one failure doesn't stop others
 try {
   initAgeGate();
+} catch (e) {
+  console.error('Error in initAgeGate (non-fatal):', e);
+}
+
+try {
   initNav();
+  console.log('[Init] Navigation initialized');
+} catch (e) {
+  console.error('Error in initNav (non-fatal):', e);
+  // Try to recover navigation
+  setTimeout(() => {
+    try {
+      initNav();
+      console.log('[Init] Navigation recovery successful');
+    } catch (e2) {
+      console.error('[Init] Navigation recovery failed:', e2);
+    }
+  }, 500);
+}
+
+try {
   initAuthCard();
+} catch (e) {
+  console.error('Error in initAuthCard (non-fatal):', e);
+}
+
+try {
   initJobsForm();
+} catch (e) {
+  console.error('Error in initJobsForm (non-fatal):', e);
+}
+
+try {
   initConversationInput();
+} catch (e) {
+  console.error('Error in initConversationInput (non-fatal):', e);
+}
+
+try {
   initFeedback();
+} catch (e) {
+  console.error('Error in initFeedback (non-fatal):', e);
+}
+
+try {
   initStepByStepGuide();
+} catch (e) {
+  console.error('Error in initStepByStepGuide (non-fatal):', e);
+}
+
+try {
   initHomeNotice();
+} catch (e) {
+  console.error('Error in initHomeNotice (non-fatal):', e);
+}
+
+try {
   initHowItWorksToggle();
+} catch (e) {
+  console.error('Error in initHowItWorksToggle (non-fatal):', e);
+}
+
+try {
   initFooterLinks();
+} catch (e) {
+  console.error('Error in initFooterLinks (non-fatal):', e);
+}
+
+try {
   initModeToggle(); // Make sure mode toggle is initialized
+} catch (e) {
+  console.error('Error in initModeToggle (non-fatal):', e);
+}
+
+try {
   checkAgeGate();
+} catch (e) {
+  console.error('Error in checkAgeGate (non-fatal):', e);
+}
+
+try {
   handleStripeReturn();
+} catch (e) {
+  console.error('Error in handleStripeReturn (non-fatal):', e);
+}
+
+try {
   checkAutoCompleteJobs();
   setInterval(checkAutoCompleteJobs, 60 * 1000);
+} catch (e) {
+  console.error('Error in checkAutoCompleteJobs (non-fatal):', e);
+}
   
   // Periodically update unread message count (every 30 seconds)
   setInterval(() => {
