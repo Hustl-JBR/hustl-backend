@@ -2511,10 +2511,16 @@
               <div id="locationStatus" style="font-size: 0.75rem; color: #64748b; margin-top: 0.5rem; font-style: italic;">If blank, uses your device location</div>
             </div>
             
-            <!-- Apply Filters and Reset Buttons -->
-            <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;">
-              <button id="applyFiltersBtn" class="btn btn-primary" style="flex: 1; padding: 0.6rem 1rem; font-size: 0.9rem; font-weight: 600; min-height: 44px;">
+            <!-- Apply Filters, Save Filters, and Reset Buttons -->
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb; flex-wrap: wrap;">
+              <button id="applyFiltersBtn" class="btn btn-primary" style="flex: 1; min-width: 120px; padding: 0.6rem 1rem; font-size: 0.9rem; font-weight: 600; min-height: 44px;">
                 ✓ Apply Filters
+              </button>
+              <button id="saveFiltersBtn" class="btn" style="flex: 1; min-width: 120px; padding: 0.6rem 1rem; font-size: 0.9rem; font-weight: 600; min-height: 44px; background: #10b981; color: white; border: none;">
+                💾 Save Filters
+              </button>
+              <button id="disableFiltersBtn" class="btn outline" style="flex: 1; min-width: 120px; padding: 0.6rem 1rem; font-size: 0.85rem; min-height: 44px;">
+                🚫 Disable Filters
               </button>
               <button id="resetFiltersBtn" class="btn outline" style="padding: 0.6rem 1rem; font-size: 0.85rem; white-space: nowrap; min-height: 44px;">
                 Reset
@@ -4089,12 +4095,21 @@ try {
 
           try {
             // Build address string for geocoding - include zip code for accuracy
+            // FIXED: Don't include pickupArea in main address field - only use for geocoding
             const addressParts = [];
             if (pickupAddress) addressParts.push(pickupAddress);
-            if (pickupArea) addressParts.push(pickupArea);
+            // pickupArea is NOT included in main address - it's stored separately
             if (pickupCity) addressParts.push(pickupCity);
             if (pickupZip) addressParts.push(pickupZip);
-            const address = addressParts.length > 0 ? addressParts.join(", ") : `${pickupCity || pickupArea || "Tennessee"}, ${pickupZip || ""}`;
+            const address = addressParts.length > 0 ? addressParts.join(", ") : `${pickupCity || "Tennessee"}, ${pickupZip || ""}`;
+            
+            // For geocoding, we can include pickupArea for better accuracy
+            const geocodeAddressParts = [];
+            if (pickupAddress) geocodeAddressParts.push(pickupAddress);
+            if (pickupArea) geocodeAddressParts.push(pickupArea); // Include area for geocoding only
+            if (pickupCity) geocodeAddressParts.push(pickupCity);
+            if (pickupZip) geocodeAddressParts.push(pickupZip);
+            const geocodeAddress = geocodeAddressParts.length > 0 ? geocodeAddressParts.join(", ") : address;
             
             if (!address || address.trim() === "") {
               return showToast("Please provide location information (city and zip code).");
@@ -4283,25 +4298,26 @@ async function renderJobs(reset = false) {
         statusFilter = statusUpper;
       }
     }
-    // Determine sortBy from active filter
+    // Determine sortBy from active filter - FIXED: Actually pass to backend
     // Ensure activeJobFilter is defined (default to 'newest' if not set)
     if (typeof activeJobFilter === 'undefined') {
       activeJobFilter = 'newest';
     }
     
-    let sortByValue = 'newest'; // Default: newest first (like major apps)
+    // Map filter to backend sortBy parameter
+    let sortByValue = 'newest'; // Default: newest first
     if (activeJobFilter === 'near-me') {
-      sortByValue = 'distance'; // Sort by distance
+      sortByValue = 'distance'; // Backend will sort by distance
     } else if (activeJobFilter === 'highest-pay') {
-      sortByValue = 'pay'; // Sort by highest pay
+      sortByValue = 'pay'; // Backend will sort by highest pay
     } else if (activeJobFilter === 'newest') {
-      sortByValue = 'newest'; // Sort by newest
+      sortByValue = 'newest'; // Backend will sort by newest
     }
     
     const listParams = {
       page: currentJobsPage,
       limit: 20,
-      sortBy: sortByValue, // Use filter-based sort
+      sortBy: sortByValue, // CRITICAL: Pass to backend API
     };
     if (statusFilter) {
       listParams.status = statusFilter;
@@ -4332,29 +4348,33 @@ async function renderJobs(reset = false) {
       }
     }
     
-    // Location-based filtering: Auto-filter by user location with default radius (10 miles)
-    // Production-ready with validation and fallbacks
+    // Location-based filtering - FIXED: Actually pass to backend API
     // Check slider first (preferred for mobile), then select (backward compatibility)
     const radiusSlider = document.getElementById("jobsRadiusSlider");
     const radiusSelect = document.getElementById("jobsRadiusFilter");
     const radiusFilter = radiusSlider?.value || radiusSelect?.value || '10'; // Default 10 miles
     const radiusNum = parseInt(radiusFilter, 10) || 10;
+    listParams.radius = radiusNum; // Always pass radius to backend
+    
     const userLocation = JSON.parse(localStorage.getItem('userLocation') || 'null');
     const locationFilterInput = document.getElementById("jobsLocationFilter")?.value.trim();
     const savedZipFilter = localStorage.getItem('savedZipFilter');
     
-    // Priority order: location filter input (ZIP or city) > saved zip > user profile zip > geolocation > default
+    // Priority order: location filter input (ZIP or city) > saved zip > user profile zip > geolocation
     // Check if it's a 5-digit ZIP code
-    if (locationFilterInput && locationFilterInput.length === 5 && /^\d{5}$/.test(locationFilterInput)) {
-      listParams.zip = locationFilterInput;
-      listParams.radius = radiusNum;
+    if (locationFilterInput) {
+      if (locationFilterInput.length === 5 && /^\d{5}$/.test(locationFilterInput)) {
+        // It's a ZIP code
+        listParams.zip = locationFilterInput;
+      } else {
+        // It's a city name - pass to backend
+        listParams.city = locationFilterInput;
+      }
     } else if (savedZipFilter && savedZipFilter.length === 5 && /^\d{5}$/.test(savedZipFilter)) {
       listParams.zip = savedZipFilter;
-      listParams.radius = radiusNum;
     } else if (user && user.zip && user.zip.length === 5 && /^\d{5}$/.test(user.zip)) {
       // Use user's profile zip code (validated)
       listParams.zip = user.zip;
-      listParams.radius = radiusNum;
     } else if (userLocation && userLocation.lat && userLocation.lng) {
       // Validate geolocation coordinates
       const lat = parseFloat(userLocation.lat);
@@ -4366,30 +4386,20 @@ async function renderJobs(reset = false) {
         // Check if location is recent (within 1 hour) for accuracy
         const locationAge = userLocation.timestamp ? Date.now() - userLocation.timestamp : Infinity;
         if (locationAge < 60 * 60 * 1000) { // 1 hour
-          listParams.lat = lat;
-          listParams.lng = lng;
-          listParams.radius = radiusNum;
+          listParams.lat = lat.toString();
+          listParams.lng = lng.toString();
         } else {
           // Location too old, fall back to profile zip or default
           if (user && user.zip && user.zip.length === 5) {
             listParams.zip = user.zip;
-            listParams.radius = radiusNum;
-          } else {
-            listParams.radius = radiusNum;
           }
         }
       } else {
         // Invalid coordinates, use profile zip or default
         if (user && user.zip && user.zip.length === 5) {
           listParams.zip = user.zip;
-          listParams.radius = radiusNum;
-        } else {
-          listParams.radius = radiusNum;
         }
       }
-    } else {
-      // Default: use radius, backend will use user's profile location if available
-      listParams.radius = radiusNum;
     }
     
     // Add search term if provided
@@ -4997,14 +5007,13 @@ async function renderJobs(reset = false) {
     const distance = job.distance !== null && job.distance !== undefined ? job.distance : null;
     const distanceText = job.distanceFormatted || (distance !== null ? `${distance.toFixed(1)} mi` : '');
     
-    // Build location string from pickup fields (NEVER use geocoded address - it can be wrong)
+    // Build location string from pickup fields - FIXED: Don't include pickupArea in main display
+    // pickupArea (like "Montclaire") is stored separately but NOT shown in job card address
     let locParts = [];
     if (pickupAddress) {
       locParts.push(pickupAddress);
     }
-    if (pickupArea) {
-      locParts.push(pickupArea);
-    }
+    // pickupArea is NOT included in main address display - only shown in job details
     if (pickupCity) {
       locParts.push(pickupCity);
     }
@@ -5252,7 +5261,8 @@ async function renderJobs(reset = false) {
         // Update active filter
         activeJobFilter = btn.dataset.filter || 'newest';
         
-        // Re-render jobs with new filter
+        // FIXED: Actually pass sortBy to backend API
+        // Re-render jobs with new filter (backend will sort)
         renderJobs(true); // Reset pagination
       });
     });
@@ -5267,30 +5277,32 @@ async function renderJobs(reset = false) {
     }
   }
   
-  // Wire up "More Filters" toggle button with smooth animations
-  // Use a persistent state variable to track if filters are open
-  if (!window.filtersDrawerState) {
-    window.filtersDrawerState = { isOpen: false };
-  }
-  
+  // Wire up "More Filters" toggle button - FIXED: Prevent disappearing
   const showMoreFiltersBtn = document.getElementById('showMoreFiltersBtn');
   const advancedFiltersContainer = document.getElementById('advancedFiltersContainer');
   const showMoreFiltersArrow = document.getElementById('showMoreFiltersArrow');
   const showMoreFiltersText = document.getElementById('showMoreFiltersText');
   const filtersAppliedLabel = document.getElementById('filtersAppliedLabel');
   
-  // Function to toggle filters drawer state
-  function toggleFiltersDrawer(open) {
+  // CRITICAL FIX: Use window-level state that persists across renderJobs calls
+  if (!window.filtersDrawerState) {
+    window.filtersDrawerState = { isOpen: false };
+  }
+  
+  // Function to toggle filters drawer - uses persistent window state
+  function toggleFiltersDrawer(forceOpen) {
     if (!showMoreFiltersBtn || !advancedFiltersContainer) return;
     
-    // Determine if we should open or close
-    if (open === undefined) {
-      open = !filtersDrawerOpen;
+    // Determine state
+    if (forceOpen === undefined) {
+      window.filtersDrawerState.isOpen = !window.filtersDrawerState.isOpen;
+    } else {
+      window.filtersDrawerState.isOpen = forceOpen;
     }
     
-    filtersDrawerOpen = open;
+    filtersDrawerOpen = window.filtersDrawerState.isOpen;
     
-    if (open) {
+    if (window.filtersDrawerState.isOpen) {
       // Open it - expand drawer
       advancedFiltersContainer.style.display = 'block';
       // Force reflow
@@ -5315,7 +5327,9 @@ async function renderJobs(reset = false) {
       advancedFiltersContainer.style.transform = 'translateY(-10px)';
       advancedFiltersContainer.style.height = '0';
       setTimeout(() => {
-        advancedFiltersContainer.style.display = 'none';
+        if (!window.filtersDrawerState.isOpen) {
+          advancedFiltersContainer.style.display = 'none';
+        }
       }, 300);
       if (showMoreFiltersText) showMoreFiltersText.textContent = 'More Filters';
       if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(0deg)';
@@ -5324,9 +5338,15 @@ async function renderJobs(reset = false) {
     }
   }
   
-  // Don't restore state here - let the click listener handle it
-  // Just ensure it starts closed if state says closed
-  if (!filtersDrawerOpen && advancedFiltersContainer) {
+  // Restore state from window.filtersDrawerState (persists across renderJobs)
+  if (window.filtersDrawerState.isOpen && advancedFiltersContainer) {
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(() => {
+      if (window.filtersDrawerState.isOpen) {
+        toggleFiltersDrawer(true);
+      }
+    });
+  } else if (advancedFiltersContainer) {
     advancedFiltersContainer.style.display = 'none';
     advancedFiltersContainer.style.opacity = '0';
     advancedFiltersContainer.style.height = '0';
@@ -5338,66 +5358,166 @@ async function renderJobs(reset = false) {
     showMoreFiltersBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      filtersDrawerOpen = !filtersDrawerOpen;
-      toggleFiltersDrawer(filtersDrawerOpen);
+      toggleFiltersDrawer(); // Toggle using window state
     }, { once: false, passive: false });
     
-    // Restore state after a brief delay to ensure DOM is ready
-    setTimeout(() => {
-      if (filtersDrawerOpen && advancedFiltersContainer.style.display !== 'block') {
-        toggleFiltersDrawer(true);
-      }
-    }, 100);
-    
     // Wire up radius slider (sync with hidden select for backward compatibility)
+    // FIXED: Load saved filters on initialization
     const radiusSlider = document.getElementById('jobsRadiusSlider');
     const radiusSelect = document.getElementById('jobsRadiusFilter');
     const radiusValueDisplay = document.getElementById('radiusValueDisplay');
+    const locationFilterInput = document.getElementById('jobsLocationFilter');
     
-    if (radiusSlider && radiusValueDisplay) {
-      radiusSlider.addEventListener('input', (e) => {
-        const value = e.target.value;
-        radiusValueDisplay.textContent = `${value} mi`;
-        if (radiusSelect) {
-          // Update select value if slider value matches an option
-          const matchingOption = Array.from(radiusSelect.options).find(opt => opt.value === value);
-          if (matchingOption) {
-            radiusSelect.value = value;
-          } else {
-            // If no exact match, set closest value
-            radiusSelect.value = value <= 10 ? '10' : value <= 25 ? '25' : '50';
+    // Load saved filters if they exist
+    const savedFilters = localStorage.getItem('savedJobFilters');
+    if (savedFilters) {
+      try {
+        const filters = JSON.parse(savedFilters);
+        // Only load if saved within last 7 days
+        const age = Date.now() - (filters.timestamp || 0);
+        if (age < 7 * 24 * 60 * 60 * 1000) {
+          if (radiusSlider && filters.radius) {
+            radiusSlider.value = filters.radius;
+            if (radiusValueDisplay) radiusValueDisplay.textContent = `${filters.radius} mi`;
+            if (radiusSelect) radiusSelect.value = filters.radius;
+          }
+          if (locationFilterInput && filters.location) {
+            locationFilterInput.value = filters.location;
+          }
+          if (filters.sortBy) {
+            activeJobFilter = filters.sortBy;
+            // Update button states
+            document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+              if (btn.id !== 'showMoreFiltersBtn') {
+                btn.classList.remove('active');
+                btn.style.borderColor = '#d1d5db';
+                btn.style.background = 'white';
+                btn.style.color = '#374151';
+              }
+            });
+            const savedFilterBtn = document.querySelector(`[data-filter="${filters.sortBy}"]`);
+            if (savedFilterBtn) {
+              savedFilterBtn.classList.add('active');
+              savedFilterBtn.style.borderColor = '#3b82f6';
+              savedFilterBtn.style.background = '#3b82f6';
+              savedFilterBtn.style.color = 'white';
+            }
           }
         }
-      }, { passive: true });
+      } catch (e) {
+        console.warn('Error loading saved filters:', e);
+      }
+    }
+    
+    if (radiusSlider && radiusValueDisplay) {
+      // Remove old listeners to prevent duplicates
+      if (!radiusSlider.dataset.listenerAttached) {
+        radiusSlider.dataset.listenerAttached = 'true';
+        radiusSlider.addEventListener('input', (e) => {
+          const value = e.target.value;
+          radiusValueDisplay.textContent = `${value} mi`;
+          if (radiusSelect) {
+            // Update select value if slider value matches an option
+            const matchingOption = Array.from(radiusSelect.options).find(opt => opt.value === value);
+            if (matchingOption) {
+              radiusSelect.value = value;
+            } else {
+              // If no exact match, set closest value
+              radiusSelect.value = value <= 10 ? '10' : value <= 25 ? '25' : '50';
+            }
+          }
+        }, { passive: true });
+      }
       
       // Sync slider with select on load
       if (radiusSelect) {
-        radiusSlider.value = radiusSelect.value || '10';
+        radiusSlider.value = radiusSelect.value || radiusSlider.value || '10';
         radiusValueDisplay.textContent = `${radiusSlider.value} mi`;
       }
     }
     
     // Wire up Apply Filters button
     const applyFiltersBtn = document.getElementById('applyFiltersBtn');
-    if (applyFiltersBtn) {
+    if (applyFiltersBtn && !applyFiltersBtn.dataset.listenerAttached) {
+      applyFiltersBtn.dataset.listenerAttached = 'true';
       applyFiltersBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        // Close filters panel first
-        filtersDrawerOpen = false;
-        toggleFiltersDrawer(false);
-        // Then re-render with new filters
+        // Apply filters and re-render (keep panel open)
         updateFiltersAppliedLabel();
-        setTimeout(() => {
-          renderJobs(true);
-          // Scroll job list into view on mobile
-          if (window.innerWidth <= 768) {
-            setTimeout(() => {
-              const jobsList = document.getElementById('jobsList');
-              if (jobsList) jobsList.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
+        renderJobs(true);
+        // Scroll job list into view on mobile
+        if (window.innerWidth <= 768) {
+          setTimeout(() => {
+            const jobsList = document.getElementById('jobsList');
+            if (jobsList) jobsList.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 100);
+        }
+      }, { passive: false });
+    }
+    
+    // Wire up Save Filters button
+    const saveFiltersBtn = document.getElementById('saveFiltersBtn');
+    if (saveFiltersBtn && !saveFiltersBtn.dataset.listenerAttached) {
+      saveFiltersBtn.dataset.listenerAttached = 'true';
+      saveFiltersBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Save current filter state to localStorage
+        const radiusSlider = document.getElementById('jobsRadiusSlider');
+        const locationFilter = document.getElementById('jobsLocationFilter');
+        const savedFilters = {
+          radius: radiusSlider?.value || '10',
+          location: locationFilter?.value?.trim() || '',
+          sortBy: activeJobFilter || 'newest',
+          timestamp: Date.now()
+        };
+        localStorage.setItem('savedJobFilters', JSON.stringify(savedFilters));
+        showToast('✓ Filters saved!');
+        updateFiltersAppliedLabel();
+        renderJobs(true);
+      }, { passive: false });
+    }
+    
+    // Wire up Disable Filters button
+    const disableFiltersBtn = document.getElementById('disableFiltersBtn');
+    if (disableFiltersBtn && !disableFiltersBtn.dataset.listenerAttached) {
+      disableFiltersBtn.dataset.listenerAttached = 'true';
+      disableFiltersBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Clear all filters and reset to defaults
+        localStorage.removeItem('savedJobFilters');
+        const radiusSlider = document.getElementById('jobsRadiusSlider');
+        const radiusSelect = document.getElementById('jobsRadiusFilter');
+        const locationFilter = document.getElementById('jobsLocationFilter');
+        if (radiusSlider) radiusSlider.value = '10';
+        if (radiusSelect) radiusSelect.value = '10';
+        if (locationFilter) locationFilter.value = '';
+        const radiusValueDisplay = document.getElementById('radiusValueDisplay');
+        if (radiusValueDisplay) radiusValueDisplay.textContent = '10 mi';
+        
+        // Reset sort to newest
+        activeJobFilter = 'newest';
+        document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+          if (btn.id !== 'showMoreFiltersBtn') {
+            btn.classList.remove('active');
+            btn.style.borderColor = '#d1d5db';
+            btn.style.background = 'white';
+            btn.style.color = '#374151';
           }
-        }, 350);
+        });
+        const newestBtn = document.querySelector('[data-filter="newest"]');
+        if (newestBtn) {
+          newestBtn.classList.add('active');
+          newestBtn.style.borderColor = '#3b82f6';
+          newestBtn.style.background = '#3b82f6';
+          newestBtn.style.color = 'white';
+        }
+        
+        showToast('Filters disabled');
+        updateFiltersAppliedLabel();
+        renderJobs(true);
       }, { passive: false });
     }
     
@@ -6179,17 +6299,24 @@ async function renderJobs(reset = false) {
         locationContainer.style.borderRadius = "6px";
         locationContainer.style.border = "1px solid #86efac";
         
-        // Map Preview (move higher - right after location label)
-        // Only show if we have valid lat/lng coordinates
+        // Map Preview - FIXED: Always try to show map with proper error handling
+        const mapPreview = document.createElement("div");
+        mapPreview.id = `mapPreview-${job.id}`;
+        mapPreview.style.cssText = "margin-bottom: 0.75rem; border-radius: 8px; overflow: hidden; height: 200px; width: 100%; background: #e5e7eb; cursor: pointer; border: 2px solid #86efac; position: relative;";
+        
+        // Try to get coordinates from job
+        let lat = null;
+        let lng = null;
         if (job.lat && job.lng && !isNaN(parseFloat(job.lat)) && !isNaN(parseFloat(job.lng))) {
-          const mapPreview = document.createElement("div");
-          mapPreview.id = `mapPreview-${job.id}`;
-          mapPreview.style.cssText = "margin-bottom: 0.75rem; border-radius: 8px; overflow: hidden; height: 200px; width: 100%; background: #e5e7eb; cursor: pointer; border: 2px solid #86efac; position: relative;";
-          
+          lat = parseFloat(job.lat);
+          lng = parseFloat(job.lng);
+        }
+        
+        if (lat && lng) {
           // Use Mapbox Static Image API for preview
           const mapboxToken = "pk.eyJ1IjoiaHVzdGxtYXAiLCJhIjoiY21qNGUzc2pqMGVxbzJrcjhuYm1icGNueSJ9.YzIpkBWGqqn0dEHz-n_puQ";
-          const lat = parseFloat(job.lat);
-          const lng = parseFloat(job.lng);
+          // Format: pin-s+color(lng,lat)/lng,lat,zoom,bearing/widthxheight@2x
+          // Use proper URL encoding for the pin marker
           const mapImageUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+2563eb(${lng},${lat})/${lng},${lat},14,0/400x200@2x?access_token=${mapboxToken}`;
           
           const mapImg = document.createElement("img");
@@ -6201,13 +6328,18 @@ async function renderJobs(reset = false) {
           // Add error handling for failed image loads
           mapImg.onerror = function() {
             this.style.display = "none";
-            mapPreview.innerHTML = '<div style="padding: 2rem; text-align: center; color: #6b7280; height: 100%; display: flex; align-items: center; justify-content: center;">Map preview unavailable</div>';
+            mapPreview.innerHTML = '<div style="padding: 2rem; text-align: center; color: #6b7280; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">Map preview unavailable</div>';
           };
           
           mapPreview.appendChild(mapImg);
           
           mapPreview.addEventListener("click", () => {
-            const address = pickupAddress || (pickupCity && pickupZip ? `${pickupCity}, ${pickupZip}` : pickupZip || '');
+            // Build address for map link - don't include pickupArea
+            const mapAddressParts = [];
+            if (pickupAddress) mapAddressParts.push(pickupAddress);
+            if (pickupCity) mapAddressParts.push(pickupCity);
+            if (pickupZip) mapAddressParts.push(pickupZip);
+            const address = mapAddressParts.length > 0 ? mapAddressParts.join(', ') : (pickupCity && pickupZip ? `${pickupCity}, ${pickupZip}` : pickupZip || '');
             if (address) {
               const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
               window.open(mapUrl, "_blank");
@@ -6217,9 +6349,12 @@ async function renderJobs(reset = false) {
               window.open(mapUrl, "_blank");
             }
           });
-          
-          locationContainer.appendChild(mapPreview);
+        } else {
+          // No coordinates - show message
+          mapPreview.innerHTML = '<div style="padding: 2rem; text-align: center; color: #6b7280; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">Map preview unavailable - location not available</div>';
         }
+        
+        locationContainer.appendChild(mapPreview);
         
         // Pickup Location
         const pickupLabel = document.createElement("div");
@@ -6228,9 +6363,10 @@ async function renderJobs(reset = false) {
         pickupLabel.textContent = "📍 Pickup Location";
         locationContainer.appendChild(pickupLabel);
         
+        // FIXED: Don't include pickupArea in main address display
         const pickupParts = [];
         if (pickupAddress) pickupParts.push(pickupAddress);
-        if (pickupArea) pickupParts.push(pickupArea);
+        // pickupArea is stored but shown separately or in details only
         if (pickupCity) pickupParts.push(pickupCity);
         if (pickupZip) pickupParts.push(pickupZip);
         
@@ -6239,6 +6375,17 @@ async function renderJobs(reset = false) {
         pickupText.style.lineHeight = "1.5";
         pickupText.textContent = pickupParts.length > 0 ? pickupParts.join(', ') : 'Address shared after acceptance';
         locationContainer.appendChild(pickupText);
+        
+        // Show pickupArea separately if it exists (as additional info, not in main address)
+        if (pickupArea) {
+          const areaNote = document.createElement("div");
+          areaNote.style.marginTop = "0.25rem";
+          areaNote.style.fontSize = "0.85rem";
+          areaNote.style.color = "#6b7280";
+          areaNote.style.fontStyle = "italic";
+          areaNote.textContent = `Area: ${pickupArea}`;
+          locationContainer.appendChild(areaNote);
+        }
         
         // Map link for pickup - only use address and zipcode
         const pickupMapParts = [];
