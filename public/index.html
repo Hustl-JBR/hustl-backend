@@ -5185,8 +5185,17 @@ async function renderJobs(reset = false) {
 
     card.appendChild(actions);
 
-    // clicking the whole card opens details too
-    card.addEventListener("click", () => openJobDetails(job.id));
+    // clicking the whole card opens details too (but not if clicking buttons)
+    card.style.cursor = "pointer";
+    card.addEventListener("click", (e) => {
+      // Don't open if clicking on a button or action element
+      if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('.job-card-actions')) {
+        return;
+      }
+      console.log('Job card clicked:', job.id);
+      setView("jobs");
+      setTimeout(() => openJobDetails(job.id), 50);
+    });
 
     // Only append desktop card if not mobile (mobile cards already appended above)
     if (!isMobile) {
@@ -5269,52 +5278,31 @@ async function renderJobs(reset = false) {
   const showMoreFiltersText = document.getElementById('showMoreFiltersText');
   const filtersAppliedLabel = document.getElementById('filtersAppliedLabel');
   
+  // SIMPLIFIED: Just toggle the filters panel - no complex logic
   if (showMoreFiltersBtn && advancedFiltersContainer) {
-    // Single-tap toggle (no double-tap) - use preventDefault/stopPropagation
     showMoreFiltersBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       
-      const isHidden = advancedFiltersContainer.style.display === 'none' || !advancedFiltersContainer.style.display || 
-                       window.getComputedStyle(advancedFiltersContainer).display === 'none';
+      const isCurrentlyVisible = advancedFiltersContainer.style.display === 'block' && 
+                                 advancedFiltersContainer.style.opacity !== '0';
       
-      if (isHidden) {
-        // Opening: Show with animation
-        advancedFiltersContainer.style.display = 'block';
-        // Force reflow for animation
-        advancedFiltersContainer.offsetHeight;
-        advancedFiltersContainer.style.opacity = '1';
-        advancedFiltersContainer.style.transform = 'translateY(0)';
-        advancedFiltersContainer.style.maxHeight = '600px'; // Enough for all filters
-        
-        // Update button appearance
-        showMoreFiltersBtn.style.background = '#eff6ff';
-        showMoreFiltersBtn.style.borderColor = '#3b82f6';
-        showMoreFiltersText.textContent = 'Less Filters';
-        if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(180deg)';
-        
-        // Auto-scroll into view on mobile to avoid bottom nav blocking
-        setTimeout(() => {
-          advancedFiltersContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 100);
-      } else {
-        // Closing: Hide with animation
-        advancedFiltersContainer.style.opacity = '0';
-        advancedFiltersContainer.style.transform = 'translateY(-10px)';
-        advancedFiltersContainer.style.maxHeight = '0';
-        
-        // Update button appearance
-        showMoreFiltersBtn.style.background = 'white';
-        showMoreFiltersBtn.style.borderColor = '#d1d5db';
+      if (isCurrentlyVisible) {
+        // Close it
+        advancedFiltersContainer.style.display = 'none';
         showMoreFiltersText.textContent = 'More Filters';
         if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(0deg)';
-        
-        // Hide after animation completes
-        setTimeout(() => {
-          advancedFiltersContainer.style.display = 'none';
-        }, 300);
+        showMoreFiltersBtn.style.background = 'white';
+        showMoreFiltersBtn.style.borderColor = '#d1d5db';
+      } else {
+        // Open it
+        advancedFiltersContainer.style.display = 'block';
+        showMoreFiltersText.textContent = 'Less Filters';
+        if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(180deg)';
+        showMoreFiltersBtn.style.background = '#eff6ff';
+        showMoreFiltersBtn.style.borderColor = '#3b82f6';
       }
-    }, { passive: false }); // Not passive so we can preventDefault
+    });
     
     // Wire up radius slider (sync with hidden select for backward compatibility)
     const radiusSlider = document.getElementById('jobsRadiusSlider');
@@ -5352,11 +5340,43 @@ async function renderJobs(reset = false) {
         e.stopPropagation();
         renderJobs(true); // Re-render with new filters
         updateFiltersAppliedLabel();
-        // Close filters panel after applying
-        if (showMoreFiltersBtn && advancedFiltersContainer.style.display !== 'none') {
-          showMoreFiltersBtn.click(); // Trigger close animation
+        // SIMPLIFIED: Close filters panel after applying
+        if (showMoreFiltersBtn && advancedFiltersContainer) {
+          advancedFiltersContainer.style.display = 'none';
+          showMoreFiltersText.textContent = 'More Filters';
+          if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(0deg)';
+          showMoreFiltersBtn.style.background = 'white';
+          showMoreFiltersBtn.style.borderColor = '#d1d5db';
         }
       }, { passive: false });
+    }
+    
+    // Make "Filters Applied" label tappable to toggle filters panel (SIMPLIFIED)
+    if (filtersAppliedLabel && showMoreFiltersBtn && advancedFiltersContainer) {
+      filtersAppliedLabel.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Same simple toggle as More Filters button
+        const isCurrentlyVisible = advancedFiltersContainer.style.display === 'block' && 
+                                   advancedFiltersContainer.style.opacity !== '0';
+        
+        if (isCurrentlyVisible) {
+          // Close it
+          advancedFiltersContainer.style.display = 'none';
+          showMoreFiltersText.textContent = 'More Filters';
+          if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(0deg)';
+          showMoreFiltersBtn.style.background = 'white';
+          showMoreFiltersBtn.style.borderColor = '#d1d5db';
+        } else {
+          // Open it
+          advancedFiltersContainer.style.display = 'block';
+          showMoreFiltersText.textContent = 'Less Filters';
+          if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(180deg)';
+          showMoreFiltersBtn.style.background = '#eff6ff';
+          showMoreFiltersBtn.style.borderColor = '#3b82f6';
+        }
+      });
     }
     
     // Wire up Reset Filters button
@@ -11216,33 +11236,88 @@ meta.textContent =
       header.appendChild(pay);
       card.appendChild(header);
       
-      // Meta: Distance + Time posted
+      // Category badge
+      const categoryBadge = document.createElement("div");
+      categoryBadge.style.cssText = "display: inline-block; padding: 0.25rem 0.5rem; background: #e0e7ff; color: #4338ca; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-top: 0.5rem;";
+      const cat = job.category === "moving" ? "🚚 Moving" : 
+                  job.category === "yard" ? "🌿 Yard Work" :
+                  job.category === "cleaning" ? "🧹 Cleaning" :
+                  job.category === "furniture" ? "🛠 Furniture" :
+                  job.category === "handyman" ? "🔧 Handyman" :
+                  job.category === "painting" ? "🎨 Painting" :
+                  job.category === "landscaping" ? "🌳 Landscaping" :
+                  job.category === "petcare" ? "🐕 Pet Care" :
+                  job.category === "event" ? "🎉 Event Help" :
+                  job.category === "tech" ? "💻 Tech Support" :
+                  "⭐ Other";
+      categoryBadge.textContent = cat;
+      card.appendChild(categoryBadge);
+      
+      // Meta: Distance + Time posted + Location
       const meta = document.createElement("div");
       meta.className = "mobile-job-card-meta";
+      meta.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
       
-      const distance = document.createElement("div");
-      distance.className = "mobile-job-card-distance";
-      const distanceText = job.distanceFormatted || (job.distance !== null && job.distance !== undefined ? `${job.distance.toFixed(1)} mi` : '');
-      distance.innerHTML = `📍 ${distanceText || 'Distance unknown'}`;
+      // Distance
+      if (job.distance !== null && job.distance !== undefined) {
+        const distance = document.createElement("div");
+        const distanceText = job.distanceFormatted || `${job.distance.toFixed(1)} mi`;
+        distance.innerHTML = `📍 ${distanceText} away`;
+        meta.appendChild(distance);
+      }
       
+      // Location (zip/city)
+      const requirements = job.requirements || {};
+      const pickupZip = requirements.pickupZip || '';
+      const pickupCity = requirements.pickupCity || job.customer?.city || '';
+      if (pickupZip || pickupCity) {
+        const location = document.createElement("div");
+        location.innerHTML = `📍 ${pickupCity || ''}${pickupCity && pickupZip ? ', ' : ''}${pickupZip || ''}`;
+        meta.appendChild(location);
+      }
+      
+      // Time posted
       const time = document.createElement("div");
-      time.className = "mobile-job-card-time";
       const createdMs = job.createdAt ? new Date(job.createdAt).getTime() : Date.now();
       time.innerHTML = `⏰ ${timeAgo(createdMs)}`;
-      
-      meta.appendChild(distance);
       meta.appendChild(time);
+      
+      // Pay type indicator
+      const payType = document.createElement("div");
+      payType.style.cssText = "font-weight: 600; color: var(--primary);";
+      if (job.payType === "flat") {
+        payType.innerHTML = "💵 Flat Rate";
+      } else {
+        const hr = Number(job.hourlyRate) || 0;
+        const maxH = job.estHours || 0;
+        payType.innerHTML = `⏱ Hourly (${maxH}h max)`;
+      }
+      meta.appendChild(payType);
+      
       card.appendChild(meta);
       
-      // Short description preview (truncated)
+      // Applicant count (if available)
+      if (job._count && job._count.offers !== undefined && job._count.offers > 0) {
+        const applicantBadge = document.createElement("div");
+        applicantBadge.style.cssText = "display: inline-block; padding: 0.25rem 0.5rem; background: #dbeafe; color: #1e40af; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-top: 0.5rem;";
+        applicantBadge.innerHTML = `👥 ${job._count.offers} ${job._count.offers === 1 ? 'person applied' : 'people applied'}`;
+        card.appendChild(applicantBadge);
+      }
+      
+      // Photo indicator (if job has photos)
+      if (job.photos && job.photos.length > 0) {
+        const photoBadge = document.createElement("div");
+        photoBadge.style.cssText = "display: inline-block; padding: 0.25rem 0.5rem; background: #fef3c7; color: #92400e; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-top: 0.5rem; margin-left: 0.5rem;";
+        photoBadge.innerHTML = `📸 ${job.photos.length} photo${job.photos.length > 1 ? 's' : ''}`;
+        card.appendChild(photoBadge);
+      }
+      
+      // Description preview (show more lines - 3-4 lines)
       const description = job.description || '';
       if (description) {
         const descPreview = document.createElement("div");
-        descPreview.style.fontSize = "0.9rem";
-        descPreview.style.color = "var(--text-muted)";
-        descPreview.style.marginTop = "0.5rem";
-        descPreview.style.lineHeight = "1.4";
-        descPreview.textContent = description.length > 100 ? description.substring(0, 100) + "..." : description;
+        descPreview.style.cssText = "font-size: 0.9rem; color: var(--text-main); margin-top: 0.75rem; line-height: 1.5; max-height: 4.5em; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;";
+        descPreview.textContent = description;
         card.appendChild(descPreview);
       }
       
