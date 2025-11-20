@@ -66,25 +66,12 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files from /public folder
-const publicPath = path.join(__dirname, "public");
-app.use(express.static(publicPath, {
-  setHeaders: (res, filePath) => {
-    // Disable caching for HTML and JS files to ensure updates are picked up
-    if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-    }
-  }
-}));
-
-// Health check route
+// Health check route (before everything else)
 app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "hustl-backend", timestamp: new Date().toISOString() });
 });
 
-// Import route modules
+// Import route modules (must be before static files)
 const authRouter = require("./routes/auth");
 const usersRouter = require("./routes/users");
 const jobsRouter = require("./routes/jobs");
@@ -99,7 +86,7 @@ const feedbackRouter = require("./routes/feedback");
 const adminRouter = require("./routes/admin");
 const notificationsRouter = require("./routes/notifications");
 
-// API Routes with rate limiting
+// CRITICAL: API Routes MUST come BEFORE static files to ensure they're matched first
 app.use("/auth", authLimiter, authRouter); // Stricter rate limiting for auth
 app.use("/users", usersRouter);
 app.use("/jobs", jobsRouter);
@@ -107,12 +94,25 @@ app.use("/offers", offersRouter);
 app.use("/threads", threadsRouter);
 app.use("/payments", paymentsRouter);
 app.use("/webhooks", webhooksRouter);
-app.use("/r2", r2Router);
+app.use("/r2", r2Router); // Must be before static files!
 app.use("/stripe-connect", stripeConnectRouter);
 app.use("/reviews", reviewsRouter);
 app.use("/feedback", feedbackRouter);
 app.use("/admin", adminRouter);
 app.use("/notifications", notificationsRouter);
+
+// Serve static files from /public folder (AFTER API routes)
+const publicPath = path.join(__dirname, "public");
+app.use(express.static(publicPath, {
+  setHeaders: (res, filePath) => {
+    // Disable caching for HTML and JS files to ensure updates are picked up
+    if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
+}));
 
 // Legacy Stripe Checkout session creation (keep for backward compatibility)
 app.post("/create-checkout-session", async (req, res) => {
@@ -185,6 +185,14 @@ const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '0.0.0.0';
 app.listen(PORT, host, () => {
   console.log(`🚀 Hustl backend running at http://localhost:${PORT}`);
   console.log(`📁 Serving static files from: ${publicPath}`);
+  
+  // Log registered routes for debugging
+  console.log(`\n✅ Registered API Routes:`);
+  console.log(`   POST /r2/upload - File upload to R2`);
+  console.log(`   GET  /jobs/my-jobs - Get user's jobs`);
+  console.log(`   GET  /offers/user/me - Get user's offers`);
+  console.log(`   POST /r2/presign - Generate presigned URL (legacy)\n`);
+  
   if (process.env.NODE_ENV === 'production') {
     console.log(`🌐 Production mode - App is live!`);
     console.log(`🔗 Frontend URL: ${process.env.FRONTEND_BASE_URL || 'Not set'}`);
@@ -193,21 +201,23 @@ app.listen(PORT, host, () => {
     console.log(`   (Make sure your phone is on the same WiFi network)`);
   }
   
-  // Start cleanup job scheduler
-  const { cleanupOldJobs } = require('./services/cleanup');
-  
-  // Run cleanup immediately on startup (optional)
-  cleanupOldJobs().catch(err => {
-    console.error('[Startup] Cleanup error (non-fatal):', err);
-  });
-  
-  // Run cleanup every 6 hours
-  const CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
-  setInterval(() => {
-    cleanupOldJobs().catch(err => {
-      console.error('[Scheduled Cleanup] Error (non-fatal):', err);
-    });
-  }, CLEANUP_INTERVAL_MS);
-  
-  console.log(`🧹 Cleanup job scheduled: runs every 6 hours (deletes all jobs older than 2 weeks)`);
+      // Start cleanup job scheduler
+      const { cleanup72HourJobs, cleanupOldJobs, runAllCleanup } = require('./services/cleanup');
+      
+      // Run cleanup immediately on startup
+      runAllCleanup().catch(err => {
+        console.error('[Startup] Cleanup error (non-fatal):', err);
+      });
+      
+      // Run cleanup every 2 hours (more frequent for better UX)
+      const CLEANUP_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours
+      setInterval(() => {
+        runAllCleanup().catch(err => {
+          console.error('[Scheduled Cleanup] Error (non-fatal):', err);
+        });
+      }, CLEANUP_INTERVAL_MS);
+      
+      console.log(`🧹 Cleanup job scheduled: runs every 2 hours`);
+      console.log(`   - Cancels OPEN jobs older than 48-72h with no accepted offers`);
+      console.log(`   - Deletes all jobs older than 2 weeks`);
 });

@@ -27,25 +27,45 @@ const upload = multer({
 });
 
 // POST /r2/upload - Upload file directly through backend (avoids CORS issues)
-router.post('/upload', upload.single('file'), async (req, res) => {
+router.post('/upload', (req, res, next) => {
+  console.log('[R2 Upload] Request received:', {
+    method: req.method,
+    path: req.path,
+    contentType: req.headers['content-type'],
+    hasAuth: !!req.headers.authorization,
+  });
+  next();
+}, upload.single('file'), async (req, res) => {
   try {
+    console.log('[R2 Upload] File received:', {
+      hasFile: !!req.file,
+      fileName: req.file?.originalname,
+      fileSize: req.file?.size,
+      mimeType: req.file?.mimetype,
+    });
+
     if (!req.file) {
+      console.error('[R2 Upload] No file provided in request');
       return res.status(400).json({ error: 'No file provided' });
     }
 
     const { file } = req;
+    console.log('[R2 Upload] Uploading to R2...');
     const { fileKey, publicUrl } = await uploadFileToR2(
       file.buffer,
       file.originalname,
       file.mimetype
     );
 
+    console.log('[R2 Upload] Upload successful:', { fileKey, publicUrl });
+
     res.json({
       fileKey,
       publicUrl,
     });
   } catch (error) {
-    console.error('Upload file error:', error);
+    console.error('[R2 Upload] Upload file error:', error);
+    console.error('[R2 Upload] Error stack:', error.stack);
     res.status(400).json({ error: error.message || 'Failed to upload file' });
   }
 });

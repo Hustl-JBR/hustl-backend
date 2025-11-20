@@ -358,5 +358,73 @@ router.post('/resend-verification', [
   }
 });
 
+// POST /auth/refresh - Refresh JWT token (for persistent login)
+router.post('/refresh', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    // Verify token (even if expired, we can still refresh if it's close to expiry)
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (error) {
+      // If token is expired, try to decode without verification to get userId
+      if (error.name === 'TokenExpiredError') {
+        decoded = jwt.decode(token);
+        if (!decoded || !decoded.userId) {
+          return res.status(401).json({ error: 'Invalid token' });
+        }
+      } else {
+        return res.status(401).json({ error: 'Invalid token' });
+      }
+    }
+
+    // Get user from database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        username: true,
+        roles: true,
+        idVerified: true,
+        emailVerified: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    // Generate new token
+    const newToken = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        username: user.username,
+        roles: user.roles,
+        idVerified: user.idVerified,
+        emailVerified: user.emailVerified || false,
+      },
+      token: newToken,
+    });
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
 

@@ -947,6 +947,47 @@
       }
     }
 
+    /* Filter buttons (TaskRabbit/Thumbtack style) */
+    .filter-btn {
+      padding: 0.5rem 1rem;
+      border: 1px solid #d1d5db;
+      border-radius: 20px;
+      background: white;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #374151;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .filter-btn:hover {
+      border-color: #9ca3af;
+      background: #f9fafb;
+    }
+
+    .filter-btn.active {
+      border-color: #3b82f6;
+      background: #3b82f6;
+      color: white;
+    }
+
+    .filter-btn.active:hover {
+      background: #2563eb;
+      border-color: #2563eb;
+    }
+
+    .filter-btn:active {
+      transform: scale(0.95);
+    }
+
+    @media (max-width: 768px) {
+      .filter-btn {
+        padding: 0.45rem 0.9rem;
+        font-size: 0.8rem;
+      }
+    }
+
     .small-btn.outline {
       background: transparent;
       border: 1px solid var(--border);
@@ -1157,12 +1198,13 @@
     }
 
     .chat-messages {
-      max-height: 150px;
+      max-height: 500px;
       overflow-y: auto;
       margin-bottom: 0.5rem;
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
+      gap: 0;
+      padding: 1rem;
     }
 
     .chat-msg {
@@ -1182,6 +1224,25 @@
       align-self: flex-start;
       background: #e5e7eb;
       color: var(--text-main);
+    }
+    
+    /* Modern message styling - like iMessage/WhatsApp */
+    .chat-message {
+      display: flex;
+      align-items: flex-end;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      max-width: 85%;
+    }
+    
+    .chat-message.sent {
+      flex-direction: row-reverse;
+      margin-left: auto;
+    }
+    
+    .chat-message.received {
+      flex-direction: row;
+      margin-right: auto;
     }
 
     .chat-meta {
@@ -1633,7 +1694,90 @@
         }
         ids[id] = true;
       });
+      
+      // 🚀 Initialize modern optimizations
+      initModernFeatures();
+      
+      // 🚀 Start persistent login (auto-refresh tokens)
+      if (window.appCore && window.appCore.tokenManager) {
+        window.appCore.tokenManager.startAutoRefresh();
+      }
+      
+      // 🚀 Restore view from URL hash (persistent on reload)
+      if (window.appCore && window.appCore.routeManager) {
+        const savedView = window.appCore.routeManager.getCurrentRoute();
+        if (savedView && savedView !== 'home' && typeof setView === 'function') {
+          setTimeout(() => {
+            setView(savedView);
+          }, 100);
+        }
+      }
+      
+      // 🚀 Initialize mobile bottom navigation
+      if (window.mobileCore && window.mobileCore.bottomNav) {
+        window.mobileCore.bottomNav.init();
+      }
+      
+      // 🚀 Initialize lazy image loading
+      if (window.mobileCore && window.mobileCore.lazyImages) {
+        window.mobileCore.lazyImages.observeAll();
+      }
     });
+    
+    // Initialize modern features (debounced search, optimized handlers, etc.)
+    function initModernFeatures() {
+      // Debounced search input (optimize API calls)
+      const searchInput = document.getElementById('jobsSearchInput');
+      if (searchInput && window.appCore) {
+        const debouncedSearch = window.appCore.debounce(() => {
+          if (document.getElementById('view-jobs')?.style.display !== 'none') {
+            renderJobs(true);
+          }
+        }, 500); // Wait 500ms after user stops typing
+        
+        searchInput.addEventListener('input', debouncedSearch);
+        searchInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            debouncedSearch.flush?.(); // Force immediate execution
+            renderJobs(true);
+          }
+        });
+      }
+      
+      // Optimize filter buttons with throttling
+      const filtersBar = document.getElementById('jobFiltersBar');
+      if (filtersBar && window.appCore) {
+        const throttledRender = window.appCore.throttle(() => {
+          renderJobs(true);
+        }, 300);
+        
+        // Filter buttons are already wired up, but we can optimize them further
+        filtersBar.querySelectorAll('.filter-btn').forEach(btn => {
+          const originalClick = btn.onclick;
+          btn.onclick = null; // Remove inline handler if any
+          btn.addEventListener('click', throttledRender);
+        });
+      }
+      
+      // Subscribe to error handler for better UX
+      if (window.appCore && window.appCore.errorHandler) {
+        window.appCore.errorHandler.subscribe((error, message, context) => {
+          // Errors are already handled by showToast, but we can add additional handling here
+          console.error(`[${context}]`, error);
+        });
+      }
+      
+      // Subscribe to loading states
+      if (window.appCore && window.appCore.loadingManager) {
+        window.appCore.loadingManager.subscribe((loadingStates) => {
+          // Update UI based on loading states
+          // Could show global loading indicator
+        });
+      }
+      
+      console.log('✅ Modern features initialized - Optimizations active');
+    }
     
     // ULTRA-AGGRESSIVE cleanup - runs IMMEDIATELY before anything else
     (function() {
@@ -2237,76 +2381,92 @@
             <span data-tab="available" class="job-tab" style="cursor: pointer; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; font-weight: 500; color: var(--text-muted);">Available Jobs</span>
             <span data-tab="my-hustles" class="job-tab" style="cursor: pointer; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; font-weight: 500; color: var(--text-muted); display: none;">My Hustles (In Progress)</span>
           </div>
+          <!-- Status filters (only shown on My Jobs/My Hustles tabs) -->
           <div class="job-status-group" id="jobsStatusFilter" style="display: none;">
             <!-- Status filters will be dynamically shown based on mode and tab -->
           </div>
-          <!-- Search Bar -->
-          <div class="field" style="margin: 0.75rem 0;">
-            <label for="jobsSearchInput" style="font-size: 0.9rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem; display: block;">🔍 Search Jobs</label>
+          
+          <!-- Simple Search Bar -->
+          <div style="margin-bottom: 1rem;">
             <div style="position: relative;">
               <input 
                 id="jobsSearchInput" 
                 type="text" 
-                placeholder="Search by title or description (e.g., 'moving', 'yard work')" 
-                style="width: 100%; padding: 0.75rem; padding-right: 3rem; font-size: 0.95rem; border: 1px solid #e5e7eb; border-radius: 8px;" 
+                placeholder="🔍 Search jobs..." 
+                style="width: 100%; padding: 0.75rem 1rem; padding-right: 3rem; font-size: 0.95rem; border: 1px solid #e5e7eb; border-radius: 8px;" 
               />
               <button 
                 id="clearSearchBtn" 
-                style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: transparent; border: none; cursor: pointer; font-size: 1.2rem; color: #9ca3af; display: none; padding: 0.25rem;"
+                style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: transparent; border: none; cursor: pointer; font-size: 1.2rem; color: #9ca3af; display: none; padding: 0.25rem;"
                 onclick="clearJobSearch()"
               >×</button>
             </div>
-            <div style="font-size: 0.8rem; color: #6b7280; margin-top: 0.25rem;">
-              Search through job titles and descriptions to find what you're looking for
-            </div>
           </div>
-          <div class="field-inline" style="margin: 0.75rem 0; gap: 0.5rem;">
-            <div class="field" style="flex: 1;">
-              <select id="jobsDateFilter" style="width: 100%; padding: 0.5rem;">
-                <option value="">All Dates</option>
-                <option value="today">Today</option>
-                <option value="tomorrow">Tomorrow</option>
-              </select>
-            </div>
-            <div class="field" style="flex: 1;">
-              <select id="jobsTimeFilter" style="width: 100%; padding: 0.5rem;">
-                <option value="">All Times</option>
-                <option value="morning">Morning</option>
-                <option value="afternoon">Afternoon</option>
-                <option value="evening">Evening</option>
-                <option value="night">Night</option>
-              </select>
-            </div>
+          
+          <!-- Simple Filter Buttons (only show most important) -->
+          <div id="jobFiltersBar" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+            <button class="filter-btn" data-filter="near-me" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 20px; background: white; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: #374151; transition: all 0.2s;">
+              📍 Near Me
+            </button>
+            <button class="filter-btn active" data-filter="newest" style="padding: 0.5rem 1rem; border: 1px solid #3b82f6; border-radius: 20px; background: #3b82f6; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: white; transition: all 0.2s;">
+              ⏰ Newest
+            </button>
+            <button class="filter-btn" data-filter="highest-pay" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 20px; background: white; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: #374151; transition: all 0.2s;">
+              💰 Highest Pay
+            </button>
+            <!-- Collapsible "More Filters" button -->
+            <button id="showMoreFiltersBtn" class="filter-btn" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 20px; background: white; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: #374151; transition: all 0.2s;">
+              ⋯ More
+            </button>
           </div>
-          <!-- Location Controls -->
-          <div id="locationControls" style="margin: 0.75rem 0; padding: 0.75rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-              <label for="jobsRadiusFilter" style="font-size: 0.9rem; font-weight: 600; color: #374151;">📍 Search radius</label>
-              <span id="currentRadiusDisplay" style="font-size: 0.85rem; color: #6b7280;">25 miles</span>
-            </div>
-            <select id="jobsRadiusFilter" style="width: 100%; padding: 0.5rem; font-size: 0.9rem;">
-              <option value="5">5 miles (very local)</option>
-              <option value="10">10 miles (local)</option>
-              <option value="25" selected>25 miles (nearby) - Default</option>
-              <option value="50">50 miles (expanded)</option>
-              <option value="100">100 miles (all Tennessee)</option>
-            </select>
-            <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #6b7280; line-height: 1.4;">
-              Jobs are sorted by closest first. Adjust the radius to see more or fewer jobs.
-            </div>
-          </div>
-          <div class="field-inline" style="margin: 0.5rem 0; gap: 0.5rem; align-items: flex-end;">
-            <div class="field" style="flex: 1;">
-              <label for="jobsZipFilter" style="font-size: 0.85rem; margin-bottom: 0.25rem; display: block;">Or search by zip code (optional)</label>
-              <input id="jobsZipFilter" type="text" placeholder="37011" maxlength="5" pattern="[0-9]{5}" style="width: 100%; padding: 0.5rem;" />
-            </div>
-            <div class="field" style="flex: 0 0 auto;">
-              <button id="setMyLocationBtn" class="btn outline" style="padding: 0.5rem 1rem; white-space: nowrap; margin-top: 1.5rem;">
-                📍 Use My Location
+          
+          <!-- Hidden Advanced Filters (shown when "More" is clicked) -->
+          <div id="advancedFiltersContainer" style="display: none; margin-bottom: 1rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+              <button class="filter-btn" data-filter="hourly" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 20px; background: white; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: #374151; transition: all 0.2s;">
+                ⏱ Hourly
+              </button>
+              <button class="filter-btn" data-filter="flat" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 20px; background: white; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: #374151; transition: all 0.2s;">
+                💵 Flat Rate
               </button>
             </div>
+            <!-- Compact Location Controls -->
+            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 120px;">
+                <label for="jobsRadiusFilter" style="font-size: 0.8rem; color: #6b7280; margin-right: 0.5rem;">📍 Radius:</label>
+                <select id="jobsRadiusFilter" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; border: 1px solid #d1d5db; border-radius: 6px;">
+                  <option value="5">5 mi</option>
+                  <option value="10" selected>10 mi</option>
+                  <option value="25">25 mi</option>
+                  <option value="50">50 mi</option>
+                  <option value="100">100 mi</option>
+                </select>
+              </div>
+              <div style="flex: 1; min-width: 120px;">
+                <input id="jobsZipFilter" type="text" placeholder="ZIP code" maxlength="5" pattern="[0-9]{5}" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; border: 1px solid #d1d5db; border-radius: 6px;" />
+              </div>
+              <button id="setMyLocationBtn" class="btn outline" style="padding: 0.5rem 1rem; white-space: nowrap; font-size: 0.85rem;">
+                📍 My Location
+              </button>
+            </div>
+            <div id="locationStatus" style="font-size: 0.75rem; color: #64748b; margin-top: 0.5rem;"></div>
           </div>
-          <div id="locationStatus" style="font-size: 0.85rem; color: #64748b; margin-top: 0.25rem;"></div>
+          
+          <!-- Hidden date/time filters (removed from main view, kept for backward compatibility) -->
+          <div style="display: none;">
+            <select id="jobsDateFilter">
+              <option value="">All Dates</option>
+              <option value="today">Today</option>
+              <option value="tomorrow">Tomorrow</option>
+            </select>
+            <select id="jobsTimeFilter">
+              <option value="">All Times</option>
+              <option value="morning">Morning</option>
+              <option value="afternoon">Afternoon</option>
+              <option value="evening">Evening</option>
+              <option value="night">Night</option>
+            </select>
+          </div>
           <div class="jobs-list" id="jobsList"></div>
           <div id="loadMoreJobsContainer" style="text-align: center; margin-top: 1rem; display: none;">
             <button id="loadMoreJobsBtn" class="btn outline" style="padding: 0.75rem 2rem;">Load More Jobs</button>
@@ -2732,6 +2892,12 @@
     </div>
   </div>
 
+<!-- Mobile-First Optimizations - TaskRabbit/Rover-level mobile experience -->
+<link rel="stylesheet" href="/mobile-optimizations.css">
+<!-- Mobile-First Core - TaskRabbit/Rover-level mobile experience -->
+<script src="/mobile-core.js"></script>
+<!-- Modern App Core - Performance optimizations, caching, debouncing -->
+<script src="/app-core.js"></script>
 <script src="/api-integration.js?v=3"></script>
   <script>
 // ==== API Integration (replaces Supabase) ====
@@ -2753,6 +2919,7 @@
 
     let activeView = "home";
     let activeJobsStatusFilter = "all";
+    let activeJobFilter = 'newest'; // Default filter: newest jobs first
     let activeConversationJobId = null;
     let showArchivedConversations = false;
     let showDeletedConversations = false;
@@ -2762,6 +2929,43 @@
     let currentJobsPage = 1;
     let allLoadedJobs = [];
     let jobsPagination = { hasMore: false };
+    
+    // Modern state management - dismissed jobs (for hustlers)
+    const DISMISSED_JOBS_KEY = "hustl_dismissed_jobs_v1";
+    let dismissedJobIds = new Set();
+    
+    // Load dismissed jobs from localStorage
+    function loadDismissedJobs() {
+      try {
+        const stored = localStorage.getItem(DISMISSED_JOBS_KEY);
+        if (stored) {
+          dismissedJobIds = new Set(JSON.parse(stored));
+        }
+      } catch (e) {
+        console.error("Error loading dismissed jobs:", e);
+      }
+    }
+    
+    // Save dismissed jobs to localStorage
+    function saveDismissedJobs() {
+      try {
+        localStorage.setItem(DISMISSED_JOBS_KEY, JSON.stringify(Array.from(dismissedJobIds)));
+      } catch (e) {
+        console.error("Error saving dismissed jobs:", e);
+      }
+    }
+    
+    // Dismiss a job (for hustlers)
+    function dismissJob(jobId) {
+      dismissedJobIds.add(jobId);
+      saveDismissedJobs();
+      // Re-render jobs to hide the dismissed one
+      renderJobs(false);
+      showToast("✓ Job removed from your feed");
+    }
+    
+    // Load dismissed jobs on page load
+    loadDismissedJobs();
 
     /* ---------- Utilities ---------- */
 
@@ -2831,46 +3035,151 @@
     }
 
     let toastTimeout = null;
-    // Show verification code modal popup
-    function showVerificationCodeModal(code, jobId, jobTitle = "Job") {
-      // Remove any existing verification code modal
-      const existing = document.getElementById("verificationCodeModal");
+    // 🚀 MOBILE: Show "YOU'RE HIRED!" banner when hustler gets accepted
+    function showHiredBanner(jobId, jobTitle = "Job") {
+      // Remove any existing hired banner
+      const existing = document.getElementById("hiredBannerOverlay");
       if (existing) existing.remove();
       
+      const isMobile = window.innerWidth <= 768;
+      
       const overlay = document.createElement("div");
-      overlay.id = "verificationCodeModal";
+      overlay.id = "hiredBannerOverlay";
       overlay.style.position = "fixed";
       overlay.style.top = "0";
       overlay.style.left = "0";
       overlay.style.width = "100%";
       overlay.style.height = "100%";
-      overlay.style.background = "rgba(0, 0, 0, 0.7)";
-      overlay.style.zIndex = "10000";
+      overlay.style.background = isMobile ? "white" : "rgba(0, 0, 0, 0.7)";
+      overlay.style.zIndex = "10001";
       overlay.style.display = "flex";
-      overlay.style.alignItems = "center";
+      overlay.style.alignItems = isMobile ? "flex-start" : "center";
       overlay.style.justifyContent = "center";
-      overlay.style.padding = "1rem";
+      overlay.style.padding = isMobile ? "1rem" : "2rem";
+      overlay.style.overflowY = "auto";
+      overlay.style.webkitOverflowScrolling = "touch";
       
       const modal = document.createElement("div");
-      modal.style.background = "#fff";
-      modal.style.borderRadius = "12px";
-      modal.style.padding = "2rem";
-      modal.style.maxWidth = "400px";
-      modal.style.width = "100%";
-      modal.style.boxShadow = "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)";
+      modal.className = isMobile ? "hired-banner-mobile" : "hired-banner";
+      modal.style.cssText = isMobile 
+        ? "width: 100%; max-width: 100%; padding: 1.5rem; background: white;"
+        : "max-width: 500px; width: 100%;";
       
       modal.innerHTML = `
-        <div style="text-align: center; margin-bottom: 1.5rem;">
-          <div style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; color: #059669;">🔐 Verification Code</div>
-          <div style="font-size: 0.9rem; color: #6b7280;">Share this code with the customer to confirm job completion</div>
+        <div class="hired-banner" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: ${isMobile ? '2rem 1rem' : '3rem 2rem'}; text-align: center; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+          <div class="hired-banner-title" style="font-size: ${isMobile ? '2rem' : '2.5rem'}; font-weight: 700; margin-bottom: 0.5rem;">
+            🎉 YOU'RE HIRED! 🎉
+          </div>
+          <div class="hired-banner-subtitle" style="font-size: ${isMobile ? '1rem' : '1.2rem'}; opacity: 0.95; margin-bottom: 1.5rem;">
+            Congratulations! You were picked as the Hustler for this job.
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+            <div style="font-weight: 600; font-size: 1rem; margin-bottom: 0.5rem;">Job: ${jobTitle}</div>
+            <div style="font-size: 0.9rem; opacity: 0.9;">Check your email for details. You can now message the customer!</div>
+          </div>
+          <button id="viewHiredJobBtn" class="mobile-job-details-action-btn" style="width: 100%; padding: 1rem; background: white; color: #059669; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 700; cursor: pointer; min-height: 56px; -webkit-tap-highlight-color: transparent;">
+            View Job Details →
+          </button>
+        </div>
+      `;
+      
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+      document.body.style.overflow = "hidden";
+      
+      // View job button
+      const viewBtn = modal.querySelector("#viewHiredJobBtn");
+      viewBtn.addEventListener("click", () => {
+        overlay.remove();
+        document.body.style.overflow = "";
+        setView("jobs");
+        setTimeout(() => {
+          openJobDetails(jobId);
+        }, 300);
+      });
+      
+      // Close on overlay click (desktop only)
+      if (!isMobile) {
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) {
+            overlay.remove();
+            document.body.style.overflow = "";
+          }
+        });
+      }
+      
+      // Close on Escape
+      const escapeHandler = (e) => {
+        if (e.key === "Escape") {
+          overlay.remove();
+          document.body.style.overflow = "";
+          document.removeEventListener("keydown", escapeHandler);
+        }
+      };
+      document.addEventListener("keydown", escapeHandler);
+      
+      // Prevent closing on modal click
+      modal.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+    }
+
+    // Show verification code modal popup (mobile-optimized)
+    function showVerificationCodeModal(code, jobId, jobTitle = "Job") {
+      // Remove any existing verification code modal
+      const existing = document.getElementById("verificationCodeModal");
+      if (existing) existing.remove();
+      
+      const isMobile = window.innerWidth <= 768;
+      
+      const overlay = document.createElement("div");
+      overlay.id = "verificationCodeModal";
+      overlay.className = isMobile ? "mobile-job-details-overlay" : "modal-overlay";
+      overlay.style.position = "fixed";
+      overlay.style.top = "0";
+      overlay.style.left = "0";
+      overlay.style.width = "100%";
+      overlay.style.height = "100%";
+      overlay.style.background = isMobile ? "white" : "rgba(0, 0, 0, 0.7)";
+      overlay.style.zIndex = "10000";
+      overlay.style.display = "flex";
+      overlay.style.alignItems = isMobile ? "flex-start" : "center";
+      overlay.style.justifyContent = "center";
+      overlay.style.padding = isMobile ? "1rem" : "2rem";
+      overlay.style.overflowY = "auto";
+      overlay.style.webkitOverflowScrolling = "touch";
+      
+      const modal = document.createElement("div");
+      modal.className = isMobile ? "hired-code-box" : "";
+      modal.style.cssText = isMobile
+        ? "width: 100%; max-width: 100%; background: white; padding: 1.5rem;"
+        : "background: #fff; border-radius: 12px; padding: 2rem; max-width: 400px; width: 100%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);";
+      
+      // 🚀 MOBILE: Back button on mobile
+      if (isMobile) {
+        const backBtn = document.createElement("button");
+        backBtn.innerHTML = "← Back";
+        backBtn.style.cssText = "width: 100%; padding: 1rem; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; color: #374151; margin-bottom: 1rem; min-height: 48px; -webkit-tap-highlight-color: transparent;";
+        backBtn.addEventListener("click", () => {
+          overlay.remove();
+          document.body.style.overflow = "";
+        });
+        modal.appendChild(backBtn);
+      }
+      
+      const codeSection = document.createElement("div");
+      codeSection.innerHTML = `
+        <div style="text-align: center; margin-bottom: ${isMobile ? '1rem' : '1.5rem'};">
+          <div style="font-size: ${isMobile ? '1.3rem' : '1.5rem'}; font-weight: 700; margin-bottom: 0.5rem; color: #059669;">🔐 Verification Code</div>
+          <div style="font-size: ${isMobile ? '0.85rem' : '0.9rem'}; color: #6b7280;">Share this code with the customer to confirm job completion</div>
         </div>
         
-        <div style="background: #f0fdf4; border: 3px solid #059669; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; text-align: center;">
-          <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: #047857; text-transform: uppercase; letter-spacing: 0.1em;">Your Code</div>
-          <div style="font-size: 2.5rem; font-weight: 700; letter-spacing: 0.3em; color: #059669; font-family: 'Courier New', monospace; margin: 0.5rem 0;">
+        <div class="hired-code-box" style="background: #f0fdf4; border: ${isMobile ? '2px' : '3px'} solid #059669; border-radius: ${isMobile ? '12px' : '8px'}; padding: ${isMobile ? '1.5rem 1rem' : '1.5rem'}; margin-bottom: ${isMobile ? '1rem' : '1.5rem'}; text-align: center;">
+          <div style="font-size: ${isMobile ? '0.75rem' : '0.85rem'}; font-weight: 600; margin-bottom: 0.5rem; color: #047857; text-transform: uppercase; letter-spacing: 0.1em;">Your Code</div>
+          <div class="hired-code" style="font-size: ${isMobile ? '2rem' : '2.5rem'}; font-weight: 700; letter-spacing: ${isMobile ? '0.2em' : '0.3em'}; color: #059669; font-family: 'Courier New', monospace; margin: 0.5rem 0;">
             ${code}
           </div>
-          <div style="font-size: 0.8rem; color: #047857; margin-top: 0.5rem;">
+          <div style="font-size: ${isMobile ? '0.75rem' : '0.8rem'}; color: #047857; margin-top: 0.5rem;">
             Job: ${jobTitle}
           </div>
         </div>
@@ -2879,21 +3188,24 @@
           <strong>⚠️ Important:</strong> The customer has 48 hours to enter this code. If they don't enter it and don't report an issue, payment will be automatically released to you.
         </div>
         
-        <div style="display: flex; gap: 0.5rem;">
-          <button id="copyCodeBtn" class="btn btn-primary" style="flex: 1;">
+        <div style="display: flex; gap: 0.5rem; flex-direction: ${isMobile ? 'column' : 'row'};">
+          <button id="copyCodeBtn" class="mobile-job-details-action-btn" style="flex: 1; padding: ${isMobile ? '1rem' : '0.75rem'}; background: #059669; color: white; border: none; border-radius: 8px; font-size: ${isMobile ? '1rem' : '0.9rem'}; font-weight: 600; cursor: pointer; min-height: ${isMobile ? '56px' : '44px'}; -webkit-tap-highlight-color: transparent;">
             📋 Copy Code
           </button>
-          <button id="closeCodeModalBtn" class="btn" style="flex: 1; background: #f3f4f6; color: #374151;">
+          ${!isMobile ? `<button id="closeCodeModalBtn" class="btn" style="flex: 1; background: #f3f4f6; color: #374151; min-height: 44px;">
             Close
-          </button>
+          </button>` : ''}
         </div>
         
-        <div style="margin-top: 1rem; text-align: center;">
-          <button id="viewInActiveJobsBtn" class="btn" style="background: transparent; color: #059669; text-decoration: underline; font-size: 0.9rem;">
+        <div style="margin-top: ${isMobile ? '1rem' : '1rem'}; text-align: center;">
+          <button id="viewInActiveJobsBtn" class="btn" style="background: transparent; color: #059669; text-decoration: underline; font-size: ${isMobile ? '0.95rem' : '0.9rem'}; padding: 0.5rem; min-height: ${isMobile ? '48px' : 'auto'};">
             View in Active Jobs →
           </button>
         </div>
       `;
+      
+      codeSection.style.padding = isMobile ? "0" : "";
+      modal.appendChild(codeSection);
       
       overlay.appendChild(modal);
       document.body.appendChild(overlay);
@@ -3133,6 +3445,19 @@ if (job.acceptedHustlerId) {
 
     function setView(view) {
       activeView = view;
+      
+      // Save route to URL hash (for page reload persistence)
+      if (window.appCore && window.appCore.routeManager) {
+        window.appCore.routeManager.saveRoute(view);
+      } else {
+        // Fallback: use URL hash directly
+        if (view && view !== 'home') {
+          window.location.hash = view;
+        } else {
+          window.location.hash = '';
+        }
+      }
+      
       document
         .querySelectorAll("[id^='view-']")
         .forEach((sec) => (sec.style.display = "none"));
@@ -3156,6 +3481,41 @@ if (job.acceptedHustlerId) {
       }
 
       renderAll();
+      
+      // 🚀 MOBILE: Update bottom nav active tab
+      if (window.mobileCore && window.mobileCore.bottomNav) {
+        window.mobileCore.bottomNav.updateActiveTab(view);
+      }
+      
+      // Start/stop real-time polling based on view (optimized)
+      if (window.appCore && window.appCore.pollingManager) {
+        const polling = window.appCore.pollingManager;
+        
+        // Stop all polling first
+        polling.stopAll();
+        
+        // Small delay before starting polling to avoid immediate calls
+        setTimeout(() => {
+          // Start polling based on current view (only when view is visible)
+          if (view === "jobs" && document.getElementById('view-jobs')?.style.display !== 'none') {
+            // Poll for jobs every 30 seconds
+            polling.startJobsPolling(() => {
+              if (document.getElementById('view-jobs')?.style.display !== 'none') {
+                renderJobs(false); // Don't reset pagination
+              }
+            }, 30000);
+          } else if (view === "messages" && document.getElementById('view-messages')?.style.display !== 'none') {
+            // Poll for messages every 15 seconds
+            polling.startMessagesPolling(() => {
+              if (document.getElementById('view-messages')?.style.display !== 'none') {
+                if (typeof renderMessagesView === 'function') {
+                  renderMessagesView();
+                }
+              }
+            }, 15000);
+          }
+        }, 1000); // Wait 1 second before starting polling
+      }
       
       // Check for accepted offers when switching to jobs view
       if (view === "jobs" && typeof checkForAcceptedOffers === 'function') {
@@ -3789,6 +4149,9 @@ try {
 
     
 async function renderJobs(reset = false) {
+  // Use optimized loading state
+  loadingManager?.setLoading('jobs', true);
+  try {
   const jobsList = document.getElementById("jobsList");
   const jobsCardTitle = document.getElementById("jobsCardTitle");
   const jobsFilterSummary = document.getElementById("jobsFilterSummary");
@@ -3849,10 +4212,25 @@ async function renderJobs(reset = false) {
         statusFilter = statusUpper;
       }
     }
+    // Determine sortBy from active filter
+    // Ensure activeJobFilter is defined (default to 'newest' if not set)
+    if (typeof activeJobFilter === 'undefined') {
+      activeJobFilter = 'newest';
+    }
+    
+    let sortByValue = 'newest'; // Default: newest first (like major apps)
+    if (activeJobFilter === 'near-me') {
+      sortByValue = 'distance'; // Sort by distance
+    } else if (activeJobFilter === 'highest-pay') {
+      sortByValue = 'pay'; // Sort by highest pay
+    } else if (activeJobFilter === 'newest') {
+      sortByValue = 'newest'; // Sort by newest
+    }
+    
     const listParams = {
       page: currentJobsPage,
       limit: 20,
-      sortBy: 'distance', // Sort by closest first
+      sortBy: sortByValue, // Use filter-based sort
     };
     if (statusFilter) {
       listParams.status = statusFilter;
@@ -3883,10 +4261,10 @@ async function renderJobs(reset = false) {
       }
     }
     
-    // Location-based filtering: Auto-filter by user location with default radius (25 miles)
+    // Location-based filtering: Auto-filter by user location with default radius (10 miles)
     // Production-ready with validation and fallbacks
-    const radiusFilter = document.getElementById("jobsRadiusFilter")?.value || '25'; // Default 25 miles
-    const radiusNum = parseInt(radiusFilter, 10) || 25;
+    const radiusFilter = document.getElementById("jobsRadiusFilter")?.value || '10'; // Default 10 miles
+    const radiusNum = parseInt(radiusFilter, 10) || 10;
     const userLocation = JSON.parse(localStorage.getItem('userLocation') || 'null');
     const zipFilterInput = document.getElementById("jobsZipFilter")?.value.trim();
     const savedZipFilter = localStorage.getItem('savedZipFilter');
@@ -3945,20 +4323,34 @@ async function renderJobs(reset = false) {
       listParams.search = searchInput.value.trim();
     }
     
-    // Fetch jobs from API
-    const token = localStorage.getItem("hustl_token");
-    const queryString = new URLSearchParams(listParams).toString();
-    const jobsUrl = `/jobs${queryString ? `?${queryString}` : ''}`;
-    
-    const jobsResponse = await fetch(jobsUrl, {
-      headers: token ? { "Authorization": `Bearer ${token}` } : {}
-    });
-    
-    if (!jobsResponse.ok) {
-      throw new Error(`Failed to load jobs: ${jobsResponse.statusText}`);
+    // Fetch jobs from API (optimized with caching)
+    perfMonitor.start('fetchJobs');
+    let jobsData;
+    try {
+      const queryString = new URLSearchParams(listParams).toString();
+      const jobsUrl = `/jobs${queryString ? `?${queryString}` : ''}`;
+      
+      // Use optimized API client if available, otherwise fallback to fetch
+      if (window.optimizedApi) {
+        jobsData = await window.optimizedApi.get(jobsUrl, { useCache: true });
+      } else {
+        const token = localStorage.getItem("hustl_token");
+        const jobsResponse = await fetch(jobsUrl, {
+          headers: token ? { "Authorization": `Bearer ${token}` } : {}
+        });
+        
+        if (!jobsResponse.ok) {
+          throw new Error(`Failed to load jobs: ${jobsResponse.statusText}`);
+        }
+        
+        jobsData = await jobsResponse.json();
+      }
+      perfMonitor.end('fetchJobs');
+    } catch (error) {
+      perfMonitor.end('fetchJobs');
+      const message = errorHandler.handle(error, 'Loading jobs');
+      throw new Error(message);
     }
-    
-    const jobsData = await jobsResponse.json();
     // Handle paginated response format: { jobs: [], pagination: {} }
     let newJobs = Array.isArray(jobsData) ? jobsData : (jobsData.jobs || []);
     
@@ -3980,6 +4372,39 @@ async function renderJobs(reset = false) {
     
     // Use allLoadedJobs for filtering
     jobs = allLoadedJobs;
+    
+    // Apply filter-based filtering (hourly/flat, etc.)
+    // Ensure activeJobFilter is defined (safety check)
+    if (typeof activeJobFilter === 'undefined') {
+      activeJobFilter = 'newest';
+    }
+    
+    if (activeJobFilter === 'hourly') {
+      jobs = jobs.filter(j => j.payType === 'hourly');
+    } else if (activeJobFilter === 'flat') {
+      jobs = jobs.filter(j => j.payType === 'flat');
+    }
+    // 'newest', 'near-me', 'highest-pay' are handled by sortBy in API
+    
+  // Filter out dismissed jobs (for hustlers)
+  if (userMode === "hustler") {
+    jobs = jobs.filter(j => !dismissedJobIds.has(j.id));
+  }
+  
+  // 🚀 MOBILE OPTIMIZATION: Limit to 10 jobs per page on mobile, group by distance
+  const isMobile = window.innerWidth <= 768;
+  if (isMobile && window.mobileCore) {
+    // Group by distance on mobile
+    const grouped = window.mobileCore.jobFeed.groupByDistance(jobs);
+    
+    // Limit jobs per page (10 on mobile)
+    const limitedJobs = window.mobileCore.jobFeed.limitJobs(jobs, currentJobsPage);
+    jobs = limitedJobs;
+    
+    // Store grouped jobs for display
+    jobs.groupedByDistance = grouped;
+    jobs.hasMore = window.mobileCore.jobFeed.hasMore(allLoadedJobs);
+  }
     
     // Filter out COMPLETED jobs that are older than 48 hours OR allow immediate deletion
     // COMPLETED jobs should disappear from the main view
@@ -4031,11 +4456,13 @@ async function renderJobs(reset = false) {
       }
     }
   } catch (error) {
+    perfMonitor.end('fetchJobs');
+    const message = errorHandler?.handle(error, 'Loading jobs') || error.message || 'Unknown error';
     console.error("Error loading jobs", error);
-    console.error("Error details:", error.message, error.stack);
-    jobsList.innerHTML = `<div class='muted'>Error loading jobs: ${error.message || 'Unknown error'}. Check console for details.</div>`;
+    jobsList.innerHTML = `<div class='muted'>❌ ${message}</div>`;
     jobsCardTitle.textContent = "Jobs";
     jobsFilterSummary.textContent = "Error loading jobs";
+    showToast(message);
     return;
   }
   
@@ -4353,7 +4780,18 @@ async function renderJobs(reset = false) {
   }
 
   // 8) Render each job card
+  // 🚀 MOBILE: Use simplified mobile cards on mobile screens
+  const isMobile = window.innerWidth <= 768;
+  
   jobs.forEach((job) => {
+    // Use mobile-optimized card on mobile
+    if (isMobile && window.mobileCore && typeof createMobileJobCard === 'function') {
+      const mobileCard = createMobileJobCard(job, user, userMode);
+      jobsList.appendChild(mobileCard);
+      return; // Skip desktop card creation on mobile
+    }
+    
+    // Desktop card (existing code)
     const card = document.createElement("div");
     card.className = "job-card";
     card.dataset.jobId = job.id;
@@ -4637,6 +5075,25 @@ async function renderJobs(reset = false) {
     actions.appendChild(left);
 
     const right = document.createElement("div");
+    right.style.display = "flex";
+    right.style.gap = "0.5rem";
+    right.style.alignItems = "center";
+    
+    // "Seen" dismiss button (for hustlers viewing open jobs they don't want)
+    if (user && userMode === "hustler" && (job.status || "").toUpperCase() === "OPEN" && job.customerId !== user.id) {
+      const seenBtn = document.createElement("button");
+      seenBtn.className = "small-btn outline";
+      seenBtn.textContent = "✓ Seen";
+      seenBtn.title = "Remove this job from your feed";
+      seenBtn.style.padding = "0.5rem 0.9rem";
+      seenBtn.style.fontSize = "0.8rem";
+      seenBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        dismissJob(job.id);
+      });
+      right.appendChild(seenBtn);
+    }
+    
     const viewBtn = document.createElement("button");
     viewBtn.className = "small-btn outline";
     viewBtn.textContent = "View";
@@ -4652,8 +5109,122 @@ async function renderJobs(reset = false) {
     // clicking the whole card opens details too
     card.addEventListener("click", () => openJobDetails(job.id));
 
-    jobsList.appendChild(card);
+    // Only append desktop card if not mobile (mobile cards already appended above)
+    if (!isMobile) {
+      jobsList.appendChild(card);
+    }
   });
+  
+  // Add "Load More" button for mobile (if more jobs available)
+  if (window.innerWidth <= 768 && window.mobileCore && jobsPagination.hasMore) {
+    const loadMoreBtn = document.createElement('button');
+    loadMoreBtn.className = 'job-feed-load-more mobile-only';
+    loadMoreBtn.textContent = 'Load More Jobs';
+    loadMoreBtn.addEventListener('click', () => {
+      currentJobsPage++;
+      renderJobs(false); // Don't reset
+    });
+    if (loadMoreContainer) {
+      loadMoreContainer.innerHTML = '';
+      loadMoreContainer.appendChild(loadMoreBtn);
+      loadMoreContainer.style.display = 'block';
+    }
+  }
+  
+  // Wire up filter buttons if they exist
+  const filtersBar = document.getElementById("jobFiltersBar");
+  if (filtersBar) {
+    filtersBar.querySelectorAll('.filter-btn').forEach(btn => {
+      // Skip the "More" button - it has its own handler
+      if (btn.id === 'showMoreFiltersBtn') return;
+      
+      btn.addEventListener('click', () => {
+        // Remove active class from all buttons (except More button)
+        filtersBar.querySelectorAll('.filter-btn').forEach(b => {
+          if (b.id === 'showMoreFiltersBtn') return;
+          b.classList.remove('active');
+          b.style.borderColor = '#d1d5db';
+          b.style.background = 'white';
+          b.style.color = '#374151';
+        });
+        
+        // Also update advanced filters container buttons
+        const advancedContainer = document.getElementById('advancedFiltersContainer');
+        if (advancedContainer) {
+          advancedContainer.querySelectorAll('.filter-btn').forEach(b => {
+            b.classList.remove('active');
+            b.style.borderColor = '#d1d5db';
+            b.style.background = 'white';
+            b.style.color = '#374151';
+          });
+        }
+        
+        // Add active class to clicked button
+        btn.classList.add('active');
+        btn.style.borderColor = '#3b82f6';
+        btn.style.background = '#3b82f6';
+        btn.style.color = 'white';
+        
+        // Update active filter
+        activeJobFilter = btn.dataset.filter || 'newest';
+        
+        // Re-render jobs with new filter
+        renderJobs(true); // Reset pagination
+      });
+    });
+    
+    // Set initial active state
+    const activeFilterBtn = filtersBar.querySelector(`[data-filter="${activeJobFilter}"]`);
+    if (activeFilterBtn) {
+      activeFilterBtn.classList.add('active');
+      activeFilterBtn.style.borderColor = '#3b82f6';
+      activeFilterBtn.style.background = '#3b82f6';
+      activeFilterBtn.style.color = 'white';
+    }
+  }
+  
+  // Wire up "More Filters" toggle button
+  const showMoreFiltersBtn = document.getElementById('showMoreFiltersBtn');
+  const advancedFiltersContainer = document.getElementById('advancedFiltersContainer');
+  if (showMoreFiltersBtn && advancedFiltersContainer) {
+    showMoreFiltersBtn.addEventListener('click', () => {
+      const isHidden = advancedFiltersContainer.style.display === 'none' || !advancedFiltersContainer.style.display;
+      advancedFiltersContainer.style.display = isHidden ? 'block' : 'none';
+      showMoreFiltersBtn.textContent = isHidden ? '⋯ Less' : '⋯ More';
+    });
+  }
+  
+  // Wire up advanced filter buttons (hourly/flat) if they exist
+  if (advancedFiltersContainer) {
+    advancedFiltersContainer.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        // Remove active from all filter buttons (main + advanced)
+        const allFilterBtns = [
+          ...(filtersBar?.querySelectorAll('.filter-btn') || []),
+          ...advancedFiltersContainer.querySelectorAll('.filter-btn')
+        ];
+        allFilterBtns.forEach(b => {
+          if (b.id === 'showMoreFiltersBtn') return;
+          b.classList.remove('active');
+          b.style.borderColor = '#d1d5db';
+          b.style.background = 'white';
+          b.style.color = '#374151';
+        });
+        
+        // Add active to clicked button
+        btn.classList.add('active');
+        btn.style.borderColor = '#3b82f6';
+        btn.style.background = '#3b82f6';
+        btn.style.color = 'white';
+        
+        // Update active filter
+        activeJobFilter = btn.dataset.filter || 'newest';
+        
+        // Re-render jobs
+        renderJobs(true);
+      });
+    });
+  }
   
   // 9) Show/hide Load More button
   if (loadMoreContainer) {
@@ -4662,6 +5233,10 @@ async function renderJobs(reset = false) {
     } else {
       loadMoreContainer.style.display = "none";
     }
+  }
+  } finally {
+    // Always clear loading state
+    loadingManager?.setLoading('jobs', false);
   }
 }
 
@@ -4715,10 +5290,17 @@ async function renderJobs(reset = false) {
         return;
       }
       
-      // Create modal overlay
+      // 🚀 MOBILE: Use full-screen one-scroll page on mobile, modal on desktop
+      const isMobile = window.innerWidth <= 768;
+      
+      // Create overlay/page container
       const overlay = document.createElement("div");
       overlay.id = "jobModalOverlay";
-      overlay.className = "modal-overlay";
+      overlay.className = isMobile ? "mobile-job-details-overlay" : "modal-overlay";
+      if (isMobile) {
+        // Full-screen on mobile
+        overlay.style.cssText = "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 2000; overflow-y: auto; -webkit-overflow-scrolling: touch;";
+      }
       
       // Store cleanup function
       let escapeHandler = null;
@@ -4733,13 +5315,20 @@ async function renderJobs(reset = false) {
         if (escapeHandler) {
           document.removeEventListener("keydown", escapeHandler);
         }
+        // 🚀 MOBILE: Update bottom nav if returning to jobs view
+        if (isMobile && window.mobileCore && window.mobileCore.bottomNav) {
+          window.mobileCore.bottomNav.updateActiveTab('jobs');
+        }
       };
       
-      overlay.addEventListener("click", (e) => {
-        if (e.target === overlay) {
-          cleanup();
-        }
-      });
+      // Only close on overlay click for desktop (not mobile - mobile uses back button)
+      if (!isMobile) {
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) {
+            cleanup();
+          }
+        });
+      }
       
       // Close on Escape key
       escapeHandler = (e) => {
@@ -4749,59 +5338,31 @@ async function renderJobs(reset = false) {
       };
       document.addEventListener("keydown", escapeHandler);
 
-      // Create modal content
+      // Create modal/content container
       const modal = document.createElement("div");
-      modal.className = "modal-content";
-      modal.style.padding = "1.5rem";
-
-      // Close button
-      const closeBtn = document.createElement("button");
-      closeBtn.className = "modal-close";
-      closeBtn.innerHTML = "×";
-      closeBtn.addEventListener("click", () => {
-        if (overlay && overlay.parentNode) {
-          overlay.remove();
-        }
-        if (document.body) {
-          document.body.style.overflow = "";
-          document.body.style.pointerEvents = "";
-        }
-        if (escapeHandler) {
-          document.removeEventListener("keydown", escapeHandler);
-        }
-      });
-      modal.appendChild(closeBtn);
-
-      // Back arrow button for mobile (below header)
-      const backBtn = document.createElement("button");
-      backBtn.innerHTML = "← Back";
-      backBtn.style.display = "none";
-      backBtn.style.marginBottom = "1rem";
-      backBtn.style.padding = "0.5rem 1rem";
-      backBtn.style.background = "#f3f4f6";
-      backBtn.style.border = "1px solid #e5e7eb";
-      backBtn.style.borderRadius = "6px";
-      backBtn.style.cursor = "pointer";
-      backBtn.style.fontSize = "0.9rem";
-      backBtn.style.color = "#374151";
-      backBtn.style.width = "100%";
-      backBtn.addEventListener("click", () => {
-        if (overlay && overlay.parentNode) {
-          overlay.remove();
-        }
-        if (document.body) {
-          document.body.style.overflow = "";
-          document.body.style.pointerEvents = "";
-        }
-        if (escapeHandler) {
-          document.removeEventListener("keydown", escapeHandler);
-        }
-      });
-      // Show back button on mobile
-      if (window.innerWidth <= 768) {
-        backBtn.style.display = "block";
+      modal.className = isMobile ? "mobile-job-details" : "modal-content";
+      if (isMobile) {
+        // Full-width on mobile, padding for scroll
+        modal.style.cssText = "padding: 1rem; max-width: 100%; padding-bottom: 180px;";
+      } else {
+        modal.style.padding = "1.5rem";
       }
-      modal.appendChild(backBtn);
+
+      // 🚀 MOBILE: Back button at top (full-width, thumb-friendly)
+      if (isMobile) {
+        const backBtn = document.createElement("button");
+        backBtn.innerHTML = "← Back to Jobs";
+        backBtn.style.cssText = "width: 100%; padding: 1rem; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; color: #374151; margin-bottom: 1rem; min-height: 48px; -webkit-tap-highlight-color: transparent;";
+        backBtn.addEventListener("click", cleanup);
+        modal.appendChild(backBtn);
+      } else {
+        // Desktop: Close button (X)
+        const closeBtn = document.createElement("button");
+        closeBtn.className = "modal-close";
+        closeBtn.innerHTML = "×";
+        closeBtn.addEventListener("click", cleanup);
+        modal.appendChild(closeBtn);
+      }
 
       // Build modal content
       const content = document.createElement("div");
@@ -7970,29 +8531,110 @@ async function renderJobs(reset = false) {
         convMessages.appendChild(empty);
       } else {
         messages.forEach((m) => {
-          const bubble = document.createElement("div");
           const isMe = m.senderId === user.id || (m.sender && m.sender.id === user.id);
-          bubble.className = "chat-msg " + (isMe ? "me" : "them");
-          bubble.textContent = m.body || m.text || "";
-          convMessages.appendChild(bubble);
           
-          const meta = document.createElement("div");
-          meta.className = "chat-meta";
+          // Create message row (like iMessage/WhatsApp)
+          const messageRow = document.createElement("div");
+          messageRow.style.cssText = `
+            display: flex;
+            align-items: flex-end;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            flex-direction: ${isMe ? 'row-reverse' : 'row'};
+            max-width: 85%;
+            ${isMe ? 'margin-left: auto;' : 'margin-right: auto;'}
+          `;
           
-          // Get sender name from message sender or job data
-          let senderName = "Unknown";
-          if (m.sender) {
-            senderName = m.sender.name || m.sender.username || "User";
-          } else if (isMe) {
-            senderName = user.name || user.username || "You";
-          } else {
-            senderName = job.customerId === user.id 
-              ? (job.hustler?.name || job.hustler?.username || "Hustler")
-              : (job.customer?.name || job.customer?.username || "Customer");
+          // Get sender user for photo
+          let senderUser = null;
+          if (isMe) {
+            senderUser = user;
+          } else if (job.customerId === m.senderId) {
+            senderUser = job.customer;
+          } else if (job.hustlerId === m.senderId) {
+            senderUser = job.hustler;
           }
           
-          meta.textContent = `${senderName} · ${timeAgo(m.createdAt ? new Date(m.createdAt).getTime() : Date.now())}`;
-          convMessages.appendChild(meta);
+          if (!senderUser && m.senderId) {
+            senderUser = m.sender || null;
+          }
+          
+          // Profile photo (show for received messages, or both on desktop)
+          if (!isMe || window.innerWidth > 768) {
+            const messagePhoto = document.createElement("div");
+            messagePhoto.style.cssText = `
+              width: 32px;
+              height: 32px;
+              border-radius: 50%;
+              background: var(--primary-soft);
+              border: 2px solid var(--border);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: var(--primary);
+              font-weight: 600;
+              font-size: 0.75rem;
+              flex-shrink: 0;
+              overflow: hidden;
+            `;
+            
+            if (senderUser && typeof getProfilePhoto === 'function') {
+              const photo = getProfilePhoto(senderUser, 'small');
+              if (photo) {
+                messagePhoto.appendChild(photo.cloneNode(true));
+              } else {
+                const name = senderUser.name || senderUser.username || 'U';
+                messagePhoto.textContent = name.charAt(0).toUpperCase();
+              }
+            } else {
+              const senderName = (m.sender?.name || m.sender?.username || 'User');
+              messagePhoto.textContent = senderName.charAt(0).toUpperCase();
+            }
+            
+            messageRow.appendChild(messagePhoto);
+          }
+          
+          // Message bubble wrapper (bubble + timestamp)
+          const bubbleWrapper = document.createElement("div");
+          bubbleWrapper.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            align-items: ${isMe ? 'flex-end' : 'flex-start'};
+            flex: 1;
+            min-width: 0;
+          `;
+          
+          // Message bubble (like normal text message)
+          const messageBubble = document.createElement("div");
+          messageBubble.style.cssText = `
+            padding: 0.625rem 0.875rem;
+            border-radius: ${isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px'};
+            max-width: 100%;
+            word-wrap: break-word;
+            word-break: break-word;
+            line-height: 1.4;
+            font-size: 0.95rem;
+            ${isMe 
+              ? 'background: var(--primary); color: white;' 
+              : 'background: #e5e7eb; color: var(--text-main);'
+            }
+          `;
+          messageBubble.textContent = m.body || m.text || "";
+          bubbleWrapper.appendChild(messageBubble);
+          
+          // Timestamp (small, below message)
+          const timestamp = document.createElement("div");
+          timestamp.style.cssText = `
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+            padding: 0 0.5rem;
+          `;
+          timestamp.textContent = timeAgo(m.createdAt ? new Date(m.createdAt).getTime() : Date.now());
+          bubbleWrapper.appendChild(timestamp);
+          
+          messageRow.appendChild(bubbleWrapper);
+          convMessages.appendChild(messageRow);
         });
       }
       
@@ -9728,33 +10370,205 @@ meta.textContent =
       }
     }
 
-    /* ---------- Main render ---------- */
-
-    async function renderAll() {
-      renderAuthPill();
-      renderAuthSectionVisibility();
-      renderOwnerView();
-
-      if (activeView === "jobs") {
-        renderJobs();
-      } else if (activeView === "messages") {
-        renderMessagesView();
-      } else if (activeView === "profile") {
-        renderProfile();
-      } else if (activeView === "owner") {
-        renderOwnerView();
+    /* ---------- MOBILE JOB CARD CREATOR (Simplified for Mobile) ---------- */
+    function createMobileJobCard(job, user, userMode) {
+      const card = document.createElement("div");
+      card.className = "mobile-job-card";
+      
+      // Header: Title + Pay
+      const header = document.createElement("div");
+      header.className = "mobile-job-card-header";
+      
+      const title = document.createElement("div");
+      title.className = "mobile-job-card-title";
+      title.textContent = job.title || "Untitled Job";
+      
+      const pay = document.createElement("div");
+      pay.className = "mobile-job-card-pay";
+      if (job.payType === "flat") {
+        pay.textContent = `$${(Number(job.amount) || 0).toFixed(2)}`;
+      } else {
+        const hr = Number(job.hourlyRate) || 0;
+        const maxH = job.estHours || 0;
+        const maxTotal = hr * maxH;
+        pay.textContent = `$${hr.toFixed(2)}/hr (up to $${maxTotal.toFixed(2)})`;
       }
       
-      // Always update unread message count (works even when not on messages view)
-      countUnreadMessages();
+      header.appendChild(title);
+      header.appendChild(pay);
+      card.appendChild(header);
       
-      // Check for new accepted jobs and show notification (for hustlers)
-      if (userMode === "hustler") {
-        checkNewAcceptedJobs();
+      // Meta: Distance + Time posted
+      const meta = document.createElement("div");
+      meta.className = "mobile-job-card-meta";
+      
+      const distance = document.createElement("div");
+      distance.className = "mobile-job-card-distance";
+      const distanceText = job.distanceFormatted || (job.distance !== null && job.distance !== undefined ? `${job.distance.toFixed(1)} mi` : '');
+      distance.innerHTML = `📍 ${distanceText || 'Distance unknown'}`;
+      
+      const time = document.createElement("div");
+      time.className = "mobile-job-card-time";
+      const createdMs = job.createdAt ? new Date(job.createdAt).getTime() : Date.now();
+      time.innerHTML = `⏰ ${timeAgo(createdMs)}`;
+      
+      meta.appendChild(distance);
+      meta.appendChild(time);
+      card.appendChild(meta);
+      
+      // Short description preview (truncated)
+      const description = job.description || '';
+      if (description) {
+        const descPreview = document.createElement("div");
+        descPreview.style.fontSize = "0.9rem";
+        descPreview.style.color = "var(--text-muted)";
+        descPreview.style.marginTop = "0.5rem";
+        descPreview.style.lineHeight = "1.4";
+        descPreview.textContent = description.length > 100 ? description.substring(0, 100) + "..." : description;
+        card.appendChild(descPreview);
+      }
+      
+      // Actions: View Job button + Seen button (for hustlers)
+      const actions = document.createElement("div");
+      actions.className = "mobile-job-card-actions";
+      
+      const viewBtn = document.createElement("button");
+      viewBtn.className = "mobile-job-card-view-btn";
+      viewBtn.textContent = "View Job";
+      viewBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openJobDetails(job.id);
+      });
+      actions.appendChild(viewBtn);
+      
+      // "Seen" button for hustlers
+      if (user && userMode === "hustler" && (job.status || "").toUpperCase() === "OPEN" && job.customerId !== user.id) {
+        const seenBtn = document.createElement("button");
+        seenBtn.className = "mobile-job-card-seen-btn";
+        seenBtn.textContent = "✓ Seen";
+        seenBtn.title = "Remove this job from your feed";
+        seenBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          dismissJob(job.id);
+        });
+        actions.appendChild(seenBtn);
+      }
+      
+      card.appendChild(actions);
+      
+      // Click entire card to view job (except buttons)
+      card.addEventListener("click", (e) => {
+        if (e.target.tagName !== 'BUTTON' && !e.target.closest('button')) {
+          openJobDetails(job.id);
+        }
+      });
+      
+      return card;
+    }
+
+    /* ---------- PROFILE PHOTO HELPER (Shows photos everywhere) ---------- */
+    function getProfilePhoto(user, size = 'medium') {
+      if (!user) return null;
+      
+      const sizes = {
+        small: { width: 32, height: 32, fontSize: '0.75rem' },
+        medium: { width: 40, height: 40, fontSize: '0.9rem' },
+        large: { width: 80, height: 80, fontSize: '1.5rem' },
+      };
+      
+      const sizeConfig = sizes[size] || sizes.medium;
+      const photo = document.createElement('div');
+      photo.className = `profile-photo profile-photo-${size}`;
+      photo.style.cssText = `
+        width: ${sizeConfig.width}px;
+        height: ${sizeConfig.height}px;
+        border-radius: 50%;
+        background: var(--primary-soft);
+        border: 2px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary);
+        font-weight: 600;
+        font-size: ${sizeConfig.fontSize};
+        flex-shrink: 0;
+        overflow: hidden;
+      `;
+      
+      // Get user initial (first letter of name or username)
+      const name = user.name || user.username || 'U';
+      const initial = name.charAt(0).toUpperCase();
+      photo.setAttribute('data-initial', initial);
+      photo.textContent = initial;
+      
+      // If user has photo URL, add image
+      if (user.photoUrl) {
+        const img = document.createElement('img');
+        img.src = user.photoUrl;
+        img.alt = name;
+        img.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+        img.onerror = () => {
+          // If image fails to load, show initial
+          img.style.display = 'none';
+        };
+        photo.appendChild(img);
+      }
+      
+      return photo;
+    }
+
+    /* ---------- Main render ---------- */
+
+    // Optimized renderAll - only render what's needed with performance monitoring
+    async function renderAll() {
+      perfMonitor?.start('renderAll');
+      try {
+        renderAuthPill();
+        renderAuthSectionVisibility();
+        renderOwnerView();
+
+        // Only render the active view (performance optimization)
+        if (activeView === "jobs") {
+          perfMonitor?.start('renderJobs');
+          await renderJobs();
+          perfMonitor?.end('renderJobs');
+        } else if (activeView === "messages") {
+          perfMonitor?.start('renderMessages');
+          if (typeof renderMessagesView === 'function') {
+            renderMessagesView();
+          }
+          perfMonitor?.end('renderMessages');
+        } else if (activeView === "profile") {
+          perfMonitor?.start('renderProfile');
+          if (typeof renderProfile === 'function') {
+            await renderProfile();
+          }
+          perfMonitor?.end('renderProfile');
+        } else if (activeView === "owner") {
+          renderOwnerView();
+        }
+        
+        // Always update unread message count (works even when not on messages view)
+        // Optimize: only if user is logged in
         const user = await window.hustlAPI.auth.getCurrentUser();
         if (user) {
-          updateMyHustlesBadge(user.id);
+          countUnreadMessages();
+          
+          // Check for new accepted jobs and show notification (for hustlers)
+          if (userMode === "hustler") {
+            // Use Promise.all for parallel execution
+            Promise.all([
+              checkNewAcceptedJobs(),
+              updateMyHustlesBadge(user.id)
+            ]).catch(err => console.error('Error in background tasks:', err));
+          }
         }
+      } catch (error) {
+        const message = errorHandler?.handle(error, 'Rendering') || error.message || 'Rendering error';
+        console.error('RenderAll error:', error);
+        showToast(message);
+      } finally {
+        perfMonitor?.end('renderAll');
       }
     }
     
@@ -9823,13 +10637,21 @@ meta.textContent =
         const unNotifiedJobs = newAcceptedJobs.filter(j => !notifiedJobIds.includes(j.id));
         
         if (unNotifiedJobs.length > 0) {
-          // Show toast notification
-          const jobText = unNotifiedJobs.length === 1 
-            ? `You've been accepted for "${unNotifiedJobs[0].title}"!` 
-            : `You've been accepted for ${unNotifiedJobs.length} job${unNotifiedJobs.length > 1 ? 's' : ''}!`;
-          showToast(`🎉 ${jobText} Check "My Hustles" tab.`);
+          // 🚀 MOBILE: Show "YOU'RE HIRED!" banner for each newly accepted job (mobile-optimized)
+          unNotifiedJobs.forEach(job => {
+            // Show banner (mobile-optimized, full-screen on mobile)
+            if (typeof showHiredBanner === 'function') {
+              showHiredBanner(job.id, job.title);
+            } else {
+              // Fallback to toast if banner function not available
+              showToast(`🎉 You've been accepted for "${job.title}"! Check "My Hustles" tab.`);
+            }
+            
+            // Mark as notified
+            notifiedJobIds.push(job.id);
+          });
           
-          // Save notified job IDs
+          // Save all notified job IDs
           const allNotifiedIds = [...notifiedJobIds, ...unNotifiedJobs.map(j => j.id)];
           localStorage.setItem("lastAcceptedJobsNotification", JSON.stringify(allNotifiedIds));
         }

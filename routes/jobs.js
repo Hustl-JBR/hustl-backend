@@ -87,9 +87,12 @@ router.get('/my-jobs', authenticate, async (req, res) => {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' }, // Most recent jobs first
       take: parseInt(limit, 10),
     });
+    
+    // Log performance for debugging
+    console.log(`[Jobs] Fetched ${jobs.length} jobs for user in ${Date.now() - (req.startTime || Date.now())}ms`);
     
     res.json(jobs);
   } catch (error) {
@@ -369,15 +372,19 @@ router.get('/', optionalAuth, [
   query('city').optional().trim(),
   query('page').optional().isInt({ min: 1 }),
   query('limit').optional().isInt({ min: 1, max: 100 }),
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
+    ], async (req, res) => {
+      try {
+        // Performance monitoring
+        const startTime = Date.now();
+        req.startTime = startTime;
+        
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+          return res.status(400).json({ errors: errors.array() });
+        }
 
-    const { status, category, lat, lng, radius = 25, zip, city, page = 1, limit = 20, sortBy = 'distance', search } = req.query;
-    const userId = req.user?.id;
+        const { status, category, lat, lng, radius = 25, zip, city, page = 1, limit = 20, sortBy = 'newest', search } = req.query;
+        const userId = req.user?.id;
 
     const where = {};
     if (status) where.status = status;
@@ -392,8 +399,8 @@ router.get('/', optionalAuth, [
       ];
     }
 
-    // 72-hour cleanup: Hide OPEN jobs older than 72 hours with no accepted offers
-    const seventyTwoHoursAgo = new Date(Date.now() - 72 * 60 * 60 * 1000);
+    // 48-72 hour cleanup: Hide OPEN jobs older than threshold with no accepted offers
+    // This is handled in the where clause below, no need for separate variable
 
     // Location-based filtering: Auto-filter by user location if available
     let userLat = null;
@@ -471,16 +478,21 @@ router.get('/', optionalAuth, [
       // This will be filtered in post-processing
     }
 
-    // 72-hour cleanup: Only hide OPEN jobs older than 72 hours with no accepted offers
+    // 48-72 hour cleanup: Only hide OPEN jobs older than threshold with no accepted offers
     // Don't filter if status is already set to something other than OPEN
+    // Use 48 hours as default (configurable)
+    const hoursThreshold = parseInt(process.env.JOB_CLEANUP_HOURS || '48', 10);
+    const hoursAgo = new Date(Date.now() - hoursThreshold * 60 * 60 * 1000);
+    
     if (!status || status === 'OPEN') {
       // Add condition: Exclude old OPEN jobs with no accepted offers
-      // We'll filter these out: status=OPEN AND age>72h AND no accepted offers
+      // We'll filter these out: status=OPEN AND age>threshold AND no accepted offers
       where.AND = where.AND || [];
       where.AND.push({
         OR: [
           { status: { not: 'OPEN' } }, // Not OPEN status (already assigned/completed)
-          { createdAt: { gte: seventyTwoHoursAgo } }, // Less than 72 hours old
+          { status: { not: 'CANCELLED' } }, // Not cancelled
+          { createdAt: { gte: hoursAgo } }, // Less than threshold hours old
           {
             offers: {
               some: {
@@ -532,6 +544,9 @@ router.get('/', optionalAuth, [
           },
         },
       },
+      // Optimized: Add database-level ordering for better performance
+      // Default order by newest first (can be overridden by client-side sorting)
+      orderBy: sortBy === 'pay' ? { amount: 'desc' } : { createdAt: 'desc' },
       // We'll sort by distance after calculating - get enough jobs to filter and sort
       // Note: We need to fetch more initially to properly filter by distance, then paginate
       skip: 0,
@@ -585,8 +600,14 @@ router.get('/', optionalAuth, [
         };
       }).filter(job => job !== null); // Remove jobs beyond radius
       
-      // Sort by distance (default) or by creation date
-      if (sortBy === 'distance' || !sortBy) {
+      // Sort by newest first (default) or by distance/pay
+      if (sortBy === 'newest' || !sortBy) {
+        // Default: Newest first (like major apps)
+        filteredJobs.sort((a, b) => {
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        });
+      } else if (sortBy === 'distance') {
+        // Sort by distance (closest first)
         filteredJobs.sort((a, b) => {
           if (a.distance === null && b.distance === null) {
             // Both have no distance - sort by creation date (newest first)
@@ -596,10 +617,16 @@ router.get('/', optionalAuth, [
           if (b.distance === null) return -1;
           return a.distance - b.distance; // Closest first
         });
-      } else if (sortBy === 'newest') {
-        // Sort by newest first
+      } else if (sortBy === 'pay') {
+        // Sort by highest pay first
         filteredJobs.sort((a, b) => {
-          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+          const aAmount = Number(a.amount || 0);
+          const bAmount = Number(b.amount || 0);
+          if (aAmount === bAmount) {
+            // If same pay, sort by newest
+            return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+          }
+          return bAmount - aAmount; // Highest first
         });
       }
     } else {
@@ -610,10 +637,22 @@ router.get('/', optionalAuth, [
         distanceFormatted: 'Distance unknown',
       }));
       
-      // Sort by newest first if no location
-      filteredJobs.sort((a, b) => {
-        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-      });
+      // Sort by newest first (default) or by pay if requested
+      if (sortBy === 'pay') {
+        filteredJobs.sort((a, b) => {
+          const aAmount = Number(a.amount || 0);
+          const bAmount = Number(b.amount || 0);
+          if (aAmount === bAmount) {
+            return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+          }
+          return bAmount - aAmount;
+        });
+      } else {
+        // Default: Newest first
+        filteredJobs.sort((a, b) => {
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        });
+      }
     }
 
     // Apply pagination after filtering and sorting

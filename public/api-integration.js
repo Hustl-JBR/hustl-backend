@@ -103,15 +103,81 @@ const apiAuth = {
     if (!authToken) return null;
 
     try {
+      // Try to refresh token if needed (modern auto-refresh)
+      if (window.appCore && window.appCore.tokenManager) {
+        const needsRefresh = window.appCore.tokenManager.needsRefresh(authToken);
+        if (needsRefresh) {
+          await window.appCore.tokenManager.refreshToken();
+          // Update authToken after refresh
+          authToken = localStorage.getItem('hustl_token');
+        }
+      }
+      
       currentUser = await apiRequest('/users/me');
       localStorage.setItem('hustl_user', JSON.stringify(currentUser));
       return currentUser;
     } catch (error) {
-      // Token expired or invalid
+      // If 401, try to refresh token once
+      if (error.status === 401 && window.appCore && window.appCore.tokenManager) {
+        try {
+          const refreshed = await window.appCore.tokenManager.refreshToken();
+          if (refreshed) {
+            authToken = localStorage.getItem('hustl_token');
+            // Retry the request
+            currentUser = await apiRequest('/users/me');
+            localStorage.setItem('hustl_user', JSON.stringify(currentUser));
+            return currentUser;
+          }
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+        }
+      }
+      
+      // Token expired or invalid - clear auth
       authToken = null;
+      currentUser = null;
       localStorage.removeItem('hustl_token');
+      localStorage.removeItem('hustl_user');
       return null;
     }
+  },
+  
+  async refreshToken() {
+    if (!authToken) return false;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.token) {
+        authToken = data.token;
+        currentUser = data.user;
+        localStorage.setItem('hustl_token', authToken);
+        localStorage.setItem('hustl_user', JSON.stringify(currentUser));
+        
+        // Invalidate API cache
+        if (window.optimizedApi) {
+          window.optimizedApi.invalidateCache('/users/me');
+        }
+        
+        return true;
+      }
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      return false;
+    }
+
+    return false;
   },
 
   getStoredUser() {
