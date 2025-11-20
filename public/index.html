@@ -1882,10 +1882,10 @@
             </div>
             <div id="notificationsEmpty" style="display: none; text-align: center; padding: 2rem; color: #6b7280; font-size: 0.9rem;">No notifications yet</div>
           </div>
-        </div>
-        <div class="auth-pill" id="authPill">
-          <span id="authPillText">Not signed in</span>
-          <button id="openAuthButton">Sign in / Create account</button>
+      </div>
+      <div class="auth-pill" id="authPill">
+        <span id="authPillText">Not signed in</span>
+        <button id="openAuthButton">Sign in / Create account</button>
         </div>
       </div>
     </header>
@@ -2531,18 +2531,18 @@
           <!-- Hidden date/time filters (removed from main view, kept for backward compatibility) -->
           <div style="display: none;">
             <select id="jobsDateFilter">
-              <option value="">All Dates</option>
-              <option value="today">Today</option>
-              <option value="tomorrow">Tomorrow</option>
-            </select>
+                <option value="">All Dates</option>
+                <option value="today">Today</option>
+                <option value="tomorrow">Tomorrow</option>
+              </select>
             <select id="jobsTimeFilter">
-              <option value="">All Times</option>
-              <option value="morning">Morning</option>
-              <option value="afternoon">Afternoon</option>
-              <option value="evening">Evening</option>
-              <option value="night">Night</option>
-            </select>
-          </div>
+                <option value="">All Times</option>
+                <option value="morning">Morning</option>
+                <option value="afternoon">Afternoon</option>
+                <option value="evening">Evening</option>
+                <option value="night">Night</option>
+              </select>
+            </div>
           <div class="jobs-list" id="jobsList"></div>
           <div id="loadMoreJobsContainer" style="text-align: center; margin-top: 1rem; display: none;">
             <button id="loadMoreJobsBtn" class="btn outline" style="padding: 0.75rem 2rem;">Load More Jobs</button>
@@ -3521,34 +3521,72 @@ if (job.acceptedHustlerId) {
     /* ---------- View navigation ---------- */
 
     function setView(view) {
+      // CRITICAL: Ensure view is valid
+      if (!view) {
+        console.error('setView called with invalid view:', view);
+        return;
+      }
+      
+      console.log('[setView] Switching to view:', view);
       activeView = view;
       
       // Save route to URL hash (for page reload persistence)
-      if (window.appCore && window.appCore.routeManager) {
-        window.appCore.routeManager.saveRoute(view);
-      } else {
-        // Fallback: use URL hash directly
-        if (view && view !== 'home') {
-          window.location.hash = view;
+      try {
+        if (window.appCore && window.appCore.routeManager) {
+          window.appCore.routeManager.saveRoute(view);
         } else {
-          window.location.hash = '';
+          // Fallback: use URL hash directly
+          if (view && view !== 'home') {
+            window.location.hash = view;
+          } else {
+            window.location.hash = '';
+          }
         }
+      } catch (e) {
+        console.error('[setView] Error saving route:', e);
       }
       
-      document
-        .querySelectorAll("[id^='view-']")
-        .forEach((sec) => (sec.style.display = "none"));
+      // Hide all views
+      try {
+        document
+          .querySelectorAll("[id^='view-']")
+          .forEach((sec) => {
+            if (sec) sec.style.display = "none";
+          });
+      } catch (e) {
+        console.error('[setView] Error hiding views:', e);
+      }
+      
+      // Show target view
       const target = document.getElementById("view-" + view);
-      if (target) target.style.display = "block";
+      if (target) {
+        target.style.display = "block";
+        console.log('[setView] View displayed:', view);
+      } else {
+        console.error('[setView] Target view not found: view-' + view);
+      }
 
-      document.querySelectorAll(".nav-tab").forEach((tab) => {
-        tab.classList.toggle("active", tab.dataset.view === view);
-      });
+      // Update nav tabs
+      try {
+        document.querySelectorAll(".nav-tab").forEach((tab) => {
+          if (tab) {
+            tab.classList.toggle("active", tab.dataset.view === view);
+          }
+        });
+      } catch (e) {
+        console.error('[setView] Error updating nav tabs:', e);
+      }
 
       // Update mobile menu items
-      document.querySelectorAll(".mobile-menu-item").forEach((item) => {
-        item.classList.toggle("active", item.dataset.view === view);
-      });
+      try {
+        document.querySelectorAll(".mobile-menu-item").forEach((item) => {
+          if (item) {
+            item.classList.toggle("active", item.dataset.view === view);
+          }
+        });
+      } catch (e) {
+        console.error('[setView] Error updating mobile menu:', e);
+      }
 
       // Close mobile menu when navigating
       const mobileMenu = document.getElementById("mobileMenu");
@@ -3557,7 +3595,16 @@ if (job.acceptedHustlerId) {
         mobileMenu.style.display = "none";
       }
 
-      renderAll();
+      // Render all (with error handling)
+      try {
+        if (typeof renderAll === 'function') {
+          renderAll();
+        } else {
+          console.error('[setView] renderAll is not a function');
+        }
+      } catch (e) {
+        console.error('[setView] Error in renderAll:', e);
+      }
       
       // 🚀 MOBILE: Update bottom nav active tab
       if (window.mobileCore && window.mobileCore.bottomNav) {
@@ -4356,6 +4403,9 @@ async function renderJobs(reset = false) {
     const radiusNum = parseInt(radiusFilter, 10) || 10;
     listParams.radius = radiusNum; // Always pass radius to backend
     
+    // CRITICAL: Ensure token is always included in job requests for "My Jobs" filtering
+    const token = localStorage.getItem("hustl_token");
+    
     const userLocation = JSON.parse(localStorage.getItem('userLocation') || 'null');
     const locationFilterInput = document.getElementById("jobsLocationFilter")?.value.trim();
     const savedZipFilter = localStorage.getItem('savedZipFilter');
@@ -4409,27 +4459,24 @@ async function renderJobs(reset = false) {
     }
     
     // Fetch jobs from API (optimized with caching)
+    // CRITICAL: Always include Authorization header for "My Jobs" filtering
     perfMonitor.start('fetchJobs');
     let jobsData;
     try {
-      const queryString = new URLSearchParams(listParams).toString();
-      const jobsUrl = `/jobs${queryString ? `?${queryString}` : ''}`;
-      
-      // Use optimized API client if available, otherwise fallback to fetch
-      if (window.optimizedApi) {
-        jobsData = await window.optimizedApi.get(jobsUrl, { useCache: true });
-      } else {
-        const token = localStorage.getItem("hustl_token");
-        const jobsResponse = await fetch(jobsUrl, {
-          headers: token ? { "Authorization": `Bearer ${token}` } : {}
-        });
-        
-        if (!jobsResponse.ok) {
-          throw new Error(`Failed to load jobs: ${jobsResponse.statusText}`);
-        }
-        
-        jobsData = await jobsResponse.json();
-      }
+    const queryString = new URLSearchParams(listParams).toString();
+    const jobsUrl = `/jobs${queryString ? `?${queryString}` : ''}`;
+    
+      // Always use fetch with Authorization header to ensure "My Jobs" works
+      const token = localStorage.getItem("hustl_token");
+    const jobsResponse = await fetch(jobsUrl, {
+      headers: token ? { "Authorization": `Bearer ${token}` } : {}
+    });
+    
+    if (!jobsResponse.ok) {
+      throw new Error(`Failed to load jobs: ${jobsResponse.statusText}`);
+    }
+    
+      jobsData = await jobsResponse.json();
       perfMonitor.end('fetchJobs');
     } catch (error) {
       perfMonitor.end('fetchJobs');
@@ -4914,15 +4961,15 @@ async function renderJobs(reset = false) {
     const meta = document.createElement("div");
     meta.className = "job-meta";
 
-      const cat =
-        job.category === "moving"
-          ? "🚚 moving"
-          : job.category === "yard"
-          ? "🌿 yard"
-          : job.category === "cleaning"
-          ? "🧹 cleaning"
-          : job.category === "furniture"
-          ? "🛠 furniture"
+    const cat =
+      job.category === "moving"
+        ? "🚚 moving"
+        : job.category === "yard"
+        ? "🌿 yard"
+        : job.category === "cleaning"
+        ? "🧹 cleaning"
+        : job.category === "furniture"
+        ? "🛠 furniture"
           : job.category === "handyman"
           ? "🔧 handyman"
           : job.category === "painting"
@@ -4935,7 +4982,7 @@ async function renderJobs(reset = false) {
           ? "🎉 event help"
           : job.category === "tech"
           ? "💻 tech support"
-          : "⭐ other";
+        : "⭐ other";
 
     const createdMs = job.createdAt
       ? new Date(job.createdAt).getTime()
@@ -5192,19 +5239,41 @@ async function renderJobs(reset = false) {
 
     // clicking the whole card opens details too (but not if clicking buttons)
     card.style.cursor = "pointer";
-    card.addEventListener("click", (e) => {
-      // Don't open if clicking on a button or action element
-      if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('.job-card-actions')) {
-        return;
+    // CRITICAL: Ensure job card always opens job details when clicked
+      // Use a flag to prevent double-triggering
+      let isOpening = false;
+      card.addEventListener("click", (e) => {
+        // Don't open if clicking on a button or action element
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('.job-card-actions')) {
+          return;
+        }
+        // Prevent double-triggering
+        if (isOpening) {
+          e.stopPropagation();
+          return; // Don't use preventDefault - it blocks all clicks
+        }
+        isOpening = true;
+        // Prevent event bubbling (don't use preventDefault - it blocks all clicks)
+        e.stopPropagation();
+        console.log('Job card clicked:', job.id);
+      // Always open job details - ensure view is set to jobs first
+      if (activeView !== 'jobs') {
+        setView("jobs");
       }
-      console.log('Job card clicked:', job.id);
-      setView("jobs");
-      setTimeout(() => openJobDetails(job.id), 50);
-    });
+      // Use requestAnimationFrame for reliable execution
+      requestAnimationFrame(() => {
+        openJobDetails(job.id).catch(err => {
+          console.error('Error opening job details:', err);
+          showToast('Error loading job details. Please try again.');
+        }).finally(() => {
+          // Reset flag after a delay to allow reopening
+          setTimeout(() => { isOpening = false; }, 500);
+        });
+      });
 
     // Only append desktop card if not mobile (mobile cards already appended above)
     if (!isMobile) {
-      jobsList.appendChild(card);
+    jobsList.appendChild(card);
     }
   });
   
@@ -5683,6 +5752,21 @@ async function renderJobs(reset = false) {
 }
 
     async function openJobDetails(jobId, options = {}) {
+      // CRITICAL: Prevent double-triggering with global flag
+      // But don't block if flag is stuck (reset after 5 seconds)
+      if (window.openingJobDetails) {
+        const stuckTime = window.openingJobDetailsTimestamp || 0;
+        if (Date.now() - stuckTime > 5000) {
+          console.warn('[openJobDetails] Flag was stuck, resetting...');
+          window.openingJobDetails = false;
+        } else {
+          console.log('[openJobDetails] Job details already opening, ignoring duplicate call');
+          return;
+        }
+      }
+      window.openingJobDetails = true;
+      window.openingJobDetailsTimestamp = Date.now();
+      
       // CRITICAL: Remove ANY existing overlays first
       document.querySelectorAll('.modal-overlay, [id^="jobModalOverlay"], #verificationCodeModal, [id^="jobDetailsOverlay"]').forEach(ov => {
         if (ov && ov.parentNode) {
@@ -5691,7 +5775,7 @@ async function renderJobs(reset = false) {
       });
       if (document.body) {
         document.body.style.overflow = "";
-        document.body.style.pointerEvents = "";
+        document.body.style.pointerEvents = "auto"; // CRITICAL: Always restore clicks
       }
 
       // Get current user from token
@@ -5732,6 +5816,11 @@ async function renderJobs(reset = false) {
         return;
       }
       
+      // CRITICAL: Check if coordinates exist before proceeding
+      if (!job.lat || !job.lng) {
+        console.log("Job missing coordinates:", job.id, { lat: job.lat, lng: job.lng });
+      }
+      
       // 🚀 MOBILE: Use full-screen one-scroll page on mobile, modal on desktop
       const isMobile = window.innerWidth <= 768;
       
@@ -5752,7 +5841,7 @@ async function renderJobs(reset = false) {
         }
         if (document.body) {
           document.body.style.overflow = "";
-          document.body.style.pointerEvents = "";
+          document.body.style.pointerEvents = "auto"; // CRITICAL: Always restore clicks
         }
         if (escapeHandler) {
           document.removeEventListener("keydown", escapeHandler);
@@ -5761,15 +5850,20 @@ async function renderJobs(reset = false) {
         if (isMobile && window.mobileCore && window.mobileCore.bottomNav) {
           window.mobileCore.bottomNav.updateActiveTab('jobs');
         }
+        // CRITICAL: Reset flag to allow reopening (with timeout to prevent race conditions)
+        setTimeout(() => {
+          window.openingJobDetails = false;
+          window.openingJobDetailsTimestamp = null;
+        }, 100);
       };
       
       // Only close on overlay click for desktop (not mobile - mobile uses back button)
       if (!isMobile) {
-        overlay.addEventListener("click", (e) => {
-          if (e.target === overlay) {
-            cleanup();
-          }
-        });
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) {
+          cleanup();
+        }
+      });
       }
       
       // Close on Escape key
@@ -5787,7 +5881,7 @@ async function renderJobs(reset = false) {
         // Full-width on mobile, padding for scroll
         modal.style.cssText = "padding: 1rem; max-width: 100%; padding-bottom: 180px;";
       } else {
-        modal.style.padding = "1.5rem";
+      modal.style.padding = "1.5rem";
       }
 
       // 🚀 MOBILE: Back button at top (full-width, thumb-friendly)
@@ -5799,11 +5893,11 @@ async function renderJobs(reset = false) {
         modal.appendChild(backBtn);
       } else {
         // Desktop: Close button (X)
-        const closeBtn = document.createElement("button");
-        closeBtn.className = "modal-close";
-        closeBtn.innerHTML = "×";
+      const closeBtn = document.createElement("button");
+      closeBtn.className = "modal-close";
+      closeBtn.innerHTML = "×";
         closeBtn.addEventListener("click", cleanup);
-        modal.appendChild(closeBtn);
+      modal.appendChild(closeBtn);
       }
 
       // Build modal content
@@ -6172,7 +6266,7 @@ async function renderJobs(reset = false) {
             }
           }, { passive: false }); // Not passive so we can preventDefault
           
-          descContainer.appendChild(desc);
+        descContainer.appendChild(desc);
           descContainer.appendChild(toggleBtn);
         } else {
           desc.textContent = job.description;
@@ -6300,19 +6394,33 @@ async function renderJobs(reset = false) {
         locationContainer.style.border = "1px solid #86efac";
         
         // Map Preview - FIXED: Always try to show map with proper error handling
+        // CRITICAL: Only render map AFTER job data is loaded and coordinates exist
         const mapPreview = document.createElement("div");
         mapPreview.id = `mapPreview-${job.id}`;
         mapPreview.style.cssText = "margin-bottom: 0.75rem; border-radius: 8px; overflow: hidden; height: 200px; width: 100%; background: #e5e7eb; cursor: pointer; border: 2px solid #86efac; position: relative;";
         
-        // Try to get coordinates from job
-        let lat = null;
-        let lng = null;
-        if (job.lat && job.lng && !isNaN(parseFloat(job.lat)) && !isNaN(parseFloat(job.lng))) {
-          lat = parseFloat(job.lat);
-          lng = parseFloat(job.lng);
-        }
-        
-        if (lat && lng) {
+        // CRITICAL: Early check - if no coordinates, show message and skip map rendering
+        if (!job.lat || !job.lng) {
+          console.log("Missing coordinates for map preview:", job.id);
+          mapPreview.innerHTML = '<div style="padding: 2rem; text-align: center; color: #6b7280; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">Map preview unavailable - location not available</div>';
+          locationContainer.appendChild(mapPreview);
+          // Continue with rest of the modal (skip map rendering)
+        } else {
+          // Try to get coordinates from job
+          let lat = null;
+          let lng = null;
+          if (job.lat && job.lng && !isNaN(parseFloat(job.lat)) && !isNaN(parseFloat(job.lng))) {
+            lat = parseFloat(job.lat);
+            lng = parseFloat(job.lng);
+          }
+          
+          // Double-check coordinates are valid
+          if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+            console.log("Invalid coordinates for map preview:", job.id, { lat, lng });
+            mapPreview.innerHTML = '<div style="padding: 2rem; text-align: center; color: #6b7280; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">Map preview unavailable - invalid coordinates</div>';
+            locationContainer.appendChild(mapPreview);
+            // Continue with rest of the modal (skip map rendering)
+          } else if (lat && lng) {
           // Use Mapbox Static Image API for preview
           const mapboxToken = "pk.eyJ1IjoiaHVzdGxtYXAiLCJhIjoiY21qNGUzc2pqMGVxbzJrcjhuYm1icGNueSJ9.YzIpkBWGqqn0dEHz-n_puQ";
           // Format: pin-s+color(lng,lat)/lng,lat,zoom,bearing/widthxheight@2x
@@ -6349,12 +6457,10 @@ async function renderJobs(reset = false) {
               window.open(mapUrl, "_blank");
             }
           });
-        } else {
-          // No coordinates - show message
-          mapPreview.innerHTML = '<div style="padding: 2rem; text-align: center; color: #6b7280; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">Map preview unavailable - location not available</div>';
-        }
-        
-        locationContainer.appendChild(mapPreview);
+          
+          locationContainer.appendChild(mapPreview);
+          } // End of valid coordinates check
+        } // End of coordinates existence check
         
         // Pickup Location
         const pickupLabel = document.createElement("div");
@@ -7262,9 +7368,27 @@ async function renderJobs(reset = false) {
           viewProfileBtn.className = "small-btn";
           viewProfileBtn.style.marginTop = "0.5rem";
           viewProfileBtn.textContent = "View Profile";
-          viewProfileBtn.addEventListener("click", () => {
-            // TODO: Open customer profile modal
-            showToast("Profile view coming soon!");
+          viewProfileBtn.addEventListener("click", async () => {
+            // Open customer profile view
+            if (job.customerId) {
+              try {
+                // Fetch customer profile
+                const customer = await window.hustlAPI.users.get(job.customerId);
+                if (customer) {
+                  // Show user profile in profile view
+                  setView("profile");
+                  // Render the customer's profile
+                  await renderProfile(customer);
+                } else {
+                  showToast("Profile not found");
+                }
+              } catch (error) {
+                console.error("Error loading profile:", error);
+                showToast("Error loading profile");
+              }
+            } else {
+              showToast("Profile information not available");
+            }
           });
           customerCard.appendChild(viewProfileBtn);
 
@@ -7733,20 +7857,20 @@ async function renderJobs(reset = false) {
               
               // Close the job details modal first
               setTimeout(() => {
-                overlay.remove();
-                document.body.style.overflow = "";
-                
-                // Refresh jobs list and profile to show updated status (COMPLETED with purple badge)
-                renderJobs();
-                renderProfile();
-                
-                // Job is now COMPLETED - both parties can review each other
+              overlay.remove();
+              document.body.style.overflow = "";
+              
+              // Refresh jobs list and profile to show updated status (COMPLETED with purple badge)
+              renderJobs();
+              renderProfile();
+              
+              // Job is now COMPLETED - both parties can review each other
                 // Auto-open review modal for customer to review hustler
-                if (job.hustlerId) {
-                  setTimeout(() => {
-                    showReviewModal(job.id, job.hustlerId, job.hustler?.name || "Hustler");
+              if (job.hustlerId) {
+                setTimeout(() => {
+                  showReviewModal(job.id, job.hustlerId, job.hustler?.name || "Hustler");
                   }, 500);
-                }
+              }
               }, 1500);
               
               // Note: Hustler can also review customer - they'll see the option when they view the job
@@ -9514,7 +9638,7 @@ async function renderJobs(reset = false) {
               const photo = getProfilePhoto(senderUser, 'small');
               if (photo) {
                 messagePhoto.appendChild(photo.cloneNode(true));
-              } else {
+          } else {
                 const name = senderUser.name || senderUser.username || 'U';
                 messagePhoto.textContent = name.charAt(0).toUpperCase();
               }
@@ -9695,16 +9819,16 @@ async function renderJobs(reset = false) {
       if (!Array.isArray(allJobs)) {
         console.warn("jobs.listMyJobs() did not return an array, defaulting to empty array");
         allJobs = [];
-      }
-    } else {
+              }
+            } else {
       // Fallback: Use regular list with filters (less efficient but works)
       console.warn("listMyJobs not available, using fallback");
       const response = await window.hustlAPI.jobs.list({ page: 1, limit: 100 });
       if (response && typeof response === 'object' && 'jobs' in response) {
         allJobs = response.jobs || [];
-      } else if (Array.isArray(response)) {
-        allJobs = response;
-      }
+    } else if (Array.isArray(response)) {
+      allJobs = response;
+    }
     }
   } catch (error) {
     console.error("Error loading jobs for profile:", error);
@@ -10623,8 +10747,8 @@ setTimeout(() => {
 
     // Fetch all user offers in ONE API call (optimized - was making 20+ separate calls!)
     const appliedJobsData = [];
-    try {
-      const token = localStorage.getItem("hustl_token");
+      try {
+        const token = localStorage.getItem("hustl_token");
       if (token && window.hustlAPI.offers.listUserOffers) {
         // Use optimized endpoint - get all user offers in one call
         const userOffers = await window.hustlAPI.offers.listUserOffers();
@@ -10665,9 +10789,9 @@ setTimeout(() => {
           } else {
             appliedJobsData.push({ job, offer: userOffer });
           }
+          }
         }
-      }
-    } catch (error) {
+      } catch (error) {
       console.error('Error fetching user offers:', error);
       // Fallback: silently fail, don't show applied jobs section
     }
@@ -10888,7 +11012,7 @@ setTimeout(() => {
         // Upload to R2
         let publicUrl;
         try {
-          const uploadResult = await window.hustlAPI.uploads.uploadFile(file);
+          const uploadResult = await window.hustlAPI.uploads.uploadFile(file, 'photo');
           publicUrl = uploadResult.publicUrl;
           console.log("Upload successful, publicUrl:", publicUrl);
           
@@ -11537,10 +11661,34 @@ meta.textContent =
       card.appendChild(actions);
       
       // Click entire card to view job (except buttons)
+      card.style.cursor = "pointer";
+      card.dataset.jobId = job.id; // Add data attribute for easy identification
+      // Use a flag to prevent double-triggering
+      let isOpeningMobile = false;
       card.addEventListener("click", (e) => {
-        if (e.target.tagName !== 'BUTTON' && !e.target.closest('button')) {
-          openJobDetails(job.id);
+        // Don't open if clicking on a button or action element
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('.mobile-job-card-actions')) {
+          return;
         }
+        // Prevent double-triggering
+        if (isOpeningMobile) {
+          e.stopPropagation();
+          return; // Don't use preventDefault - it blocks all clicks
+        }
+        isOpeningMobile = true;
+        // Prevent event bubbling (don't use preventDefault - it blocks all clicks)
+        e.stopPropagation();
+        console.log('Mobile job card clicked:', job.id);
+        // Always open job details
+        requestAnimationFrame(() => {
+          openJobDetails(job.id).catch(err => {
+            console.error('Error opening job details:', err);
+            showToast('Error loading job details. Please try again.');
+          }).finally(() => {
+            // Reset flag after a delay to allow reopening
+            setTimeout(() => { isOpeningMobile = false; }, 500);
+          });
+        });
       });
       
       return card;
@@ -11610,39 +11758,39 @@ meta.textContent =
     async function renderAll() {
       perfMonitor?.start('renderAll');
       try {
-        renderAuthPill();
-        renderAuthSectionVisibility();
-        renderOwnerView();
+      renderAuthPill();
+      renderAuthSectionVisibility();
+      renderOwnerView();
 
         // Only render the active view (performance optimization)
-        if (activeView === "jobs") {
+      if (activeView === "jobs") {
           perfMonitor?.start('renderJobs');
           await renderJobs();
           perfMonitor?.end('renderJobs');
-        } else if (activeView === "messages") {
+      } else if (activeView === "messages") {
           perfMonitor?.start('renderMessages');
           if (typeof renderMessagesView === 'function') {
-            renderMessagesView();
+        renderMessagesView();
           }
           perfMonitor?.end('renderMessages');
-        } else if (activeView === "profile") {
+      } else if (activeView === "profile") {
           perfMonitor?.start('renderProfile');
           if (typeof renderProfile === 'function') {
             await renderProfile();
           }
           perfMonitor?.end('renderProfile');
-        } else if (activeView === "owner") {
-          renderOwnerView();
-        }
-        
-        // Always update unread message count (works even when not on messages view)
+      } else if (activeView === "owner") {
+        renderOwnerView();
+      }
+      
+      // Always update unread message count (works even when not on messages view)
         // Optimize: only if user is logged in
         const user = await window.hustlAPI.auth.getCurrentUser();
         if (user) {
-          countUnreadMessages();
-          
-          // Check for new accepted jobs and show notification (for hustlers)
-          if (userMode === "hustler") {
+      countUnreadMessages();
+      
+      // Check for new accepted jobs and show notification (for hustlers)
+      if (userMode === "hustler") {
             // Use Promise.all for parallel execution
             Promise.all([
               checkNewAcceptedJobs(),
@@ -11754,18 +11902,38 @@ meta.textContent =
       const hustlerBtn = document.getElementById("modeHustlerBtn");
       
       if (customerBtn) {
-        customerBtn.addEventListener("click", () => {
+        customerBtn.addEventListener("click", async () => {
           userMode = "customer";
           localStorage.setItem("hustl_userMode", userMode);
+          
+          // Backend-aware: Refresh jobs list when switching modes to show correct data
+          if (activeView === "jobs") {
+            // Reset pagination and reload jobs with correct filters for new mode
+            currentJobsPage = 1;
+            allLoadedJobs = [];
+            await renderJobs(true);
+          } else {
+            // If not on jobs view, just render all (will update mode indicator)
           renderAll();
+          }
         });
       }
       
       if (hustlerBtn) {
-        hustlerBtn.addEventListener("click", () => {
+        hustlerBtn.addEventListener("click", async () => {
           userMode = "hustler";
           localStorage.setItem("hustl_userMode", userMode);
+          
+          // Backend-aware: Refresh jobs list when switching modes to show correct data
+          if (activeView === "jobs") {
+            // Reset pagination and reload jobs with correct filters for new mode
+            currentJobsPage = 1;
+            allLoadedJobs = [];
+            await renderJobs(true);
+          } else {
+            // If not on jobs view, just render all (will update mode indicator)
           renderAll();
+          }
         });
       }
     }
@@ -11773,21 +11941,53 @@ meta.textContent =
     /* ---------- Init ---------- */
 
     function initNav() {
+      console.log('[initNav] Initializing navigation...');
+      
       // Regular nav tabs
-      document.querySelectorAll(".nav-tab").forEach((tab) => {
-        tab.addEventListener("click", () => {
-          const v = tab.dataset.view;
-          setView(v);
-        });
+      const navTabs = document.querySelectorAll(".nav-tab");
+      console.log('[initNav] Found', navTabs.length, 'nav tabs');
+      navTabs.forEach((tab) => {
+        if (tab) {
+          // Remove any existing listeners first
+          const newTab = tab.cloneNode(true);
+          tab.parentNode.replaceChild(newTab, tab);
+          
+          newTab.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const v = newTab.dataset.view;
+            console.log('[initNav] Nav tab clicked:', v);
+            if (v && typeof setView === 'function') {
+              setView(v);
+            } else {
+              console.error('[initNav] Invalid view or setView not available:', v);
+            }
+          });
+        }
       });
 
       // Mobile menu items
-      document.querySelectorAll(".mobile-menu-item").forEach((item) => {
-        item.addEventListener("click", () => {
-          const view = item.dataset.view;
-          if (view) setView(view);
-        });
+      const mobileMenuItems = document.querySelectorAll(".mobile-menu-item");
+      console.log('[initNav] Found', mobileMenuItems.length, 'mobile menu items');
+      mobileMenuItems.forEach((item) => {
+        if (item) {
+          // Remove any existing listeners first
+          const newItem = item.cloneNode(true);
+          item.parentNode.replaceChild(newItem, item);
+          
+          newItem.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const view = newItem.dataset.view;
+            console.log('[initNav] Mobile menu item clicked:', view);
+            if (view && typeof setView === 'function') {
+              setView(view);
+            } else {
+              console.error('[initNav] Invalid view or setView not available:', view);
+            }
+          });
+        }
       });
+      
+      console.log('[initNav] Navigation initialized successfully');
 
       // Mobile menu button toggle
       const mobileMenuBtn = document.getElementById("mobileMenuBtn");
@@ -11992,11 +12192,19 @@ meta.textContent =
           }
         });
         
-        jobsLocationFilter.addEventListener("keypress", (e) => {
-          if (e.key === "Enter") {
-            jobsZipFilter.blur(); // Trigger blur event to apply filter
-          }
-        });
+        // Get zip filter element (might not exist if using location filter)
+        const jobsZipFilter = document.getElementById("jobsZipFilter");
+        
+        if (jobsLocationFilter) {
+          jobsLocationFilter.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+              jobsLocationFilter.blur(); // Trigger blur event to apply filter
+            }
+          });
+        }
+        
+        // Get zip filter element (might not exist if using location filter)
+        const jobsZipFilter = document.getElementById("jobsZipFilter");
         
         // Load saved zip filter on page load
         const savedZip = localStorage.getItem('savedZipFilter');
@@ -12299,24 +12507,57 @@ window.clearStuckOverlays = function() {
   // Reset body styles
   if (document.body) {
     document.body.style.overflow = '';
-    document.body.style.pointerEvents = '';
+    document.body.style.pointerEvents = 'auto';
   }
   
   // Remove any inline styles that might block
   document.querySelectorAll('*').forEach(el => {
     if (el.style && el.style.pointerEvents === 'none' && el.style.position === 'fixed') {
-      el.style.pointerEvents = '';
+      el.style.pointerEvents = 'auto';
     }
   });
   
   console.log('Cleared stuck overlays - page should be clickable now');
 };
 
+// CRITICAL: Always ensure clicks are enabled on page load
+function ensureClicksEnabled() {
+  // Always set pointer-events to auto on body and html
+  if (document.body) {
+    document.body.style.pointerEvents = 'auto';
+  }
+  if (document.documentElement) {
+    document.documentElement.style.pointerEvents = 'auto';
+  }
+  
+  // Remove any blocking overlays
+  document.querySelectorAll('.modal-overlay, [id^="jobModalOverlay"], #verificationCodeModal, [id^="jobDetailsOverlay"]').forEach(ov => {
+    if (ov && ov.parentNode) {
+      ov.remove();
+    }
+  });
+  
+  console.log('✅ Clicks enabled - page should be fully clickable');
+}
+
+// Run immediately when script loads
+ensureClicksEnabled();
+
+// Also run after DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', ensureClicksEnabled);
+} else {
+  ensureClicksEnabled();
+}
+
+// Run on window load as well
+window.addEventListener('load', ensureClicksEnabled);
+
 // IMMEDIATE cleanup - run right away, don't wait for load
 // Run immediately to prevent stuck overlays from blocking the page
 (function() {
   try {
-    // Remove all blocking elements immediately
+  // Remove all blocking elements immediately
     const selectors = [
       '.modal-overlay',
       '[id^="jobModalOverlay"]',
@@ -12330,19 +12571,19 @@ window.clearStuckOverlays = function() {
     selectors.forEach(selector => {
       try {
         document.querySelectorAll(selector).forEach(el => {
-          if (el && el.parentNode) {
-            el.remove();
-          }
-        });
+    if (el && el.parentNode) {
+      el.remove();
+    }
+  });
       } catch(e) {
         // Ignore errors
       }
     });
     
     // Reset body styles immediately
-    if (document.body) {
-      document.body.style.overflow = '';
-      document.body.style.pointerEvents = '';
+  if (document.body) {
+    document.body.style.overflow = '';
+    document.body.style.pointerEvents = 'auto';
       document.body.style.position = '';
     }
     
@@ -12403,7 +12644,7 @@ document.addEventListener('keydown', function(e) {
       });
       if (document.body) {
         document.body.style.overflow = '';
-        document.body.style.pointerEvents = '';
+        document.body.style.pointerEvents = 'auto';
       }
     }
   }

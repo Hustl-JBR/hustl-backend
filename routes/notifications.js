@@ -27,6 +27,10 @@ router.get('/', async (req, res) => {
       },
       include: {
         messages: {
+          where: {
+            senderId: { not: req.user.id }, // Only messages NOT sent by current user
+            read: false, // Only unread messages
+          },
           orderBy: { createdAt: 'desc' },
           take: 1,
           include: {
@@ -51,21 +55,20 @@ router.get('/', async (req, res) => {
     for (const thread of threads) {
       if (thread.messages.length > 0) {
         const lastMessage = thread.messages[0];
-        // Only show if message is from someone else and recent (last 7 days)
-        if (lastMessage.senderId !== req.user.id) {
-          const daysAgo = (Date.now() - new Date(lastMessage.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-          if (daysAgo <= 7) {
-            notifications.push({
-              id: `message_${lastMessage.id}`,
-              type: 'MESSAGE',
-              title: 'New Message',
-              message: `${lastMessage.sender.name} sent you a message about "${thread.job?.title || 'a job'}"`,
-              icon: '💬',
-              link: `/messages?thread=${thread.id}`,
-              createdAt: lastMessage.createdAt,
-              read: false, // TODO: Track read status
-            });
-          }
+        // Query already filters by senderId != currentUser and read = false
+        // Only show if message is recent (last 7 days)
+        const daysAgo = (Date.now() - new Date(lastMessage.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+        if (daysAgo <= 7) {
+          notifications.push({
+            id: `message_${lastMessage.id}`,
+            type: 'MESSAGE',
+            title: 'New Message',
+            message: `${lastMessage.sender.name} sent you a message about "${thread.job?.title || 'a job'}"`,
+            icon: '💬',
+            link: `/messages?thread=${thread.id}`,
+            createdAt: lastMessage.createdAt,
+            read: false, // Always false since query filters by read = false
+          });
         }
       }
     }

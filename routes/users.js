@@ -245,5 +245,96 @@ router.patch('/me', [
   }
 });
 
+// POST /users/me/photo - Upload profile photo to R2
+const multer = require('multer');
+const { uploadFileToR2 } = require('../services/r2');
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max for profile photos
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow only images
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/heic'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('File type not allowed. Only images are supported for profile photos.'));
+    }
+  },
+});
+
+router.post('/me/photo', upload.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No photo file provided' });
+    }
+
+    const { file } = req;
+    
+    // Generate unique filename
+    const timestamp = Date.now();
+    const extension = file.originalname.split('.').pop() || 'jpg';
+    const filename = `profile-photos/${req.user.id}/${timestamp}.${extension}`;
+    
+    // Upload to R2
+    const { fileKey, publicUrl } = await uploadFileToR2(
+      file.buffer,
+      filename,
+      file.mimetype
+    );
+
+    // Update user's photoUrl in database
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        photoUrl: publicUrl,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        username: true,
+        photoUrl: true,
+        updatedAt: true,
+      },
+    });
+
+    res.json({
+      success: true,
+      photoUrl: publicUrl,
+      user: user,
+    });
+  } catch (error) {
+    console.error('Upload profile photo error:', error);
+    res.status(500).json({ error: error.message || 'Failed to upload profile photo' });
+  }
+});
+
+// GET /users/me/photo - Get profile photo URL
+router.get('/me/photo', async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true,
+        photoUrl: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      photoUrl: user.photoUrl || null,
+    });
+  } catch (error) {
+    console.error('Get profile photo error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
 

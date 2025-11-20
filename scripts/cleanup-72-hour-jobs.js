@@ -92,11 +92,14 @@ async function cleanupOldJobs(dryRun = false, cancelJobs = false) {
         });
         console.log(`✅ Cancelled job: "${job.title}" (${job.id})`);
       } else {
-        // For now, we just exclude them from queries
-        // But we could also add an isHidden flag or status like EXPIRED
-        // Since the 72-hour filter is in the query, we don't need to update the database
-        // This script can just log what was cleaned for monitoring
-        console.log(`✅ Job "${job.title}" (${job.id}) is now hidden from listings (over 72 hours old)`);
+        // Actually cancel the job (status change ensures it's hidden from listings)
+        await prisma.job.update({
+          where: { id: job.id },
+          data: {
+            status: 'CANCELLED',
+          },
+        });
+        console.log(`✅ Cancelled job: "${job.title}" (${job.id}) - over 72 hours old with no activity`);
       }
     }
 

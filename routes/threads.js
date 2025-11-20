@@ -72,10 +72,30 @@ router.get('/', async (req, res) => {
           threadId: true,
           body: true,
           senderId: true,
+          read: true,
           createdAt: true,
         },
         orderBy: { createdAt: 'desc' },
         take: threadIds.length * 2, // Get enough messages to find latest per thread
+      });
+
+      // Get unread counts per thread for current user
+      const unreadCounts = await prisma.message.groupBy({
+        by: ['threadId'],
+        where: {
+          threadId: { in: threadIds },
+          read: false,
+          senderId: { not: req.user.id }, // Only count messages NOT sent by current user
+        },
+        _count: {
+          id: true,
+        },
+      });
+
+      // Create map of threadId -> unread count
+      const unreadCountMap = new Map();
+      unreadCounts.forEach(item => {
+        unreadCountMap.set(item.threadId, item._count.id);
       });
 
       // Group by threadId and take the latest (first due to desc order)
@@ -88,11 +108,12 @@ router.get('/', async (req, res) => {
       const threadsWithMessages = threads.map(thread => ({
         ...thread,
         messages: messageMap.get(thread.id) ? [messageMap.get(thread.id)] : [],
+        unreadCount: unreadCountMap.get(thread.id) || 0, // Add unread count
       }));
 
       res.json(threadsWithMessages);
     } else {
-      res.json(threads.map(thread => ({ ...thread, messages: [] })));
+      res.json(threads.map(thread => ({ ...thread, messages: [], unreadCount: 0 })));
     }
   } catch (error) {
     console.error('List threads error:', error);
@@ -131,7 +152,39 @@ router.get('/:id/messages', async (req, res) => {
       orderBy: { createdAt: 'asc' },
     });
 
-    res.json(messages);
+    // Mark messages as read when viewing (except messages sent by current user)
+    const unreadMessageIds = messages
+      .filter(msg => !msg.read && msg.senderId !== req.user.id)
+      .map(msg => msg.id);
+
+    if (unreadMessageIds.length > 0) {
+      await prisma.message.updateMany({
+        where: {
+          id: { in: unreadMessageIds },
+        },
+        data: {
+          read: true,
+          readAt: new Date(),
+          readBy: req.user.id,
+        },
+      });
+      
+      // Also update thread's lastMessageAt if needed
+      await prisma.thread.update({
+        where: { id: req.params.id },
+        data: { lastMessageAt: new Date() },
+      });
+    }
+
+    // Return messages with updated read status
+    const updatedMessages = messages.map(msg => ({
+      ...msg,
+      read: unreadMessageIds.includes(msg.id) ? true : msg.read,
+      readAt: unreadMessageIds.includes(msg.id) ? new Date() : msg.readAt,
+      readBy: unreadMessageIds.includes(msg.id) ? req.user.id : msg.readBy,
+    }));
+
+    res.json(updatedMessages);
   } catch (error) {
     console.error('Get messages error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -254,6 +307,10 @@ router.post('/:id/messages', [
           messagePreview,
           thread.id
         );
+        
+        // Create in-app notification (notifications are generated on-the-fly in notifications.js)
+        // No need to create a database record since notifications.js reads from messages table
+        console.log(`[Message] Created message notification for user ${recipientId} from job ${thread.jobId}`);
       }
     } catch (emailError) {
       // Don't fail message creation if email fails
@@ -263,6 +320,90 @@ router.post('/:id/messages', [
     res.status(201).json(message);
   } catch (error) {
     console.error('Create message error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /threads/:id/messages/:messageId/read - Mark a specific message as read
+router.post('/:id/messages/:messageId/read', async (req, res) => {
+  try {
+    const thread = await prisma.thread.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!thread) {
+      return res.status(404).json({ error: 'Thread not found' });
+    }
+
+    // Verify user is part of thread
+    if (thread.userAId !== req.user.id && thread.userBId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const message = await prisma.message.findUnique({
+      where: { id: req.params.messageId },
+    });
+
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
+    if (message.threadId !== req.params.id) {
+      return res.status(400).json({ error: 'Message does not belong to this thread' });
+    }
+
+    // Only mark as read if message was not sent by current user
+    if (message.senderId !== req.user.id && !message.read) {
+      await prisma.message.update({
+        where: { id: req.params.messageId },
+        data: {
+          read: true,
+          readAt: new Date(),
+          readBy: req.user.id,
+        },
+      });
+    }
+
+    res.json({ success: true, message: 'Message marked as read' });
+  } catch (error) {
+    console.error('Mark message read error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /threads/:id/mark-all-read - Mark all messages in thread as read
+router.post('/:id/mark-all-read', async (req, res) => {
+  try {
+    const thread = await prisma.thread.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!thread) {
+      return res.status(404).json({ error: 'Thread not found' });
+    }
+
+    // Verify user is part of thread
+    if (thread.userAId !== req.user.id && thread.userBId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Mark all unread messages as read (except messages sent by current user)
+    await prisma.message.updateMany({
+      where: {
+        threadId: req.params.id,
+        senderId: { not: req.user.id },
+        read: false,
+      },
+      data: {
+        read: true,
+        readAt: new Date(),
+        readBy: req.user.id,
+      },
+    });
+
+    res.json({ success: true, message: 'All messages marked as read' });
+  } catch (error) {
+    console.error('Mark all messages read error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

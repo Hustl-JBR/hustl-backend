@@ -194,13 +194,28 @@ const apiAuth = {
 // Jobs functions
 const apiJobs = {
   async listMyJobs(filters = {}) {
-    const params = new URLSearchParams();
-    if (filters.status) params.append('status', filters.status);
-    if (filters.limit) params.append('limit', filters.limit);
-    
-    const query = params.toString();
-    const endpoint = `/jobs/my-jobs${query ? `?${query}` : ''}`;
-    return await apiRequest(endpoint);
+    try {
+      const params = new URLSearchParams();
+      if (filters.status) params.append('status', filters.status);
+      if (filters.limit) params.append('limit', filters.limit);
+      
+      const query = params.toString();
+      const endpoint = `/jobs/my-jobs${query ? `?${query}` : ''}`;
+      const result = await apiRequest(endpoint);
+      
+      // Handle both array and object response
+      if (Array.isArray(result)) {
+        return result;
+      } else if (result && result.jobs) {
+        return result.jobs;
+      } else {
+        return [];
+      }
+    } catch (error) {
+      console.error('Error listing my jobs:', error);
+      // Return empty array instead of throwing - allows UI to still render
+      return [];
+    }
   },
 
   async list(filters = {}) {
@@ -396,7 +411,13 @@ const apiOffers = {
   },
 
   async listUserOffers() {
-    return await apiRequest(`/offers/user/me`);
+    try {
+      return await apiRequest(`/offers/user/me`);
+    } catch (error) {
+      console.error('Error listing user offers:', error);
+      // Return empty array instead of throwing - allows UI to still render
+      return [];
+    }
   },
 
   async create(jobId, note = '', proposedAmount = null) {
@@ -441,6 +462,18 @@ const apiMessages = {
     });
   },
   
+  async markMessageRead(threadId, messageId) {
+    return await apiRequest(`/threads/${threadId}/messages/${messageId}/read`, {
+      method: 'POST',
+    });
+  },
+  
+  async markAllMessagesRead(threadId) {
+    return await apiRequest(`/threads/${threadId}/mark-all-read`, {
+      method: 'POST',
+    });
+  },
+  
   async getThreadByJobId(jobId) {
     // Helper to find thread by job ID
     const threads = await this.getThreads();
@@ -474,13 +507,15 @@ const apiUploads = {
     });
   },
 
-  async uploadFile(file) {
+  async uploadFile(file, fieldName = 'file') {
     // Upload through backend API to avoid CORS issues
     // This is the preferred method as it doesn't require CORS configuration on R2
-    console.log('[Upload] Starting file upload through backend API...', file.name, file.type, file.size);
+    // fieldName: 'file' for general uploads, 'photo' for profile photos
+    console.log('[Upload] Starting file upload through backend API...', file.name, file.type, file.size, 'field:', fieldName);
     
     const formData = new FormData();
-    formData.append('file', file);
+    // Support both 'file' and 'photo' field names
+    formData.append(fieldName === 'photo' ? 'photo' : 'file', file);
 
     // Get auth token from localStorage (use the same token key as apiRequest)
     const token = authToken || localStorage.getItem('hustl_token');

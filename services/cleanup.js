@@ -3,17 +3,24 @@
 // 2. Deletes jobs older than 2 weeks regardless of status
 
 const prisma = require('../db');
+const { sendJobExpiringEmail } = require('./email');
+const { sendJobExpiringEmail } = require('./email');
 
 /**
- * Clean up old OPEN jobs that have no accepted offers (48-72 hour rule)
- * This sets their status to CANCELLED so they don't show in feeds
- * Uses 48 hours as default, but can be configured
+ * Clean up old OPEN jobs that have no accepted offers (72 hour rule)
+ * This sets their status to EXPIRED so they don't show in feeds
+ * Uses 72 hours as default, but can be configured
+ * Also sends email warning 24 hours before expiration
  */
 async function cleanup72HourJobs() {
   try {
-    // Use 48 hours (configurable via env, default 48)
-    const hoursThreshold = parseInt(process.env.JOB_CLEANUP_HOURS || '48', 10);
+    // Use 72 hours (configurable via env, default 72)
+    const hoursThreshold = parseInt(process.env.JOB_CLEANUP_HOURS || '72', 10);
     const hoursAgo = new Date(Date.now() - hoursThreshold * 60 * 60 * 1000);
+    
+    // Also check for jobs expiring in 24 hours (48 hours old) to send warning
+    const warningHoursThreshold = hoursThreshold - 24; // 24 hours before expiration
+    const warningHoursAgo = new Date(Date.now() - warningHoursThreshold * 60 * 60 * 1000);
     
     // Find OPEN jobs older than threshold hours with no accepted offers
     const oldOpenJobs = await prisma.job.findMany({
@@ -32,6 +39,13 @@ async function cleanup72HourJobs() {
             id: true,
           },
         },
+        customer: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          },
+        },
       },
     });
 
@@ -45,20 +59,72 @@ async function cleanup72HourJobs() {
 
     console.log(`[Cleanup ${hoursThreshold}h] Found ${jobsToCancel.length} old OPEN jobs with no accepted offers`);
 
-    // Cancel these jobs (set status to CANCELLED)
-    const jobIds = jobsToCancel.map(j => j.id);
-    const result = await prisma.job.updateMany({
-      where: {
-        id: { in: jobIds },
-      },
-      data: {
-        status: 'CANCELLED',
-      },
+    // Send email warning for jobs expiring soon (24 hours before)
+    const jobsToWarn = jobsToCancel.filter(job => {
+      const jobAge = Date.now() - job.createdAt.getTime();
+      const warningThresholdMs = warningHoursThreshold * 60 * 60 * 1000;
+      const expirationThresholdMs = hoursThreshold * 60 * 60 * 1000;
+      // Warn if job is between warning threshold and expiration threshold
+      return jobAge >= warningThresholdMs && jobAge < expirationThresholdMs;
     });
-
-    console.log(`[Cleanup ${hoursThreshold}h] Cancelled ${result.count} old OPEN jobs`);
     
-    return { cancelled: result.count };
+    let warningsSent = 0;
+    for (const job of jobsToWarn) {
+      try {
+        // Check if we already sent warning (to avoid spamming)
+        const requirements = job.requirements || {};
+        if (!requirements.expirationWarningSent && job.customer && job.customer.email) {
+          await sendJobExpiringEmail(
+            job.customer.email,
+            job.customer.name,
+            job.title,
+            job.id
+          );
+          // Mark warning as sent
+          await prisma.job.update({
+            where: { id: job.id },
+            data: {
+              requirements: {
+                ...requirements,
+                expirationWarningSent: true,
+                expirationWarningSentAt: new Date().toISOString(),
+              },
+            },
+          });
+          warningsSent++;
+          console.log(`[Cleanup] Sent expiration warning for job ${job.id}`);
+        }
+      } catch (emailError) {
+        console.error(`[Cleanup] Error sending expiration warning for job ${job.id}:`, emailError);
+        // Continue with expiration even if email fails
+      }
+    }
+    
+    // Expire jobs older than threshold (set status to EXPIRED)
+    const jobsToExpire = jobsToCancel.filter(job => {
+      const jobAge = Date.now() - job.createdAt.getTime();
+      const expirationThresholdMs = hoursThreshold * 60 * 60 * 1000;
+      return jobAge >= expirationThresholdMs;
+    });
+    
+    const jobIds = jobsToExpire.map(j => j.id);
+    if (jobIds.length > 0) {
+      const result = await prisma.job.updateMany({
+        where: {
+          id: { in: jobIds },
+        },
+        data: {
+          status: 'EXPIRED',
+        },
+      });
+
+      console.log(`[Cleanup ${hoursThreshold}h] Expired ${result.count} old OPEN jobs with no activity`);
+    }
+    
+    return { 
+      expired: jobIds.length,
+      warningsSent: warningsSent
+    };
   } catch (error) {
     console.error('[Cleanup 72h] Error cleaning up 72-hour jobs:', error);
     throw error;

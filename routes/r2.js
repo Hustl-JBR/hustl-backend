@@ -27,6 +27,7 @@ const upload = multer({
 });
 
 // POST /r2/upload - Upload file directly through backend (avoids CORS issues)
+// Accepts both 'file' (generic) and 'photo' (profile photo) field names
 router.post('/upload', (req, res, next) => {
   console.log('[R2 Upload] Request received:', {
     method: req.method,
@@ -35,21 +36,23 @@ router.post('/upload', (req, res, next) => {
     hasAuth: !!req.headers.authorization,
   });
   next();
-}, upload.single('file'), async (req, res) => {
+}, upload.fields([{ name: 'file', maxCount: 1 }, { name: 'photo', maxCount: 1 }]), async (req, res) => {
   try {
+    // Support both 'file' and 'photo' field names
+    const file = req.files?.['file']?.[0] || req.files?.['photo']?.[0] || req.file;
+    
     console.log('[R2 Upload] File received:', {
-      hasFile: !!req.file,
-      fileName: req.file?.originalname,
-      fileSize: req.file?.size,
-      mimeType: req.file?.mimetype,
+      hasFile: !!file,
+      fileName: file?.originalname,
+      fileSize: file?.size,
+      mimeType: file?.mimetype,
+      fields: req.files ? Object.keys(req.files) : 'none',
     });
 
-    if (!req.file) {
+    if (!file) {
       console.error('[R2 Upload] No file provided in request');
-      return res.status(400).json({ error: 'No file provided' });
+      return res.status(400).json({ error: 'No file provided. Please include a file with field name "file" or "photo".' });
     }
-
-    const { file } = req;
     console.log('[R2 Upload] Uploading to R2...');
     const { fileKey, publicUrl } = await uploadFileToR2(
       file.buffer,

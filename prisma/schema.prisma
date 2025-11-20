@@ -32,6 +32,7 @@ enum JobStatus {
   PAID
   COMPLETED
   CANCELLED
+  EXPIRED
 }
 
 enum OfferStatus {
@@ -63,6 +64,9 @@ model User {
   ratingCount           Int                   @default(0) @map("rating_count")
   idVerified            Boolean               @default(false) @map("id_verified")
   stripeAccountId      String?               @map("stripe_account_id") // Stripe Connect account ID
+  emailVerified         Boolean               @default(false) @map("email_verified")
+  emailVerificationCode String?               @map("email_verification_code")
+  emailVerificationExpiry DateTime?           @map("email_verification_expiry")
   createdAt             DateTime              @default(now()) @map("created_at")
   updatedAt             DateTime              @updatedAt @map("updated_at")
 
@@ -169,6 +173,9 @@ model Message {
   senderId              String                @map("sender_id")
   body                  String                @db.Text
   attachments           String[]              @default([])
+  read                  Boolean               @default(false)
+  readAt                DateTime?             @map("read_at")
+  readBy                String?               @map("read_by")
   createdAt             DateTime              @default(now()) @map("created_at")
 
   // Relations
@@ -178,6 +185,7 @@ model Message {
   @@index([threadId])
   @@index([senderId])
   @@index([createdAt])
+  @@index([read])
   @@map("messages")
 }
 

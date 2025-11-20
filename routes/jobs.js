@@ -187,6 +187,32 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
     // The job's pickupZip is what matters, not where the customer lives
     // This allows customers to post jobs anywhere in Tennessee, regardless of their home address
 
+    // BUSINESS RULE: Hustler max 2 active jobs
+    // Check if user is a Hustler and count their active jobs
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { roles: true },
+    });
+    
+    const isHustler = user && user.roles && user.roles.includes('HUSTLER');
+    if (isHustler) {
+      const activeJobsCount = await prisma.job.count({
+        where: {
+          hustlerId: req.user.id,
+          status: {
+            in: ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM'],
+          },
+        },
+      });
+      
+      if (activeJobsCount >= 2) {
+        return res.status(400).json({ 
+          error: 'You can only have 2 active jobs at a time. Please complete or cancel an existing job before posting a new one.',
+          field: 'activeJobs'
+        });
+      }
+    }
+
     const {
       title,
       category,
@@ -487,16 +513,21 @@ router.get('/', optionalAuth, [
       // This will be filtered in post-processing
     }
 
-    // 48-72 hour cleanup: Only hide OPEN jobs older than threshold with no accepted offers
+    // Exclude EXPIRED jobs from all queries (they should never show)
+    where.AND = where.AND || [];
+    where.AND.push({
+      status: { not: 'EXPIRED' },
+    });
+    
+    // 72 hour cleanup: Exclude OPEN jobs older than threshold with no accepted offers
     // Don't filter if status is already set to something other than OPEN
-    // Use 48 hours as default (configurable)
-    const hoursThreshold = parseInt(process.env.JOB_CLEANUP_HOURS || '48', 10);
+    // Use 72 hours as default (configurable)
+    const hoursThreshold = parseInt(process.env.JOB_CLEANUP_HOURS || '72', 10);
     const hoursAgo = new Date(Date.now() - hoursThreshold * 60 * 60 * 1000);
     
     if (!status || status === 'OPEN') {
       // Add condition: Exclude old OPEN jobs with no accepted offers
       // We'll filter these out: status=OPEN AND age>threshold AND no accepted offers
-      where.AND = where.AND || [];
       where.AND.push({
         OR: [
           { status: { not: 'OPEN' } }, // Not OPEN status (already assigned/completed)
@@ -790,12 +821,19 @@ router.post('/:id/cancel', authenticate, requireRole('CUSTOMER'), async (req, re
       });
     }
 
+    // BUSINESS RULE: Customer cannot delete after Hustler is OTW (IN_PROGRESS)
+    if (job.status === 'IN_PROGRESS') {
+      return res.status(400).json({ 
+        error: 'Cannot cancel job that is in progress. The hustler is already on the way or working. Please contact support if there is an emergency.' 
+      });
+    }
+    
     // Protection: Can't cancel if hustler has already started (within 2 hours of start time)
     const startTime = new Date(job.startTime);
     const twoHoursBeforeStart = new Date(startTime.getTime() - 2 * 60 * 60 * 1000);
-    if (now >= twoHoursBeforeStart && job.hustlerId) {
+    if (now >= twoHoursBeforeStart && job.hustlerId && job.status === 'ASSIGNED') {
       return res.status(400).json({ 
-        error: 'Cannot cancel job within 2 hours of start time. Please contact support if there is an emergency.' 
+        error: 'Cannot cancel job within 2 hours of start time when hustler is assigned. Please contact support if there is an emergency.' 
       });
     }
 
@@ -1314,6 +1352,21 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
       return res.status(403).json({ error: 'Forbidden' });
     }
 
+    // BUSINESS RULE: Customer cannot delete after Hustler is OTW (IN_PROGRESS) or ASSIGNED
+    if (job.status === 'IN_PROGRESS') {
+      return res.status(400).json({ 
+        error: 'Cannot delete job that is in progress. The hustler is already working or on the way.',
+        message: `Job status is ${job.status}. Cannot delete jobs in progress.`
+      });
+    }
+    
+    if (job.status === 'ASSIGNED') {
+      return res.status(400).json({ 
+        error: 'Cannot delete job that is assigned. The hustler is committed to this job.',
+        message: `Job status is ${job.status}. Please cancel the job instead if needed.`
+      });
+    }
+    
     if (job.status !== 'OPEN') {
       return res.status(400).json({ 
         error: 'Can only delete open jobs that have not been assigned',
