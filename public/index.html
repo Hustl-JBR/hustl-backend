@@ -94,6 +94,11 @@
       header {
         padding: 0.5rem 0.75rem;
       }
+      
+      /* Add bottom padding to all views to prevent nav overlap */
+      section[id^="view-"] {
+        padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+      }
     }
 
     .logo-row {
@@ -2180,7 +2185,7 @@
           <div class="field-inline">
             <div class="field" style="flex: 2;">
               <label for="pickupAddress">Pickup address (optional)</label>
-              <input id="pickupAddress" type="text" placeholder="Street address (shared in chat or after accept)" />
+              <input id="pickupAddress" type="text" placeholder="Street address (shared in chat or after accept)" onblur="this.value = this.value.replace(/[^a-zA-Z0-9,\s]/g, '').replace(/\s+/g, ' ').trim();" />
             </div>
             <div class="field" style="flex: 1;">
               <label for="pickupZip">Zip code</label>
@@ -2443,7 +2448,7 @@
           </div>
           
           <!-- Hidden Advanced Filters (shown when "More" is clicked) - Mobile-optimized -->
-          <div id="advancedFiltersContainer" style="display: none; margin-bottom: 1rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; opacity: 0; transform: translateY(-10px); transition: opacity 0.3s ease, transform 0.3s ease, max-height 0.3s ease; max-height: 0; overflow: hidden;">
+          <div id="advancedFiltersContainer" style="display: none; margin-bottom: 1rem; padding: 1rem; background: #f5f7fa; border-radius: 10px; border: 1px solid #e5e7eb; opacity: 0; transform: translateY(-10px); transition: opacity 0.3s ease, transform 0.3s ease, height 0.3s ease; height: 0; overflow: hidden;">
             <style>
               @media (max-width: 768px) {
                 #advancedFiltersContainer {
@@ -2455,8 +2460,7 @@
                   border-radius: 12px !important;
                   margin-top: 0.75rem;
                   margin-bottom: 1.5rem !important;
-                  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px) + 80px) !important;
-                  max-height: calc(100vh - 200px) !important;
+                  height: 250px !important;
                   overflow-y: auto !important;
                   overflow-x: hidden;
                   -webkit-overflow-scrolling: touch;
@@ -2478,44 +2482,34 @@
                 }
               }
             </style>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
-              <button class="filter-btn" data-filter="hourly" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 20px; background: white; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: #374151; transition: all 0.2s;">
-                ⏱ Hourly
-              </button>
-              <button class="filter-btn" data-filter="flat" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 20px; background: white; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: #374151; transition: all 0.2s;">
-                💵 Flat Rate
-              </button>
-            </div>
-            <!-- Compact Location Controls with Mobile-Friendly Slider -->
-            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.75rem;">
-              <div style="flex: 1; min-width: 120px;">
-                <label for="jobsRadiusFilter" style="font-size: 0.8rem; color: #6b7280; margin-bottom: 0.5rem; display: block;">📍 Radius: <span id="radiusValueDisplay" style="font-weight: 600; color: #2563eb;">10 mi</span></label>
-                <input type="range" id="jobsRadiusSlider" min="5" max="50" step="5" value="10" style="width: 100%; height: 8px; border-radius: 4px; background: #e5e7eb; outline: none; cursor: pointer; -webkit-appearance: none;" />
-                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #9ca3af; margin-top: 0.25rem;">
-                  <span>5mi</span>
-                  <span>50mi</span>
-                </div>
-                <!-- Hidden select for backward compatibility -->
-                <select id="jobsRadiusFilter" style="display: none;">
-                  <option value="5">5 mi</option>
-                  <option value="10" selected>10 mi</option>
-                  <option value="15">15 mi</option>
-                  <option value="20">20 mi</option>
-                  <option value="25">25 mi</option>
-                  <option value="30">30 mi</option>
-                  <option value="40">40 mi</option>
-                  <option value="50">50 mi</option>
-                </select>
+            <!-- Distance Slider -->
+            <div style="margin-bottom: 1rem;">
+              <label for="jobsRadiusSlider" style="font-size: 0.9rem; color: #374151; margin-bottom: 0.5rem; display: block; font-weight: 500;">Distance (miles)</label>
+              <input type="range" id="jobsRadiusSlider" min="1" max="50" step="1" value="10" style="width: 100%; height: 8px; border-radius: 4px; background: #e5e7eb; outline: none; cursor: pointer; -webkit-appearance: none; appearance: none;" />
+              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">
+                <span>0 mi</span>
+                <span id="radiusValueDisplay" style="font-weight: 600; color: #2563eb;">10 mi</span>
+                <span>50 mi</span>
               </div>
-              <div style="flex: 1; min-width: 120px;">
-                <label for="jobsZipFilter" style="font-size: 0.8rem; color: #6b7280; margin-bottom: 0.5rem; display: block;">📍 ZIP Code:</label>
-                <input id="jobsZipFilter" type="text" placeholder="Enter ZIP" maxlength="5" pattern="[0-9]{5}" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; border: 1px solid #d1d5db; border-radius: 6px;" />
-              </div>
-              <button id="setMyLocationBtn" class="btn outline" style="padding: 0.5rem 1rem; white-space: nowrap; font-size: 0.85rem; min-height: 44px;">
-                📍 My Location
-              </button>
+              <!-- Hidden select for backward compatibility -->
+              <select id="jobsRadiusFilter" style="display: none;">
+                <option value="5">5 mi</option>
+                <option value="10" selected>10 mi</option>
+                <option value="15">15 mi</option>
+                <option value="20">20 mi</option>
+                <option value="25">25 mi</option>
+                <option value="30">30 mi</option>
+                <option value="40">40 mi</option>
+                <option value="50">50 mi</option>
+              </select>
             </div>
-            <div id="locationStatus" style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem;"></div>
+            
+            <!-- Location Input (ZIP or City) -->
+            <div style="margin-bottom: 1rem;">
+              <label for="jobsLocationFilter" style="font-size: 0.9rem; color: #374151; margin-bottom: 0.5rem; display: block; font-weight: 500;">Location (optional)</label>
+              <input id="jobsLocationFilter" type="text" placeholder="ZIP or City (leave blank for 'Near Me')" style="width: 100%; padding: 0.6rem; font-size: 0.9rem; border: 1px solid #d1d5db; border-radius: 8px; background: white;" />
+              <div id="locationStatus" style="font-size: 0.75rem; color: #64748b; margin-top: 0.5rem; font-style: italic;">If blank, uses your device location</div>
+            </div>
             
             <!-- Apply Filters and Reset Buttons -->
             <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;">
@@ -2552,7 +2546,7 @@
       </section>
 
       <!-- MESSAGES VIEW -->
-      <section id="view-messages" style="display:none;">
+      <section id="view-messages" style="display:none; padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));">
         <div class="layout-grid">
           <!-- Conversation List Container (shown on mobile when no conversation selected) -->
           <div class="card" id="conversationListContainer">
@@ -4160,7 +4154,7 @@ try {
               title,
               category,
               description: desc,
-              address: address.trim(),
+              address: cleanedAddress || address.trim(),
               date: jobDate.toISOString(),
               startTime: startTime.toISOString(),
               endTime: endTime.toISOString(),
@@ -4345,12 +4339,13 @@ async function renderJobs(reset = false) {
     const radiusFilter = radiusSlider?.value || radiusSelect?.value || '10'; // Default 10 miles
     const radiusNum = parseInt(radiusFilter, 10) || 10;
     const userLocation = JSON.parse(localStorage.getItem('userLocation') || 'null');
-    const zipFilterInput = document.getElementById("jobsZipFilter")?.value.trim();
+    const locationFilterInput = document.getElementById("jobsLocationFilter")?.value.trim();
     const savedZipFilter = localStorage.getItem('savedZipFilter');
     
-    // Priority order: zip filter input > saved zip > user profile zip > geolocation > default
-    if (zipFilterInput && zipFilterInput.length === 5 && /^\d{5}$/.test(zipFilterInput)) {
-      listParams.zip = zipFilterInput;
+    // Priority order: location filter input (ZIP or city) > saved zip > user profile zip > geolocation > default
+    // Check if it's a 5-digit ZIP code
+    if (locationFilterInput && locationFilterInput.length === 5 && /^\d{5}$/.test(locationFilterInput)) {
+      listParams.zip = locationFilterInput;
       listParams.radius = radiusNum;
     } else if (savedZipFilter && savedZipFilter.length === 5 && /^\d{5}$/.test(savedZipFilter)) {
       listParams.zip = savedZipFilter;
@@ -4835,10 +4830,10 @@ async function renderJobs(reset = false) {
     noJobsMsg.style.padding = "2rem";
     noJobsMsg.style.textAlign = "center";
     
-    const zipFilter = document.getElementById("jobsZipFilter")?.value.trim();
+    const locationFilter = document.getElementById("jobsLocationFilter")?.value.trim();
     const distanceFilter = document.getElementById("jobsDistanceFilter")?.value;
     
-    if (zipFilter || distanceFilter) {
+    if (locationFilter || distanceFilter) {
       noJobsMsg.innerHTML = `
         <div style="margin-bottom: 0.5rem;">No jobs found with current location filters.</div>
         <div style="font-size: 0.9rem;">Try removing location filters or checking a different area.</div>
@@ -5278,7 +5273,7 @@ async function renderJobs(reset = false) {
   const showMoreFiltersText = document.getElementById('showMoreFiltersText');
   const filtersAppliedLabel = document.getElementById('filtersAppliedLabel');
   
-  // SIMPLIFIED: Just toggle the filters panel - no complex logic
+  // SIMPLIFIED: Just toggle the filters panel - clean drawer behavior
   if (showMoreFiltersBtn && advancedFiltersContainer) {
     showMoreFiltersBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -5288,19 +5283,36 @@ async function renderJobs(reset = false) {
                                  advancedFiltersContainer.style.opacity !== '0';
       
       if (isCurrentlyVisible) {
-        // Close it
-        advancedFiltersContainer.style.display = 'none';
+        // Close it - collapse drawer
+        advancedFiltersContainer.style.opacity = '0';
+        advancedFiltersContainer.style.transform = 'translateY(-10px)';
+        advancedFiltersContainer.style.height = '0';
+        setTimeout(() => {
+          advancedFiltersContainer.style.display = 'none';
+        }, 300);
         showMoreFiltersText.textContent = 'More Filters';
         if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(0deg)';
         showMoreFiltersBtn.style.background = 'white';
         showMoreFiltersBtn.style.borderColor = '#d1d5db';
       } else {
-        // Open it
+        // Open it - expand drawer
         advancedFiltersContainer.style.display = 'block';
+        // Force reflow
+        advancedFiltersContainer.offsetHeight;
+        const isMobile = window.innerWidth <= 768;
+        advancedFiltersContainer.style.height = isMobile ? '250px' : 'auto';
+        advancedFiltersContainer.style.opacity = '1';
+        advancedFiltersContainer.style.transform = 'translateY(0)';
         showMoreFiltersText.textContent = 'Less Filters';
         if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(180deg)';
         showMoreFiltersBtn.style.background = '#eff6ff';
         showMoreFiltersBtn.style.borderColor = '#3b82f6';
+        // Auto-scroll into view on mobile
+        if (isMobile) {
+          setTimeout(() => {
+            advancedFiltersContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }, 100);
+        }
       }
     });
     
@@ -5340,13 +5352,25 @@ async function renderJobs(reset = false) {
         e.stopPropagation();
         renderJobs(true); // Re-render with new filters
         updateFiltersAppliedLabel();
-        // SIMPLIFIED: Close filters panel after applying
+        // Close filters panel after applying (with animation)
         if (showMoreFiltersBtn && advancedFiltersContainer) {
-          advancedFiltersContainer.style.display = 'none';
+          advancedFiltersContainer.style.opacity = '0';
+          advancedFiltersContainer.style.transform = 'translateY(-10px)';
+          advancedFiltersContainer.style.height = '0';
+          setTimeout(() => {
+            advancedFiltersContainer.style.display = 'none';
+          }, 300);
           showMoreFiltersText.textContent = 'More Filters';
           if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(0deg)';
           showMoreFiltersBtn.style.background = 'white';
           showMoreFiltersBtn.style.borderColor = '#d1d5db';
+          // Scroll job list into view on mobile
+          if (window.innerWidth <= 768) {
+            setTimeout(() => {
+              const jobsList = document.getElementById('jobsList');
+              if (jobsList) jobsList.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 350);
+          }
         }
       }, { passive: false });
     }
@@ -5363,7 +5387,12 @@ async function renderJobs(reset = false) {
         
         if (isCurrentlyVisible) {
           // Close it
-          advancedFiltersContainer.style.display = 'none';
+          advancedFiltersContainer.style.opacity = '0';
+          advancedFiltersContainer.style.transform = 'translateY(-10px)';
+          advancedFiltersContainer.style.height = '0';
+          setTimeout(() => {
+            advancedFiltersContainer.style.display = 'none';
+          }, 300);
           showMoreFiltersText.textContent = 'More Filters';
           if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(0deg)';
           showMoreFiltersBtn.style.background = 'white';
@@ -5371,10 +5400,20 @@ async function renderJobs(reset = false) {
         } else {
           // Open it
           advancedFiltersContainer.style.display = 'block';
+          advancedFiltersContainer.offsetHeight; // Force reflow
+          const isMobile = window.innerWidth <= 768;
+          advancedFiltersContainer.style.height = isMobile ? '250px' : 'auto';
+          advancedFiltersContainer.style.opacity = '1';
+          advancedFiltersContainer.style.transform = 'translateY(0)';
           showMoreFiltersText.textContent = 'Less Filters';
           if (showMoreFiltersArrow) showMoreFiltersArrow.style.transform = 'rotate(180deg)';
           showMoreFiltersBtn.style.background = '#eff6ff';
           showMoreFiltersBtn.style.borderColor = '#3b82f6';
+          if (isMobile) {
+            setTimeout(() => {
+              advancedFiltersContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+          }
         }
       });
     }
@@ -5391,8 +5430,8 @@ async function renderJobs(reset = false) {
           radiusSlider.value = '10';
           if (radiusValueDisplay) radiusValueDisplay.textContent = '10 mi';
         }
-        const zipFilter = document.getElementById('jobsZipFilter');
-        if (zipFilter) zipFilter.value = '';
+        const locationFilter = document.getElementById('jobsLocationFilter');
+        if (locationFilter) locationFilter.value = '';
         
         // Reset filter buttons
         document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
@@ -5439,9 +5478,13 @@ async function renderJobs(reset = false) {
         activeFilters.push(`${radius} mi radius`);
       }
       
-      const zip = document.getElementById('jobsZipFilter')?.value?.trim();
-      if (zip && zip.length === 5) {
-        activeFilters.push(`ZIP ${zip}`);
+      const location = document.getElementById('jobsLocationFilter')?.value?.trim();
+      if (location) {
+        if (location.length === 5 && /^\d{5}$/.test(location)) {
+          activeFilters.push(`ZIP ${location}`);
+        } else {
+          activeFilters.push(`Location: ${location}`);
+        }
       }
       
       if (activeFilters.length > 0) {
@@ -5469,10 +5512,10 @@ async function renderJobs(reset = false) {
       (radiusSelect || radiusSlider).addEventListener('input', updateFiltersAppliedLabel);
     }
     
-    const zipFilter = document.getElementById('jobsZipFilter');
-    if (zipFilter) {
-      zipFilter.addEventListener('input', updateFiltersAppliedLabel);
-      zipFilter.addEventListener('blur', updateFiltersAppliedLabel);
+    const locationFilter = document.getElementById('jobsLocationFilter');
+    if (locationFilter) {
+      locationFilter.addEventListener('input', updateFiltersAppliedLabel);
+      locationFilter.addEventListener('blur', updateFiltersAppliedLabel);
     }
     
     // Initial update
@@ -6143,29 +6186,28 @@ async function renderJobs(reset = false) {
         locationContainer.style.border = "1px solid #86efac";
         
         // Map Preview (move higher - right after location label)
-        if (job.lat && job.lng) {
+        // Only show if we have valid lat/lng coordinates
+        if (job.lat && job.lng && !isNaN(parseFloat(job.lat)) && !isNaN(parseFloat(job.lng))) {
           const mapPreview = document.createElement("div");
-          mapPreview.style.marginBottom = "0.75rem";
-          mapPreview.style.borderRadius = "8px";
-          mapPreview.style.overflow = "hidden";
-          mapPreview.style.height = "200px";
-          mapPreview.style.background = "#e5e7eb";
-          mapPreview.style.cursor = "pointer";
-          mapPreview.style.border = "2px solid #86efac";
+          mapPreview.id = `mapPreview-${job.id}`;
+          mapPreview.style.cssText = "margin-bottom: 0.75rem; border-radius: 8px; overflow: hidden; height: 200px; width: 100%; background: #e5e7eb; cursor: pointer; border: 2px solid #86efac; position: relative;";
           
           // Use Mapbox Static Image API for preview
           const mapboxToken = "pk.eyJ1IjoiaHVzdGxtYXAiLCJhIjoiY21qNGUzc2pqMGVxbzJrcjhuYm1icGNueSJ9.YzIpkBWGqqn0dEHz-n_puQ";
-          const mapImageUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+2563eb(${job.lng},${job.lat})/${job.lng},${job.lat},14,0/400x200@2x?access_token=${mapboxToken}`;
+          const lat = parseFloat(job.lat);
+          const lng = parseFloat(job.lng);
+          const mapImageUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+2563eb(${lng},${lat})/${lng},${lat},14,0/400x200@2x?access_token=${mapboxToken}`;
           
           const mapImg = document.createElement("img");
-          mapImg.loading = "lazy"; // Lazy load map images
+          mapImg.loading = "lazy";
           mapImg.src = mapImageUrl;
-          mapImg.style.cssText = "width: 100%; height: 100%; object-fit: cover;";
+          mapImg.style.cssText = "width: 100%; height: 100%; object-fit: cover; display: block;";
           mapImg.alt = "Job location map";
+          
           // Add error handling for failed image loads
           mapImg.onerror = function() {
             this.style.display = "none";
-            mapPreview.innerHTML = '<div style="padding: 2rem; text-align: center; color: #6b7280;">Map preview unavailable</div>';
+            mapPreview.innerHTML = '<div style="padding: 2rem; text-align: center; color: #6b7280; height: 100%; display: flex; align-items: center; justify-content: center;">Map preview unavailable</div>';
           };
           
           mapPreview.appendChild(mapImg);
@@ -6174,6 +6216,10 @@ async function renderJobs(reset = false) {
             const address = pickupAddress || (pickupCity && pickupZip ? `${pickupCity}, ${pickupZip}` : pickupZip || '');
             if (address) {
               const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+              window.open(mapUrl, "_blank");
+            } else if (lat && lng) {
+              // Fallback to coordinates if no address
+              const mapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
               window.open(mapUrl, "_blank");
             }
           });
@@ -8854,10 +8900,10 @@ async function renderJobs(reset = false) {
 
       if (jobsWithThreads.length === 0) {
         convList.innerHTML =
-          "<div class='muted'>No conversations yet. When a hustler applies to your job, you'll see them here.</div>";
-        convTitle.textContent = "Select a conversation";
-        convSummary.textContent = "";
-        convMessages.innerHTML = "";
+          "<div class='muted' style='padding: 2rem; text-align: center;'>No conversations yet.<br><small style='font-size: 0.85rem; color: #9ca3af; margin-top: 0.5rem; display: block;'>Start a conversation by applying to a job or posting one.</small></div>";
+        if (convTitle) convTitle.textContent = "Select a conversation";
+        if (convSummary) convSummary.textContent = "";
+        if (convMessages) convMessages.innerHTML = "";
         activeConversationJobId = null;
         return;
       }
@@ -11786,23 +11832,26 @@ meta.textContent =
         });
       }
       
-      // Zip filter change handler - apply immediately on change
-      const jobsZipFilter = document.getElementById("jobsZipFilter");
-      if (jobsZipFilter) {
-        jobsZipFilter.addEventListener("blur", () => {
+      // Location filter change handler - apply immediately on change
+      const jobsLocationFilter = document.getElementById("jobsLocationFilter");
+      if (jobsLocationFilter) {
+        jobsLocationFilter.addEventListener("blur", () => {
           // Apply filter when user leaves the field
-          const zipValue = jobsZipFilter.value.trim();
-          if (zipValue && zipValue.length === 5 && /^\d{5}$/.test(zipValue)) {
-            localStorage.setItem('savedZipFilter', zipValue);
-            renderJobs(true); // Reset pagination when zip changes
-          } else if (!zipValue) {
+          const locationValue = cleanAddress(jobsLocationFilter.value);
+          if (locationValue) {
+            // If it's a ZIP code, save it
+            if (locationValue.length === 5 && /^\d{5}$/.test(locationValue)) {
+              localStorage.setItem('savedZipFilter', locationValue);
+            }
+            renderJobs(true); // Reset pagination when location changes
+          } else {
             // Clear filter if empty
             localStorage.removeItem('savedZipFilter');
             renderJobs(true);
           }
         });
         
-        jobsZipFilter.addEventListener("keypress", (e) => {
+        jobsLocationFilter.addEventListener("keypress", (e) => {
           if (e.key === "Enter") {
             jobsZipFilter.blur(); // Trigger blur event to apply filter
           }
