@@ -5587,7 +5587,7 @@ async function renderJobs(reset = false) {
         detailsSection.appendChild(inProgressNotice);
       }
       
-      // Description (prominently displayed)
+      // Description (prominently displayed, collapsible for long descriptions)
       if (job.description) {
         const descContainer = document.createElement("div");
         descContainer.style.marginTop = "1rem";
@@ -5605,8 +5605,46 @@ async function renderJobs(reset = false) {
         const desc = document.createElement("div");
         desc.style.lineHeight = "1.6";
         desc.style.color = "var(--text-main)";
-        desc.textContent = job.description;
-        descContainer.appendChild(desc);
+        
+        const isLong = job.description.length > 200;
+        const descId = `job-desc-${job.id}`;
+        desc.id = descId;
+        
+        if (isLong) {
+          // Show truncated version initially
+          desc.style.maxHeight = "120px";
+          desc.style.overflow = "hidden";
+          desc.textContent = job.description;
+          
+          const toggleBtn = document.createElement("button");
+          toggleBtn.style.cssText = "margin-top: 0.5rem; padding: 0.4rem 0.8rem; background: #e5e7eb; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #374151; -webkit-tap-highlight-color: transparent; user-select: none;";
+          toggleBtn.textContent = "Show More";
+          toggleBtn.dataset.expanded = "false";
+          
+          // Single-tap toggle (no double-tap needed)
+          toggleBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const expanded = toggleBtn.dataset.expanded === "true";
+            if (expanded) {
+              desc.style.maxHeight = "120px";
+              desc.style.overflow = "hidden";
+              toggleBtn.textContent = "Show More";
+              toggleBtn.dataset.expanded = "false";
+            } else {
+              desc.style.maxHeight = "none";
+              desc.style.overflow = "visible";
+              toggleBtn.textContent = "Show Less";
+              toggleBtn.dataset.expanded = "true";
+            }
+          }, { passive: true }); // Use passive listener for better performance
+          
+          descContainer.appendChild(desc);
+          descContainer.appendChild(toggleBtn);
+        } else {
+          desc.textContent = job.description;
+          descContainer.appendChild(desc);
+        }
         
         detailsSection.appendChild(descContainer);
       }
@@ -9921,25 +9959,39 @@ setTimeout(() => {
               state.users[userIndex].photoUrl = updatedUser.photoUrl;
               state.users[userIndex].avatarDataUrl = null;
             }
+            
+            // Update localStorage user data immediately
+            localStorage.setItem('hustl_user', JSON.stringify(currentUser));
           }
           saveState();
           
+          // Clear currentUser cache to force refresh
+          if (window.hustlAPI && window.hustlAPI.auth) {
+            window.hustlAPI.auth.currentUser = updatedUser;
+          }
+          
           showToast("✓ Profile photo updated!");
           
-          // Force refresh profile view with updated user immediately
-          // Use the updatedUser from API to ensure we have the latest data
-          setTimeout(() => {
-            renderProfile(updatedUser); // Pass updated user directly
-            // Also refresh if currently viewing profile
-            if (document.getElementById("view-profile")?.style.display !== "none") {
-              renderProfile(updatedUser); // Pass updated user directly
-            }
-          }, 100);
+          // Immediately refresh profile view with updated user
+          renderProfile(updatedUser);
           
-          // Also do a full refresh after a delay to sync with API
-          setTimeout(() => {
-            renderProfile(); // Fetch fresh from API to ensure sync
-          }, 500);
+          // Force re-render of all views that show profile photos
+          if (document.getElementById("view-profile")?.style.display !== "none") {
+            renderProfile(updatedUser);
+          }
+          
+          // Refresh messages view if visible (to update profile photos in chat)
+          if (document.getElementById("view-messages")?.style.display !== "none") {
+            renderMessagesView();
+          }
+          
+          // Refresh jobs view if visible (to update profile photos in job cards)
+          if (document.getElementById("view-jobs")?.style.display !== "none") {
+            renderJobs();
+          }
+          
+          // Also refresh auth pill to show updated photo
+          renderAuthPill();
         } catch (updateError) {
           console.error("Profile update error:", updateError);
           throw new Error("Failed to update profile: " + (updateError.message || "Update error"));
@@ -10013,7 +10065,10 @@ setTimeout(() => {
         content.style.display = "none";
         arrow.style.display = "block";
         
-        toggle.addEventListener("click", () => {
+        // Single-tap toggle (no double-tap needed) - use passive listener
+        toggle.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
           const isOpen = content.style.display !== "none";
           if (isOpen) {
             content.style.display = "none";
@@ -10024,7 +10079,7 @@ setTimeout(() => {
             arrow.style.transform = "rotate(180deg)";
             toggle.style.background = "#f3f4f6";
           }
-        });
+        }, { passive: true }); // Passive listener for better mobile performance
       }
     }
 

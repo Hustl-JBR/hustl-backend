@@ -97,11 +97,33 @@
 @media (max-width: 768px) {
   .mobile-bottom-nav {
     display: block;
+    z-index: 10000 !important; /* Higher than any dropdown content */
+    position: fixed !important;
   }
   
   /* Add bottom padding to main content to avoid overlap */
   main {
-    padding-bottom: 80px !important;
+    padding-bottom: 100px !important; /* Increased to ensure nav is never covered */
+    margin-bottom: 0 !important;
+  }
+  
+  /* Ensure footer is always above bottom nav */
+  footer {
+    margin-bottom: 80px !important;
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Ensure "How it works" dropdown doesn't push into footer/nav */
+  #howItWorksContent {
+    max-height: calc(100vh - 250px) !important; /* Prevent overflow */
+    overflow-y: auto !important;
+    margin-bottom: 20px !important;
+  }
+  
+  /* Ensure all cards and sections respect bottom nav */
+  .card, section {
+    margin-bottom: 1rem !important;
   }
   
   /* Hide desktop nav on mobile */
