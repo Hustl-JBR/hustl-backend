@@ -3,6 +3,8 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const rateLimit = require("express-rate-limit");
+const http = require("http");
+const { WebSocketServer } = require("ws");
 require("dotenv").config();
 
 const Stripe = require("stripe");
@@ -10,6 +12,170 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY || "");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+
+// Create HTTP server for WebSocket support
+const server = http.createServer(app);
+const { WebSocketServer } = require('ws');
+const server = http.createServer(app);
+
+// WebSocket server
+const wss = new WebSocketServer({ 
+  server,
+  path: '/ws',
+  verifyClient: (info, callback) => {
+    // Verify JWT token from query string
+    const url = new URL(info.req.url, `http://${info.req.headers.host}`);
+    const token = url.searchParams.get('token');
+    
+    if (!token) {
+      callback(false, 401, 'Unauthorized');
+      return;
+    }
+    
+    // Verify token (reuse auth middleware logic)
+    const jwt = require('jsonwebtoken');
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      info.req.user = decoded; // Attach user to request
+      callback(true);
+    } catch (error) {
+      callback(false, 401, 'Invalid token');
+    }
+  },
+});
+
+// WebSocket connection handling
+const connectedClients = new Map(); // userId -> Set of WebSocket connections
+
+wss.on('connection', (ws, req) => {
+  const user = req.user;
+  if (!user || !user.id) {
+    ws.close(1008, 'Unauthorized');
+    return;
+  }
+
+  const userId = user.id;
+  
+  // Add connection to user's set
+  if (!connectedClients.has(userId)) {
+    connectedClients.set(userId, new Set());
+  }
+  connectedClients.get(userId).add(ws);
+
+  console.log(`[WebSocket] User ${userId} connected (${connectedClients.get(userId).size} connections)`);
+
+  // Send welcome message
+  ws.send(JSON.stringify({
+    type: 'connected',
+    message: 'WebSocket connected',
+  }));
+
+  // Handle incoming messages
+  ws.on('message', async (data) => {
+    try {
+      const message = JSON.parse(data.toString());
+      
+      switch (message.type) {
+        case 'typing':
+          // Broadcast typing indicator to other users in thread
+          if (message.threadId) {
+            broadcastToThread(message.threadId, userId, {
+              type: 'typing',
+              userId,
+              userName: user.name || user.email,
+              threadId: message.threadId,
+              isTyping: message.isTyping,
+            });
+          }
+          break;
+          
+        case 'presence':
+          // Update presence status
+          broadcastToAll({
+            type: 'presence',
+            userId,
+            status: message.status || 'online',
+          });
+          break;
+          
+        default:
+          console.log(`[WebSocket] Unknown message type: ${message.type}`);
+      }
+    } catch (error) {
+      console.error('[WebSocket] Error handling message:', error);
+    }
+  });
+
+  // Handle disconnect
+  ws.on('close', () => {
+    const userConnections = connectedClients.get(userId);
+    if (userConnections) {
+      userConnections.delete(ws);
+      if (userConnections.size === 0) {
+        connectedClients.delete(userId);
+      }
+    }
+    console.log(`[WebSocket] User ${userId} disconnected`);
+  });
+
+  // Handle errors
+  ws.on('error', (error) => {
+    console.error(`[WebSocket] Error for user ${userId}:`, error);
+  });
+});
+
+// Helper function to broadcast to all users in a thread
+async function broadcastToThread(threadId, senderId, message) {
+  try {
+    const prisma = require('./db');
+    const thread = await prisma.thread.findUnique({
+      where: { id: threadId },
+      include: { userA: true, userB: true },
+    });
+
+    if (!thread) return;
+
+    const recipientId = thread.userAId === senderId ? thread.userBId : thread.userAId;
+    
+    // Send to recipient
+    const recipientConnections = connectedClients.get(recipientId);
+    if (recipientConnections) {
+      recipientConnections.forEach(ws => {
+        if (ws.readyState === 1) { // OPEN
+          ws.send(JSON.stringify(message));
+        }
+      });
+    }
+  } catch (error) {
+    console.error('[WebSocket] Error broadcasting to thread:', error);
+  }
+}
+
+// Helper function to broadcast to all connected clients
+function broadcastToAll(message) {
+  connectedClients.forEach((connections) => {
+    connections.forEach(ws => {
+      if (ws.readyState === 1) { // OPEN
+        ws.send(JSON.stringify(message));
+      }
+    });
+  });
+}
+
+// Export function to send messages from API routes
+global.sendWebSocketMessage = function(userId, message) {
+  const userConnections = connectedClients.get(userId);
+  if (userConnections) {
+    userConnections.forEach(ws => {
+      if (ws.readyState === 1) {
+        ws.send(JSON.stringify(message));
+      }
+    });
+  }
+};
+
+// Export function to broadcast to thread participants
+global.broadcastToThread = broadcastToThread;
 
 // Rate limiting - Production-ready limits (can handle hundreds of concurrent users)
 // IMPORTANT: Limits are PER IP ADDRESS, so different users from different IPs each get their own limits
@@ -85,6 +251,10 @@ const reviewsRouter = require("./routes/reviews");
 const feedbackRouter = require("./routes/feedback");
 const adminRouter = require("./routes/admin");
 const notificationsRouter = require("./routes/notifications");
+const referralsRouter = require("./routes/referrals");
+const trackingRouter = require("./routes/tracking");
+const supportRouter = require("./routes/support");
+const analyticsRouter = require("./routes/analytics");
 
 // CRITICAL: API Routes MUST come BEFORE static files to ensure they're matched first
 app.use("/auth", authLimiter, authRouter); // Stricter rate limiting for auth
@@ -100,6 +270,10 @@ app.use("/reviews", reviewsRouter);
 app.use("/feedback", feedbackRouter);
 app.use("/admin", adminRouter);
 app.use("/notifications", notificationsRouter);
+app.use("/referrals", referralsRouter);
+app.use("/tracking", trackingRouter);
+app.use("/support", supportRouter);
+app.use("/analytics", analyticsRouter);
 
 // Serve static files from /public folder (AFTER API routes)
 const publicPath = path.join(__dirname, "public");
@@ -182,7 +356,168 @@ app.use((req, res, next) => {
 
 // Start the backend server
 const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '0.0.0.0';
-app.listen(PORT, host, () => {
+// WebSocket server setup
+const wss = new WebSocketServer({ 
+  server,
+  path: '/ws',
+  verifyClient: (info, callback) => {
+    // Verify JWT token from query string
+    const url = new URL(info.req.url, `http://${info.req.headers.host}`);
+    const token = url.searchParams.get('token');
+    
+    if (!token) {
+      callback(false, 401, 'Unauthorized');
+      return;
+    }
+    
+    // Verify token (reuse auth middleware logic)
+    const jwt = require('jsonwebtoken');
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      info.req.user = decoded; // Attach user to request
+      callback(true);
+    } catch (error) {
+      callback(false, 401, 'Invalid token');
+    }
+  },
+});
+
+// WebSocket connection handling
+const connectedClients = new Map(); // userId -> Set of WebSocket connections
+
+wss.on('connection', (ws, req) => {
+  const user = req.user;
+  if (!user || !user.id) {
+    ws.close(1008, 'Unauthorized');
+    return;
+  }
+
+  const userId = user.id;
+  
+  // Add connection to user's set
+  if (!connectedClients.has(userId)) {
+    connectedClients.set(userId, new Set());
+  }
+  connectedClients.get(userId).add(ws);
+
+  console.log(`[WebSocket] User ${userId} connected (${connectedClients.get(userId).size} connections)`);
+
+  // Send welcome message
+  ws.send(JSON.stringify({
+    type: 'connected',
+    message: 'WebSocket connected',
+  }));
+
+  // Handle incoming messages
+  ws.on('message', async (data) => {
+    try {
+      const message = JSON.parse(data.toString());
+      
+      switch (message.type) {
+        case 'typing':
+          // Broadcast typing indicator to other users in thread
+          if (message.threadId) {
+            broadcastToThread(message.threadId, userId, {
+              type: 'typing',
+              userId,
+              userName: user.name || user.email,
+              threadId: message.threadId,
+              isTyping: message.isTyping,
+            });
+          }
+          break;
+          
+        case 'presence':
+          // Update presence status
+          broadcastToAll({
+            type: 'presence',
+            userId,
+            status: message.status || 'online',
+          });
+          break;
+          
+        default:
+          console.log(`[WebSocket] Unknown message type: ${message.type}`);
+      }
+    } catch (error) {
+      console.error('[WebSocket] Error handling message:', error);
+    }
+  });
+
+  // Handle disconnect
+  ws.on('close', () => {
+    const userConnections = connectedClients.get(userId);
+    if (userConnections) {
+      userConnections.delete(ws);
+      if (userConnections.size === 0) {
+        connectedClients.delete(userId);
+      }
+    }
+    console.log(`[WebSocket] User ${userId} disconnected`);
+  });
+
+  // Handle errors
+  ws.on('error', (error) => {
+    console.error(`[WebSocket] Error for user ${userId}:`, error);
+  });
+});
+
+// Helper function to broadcast to all users in a thread
+async function broadcastToThread(threadId, senderId, message) {
+  try {
+    const prisma = require('./db');
+    const thread = await prisma.thread.findUnique({
+      where: { id: threadId },
+      include: { userA: true, userB: true },
+    });
+
+    if (!thread) return;
+
+    const recipientId = thread.userAId === senderId ? thread.userBId : thread.userAId;
+    
+    // Send to recipient
+    const recipientConnections = connectedClients.get(recipientId);
+    if (recipientConnections) {
+      recipientConnections.forEach(ws => {
+        if (ws.readyState === 1) { // OPEN
+          ws.send(JSON.stringify(message));
+        }
+      });
+    }
+  } catch (error) {
+    console.error('[WebSocket] Error broadcasting to thread:', error);
+  }
+}
+
+// Helper function to broadcast to all connected clients
+function broadcastToAll(message) {
+  connectedClients.forEach((connections) => {
+    connections.forEach(ws => {
+      if (ws.readyState === 1) { // OPEN
+        ws.send(JSON.stringify(message));
+      }
+    });
+  });
+}
+
+// Export function to send messages from API routes
+global.sendWebSocketMessage = function(userId, message) {
+  const userConnections = connectedClients.get(userId);
+  if (userConnections) {
+    userConnections.forEach(ws => {
+      if (ws.readyState === 1) {
+        ws.send(JSON.stringify(message));
+      }
+    });
+  }
+};
+
+// Export function to broadcast to thread participants
+global.broadcastToThread = broadcastToThread;
+
+// Start server (using http server for WebSocket support)
+const host = process.env.HOST || "0.0.0.0";
+server.listen(PORT, host, () => {
   console.log(`🚀 Hustl backend running at http://localhost:${PORT}`);
   console.log(`📁 Serving static files from: ${publicPath}`);
   

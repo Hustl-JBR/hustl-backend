@@ -57,17 +57,24 @@ async function apiRequest(endpoint, options = {}) {
 
 // Auth functions
 const apiAuth = {
-  async signUp(email, password, name, username, role = 'CUSTOMER') {
+  async signUp(email, password, name, username, role = 'CUSTOMER', referralCode = null) {
     // City and zip are not required - completely removed from signup
+    const body = {
+      email,
+      password,
+      name,
+      username,
+      role: role.toUpperCase(),
+    };
+    
+    // Add referral code if provided
+    if (referralCode) {
+      body.referralCode = referralCode;
+    }
+    
     const data = await apiRequest('/auth/signup', {
       method: 'POST',
-      body: JSON.stringify({
-        email,
-        password,
-        name,
-        username,
-        role: role.toUpperCase(),
-      }),
+      body: JSON.stringify(body),
     });
 
     authToken = data.token;
@@ -496,6 +503,55 @@ const apiPayments = {
   async getReceipts() {
     return await apiRequest('/payments/receipts');
   },
+
+  async getEarnings(period = 'month') {
+    return await apiRequest(`/payments/earnings?period=${period}`);
+  },
+};
+
+// Referrals functions
+const apiReferrals = {
+  async getMyReferrals() {
+    return await apiRequest('/referrals/me');
+  },
+
+  async trackReferral(referralCode, userId) {
+    return await apiRequest('/referrals/track', {
+      method: 'POST',
+      body: JSON.stringify({ referralCode, userId }),
+    });
+  },
+};
+
+// Tracking functions
+const apiTracking = {
+  async startTracking(jobId) {
+    return await apiRequest(`/tracking/start/${jobId}`, {
+      method: 'POST',
+    });
+  },
+
+  async updateLocation(jobId, lat, lng, accuracy = null, heading = null, speed = null) {
+    return await apiRequest(`/tracking/update/${jobId}`, {
+      method: 'POST',
+      body: JSON.stringify({ lat, lng, accuracy, heading, speed }),
+    });
+  },
+
+  async getTracking(jobId) {
+    return await apiRequest(`/tracking/${jobId}`);
+  },
+
+  async stopTracking(jobId) {
+    return await apiRequest(`/tracking/stop/${jobId}`, {
+      method: 'POST',
+    });
+  },
+};
+
+// Global tracking state
+window.trackingState = {
+  activeTrackings: new Map(), // jobId -> { watchId, intervalId }
 };
 
 // R2 Upload functions
@@ -671,10 +727,23 @@ window.hustlAPI = {
   offers: apiOffers,
   messages: apiMessages,
   payments: apiPayments,
+  referrals: apiReferrals,
   uploads: apiUploads,
   users: apiUsers,
   reviews: apiReviews,
   feedback: apiFeedback,
   notifications: apiNotifications,
+  tracking: apiTracking,
+  support: {
+    async getFAQ() {
+      return await apiRequest('/support/faq');
+    },
+    async contactSupport(category, subject, message) {
+      return await apiRequest('/support/contact', {
+        method: 'POST',
+        body: JSON.stringify({ category, subject, message }),
+      });
+    },
+  },
 };
 

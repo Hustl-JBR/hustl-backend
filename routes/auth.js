@@ -25,9 +25,9 @@ router.post('/signup', [
       });
     }
 
-    const { email, password, name, username, role } = req.body;
+    const { email, password, name, username, role, referralCode } = req.body;
     
-    console.log('[signup] Request body:', { email, name, username, role, hasCity: !!req.body.city, hasZip: !!req.body.zip });
+    console.log('[signup] Request body:', { email, name, username, role, hasCity: !!req.body.city, hasZip: !!req.body.zip, referralCode });
 
     // Check if user exists
     const existing = await prisma.user.findFirst({
@@ -75,6 +75,23 @@ router.post('/signup', [
         createdAt: true,
       },
     });
+
+    // Track referral if code provided (non-blocking)
+    if (referralCode) {
+      try {
+        const referralResponse = await fetch(`${process.env.APP_BASE_URL || 'http://localhost:8080'}/referrals/track`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ referralCode, userId: user.id }),
+        });
+        if (referralResponse.ok) {
+          console.log('[signup] Referral tracked successfully');
+        }
+      } catch (referralError) {
+        console.error('[signup] Error tracking referral (non-fatal):', referralError);
+        // Don't fail signup if referral tracking fails
+      }
+    }
 
     // Send welcome email
     await sendSignupEmail(user.email, user.name);

@@ -101,6 +101,22 @@ router.post('/jobs/:jobId/confirm', requireRole('CUSTOMER'), async (req, res) =>
       receiptUrl
     );
 
+    // Check referral completion (non-blocking)
+    if (job.hustlerId) {
+      try {
+        await fetch(`${process.env.APP_BASE_URL || 'http://localhost:8080'}/referrals/check-completion`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${req.headers.authorization?.split(' ')[1] || ''}`,
+          },
+          body: JSON.stringify({ referredUserId: job.hustlerId }),
+        });
+      } catch (referralError) {
+        console.error('Error checking referral completion (non-fatal):', referralError);
+      }
+    }
+
     res.json({
       job: updatedJob,
       payment: {
@@ -358,6 +374,391 @@ router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), a
       message: `Checkout failed: ${errorMessage}`,
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
+  }
+});
+
+// GET /payments/config - Get Stripe publishable key for Payment Element
+router.get('/config', authenticate, async (req, res) => {
+  try {
+    const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
+    
+    if (!publishableKey) {
+      return res.status(500).json({ error: 'Stripe publishable key not configured' });
+    }
+    
+    res.json({ publishableKey });
+  } catch (error) {
+    console.error('Get Stripe config error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /payments/create-intent/offer/:offerId - Create payment intent for offer acceptance
+router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER'), async (req, res) => {
+  try {
+    const { offerId } = req.params;
+    
+    // Get offer with job details
+    const offer = await prisma.offer.findUnique({
+      where: { id: offerId },
+      include: {
+        job: {
+          include: {
+            customer: true,
+          },
+        },
+        hustler: {
+          select: {
+            id: true,
+            stripeAccountId: true,
+          },
+        },
+      },
+    });
+
+    if (!offer) {
+      return res.status(404).json({ error: 'Offer not found' });
+    }
+
+    if (offer.job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    if (offer.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Offer is not pending' });
+    }
+
+    // Calculate payment amounts
+    const jobAmount = Number(offer.job.amount);
+    const tipPercent = Math.min(parseFloat(req.body.tipPercent || 0), 25);
+    const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50);
+    const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10);
+    const total = jobAmount + tipAmount + customerFee;
+
+    // Check active jobs limit
+    const activeJobsCount = await prisma.job.count({
+      where: {
+        customerId: req.user.id,
+        status: {
+          in: ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM'],
+        },
+      },
+    });
+
+    const maxActiveJobs = 2; // Can be made configurable
+    if (activeJobsCount >= maxActiveJobs) {
+      return res.status(400).json({
+        error: 'Active jobs limit reached',
+        message: `You can only have ${maxActiveJobs} active jobs at a time. Please complete or cancel existing jobs.`,
+        currentActiveJobs: activeJobsCount,
+        maxActiveJobs,
+      });
+    }
+
+    // Create payment intent
+    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+    let paymentIntent;
+
+    if (skipStripeCheck) {
+      // Test mode - create fake payment intent
+      paymentIntent = {
+        id: `pi_test_${Date.now()}`,
+        client_secret: `pi_test_${Date.now()}_secret_${Math.random().toString(36).substr(2, 9)}`,
+        status: 'requires_payment_method',
+      };
+    } else {
+      // Real Stripe payment intent
+      const transferData = offer.hustler.stripeAccountId
+        ? {
+            destination: offer.hustler.stripeAccountId,
+            amount: Math.round(jobAmount * 100), // Amount in cents for hustler
+          }
+        : undefined;
+
+      paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(total * 100), // Total in cents
+        currency: 'usd',
+        payment_method_types: ['card'],
+        metadata: {
+          offerId: offer.id,
+          jobId: offer.job.id,
+          customerId: req.user.id,
+          hustlerId: offer.hustlerId,
+          amount: jobAmount.toString(),
+          tip: tipAmount.toString(),
+          customerFee: customerFee.toString(),
+        },
+        ...(transferData && { transfer_data: transferData }),
+        capture_method: 'manual', // Pre-authorize, capture later
+      });
+    }
+
+    res.json({ clientSecret: paymentIntent.client_secret });
+  } catch (error) {
+    console.error('Create payment intent error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Internal server error',
+      message: error.message || 'Failed to create payment intent'
+    });
+  }
+});
+
+// POST /payments/create-intent/job/:jobId - Create payment intent for job completion
+router.post('/create-intent/job/:jobId', authenticate, requireRole('CUSTOMER'), async (req, res) => {
+  try {
+    const { jobId } = req.params;
+
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: {
+        payment: true,
+        customer: true,
+        hustler: {
+          select: {
+            id: true,
+            stripeAccountId: true,
+          },
+        },
+      },
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    if (job.status !== 'COMPLETED_BY_HUSTLER' && job.status !== 'AWAITING_CUSTOMER_CONFIRM') {
+      return res.status(400).json({ error: 'Job is not ready for payment' });
+    }
+
+    // If payment already exists and is pre-authorized, return existing client secret
+    if (job.payment && job.payment.status === 'PREAUTHORIZED' && job.payment.providerId) {
+      const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+      
+      if (skipStripeCheck) {
+        return res.json({ 
+          clientSecret: `pi_test_${job.payment.providerId}_secret` 
+        });
+      }
+
+      // Retrieve existing payment intent
+      const existingIntent = await stripe.paymentIntents.retrieve(job.payment.providerId);
+      return res.json({ clientSecret: existingIntent.client_secret });
+    }
+
+    // Calculate payment amounts
+    const jobAmount = Number(job.amount);
+    const tipAmount = Number(job.payment?.tip || 0);
+    const customerFee = Number(job.payment?.feeCustomer || Math.min(Math.max(jobAmount * 0.03, 1), 10));
+    const total = jobAmount + tipAmount + customerFee;
+
+    // Create payment intent
+    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+    let paymentIntent;
+
+    if (skipStripeCheck) {
+      // Test mode
+      paymentIntent = {
+        id: `pi_test_${Date.now()}`,
+        client_secret: `pi_test_${Date.now()}_secret_${Math.random().toString(36).substr(2, 9)}`,
+        status: 'requires_payment_method',
+      };
+    } else {
+      // Real Stripe payment intent
+      const transferData = job.hustler?.stripeAccountId
+        ? {
+            destination: job.hustler.stripeAccountId,
+            amount: Math.round(jobAmount * 100),
+          }
+        : undefined;
+
+      paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(total * 100),
+        currency: 'usd',
+        payment_method_types: ['card'],
+        metadata: {
+          jobId: job.id,
+          customerId: req.user.id,
+          hustlerId: job.hustlerId,
+          amount: jobAmount.toString(),
+          tip: tipAmount.toString(),
+          customerFee: customerFee.toString(),
+        },
+        ...(transferData && { transfer_data: transferData }),
+        capture_method: 'automatic', // Auto-capture for completion payments
+      });
+    }
+
+    res.json({ clientSecret: paymentIntent.client_secret });
+  } catch (error) {
+    console.error('Create payment intent error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Internal server error',
+      message: error.message || 'Failed to create payment intent'
+    });
+  }
+});
+
+// GET /payments/earnings - Get hustler earnings dashboard data
+router.get('/earnings', authenticate, requireRole('HUSTLER'), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { period = 'month' } = req.query; // 'day', 'week', 'month', 'year', 'all'
+
+    // Calculate date range based on period
+    let startDate = new Date();
+    switch (period) {
+      case 'day':
+        startDate.setDate(startDate.getDate() - 1);
+        break;
+      case 'week':
+        startDate.setDate(startDate.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setMonth(startDate.getMonth() - 1);
+        break;
+      case 'year':
+        startDate.setFullYear(startDate.getFullYear() - 1);
+        break;
+      case 'all':
+        startDate = new Date(0); // Beginning of time
+        break;
+    }
+
+    // Get all payments for this hustler
+    const payments = await prisma.payment.findMany({
+      where: {
+        hustlerId: userId,
+        status: 'CAPTURED',
+        capturedAt: {
+          gte: period !== 'all' ? startDate : undefined,
+        },
+      },
+      include: {
+        job: {
+          select: {
+            id: true,
+            title: true,
+            category: true,
+            createdAt: true,
+          },
+        },
+      },
+      orderBy: {
+        capturedAt: 'desc',
+      },
+    });
+
+    // Get payouts
+    const payouts = await prisma.payout.findMany({
+      where: {
+        hustlerId: userId,
+        status: 'COMPLETED',
+        completedAt: {
+          gte: period !== 'all' ? startDate : undefined,
+        },
+      },
+      include: {
+        job: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+      orderBy: {
+        completedAt: 'desc',
+      },
+    });
+
+    // Calculate totals
+    const totalEarnings = payments.reduce((sum, p) => {
+      return sum + Number(p.amount) + Number(p.tip || 0);
+    }, 0);
+
+    const totalPayouts = payouts.reduce((sum, p) => {
+      return sum + Number(p.netAmount);
+    }, 0);
+
+    const totalFees = payments.reduce((sum, p) => {
+      return sum + Number(p.platformFee || 0);
+    }, 0);
+
+    const totalTips = payments.reduce((sum, p) => {
+      return sum + Number(p.tip || 0);
+    }, 0);
+
+    // Group by time period for chart data
+    const chartData = [];
+    const now = new Date();
+    const days = period === 'day' ? 1 : period === 'week' ? 7 : period === 'month' ? 30 : period === 'year' ? 365 : payments.length;
+
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(now);
+      if (period === 'day') {
+        date.setHours(date.getHours() - i);
+      } else {
+        date.setDate(date.getDate() - i);
+      }
+      date.setHours(0, 0, 0, 0);
+
+      const nextDate = new Date(date);
+      if (period === 'day') {
+        nextDate.setHours(nextDate.getHours() + 1);
+      } else {
+        nextDate.setDate(nextDate.getDate() + 1);
+      }
+
+      const dayPayments = payments.filter(p => {
+        const captureDate = p.capturedAt ? new Date(p.capturedAt) : null;
+        if (!captureDate) return false;
+        return captureDate >= date && captureDate < nextDate;
+      });
+
+      const dayEarnings = dayPayments.reduce((sum, p) => {
+        return sum + Number(p.amount) + Number(p.tip || 0);
+      }, 0);
+
+      chartData.push({
+        date: date.toISOString(),
+        earnings: dayEarnings,
+        jobs: dayPayments.length,
+      });
+    }
+
+    // Calculate averages
+    const avgPerJob = payments.length > 0 ? totalEarnings / payments.length : 0;
+    const jobsCompleted = payments.length;
+
+    res.json({
+      period,
+      totals: {
+        earnings: totalEarnings,
+        payouts: totalPayouts,
+        fees: totalFees,
+        tips: totalTips,
+        jobsCompleted,
+        avgPerJob,
+      },
+      chartData,
+      recentPayments: payments.slice(0, 10).map(p => ({
+        id: p.id,
+        jobId: p.jobId,
+        jobTitle: p.job.title,
+        category: p.job.category,
+        amount: Number(p.amount),
+        tip: Number(p.tip || 0),
+        fee: Number(p.platformFee || 0),
+        total: Number(p.amount) + Number(p.tip || 0),
+        date: p.capturedAt,
+      })),
+    });
+  } catch (error) {
+    console.error('Get earnings error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

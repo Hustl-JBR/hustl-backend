@@ -67,12 +67,15 @@ model User {
   emailVerified         Boolean               @default(false) @map("email_verified")
   emailVerificationCode String?               @map("email_verification_code")
   emailVerificationExpiry DateTime?           @map("email_verification_expiry")
+  referralCode          String?               @unique @map("referral_code")
+  referredByUserId      String?               @map("referred_by_user_id")
   createdAt             DateTime              @default(now()) @map("created_at")
   updatedAt             DateTime              @updatedAt @map("updated_at")
 
   // Relations
   jobsAsCustomer        Job[]                 @relation("CustomerJobs")
   jobsAsHustler         Job[]                 @relation("HustlerJobs")
+  locationUpdates       LocationUpdate[]      @relation
   offers                Offer[]
   reviewsReceived       Review[]              @relation("Reviewee")
   reviewsGiven          Review[]              @relation("Reviewer")
@@ -81,10 +84,15 @@ model User {
   threadsAsB            Thread[]              @relation("UserB")
   paymentsAsCustomer    Payment[]             @relation("CustomerPayments")
   paymentsAsHustler     Payment[]             @relation("HustlerPayments")
+  referrals            Referral[]            @relation("Referrer")
+  referredBy            User?                 @relation("ReferredBy", fields: [referredByUserId], references: [id])
+  referredUsers         User[]                @relation("ReferredBy")
 
   @@index([email])
   @@index([username])
   @@index([city, zip])
+  @@index([referralCode])
+  @@index([referredByUserId])
   @@map("users")
 }
 
@@ -108,6 +116,12 @@ model Job {
   requirements          Json                  // { vehicle, stairs, team_size }
   status                JobStatus             @default(OPEN)
   hustlerId             String?               @map("hustler_id")
+  // Recurring job fields
+  parentJobId           String?               @map("parent_job_id")
+  recurrenceType        String?               @map("recurrence_type") // "weekly" | "monthly" | null
+  recurrenceEndDate     DateTime?             @map("recurrence_end_date")
+  recurrencePaused      Boolean               @default(false) @map("recurrence_paused")
+  nextRecurrenceDate    DateTime?             @map("next_recurrence_date")
   createdAt             DateTime              @default(now()) @map("created_at")
   updatedAt             DateTime              @updatedAt @map("updated_at")
 
@@ -118,6 +132,9 @@ model Job {
   thread                Thread?
   payment                Payment?
   reviews                Review[]
+  locationUpdates        LocationUpdate[]
+  parentJob             Job?                  @relation("RecurringJobs", fields: [parentJobId], references: [id])
+  recurringJobs         Job[]                 @relation("RecurringJobs")
 
   @@index([customerId])
   @@index([hustlerId])
@@ -125,6 +142,9 @@ model Job {
   @@index([category])
   @@index([date])
   @@index([lat, lng])
+  @@index([parentJobId])
+  @@index([recurrenceType])
+  @@index([nextRecurrenceDate])
   @@map("jobs")
 }
 
@@ -237,5 +257,48 @@ model Payment {
   @@index([status])
   @@index([providerId])
   @@map("payments")
+}
+
+model Referral {
+  id                    String                @id @default(cuid())
+  referrerId            String                @map("referrer_id")
+  referredUserId        String                @unique @map("referred_user_id")
+  rewardAmount          Decimal               @default(0) @map("reward_amount") @db.Decimal(10, 2)
+  rewardStatus          String                @default("PENDING") @map("reward_status") // PENDING, EARNED, PAID
+  referredUserCompletedJob Boolean            @default(false) @map("referred_user_completed_job")
+  createdAt             DateTime              @default(now()) @map("created_at")
+  rewardedAt            DateTime?             @map("rewarded_at")
+  paidAt                DateTime?             @map("paid_at")
+
+  // Relations
+  referrer              User                  @relation("Referrer", fields: [referrerId], references: [id])
+  referredUser          User                  @relation("ReferredUser", fields: [referredUserId], references: [id])
+
+  @@index([referrerId])
+  @@index([referredUserId])
+  @@index([rewardStatus])
+  @@map("referrals")
+}
+
+model LocationUpdate {
+  id                    String                @id @default(cuid())
+  jobId                 String                @map("job_id")
+  hustlerId             String                @map("hustler_id")
+  lat                   Float
+  lng                   Float
+  accuracy              Float?                // GPS accuracy in meters
+  heading               Float?                // Direction in degrees (0-360)
+  speed                 Float?                // Speed in m/s
+  timestamp             DateTime              @default(now()) @map("timestamp")
+  createdAt             DateTime              @default(now()) @map("created_at")
+
+  // Relations
+  job                   Job                   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  hustler               User                  @relation(fields: [hustlerId], references: [id])
+
+  @@index([jobId])
+  @@index([hustlerId])
+  @@index([timestamp])
+  @@map("location_updates")
 }
 

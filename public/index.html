@@ -302,6 +302,127 @@
       to { transform: translate(-50%, -50%) rotate(360deg); }
     }
 
+    /* Skeleton Loaders */
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: skeleton-loading 1.5s ease-in-out infinite;
+      border-radius: 4px;
+    }
+
+    @keyframes skeleton-loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .skeleton-job-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .skeleton-job-title {
+      height: 24px;
+      width: 70%;
+      margin-bottom: 0.75rem;
+    }
+
+    .skeleton-job-meta {
+      height: 16px;
+      width: 50%;
+      margin-bottom: 0.5rem;
+    }
+
+    .skeleton-job-amount {
+      height: 20px;
+      width: 30%;
+      margin-bottom: 0.5rem;
+    }
+
+    .skeleton-message-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .skeleton-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .skeleton-message-content {
+      flex: 1;
+    }
+
+    .skeleton-message-line {
+      height: 16px;
+      margin-bottom: 0.5rem;
+    }
+
+    .skeleton-message-line:first-child {
+      width: 60%;
+    }
+
+    .skeleton-message-line:last-child {
+      width: 40%;
+    }
+
+    .skeleton-profile-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 16px;
+      padding: 2rem 1.5rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .skeleton-profile-avatar {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      margin: 0 auto 1rem;
+      background: rgba(255,255,255,0.2);
+    }
+
+    .skeleton-profile-name {
+      height: 28px;
+      width: 200px;
+      margin: 0 auto 0.5rem;
+    }
+
+    .skeleton-profile-email {
+      height: 16px;
+      width: 150px;
+      margin: 0 auto;
+    }
+
+    .skeleton-stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .skeleton-stat-label {
+      height: 14px;
+      width: 80px;
+      margin: 0 auto 0.5rem;
+    }
+
+    .skeleton-stat-value {
+      height: 32px;
+      width: 100px;
+      margin: 0 auto;
+    }
+
     /* Error messages */
     .error-message {
       background: #fee2e2;
@@ -494,6 +615,273 @@
         position: relative;
         margin-top: 0.5rem;
       }
+    }
+
+    /* Pull-to-Refresh Styles */
+    .pull-to-refresh-indicator {
+      position: absolute;
+      top: -60px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--primary);
+      font-size: 0.9rem;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .pull-to-refresh-indicator.active {
+      opacity: 1;
+    }
+
+    .pull-to-refresh-indicator.refreshing {
+      opacity: 1;
+    }
+
+    .pull-to-refresh-spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--primary);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    #view-jobs {
+      position: relative;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    @media (max-width: 768px) {
+      #view-jobs .card {
+        position: relative;
+      }
+    }
+
+    /* Typing Indicator Styles */
+    .typing-indicator {
+      display: none;
+      padding: 0.5rem 0.75rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-style: italic;
+      margin-bottom: 0.5rem;
+    }
+
+    .typing-dots {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      animation: typing-bounce 1.4s infinite ease-in-out;
+    }
+
+    .typing-dots span:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+
+    .typing-dots span:nth-child(2) {
+      animation-delay: -0.16s;
+    }
+
+    .typing-dots span:nth-child(3) {
+      animation-delay: 0s;
+    }
+
+    @keyframes typing-bounce {
+      0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+      }
+      40% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    /* Empty State Styles */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1.5rem;
+      color: var(--text-muted);
+    }
+
+    .empty-state-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+
+    .empty-state-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 0.5rem;
+    }
+
+    .empty-state-message {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    .empty-state-action {
+      margin-top: 1rem;
+    }
+
+    .empty-state-action .btn {
+      margin-top: 0.5rem;
+    }
+
+    /* Onboarding Modal Styles */
+    .onboarding-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .onboarding-modal {
+      background: white;
+      border-radius: 16px;
+      max-width: 500px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .onboarding-content {
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .onboarding-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+
+    .onboarding-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0.75rem;
+    }
+
+    .onboarding-description {
+      font-size: 1rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+
+    .onboarding-feature-list {
+      text-align: left;
+      margin: 1.5rem 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .onboarding-feature-list li {
+      padding: 0.75rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.95rem;
+      color: var(--text-main);
+    }
+
+    .onboarding-feature-list li::before {
+      content: "✓";
+      color: var(--success);
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+
+    .onboarding-progress {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .onboarding-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #e5e7eb;
+      transition: all 0.3s;
+    }
+
+    .onboarding-dot.active {
+      background: var(--primary);
+      width: 24px;
+      border-radius: 4px;
+    }
+
+    .onboarding-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+
+    .onboarding-actions .btn {
+      min-width: 120px;
+    }
+
+    .onboarding-skip {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      cursor: pointer;
+      padding: 0.5rem;
+    }
+
+    .onboarding-skip:hover {
+      color: var(--text-main);
     }
 
     /* Job tabs styling */
@@ -986,6 +1374,185 @@
       transform: scale(0.95);
     }
 
+    /* Smart Filter Chips - Enhanced */
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border: 1px solid #d1d5db;
+      border-radius: 20px;
+      background: white;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #374151;
+      transition: all 0.2s;
+      white-space: nowrap;
+      position: relative;
+    }
+
+    .filter-chip:hover {
+      border-color: #9ca3af;
+      background: #f9fafb;
+    }
+
+    .filter-chip.active {
+      border-color: #3b82f6;
+      background: #3b82f6;
+      color: white;
+      padding-right: 2rem;
+    }
+
+    .filter-chip.active:hover {
+      background: #2563eb;
+      border-color: #2563eb;
+    }
+
+    .filter-chip.active::after {
+      content: "×";
+      position: absolute;
+      right: 0.75rem;
+      font-size: 1.2rem;
+      line-height: 1;
+      opacity: 0.8;
+    }
+
+    .filter-chip.active:hover::after {
+      opacity: 1;
+    }
+
+    .filter-chip:active {
+      transform: scale(0.95);
+    }
+
+    .filter-chip-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 0.4rem;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: 0.25rem;
+    }
+
+    .filter-chip.active .filter-chip-badge {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .active-filters-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 0.5rem;
+      background: #ef4444;
+      color: white;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      margin-left: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .filter-chip {
+        padding: 0.45rem 0.9rem;
+        font-size: 0.8rem;
+      }
+      .filter-chip.active {
+        padding-right: 1.75rem;
+      }
+    }
+
+    /* Verification Badges */
+    .verification-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.75rem;
+      background: #dcfce7;
+      border: 1px solid #16a34a;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #166534;
+      margin: 0.25rem 0.5rem 0.25rem 0;
+    }
+
+    .verification-badge.pending {
+      background: #fef3c7;
+      border-color: #f59e0b;
+      color: #92400e;
+    }
+
+    .verification-badge.rejected {
+      background: #fee2e2;
+      border-color: #ef4444;
+      color: #991b1b;
+    }
+
+    .verification-badge-icon {
+      font-size: 0.9rem;
+    }
+
+    .verification-badges-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 0.75rem 0;
+    }
+
+    /* Presence Indicators */
+    .presence-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+    }
+
+    .presence-indicator.online {
+      background: #10b981;
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    }
+
+    .presence-indicator.offline {
+      background: #9ca3af;
+    }
+
+    .presence-indicator.away {
+      background: #f59e0b;
+    }
+
+    /* Stripe Payment Element Styles */
+    #payment-element-container {
+      min-height: 200px;
+    }
+
+    #payment-element-container .StripeElement {
+      padding: 0.75rem;
+    }
+
+    #payment-element-container .StripeElement--focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    #payment-element-container .StripeElement--invalid {
+      border-color: var(--danger);
+    }
+
+    #submit-payment-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
     @media (max-width: 768px) {
       .filter-btn {
         padding: 0.45rem 0.9rem;
@@ -1422,6 +1989,25 @@
     }
 
     .toast {
+      position: relative;
+    }
+    
+    .toast.success {
+      background: #10b981;
+      color: white;
+    }
+    
+    .toast.error {
+      background: #ef4444;
+      color: white;
+    }
+    
+    .toast.info {
+      background: #3b82f6;
+      color: white;
+    }
+    
+    .toast {
       position: fixed;
       bottom: 1rem;
       right: 1rem;
@@ -1719,6 +2305,16 @@
     
     // PREVENTION: Check for common issues before page loads
     // This helps catch duplicate declarations early
+    // Check for referral code in URL and store it
+    const urlParams = new URLSearchParams(window.location.search);
+    const referralCode = urlParams.get('ref');
+    if (referralCode) {
+      localStorage.setItem('hustl_referral_code', referralCode);
+      // Clean URL (remove ref parameter)
+      const newUrl = window.location.pathname + (window.location.hash || '');
+      window.history.replaceState({}, '', newUrl);
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
       // Check for duplicate IDs (common cause of issues)
       const ids = {};
@@ -1756,6 +2352,29 @@
       // 🚀 Initialize lazy image loading
       if (window.mobileCore && window.mobileCore.lazyImages) {
         window.mobileCore.lazyImages.observeAll();
+      }
+      
+      // 🚀 Register Service Worker for offline support
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then((registration) => {
+            console.log('[Service Worker] Registered:', registration.scope);
+          })
+          .catch((error) => {
+            console.warn('[Service Worker] Registration failed:', error);
+          });
+      }
+      
+      // 🚀 Initialize quick feedback widget
+      if (typeof initQuickFeedbackWidget === 'function') {
+        initQuickFeedbackWidget();
+      }
+      
+      // 🚀 Initialize analytics
+      if (window.analytics) {
+        window.analytics.track('app_loaded', {
+          view: window.location.hash.replace('#', '') || 'home',
+        });
       }
     });
     
@@ -2395,6 +3014,35 @@
             <input id="jobPhoto" type="file" accept="image/*" />
           </div>
 
+          <!-- Recurring Job Options -->
+          <div class="field" style="margin-top: 1.5rem; padding: 1rem; background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 600; color: #059669;">
+              <input type="checkbox" id="isRecurringJob" style="width: 18px; height: 18px; cursor: pointer;" />
+              <span>🔄 Make this a recurring job</span>
+            </label>
+            <div id="recurringOptions" style="display: none; margin-top: 1rem;">
+              <div class="field">
+                <label for="recurrenceType">Repeat frequency</label>
+                <select id="recurrenceType">
+                  <option value="weekly">Weekly (every week)</option>
+                  <option value="monthly">Monthly (every month)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="recurrenceEndDate">End date (optional)</label>
+                <input id="recurrenceEndDate" type="date" />
+                <div class="muted" style="font-size: 0.85rem; margin-top: 0.25rem;">
+                  Leave blank to repeat indefinitely. You can pause or cancel anytime.
+                </div>
+              </div>
+              <div style="padding: 0.75rem; background: #fff; border-radius: 6px; border: 1px solid #86efac; margin-top: 0.5rem;">
+                <div style="font-size: 0.85rem; color: #047857; line-height: 1.6;">
+                  <strong>How it works:</strong> A new job will be automatically created each week/month based on your schedule. You can pause or cancel the recurring series anytime from your job details.
+                </div>
+              </div>
+            </div>
+          </div>
+
           <button class="btn btn-primary" id="postJobButton">Post job to Hustl</button>
 
           <div class="muted" style="margin-top:0.4rem;">
@@ -2438,19 +3086,19 @@
             </div>
           </div>
           
-          <!-- Simple Filter Buttons (only show most important) -->
-          <div id="jobFiltersBar" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
-            <button class="filter-btn" data-filter="near-me" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 20px; background: white; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: #374151; transition: all 0.2s;">
+          <!-- Smart Filter Chips (Airbnb-style) -->
+          <div id="jobFiltersBar" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: center;">
+            <button class="filter-chip" data-filter="near-me" data-filter-type="sort" onclick="toggleFilter('sort', 'near-me')">
               📍 Near Me
             </button>
-            <button class="filter-btn active" data-filter="newest" style="padding: 0.5rem 1rem; border: 1px solid #3b82f6; border-radius: 20px; background: #3b82f6; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: white; transition: all 0.2s;">
+            <button class="filter-chip active" data-filter="newest" data-filter-type="sort" onclick="toggleFilter('sort', 'newest')">
               ⏰ Newest
             </button>
-            <button class="filter-btn" data-filter="highest-pay" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 20px; background: white; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: #374151; transition: all 0.2s;">
+            <button class="filter-chip" data-filter="highest-pay" data-filter-type="sort" onclick="toggleFilter('sort', 'highest-pay')">
               💰 Highest Pay
             </button>
-            <!-- Collapsible "More Filters" button with arrow icon -->
-            <button id="showMoreFiltersBtn" class="filter-btn" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 20px; background: white; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: #374151; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.4rem; -webkit-tap-highlight-color: transparent;">
+            <!-- Collapsible "More Filters" button with active count badge -->
+            <button id="showMoreFiltersBtn" class="filter-chip" style="display: flex; align-items: center; gap: 0.4rem; -webkit-tap-highlight-color: transparent;">
               <span id="showMoreFiltersText">More Filters</span>
               <span id="showMoreFiltersArrow" style="transition: transform 0.3s ease; font-size: 0.9rem;">▼</span>
             </button>
@@ -2641,6 +3289,22 @@
               <div class="card-title">Your jobs</div>
             </div>
             <div class="jobs-list" id="profileJobsList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- EARNINGS DASHBOARD VIEW (Hustlers only) -->
+      <section id="view-earnings" style="display:none;">
+        <div class="layout-grid">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">💰 Earnings Dashboard</div>
+            </div>
+            <div id="earningsContent">
+              <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                Loading earnings data...
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -2978,6 +3642,23 @@
     </footer>
 
        <div class="toast" id="toast"></div>
+       
+       <style>
+         .toast.success {
+           background: #10b981;
+           color: white;
+         }
+         
+         .toast.error {
+           background: #ef4444;
+           color: white;
+         }
+         
+         .toast.info {
+           background: #3b82f6;
+           color: white;
+         }
+       </style>
 
     <!-- Age gate disabled: popup hidden -->
     <div class="age-gate-overlay" id="ageGate" style="display:none !important; pointer-events:none !important; z-index:-1 !important;">
@@ -3004,6 +3685,8 @@
 <script src="/mobile-core.js"></script>
 <!-- Modern App Core - Performance optimizations, caching, debouncing -->
 <script src="/app-core.js"></script>
+<!-- Stripe.js for Payment Element (in-app payments) -->
+<script src="https://js.stripe.com/v3/"></script>
 <script src="/api-integration.js?v=3"></script>
   <script>
 // ==== API Integration (replaces Supabase) ====
@@ -3011,10 +3694,18 @@
 
     const STORAGE_KEY = "hustl_state_v3";
     const BACKEND_URL = window.location.origin; // Use same origin (backend serves frontend)
+    const WS_URL = BACKEND_URL.replace(/^http/, 'ws'); // Convert http to ws
 
     // 🔔 Auto-complete after 72 hours of no customer response
     const AUTO_COMPLETE_HOURS = 72;
     const AUTO_COMPLETE_MS = AUTO_COMPLETE_HOURS * 60 * 60 * 1000;
+    
+    // WebSocket connection state
+    let wsConnection = null;
+    let wsReconnectAttempts = 0;
+    let wsReconnectTimeout = null;
+    const MAX_RECONNECT_ATTEMPTS = 5;
+    const RECONNECT_DELAY = 3000; // 3 seconds
 
     let state = {
       users: [],
@@ -3030,6 +3721,15 @@
     let activeConversationJobId = null;
     let showArchivedConversations = false;
     let showDeletedConversations = false;
+    
+    // Smart filter state - supports multiple active filters
+    let activeFilters = {
+      sort: 'newest', // newest, highest-pay, near-me
+      category: null,
+      distance: null,
+      minPay: null,
+      date: null
+    };
     let userMode = "customer"; // "customer" or "hustler" - simple toggle like Airbnb/Rover
     
     // Pagination state
@@ -3740,6 +4440,10 @@ async function renderAuthPill() {
       mobileMenuAuthButton.textContent = "Log out";
       mobileMenuAuthButton.onclick = async () => {
         await window.hustlAPI.auth.signOut();
+        
+        // Close WebSocket connection on logout
+        closeWebSocket();
+        
         showToast("Logged out.");
         const mobileMenu = document.getElementById("mobileMenu");
         if (mobileMenu) {
@@ -3897,7 +4601,23 @@ try {
         const randomSuffix = Math.floor(Math.random() * 1000);
         username = username + randomSuffix;
 
-        await window.hustlAPI.auth.signUp(email, password, name, username, role);
+        // Get referral code from localStorage (set when user visits with ?ref=code)
+        const referralCode = localStorage.getItem('hustl_referral_code');
+        
+        await window.hustlAPI.auth.signUp(email, password, name, username, role, referralCode);
+        
+        // Clear referral code after use
+        if (referralCode) {
+          localStorage.removeItem('hustl_referral_code');
+        }
+        
+        // Mark account as newly created for onboarding
+        localStorage.setItem('hustl_account_created', Date.now().toString());
+        
+        // Initialize WebSocket connection after signup
+        setTimeout(() => {
+          initWebSocket();
+        }, 500);
         
         showToast("Account created successfully!");
         
@@ -3993,6 +4713,139 @@ try {
       document.getElementById("customDateField").style.display = "none";
       document.getElementById("customTimeFields").style.display = "none";
     }
+    /* ---------- Suggested Pricing Helper ---------- */
+    
+    async function getSuggestedPricing(category, zipCode) {
+      // Pricing suggestions based on category (in USD)
+      const categoryPricing = {
+        moving: { flat: { min: 80, max: 200, avg: 120 }, hourly: { min: 20, max: 35, avg: 25 } },
+        "yard-work": { flat: { min: 50, max: 150, avg: 80 }, hourly: { min: 15, max: 25, avg: 20 } },
+        cleaning: { flat: { min: 60, max: 150, avg: 90 }, hourly: { min: 18, max: 28, avg: 22 } },
+        furniture: { flat: { min: 70, max: 180, avg: 110 }, hourly: { min: 20, max: 30, avg: 25 } },
+        handyman: { flat: { min: 75, max: 200, avg: 120 }, hourly: { min: 25, max: 40, avg: 30 } },
+        painting: { flat: { min: 100, max: 300, avg: 180 }, hourly: { min: 25, max: 45, avg: 35 } },
+        landscaping: { flat: { min: 80, max: 250, avg: 140 }, hourly: { min: 20, max: 35, avg: 28 } },
+        "pet-care": { flat: { min: 30, max: 80, avg: 50 }, hourly: { min: 15, max: 25, avg: 20 } },
+        "event-help": { flat: { min: 100, max: 300, avg: 180 }, hourly: { min: 20, max: 35, avg: 28 } },
+        "tech-support": { flat: { min: 60, max: 150, avg: 90 }, hourly: { min: 30, max: 50, avg: 40 } },
+        other: { flat: { min: 50, max: 150, avg: 80 }, hourly: { min: 18, max: 30, avg: 22 } }
+      };
+      
+      const pricing = categoryPricing[category] || categoryPricing.other;
+      
+      // Try to get real data from API if available
+      try {
+        const filters = { category, limit: 20 };
+        if (zipCode) filters.zip = zipCode;
+        
+        const response = await window.hustlAPI.jobs.list(filters);
+        const jobs = response?.jobs || (Array.isArray(response) ? response : []);
+        
+        if (jobs.length > 0) {
+          // Calculate average from real jobs
+          const flatJobs = jobs.filter(j => j.payType === 'flat' && j.amount);
+          const hourlyJobs = jobs.filter(j => j.payType === 'hourly' && j.hourlyRate);
+          
+          if (flatJobs.length > 0) {
+            const avgFlat = flatJobs.reduce((sum, j) => sum + (j.amount || 0), 0) / flatJobs.length;
+            pricing.flat.avg = Math.round(avgFlat);
+            pricing.flat.min = Math.round(avgFlat * 0.7);
+            pricing.flat.max = Math.round(avgFlat * 1.5);
+          }
+          
+          if (hourlyJobs.length > 0) {
+            const avgHourly = hourlyJobs.reduce((sum, j) => sum + (j.hourlyRate || 0), 0) / hourlyJobs.length;
+            pricing.hourly.avg = Math.round(avgHourly);
+            pricing.hourly.min = Math.round(avgHourly * 0.8);
+            pricing.hourly.max = Math.round(avgHourly * 1.3);
+          }
+        }
+      } catch (error) {
+        console.warn("Could not fetch real pricing data:", error);
+        // Use defaults
+      }
+      
+      return pricing;
+    }
+    
+    function showSuggestedPricing(category, zipCode, paymentType) {
+      const flatField = document.getElementById("flatAmountField");
+      const hourlyFields = document.getElementById("hourlyFields");
+      let suggestionContainer = document.getElementById("pricingSuggestion");
+      
+      if (!category) {
+        if (suggestionContainer) suggestionContainer.remove();
+        return;
+      }
+      
+      getSuggestedPricing(category, zipCode).then(pricing => {
+        if (!suggestionContainer) {
+          suggestionContainer = document.createElement("div");
+          suggestionContainer.id = "pricingSuggestion";
+          suggestionContainer.style.cssText = `
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+          `;
+          
+          if (paymentType === "flat" && flatField) {
+            flatField.parentNode.insertBefore(suggestionContainer, flatField.nextSibling);
+          } else if (paymentType === "hourly" && hourlyFields) {
+            hourlyFields.parentNode.insertBefore(suggestionContainer, hourlyFields.nextSibling);
+          }
+        }
+        
+        if (paymentType === "flat") {
+          suggestionContainer.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+              <div>
+                <strong style="color: #1e40af;">💡 Suggested:</strong>
+                <span style="color: #1e40af; font-weight: 600;">$${pricing.flat.avg}</span>
+                <span style="color: #6b7280; font-size: 0.85rem;"> (range: $${pricing.flat.min}-$${pricing.flat.max})</span>
+              </div>
+              <button class="btn" style="background: #3b82f6; color: white; padding: 0.35rem 0.75rem; font-size: 0.85rem; border: none; border-radius: 6px; cursor: pointer;" data-apply-suggestion="${pricing.flat.avg}">
+                Apply
+              </button>
+            </div>
+          `;
+          
+          const applyBtn = suggestionContainer.querySelector('[data-apply-suggestion]');
+          if (applyBtn) {
+            applyBtn.addEventListener('click', () => {
+              document.getElementById("flatAmount").value = applyBtn.dataset.applySuggestion;
+              showToast(`✓ Set to $${applyBtn.dataset.applySuggestion}`);
+            });
+          }
+        } else {
+          suggestionContainer.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                  <strong style="color: #1e40af;">💡 Suggested hourly:</strong>
+                  <span style="color: #1e40af; font-weight: 600;">$${pricing.hourly.avg}/hr</span>
+                  <span style="color: #6b7280; font-size: 0.85rem;"> (range: $${pricing.hourly.min}-$${pricing.hourly.max})</span>
+                </div>
+                <button class="btn" style="background: #3b82f6; color: white; padding: 0.35rem 0.75rem; font-size: 0.85rem; border: none; border-radius: 6px; cursor: pointer;" data-apply-hourly="${pricing.hourly.avg}">
+                  Apply
+                </button>
+              </div>
+            </div>
+          `;
+          
+          const applyBtn = suggestionContainer.querySelector('[data-apply-hourly]');
+          if (applyBtn) {
+            applyBtn.addEventListener('click', () => {
+              document.getElementById("hourlyRate").value = applyBtn.dataset.applyHourly;
+              showToast(`✓ Set to $${applyBtn.dataset.applyHourly}/hr`);
+            });
+          }
+        }
+      });
+    }
+
     function initJobsForm() {
       const jobOnSiteOnly = document.getElementById("jobOnSiteOnly");
       const dropoffFields = document.getElementById("dropoffFields");
@@ -4003,6 +4856,15 @@ try {
       const paymentTypeSelect = document.getElementById("paymentType");
       const flatField = document.getElementById("flatAmountField");
       const hourlyFields = document.getElementById("hourlyFields");
+      
+      // Update suggested pricing when payment type changes
+      const updatePricingSuggestion = () => {
+        const category = document.getElementById("jobCategory").value;
+        const zipCode = document.getElementById("pickupZip").value.trim();
+        const paymentType = paymentTypeSelect.value;
+        showSuggestedPricing(category, zipCode, paymentType);
+      };
+      
       paymentTypeSelect.addEventListener("change", () => {
         if (paymentTypeSelect.value === "flat") {
           flatField.style.display = "block";
@@ -4011,7 +4873,22 @@ try {
           flatField.style.display = "none";
           hourlyFields.style.display = "grid";
         }
+        updatePricingSuggestion();
       });
+      
+      // Update pricing suggestion when category or zip changes
+      const categorySelect = document.getElementById("jobCategory");
+      const zipInput = document.getElementById("pickupZip");
+      
+      if (categorySelect) {
+        categorySelect.addEventListener("change", updatePricingSuggestion);
+      }
+      if (zipInput) {
+        zipInput.addEventListener("input", debounce(updatePricingSuggestion, 500));
+      }
+      
+      // Show initial suggestion if category is already selected
+      setTimeout(updatePricingSuggestion, 100);
 
       // Date filter handler
       const dateFilter = document.getElementById("jobDateFilter");
@@ -4026,6 +4903,15 @@ try {
       timeFilter.addEventListener("change", () => {
         customTimeFields.style.display = timeFilter.value === "custom" ? "flex" : "none";
       });
+
+      // Recurring job toggle
+      const isRecurringCheckbox = document.getElementById("isRecurringJob");
+      const recurringOptions = document.getElementById("recurringOptions");
+      if (isRecurringCheckbox && recurringOptions) {
+        isRecurringCheckbox.addEventListener("change", () => {
+          recurringOptions.style.display = isRecurringCheckbox.checked ? "block" : "none";
+        });
+      }
 
       document
         .getElementById("postJobButton")
@@ -4276,6 +5162,20 @@ try {
               jobData.estHours = Number(maxHours);
             }
 
+            // Add recurring job fields if enabled
+            const isRecurring = document.getElementById("isRecurringJob")?.checked || false;
+            if (isRecurring) {
+              const recurrenceType = document.getElementById("recurrenceType")?.value;
+              const recurrenceEndDate = document.getElementById("recurrenceEndDate")?.value;
+              
+              if (recurrenceType && (recurrenceType === "weekly" || recurrenceType === "monthly")) {
+                jobData.recurrenceType = recurrenceType;
+                if (recurrenceEndDate) {
+                  jobData.recurrenceEndDate = new Date(recurrenceEndDate).toISOString();
+                }
+              }
+            }
+
             // Get JWT token
             const token = localStorage.getItem("hustl_token");
             if (!token) {
@@ -4299,17 +5199,772 @@ try {
             
             // Clear draft after successful post
             localStorage.removeItem('jobDraft');
-            showToast("✓ Job posted successfully!");
+            showSuccessToast("✓ Job posted successfully!");
             setView("jobs");
             clearJobForm();
             renderJobs();
           } catch (error) {
             console.error("Job posting error:", error);
-            showToast("Post error: " + (error.message || "Unknown error"));
+            showErrorToast("Post error: " + (error.message || "Unknown error"));
           }
         });
     }
 
+    /* ---------- Skeleton Loader Helpers ---------- */
+    
+    function renderJobSkeletons(count = 5) {
+      const jobsList = document.getElementById("jobsList");
+      if (!jobsList) return;
+      
+      jobsList.innerHTML = "";
+      for (let i = 0; i < count; i++) {
+        const skeleton = document.createElement("div");
+        skeleton.className = "skeleton-job-card";
+        skeleton.innerHTML = `
+          <div class="skeleton skeleton-job-title"></div>
+          <div class="skeleton skeleton-job-meta"></div>
+          <div class="skeleton skeleton-job-amount"></div>
+        `;
+        jobsList.appendChild(skeleton);
+      }
+    }
+
+    function renderMessageSkeletons(count = 3) {
+      const convList = document.getElementById("conversationList");
+      if (!convList) return;
+      
+      convList.innerHTML = "";
+      for (let i = 0; i < count; i++) {
+        const skeleton = document.createElement("div");
+        skeleton.className = "skeleton-message-item";
+        skeleton.innerHTML = `
+          <div class="skeleton skeleton-avatar"></div>
+          <div class="skeleton-message-content">
+            <div class="skeleton skeleton-message-line"></div>
+            <div class="skeleton skeleton-message-line"></div>
+          </div>
+        `;
+        convList.appendChild(skeleton);
+      }
+    }
+
+    function renderProfileSkeletons() {
+      const container = document.getElementById("profileContent");
+      const jobsList = document.getElementById("profileJobsList");
+      
+      if (container) {
+        container.innerHTML = `
+          <div class="skeleton-profile-header">
+            <div class="skeleton skeleton-profile-avatar"></div>
+            <div class="skeleton skeleton-profile-name"></div>
+            <div class="skeleton skeleton-profile-email"></div>
+          </div>
+          <div class="skeleton-job-card" style="margin-bottom: 1rem;">
+            <div class="skeleton skeleton-job-title" style="margin-bottom: 0.5rem;"></div>
+            <div class="skeleton skeleton-job-meta"></div>
+          </div>
+        `;
+      }
+      
+      if (jobsList) {
+        jobsList.innerHTML = `
+          <div class="skeleton-stat-card" style="margin-bottom: 0.5rem;">
+            <div class="skeleton skeleton-stat-label"></div>
+            <div class="skeleton skeleton-stat-value"></div>
+          </div>
+        `;
+      }
+    }
+
+    /* ---------- Onboarding Walkthrough ---------- */
+    
+    function showOnboardingTour() {
+      // Check if user has already seen onboarding
+      const hasSeenOnboarding = localStorage.getItem('hustl_onboarding_complete');
+      if (hasSeenOnboarding === 'true') {
+        return;
+      }
+
+      const steps = [
+        {
+          icon: "👋",
+          title: "Welcome to Hustl!",
+          description: "Your local marketplace for getting things done. Post jobs or find work in Knoxville, TN.",
+          features: [
+            "Post jobs and get matched with local hustlers",
+            "Find work opportunities near you",
+            "Secure payments through Stripe",
+            "Real-time messaging with job participants"
+          ]
+        },
+        {
+          icon: "💼",
+          title: "Two Ways to Use Hustl",
+          description: "Switch between Customer and Hustler modes anytime using the toggle in the header.",
+          features: [
+            "Customer mode: Post jobs and hire help",
+            "Hustler mode: Browse and apply for jobs",
+            "One account, both roles",
+            "Switch modes instantly"
+          ]
+        },
+        {
+          icon: "🔍",
+          title: "Find Jobs Easily",
+          description: "Use filters, search, and location settings to find the perfect jobs for you.",
+          features: [
+            "Filter by category, distance, and pay",
+            "Search job titles and descriptions",
+            "See jobs sorted by newest or highest pay",
+            "Pull down to refresh on mobile"
+          ]
+        },
+        {
+          icon: "💬",
+          title: "Stay Connected",
+          description: "Message directly with customers or hustlers about specific jobs.",
+          features: [
+            "Real-time messaging",
+            "See typing indicators",
+            "Get notified of new messages",
+            "Archive or delete conversations"
+          ]
+        },
+        {
+          icon: "✅",
+          title: "You're All Set!",
+          description: "Start posting jobs or browsing opportunities. Need help? Check the About page for guides.",
+          features: [
+            "Complete your profile for better matches",
+            "Add payment methods when ready",
+            "Read reviews before accepting jobs",
+            "Have fun and make money!"
+          ]
+        }
+      ];
+
+      let currentStep = 0;
+
+      function renderStep(stepIndex) {
+        const step = steps[stepIndex];
+        const isLast = stepIndex === steps.length - 1;
+        const isFirst = stepIndex === 0;
+
+        overlay.innerHTML = `
+          <div class="onboarding-modal">
+            <button class="onboarding-skip" id="onboardingSkip">Skip</button>
+            <div class="onboarding-content">
+              <div class="onboarding-progress">
+                ${steps.map((_, i) => `
+                  <div class="onboarding-dot ${i === stepIndex ? 'active' : ''}"></div>
+                `).join('')}
+              </div>
+              <div class="onboarding-icon">${step.icon}</div>
+              <h2 class="onboarding-title">${step.title}</h2>
+              <p class="onboarding-description">${step.description}</p>
+              ${step.features ? `
+                <ul class="onboarding-feature-list">
+                  ${step.features.map(f => `<li>${f}</li>`).join('')}
+                </ul>
+              ` : ''}
+              <div class="onboarding-actions">
+                ${!isFirst ? `
+                  <button class="btn btn-ghost" id="onboardingPrev">Previous</button>
+                ` : ''}
+                <button class="btn btn-primary" id="onboardingNext">
+                  ${isLast ? 'Get Started' : 'Next'}
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Attach event listeners
+        document.getElementById('onboardingSkip').onclick = () => {
+          localStorage.setItem('hustl_onboarding_complete', 'true');
+          overlay.remove();
+        };
+
+        document.getElementById('onboardingNext').onclick = () => {
+          if (isLast) {
+            localStorage.setItem('hustl_onboarding_complete', 'true');
+            overlay.remove();
+          } else {
+            currentStep++;
+            renderStep(currentStep);
+          }
+        };
+
+        if (!isFirst) {
+          document.getElementById('onboardingPrev').onclick = () => {
+            currentStep--;
+            renderStep(currentStep);
+          };
+        }
+      }
+
+      // Create overlay
+      const overlay = document.createElement('div');
+      overlay.className = 'onboarding-overlay';
+      document.body.appendChild(overlay);
+
+      // Render first step
+      renderStep(0);
+    }
+
+    function checkOnboardingTour() {
+      // Check if user just signed up (new account)
+      const user = getCurrentUser();
+      if (user) {
+        // Check if this is a new user (created in last 5 minutes)
+        const accountCreated = localStorage.getItem('hustl_account_created');
+        if (accountCreated) {
+          const createdTime = parseInt(accountCreated);
+          const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+          if (createdTime > fiveMinutesAgo) {
+            // New account, show onboarding
+            setTimeout(() => {
+              showOnboardingTour();
+            }, 1000);
+          }
+        }
+      }
+    }
+
+    /* ---------- Empty State Helpers ---------- */
+    
+    function createEmptyState(type, options = {}) {
+      const emptyState = document.createElement("div");
+      emptyState.className = "empty-state";
+      
+      const configs = {
+        jobs: {
+          icon: "💼",
+          title: "No jobs found",
+          message: options.message || "Try adjusting your filters or check back later for new opportunities.",
+          action: options.showAction ? {
+            text: "Post a Job",
+            onClick: () => setView("post")
+          } : null
+        },
+        messages: {
+          icon: "💬",
+          title: "No messages yet",
+          message: options.message || "Start a conversation by applying to a job or posting one.",
+          action: options.showAction ? {
+            text: "Browse Jobs",
+            onClick: () => setView("jobs")
+          } : null
+        },
+        conversations: {
+          icon: "📭",
+          title: "No conversations yet",
+          message: options.message || "Start a conversation by applying to a job or posting one.",
+          action: options.showAction ? {
+            text: "Browse Jobs",
+            onClick: () => setView("jobs")
+          } : null
+        },
+        reviews: {
+          icon: "⭐",
+          title: "No reviews yet",
+          message: options.message || "Reviews will appear here after you complete jobs.",
+          action: null
+        },
+        notifications: {
+          icon: "🔔",
+          title: "No notifications",
+          message: options.message || "You're all caught up! New notifications will appear here.",
+          action: null
+        }
+      };
+      
+      const config = configs[type] || configs.jobs;
+      
+      emptyState.innerHTML = `
+        <div class="empty-state-icon">${config.icon}</div>
+        <div class="empty-state-title">${config.title}</div>
+        <div class="empty-state-message">${config.message}</div>
+        ${config.action ? `
+          <div class="empty-state-action">
+            <button class="btn btn-primary" data-empty-action>${config.action.text}</button>
+          </div>
+        ` : ''}
+      `;
+      
+      // Attach action button handler if present
+      if (config.action) {
+        const actionBtn = emptyState.querySelector('[data-empty-action]');
+        if (actionBtn) {
+          actionBtn.addEventListener('click', config.action.onClick);
+        }
+      }
+      
+      return emptyState;
+    }
+
+    /* ---------- WebSocket Real-Time Updates ---------- */
+    
+    function initWebSocket() {
+      // Don't connect if already connected
+      if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        return;
+      }
+      
+      // Get auth token
+      const token = localStorage.getItem('hustl_token');
+      if (!token) {
+        console.log('[WebSocket] No auth token, skipping connection');
+        return;
+      }
+      
+      try {
+        // Connect to WebSocket server with auth token
+        const wsUrl = `${WS_URL}/ws?token=${encodeURIComponent(token)}`;
+        console.log('[WebSocket] Connecting to:', wsUrl.replace(/token=[^&]+/, 'token=***'));
+        
+        wsConnection = new WebSocket(wsUrl);
+        
+        wsConnection.onopen = () => {
+          console.log('[WebSocket] Connected');
+          wsReconnectAttempts = 0;
+          
+          // Send initial presence update
+          sendWebSocketMessage({
+            type: 'presence',
+            status: 'online'
+          });
+        };
+        
+        wsConnection.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            handleWebSocketMessage(data);
+          } catch (error) {
+            console.error('[WebSocket] Error parsing message:', error);
+          }
+        };
+        
+        wsConnection.onerror = (error) => {
+          console.error('[WebSocket] Error:', error);
+        };
+        
+        wsConnection.onclose = () => {
+          console.log('[WebSocket] Disconnected');
+          wsConnection = null;
+          
+          // Attempt to reconnect if we have a token
+          if (localStorage.getItem('hustl_token') && wsReconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            wsReconnectAttempts++;
+            const delay = RECONNECT_DELAY * wsReconnectAttempts;
+            console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${wsReconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+            
+            wsReconnectTimeout = setTimeout(() => {
+              initWebSocket();
+            }, delay);
+          }
+        };
+      } catch (error) {
+        console.error('[WebSocket] Connection error:', error);
+        // Fallback to polling if WebSocket fails
+      }
+    }
+    
+    function closeWebSocket() {
+      if (wsReconnectTimeout) {
+        clearTimeout(wsReconnectTimeout);
+        wsReconnectTimeout = null;
+      }
+      
+      if (wsConnection) {
+        wsConnection.close();
+        wsConnection = null;
+      }
+    }
+    
+    function sendWebSocketMessage(message) {
+      if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        wsConnection.send(JSON.stringify(message));
+      } else {
+        console.warn('[WebSocket] Cannot send message, connection not open');
+      }
+    }
+    
+    function handleWebSocketMessage(data) {
+      // Handle location updates
+      if (data.type === 'location_update' && data.jobId) {
+        // Update tracking view if it's open
+        const trackingView = document.getElementById(`trackingView_${data.jobId}`);
+        if (trackingView) {
+          const mapContainer = document.getElementById(`mapContainer_${data.jobId}`);
+          const infoElement = document.getElementById(`trackingInfo_${data.jobId}`);
+          
+          if (mapContainer && infoElement) {
+            // Update info
+            const job = state.jobs.find(j => j.id === data.jobId);
+            if (job && job.lat && job.lng) {
+              const distance = calculateDistance(data.lat, data.lng, job.lat, job.lng);
+              infoElement.innerHTML = `
+                <div style="margin-bottom: 0.25rem;"><strong>Last update:</strong> ${new Date(data.timestamp).toLocaleTimeString()}</div>
+                <div><strong>Distance:</strong> ${distance.toFixed(1)} miles away</div>
+              `;
+              
+              // Update map
+              const googleMapsKey = 'YOUR_GOOGLE_MAPS_API_KEY'; // TODO: Add to environment variables
+              const mapUrl = `https://www.google.com/maps/embed/v1/directions?key=${googleMapsKey}&origin=${data.lat},${data.lng}&destination=${job.lat},${job.lng}&zoom=13`;
+              const iframe = mapContainer.querySelector('iframe');
+              if (iframe) {
+                iframe.src = mapUrl;
+              }
+            }
+          }
+        }
+        return;
+      }
+      
+      console.log('[WebSocket] Received:', data.type);
+      
+      switch (data.type) {
+        case 'message':
+          handleNewMessage(data.message, data.threadId);
+          break;
+          
+        case 'typing':
+          handleTypingIndicator(data.userId, data.userName, data.threadId, data.isTyping);
+          break;
+          
+        case 'job_status_update':
+          handleJobStatusUpdate(data.jobId, data.status, data.job);
+          break;
+          
+        case 'job_assigned':
+          handleJobAssigned(data.jobId, data.job);
+          break;
+          
+        case 'offer_accepted':
+          handleOfferAccepted(data.jobId, data.offerId);
+          break;
+          
+        case 'notification':
+          handleRealtimeNotification(data.notification);
+          break;
+          
+        case 'presence':
+          handlePresenceUpdate(data.userId, data.status);
+          break;
+          
+        default:
+          console.warn('[WebSocket] Unknown message type:', data.type);
+      }
+    }
+    
+    function handleNewMessage(message, threadId) {
+      // If we're viewing this conversation, add message immediately
+      if (activeConversationJobId) {
+        // Find the thread for this job
+        window.hustlAPI.messages.getThreads().then(threads => {
+          const thread = threads.find(t => t.id === threadId);
+          if (thread && thread.jobId === activeConversationJobId) {
+            // Refresh conversation to show new message
+            renderConversation();
+            
+            // Update unread count
+            countUnreadMessages();
+            
+            // Show notification if not focused on this conversation
+            if (document.hidden || activeView !== 'messages') {
+              showToast(`New message from ${message.sender?.name || 'Someone'}`);
+            }
+          }
+        });
+      } else {
+        // Refresh messages view to show new conversation
+        renderMessagesView();
+        countUnreadMessages();
+      }
+    }
+    
+    function handleTypingIndicator(userId, userName, threadId, isTyping) {
+      // Only show if we're viewing this conversation
+      if (!activeConversationJobId) return;
+      
+      window.hustlAPI.messages.getThreads().then(threads => {
+        const thread = threads.find(t => t.id === threadId);
+        if (thread && thread.jobId === activeConversationJobId) {
+          if (isTyping) {
+            if (window.showTypingIndicator) {
+              window.showTypingIndicator(userName);
+            }
+          } else {
+            if (window.hideTypingIndicator) {
+              window.hideTypingIndicator();
+            }
+          }
+        }
+      });
+    }
+    
+    function handleJobStatusUpdate(jobId, status, jobData) {
+      // Refresh job details if viewing this job
+      const jobDetailContainer = document.getElementById('jobDetailContainer');
+      if (jobDetailContainer && jobDetailContainer.dataset.jobId === jobId) {
+        openJobDetails(jobId);
+      }
+      
+      // Refresh jobs list
+      if (activeView === 'jobs') {
+        renderJobs(false); // Don't reset, just refresh
+      }
+      
+      // Show notification
+      showToast(`Job status updated: ${status}`);
+    }
+    
+    function handleJobAssigned(jobId, jobData) {
+      // Refresh jobs list
+      if (activeView === 'jobs') {
+        renderJobs(false);
+      }
+      
+      // Show notification
+      showToast('🎉 You\'ve been assigned to a job!');
+      
+      // Refresh messages to show new conversation
+      renderMessagesView();
+    }
+    
+    function handleOfferAccepted(jobId, offerId) {
+      // Refresh jobs list
+      if (activeView === 'jobs') {
+        renderJobs(false);
+      }
+      
+      // Show notification
+      showToast('✅ Your application was accepted!');
+      
+      // Refresh messages to show new conversation
+      renderMessagesView();
+    }
+    
+    function handleRealtimeNotification(notification) {
+      // Update notification count
+      if (window.updateNotificationCount) {
+        window.updateNotificationCount();
+      }
+      
+      // Show toast for important notifications
+      if (notification.priority === 'high') {
+        showToast(notification.message || notification.title);
+      }
+    }
+    
+    function handlePresenceUpdate(userId, status) {
+      // Update presence indicators in UI
+      const presenceIndicators = document.querySelectorAll(`[data-user-id="${userId}"] .presence-indicator`);
+      presenceIndicators.forEach(indicator => {
+        indicator.className = `presence-indicator ${status}`;
+        indicator.textContent = status === 'online' ? '🟢' : '⚪';
+      });
+    }
+    
+    // Send typing status via WebSocket
+    let typingTimeout = null;
+    function sendTypingStatus(threadId, isTyping) {
+      if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) {
+        return; // Fallback to polling if WebSocket not available
+      }
+      
+      sendWebSocketMessage({
+        type: 'typing',
+        threadId: threadId,
+        isTyping: isTyping
+      });
+    }
+
+    /* ---------- Smart Filter Chips Manager ---------- */
+    
+    function updateFilterChips() {
+      const filtersBar = document.getElementById('jobFiltersBar');
+      if (!filtersBar) return;
+      
+      // Count active filters
+      let activeCount = 0;
+      if (activeFilters.category) activeCount++;
+      if (activeFilters.distance) activeCount++;
+      if (activeFilters.minPay) activeCount++;
+      if (activeFilters.date) activeCount++;
+      
+      // Update sort filter buttons (only one can be active)
+      filtersBar.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+        const filterType = btn.dataset.filter;
+        if (['newest', 'highest-pay', 'near-me'].includes(filterType)) {
+          if (activeFilters.sort === filterType) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        }
+      });
+      
+      // Update "More Filters" button to show count
+      const moreFiltersBtn = document.getElementById('showMoreFiltersBtn');
+      if (moreFiltersBtn && activeCount > 0) {
+        const countBadge = moreFiltersBtn.querySelector('.active-filters-count') || document.createElement('span');
+        if (!countBadge.parentNode) {
+          countBadge.className = 'active-filters-count';
+          moreFiltersBtn.appendChild(countBadge);
+        }
+        countBadge.textContent = activeCount;
+        countBadge.style.display = 'inline-flex';
+      } else if (moreFiltersBtn) {
+        const countBadge = moreFiltersBtn.querySelector('.active-filters-count');
+        if (countBadge) countBadge.style.display = 'none';
+      }
+    }
+    
+    function toggleFilter(filterType, value) {
+      if (['newest', 'highest-pay', 'near-me'].includes(filterType)) {
+        // Sort filters - only one can be active
+        if (activeFilters.sort === value) {
+          activeFilters.sort = 'newest'; // Default
+        } else {
+          activeFilters.sort = value;
+        }
+        activeJobFilter = value;
+      } else {
+        // Other filters - can toggle on/off
+        if (activeFilters[filterType] === value) {
+          activeFilters[filterType] = null;
+        } else {
+          activeFilters[filterType] = value;
+        }
+      }
+      
+      updateFilterChips();
+      renderJobs(true); // Refresh jobs with new filters
+    }
+
+    /* ---------- Pull-to-Refresh Handler ---------- */
+    
+    function initPullToRefresh() {
+      const jobsView = document.getElementById("view-jobs");
+      const jobsList = document.getElementById("jobsList");
+      if (!jobsView || !jobsList) return;
+
+      // Only enable on mobile
+      if (window.innerWidth > 768) return;
+
+      let touchStartY = 0;
+      let touchCurrentY = 0;
+      let isPulling = false;
+      let isRefreshing = false;
+      const PULL_THRESHOLD = 80; // pixels to pull before triggering refresh
+
+      // Create refresh indicator
+      let refreshIndicator = document.getElementById("pullToRefreshIndicator");
+      if (!refreshIndicator) {
+        refreshIndicator = document.createElement("div");
+        refreshIndicator.id = "pullToRefreshIndicator";
+        refreshIndicator.className = "pull-to-refresh-indicator";
+        refreshIndicator.innerHTML = `
+          <div class="pull-to-refresh-spinner"></div>
+          <span>Pull to refresh</span>
+        `;
+        const card = jobsView.querySelector(".card");
+        if (card) {
+          card.style.position = "relative";
+          card.appendChild(refreshIndicator);
+        }
+      }
+
+      jobsView.addEventListener("touchstart", (e) => {
+        if (isRefreshing) return;
+        // Only start if at top of scroll
+        if (jobsView.scrollTop <= 0) {
+          touchStartY = e.touches[0].clientY;
+          isPulling = false;
+        }
+      }, { passive: true });
+
+      jobsView.addEventListener("touchmove", (e) => {
+        if (isRefreshing) {
+          e.preventDefault();
+          return;
+        }
+        
+        if (touchStartY === 0) return;
+        
+        touchCurrentY = e.touches[0].clientY;
+        const pullDistance = touchCurrentY - touchStartY;
+
+        // Only allow pull down when at top
+        if (jobsView.scrollTop <= 0 && pullDistance > 0) {
+          isPulling = true;
+          const pullPercent = Math.min(pullDistance / PULL_THRESHOLD, 1);
+          
+          // Show indicator
+          refreshIndicator.classList.add("active");
+          refreshIndicator.style.transform = `translateX(-50%) translateY(${Math.min(pullDistance, PULL_THRESHOLD)}px)`;
+          
+          // Change text based on pull distance
+          const textSpan = refreshIndicator.querySelector("span");
+          if (textSpan) {
+            if (pullDistance >= PULL_THRESHOLD) {
+              textSpan.textContent = "Release to refresh";
+              refreshIndicator.style.color = "#10b981";
+            } else {
+              textSpan.textContent = "Pull to refresh";
+              refreshIndicator.style.color = "var(--primary)";
+            }
+          }
+        }
+      }, { passive: false });
+
+      jobsView.addEventListener("touchend", async () => {
+        if (!isPulling || isRefreshing) {
+          touchStartY = 0;
+          touchCurrentY = 0;
+          isPulling = false;
+          refreshIndicator.classList.remove("active");
+          refreshIndicator.style.transform = "translateX(-50%)";
+          return;
+        }
+
+        const pullDistance = touchCurrentY - touchStartY;
+        
+        if (pullDistance >= PULL_THRESHOLD) {
+          // Trigger refresh
+          isRefreshing = true;
+          refreshIndicator.classList.add("refreshing");
+          refreshIndicator.querySelector("span").textContent = "Refreshing...";
+          
+          try {
+            // Reset and reload jobs
+            await renderJobs(true);
+            showToast("✓ Jobs refreshed");
+          } catch (error) {
+            console.error("Error refreshing jobs:", error);
+            showToast("Error refreshing jobs");
+          } finally {
+            // Reset after a brief delay
+            setTimeout(() => {
+              isRefreshing = false;
+              refreshIndicator.classList.remove("active", "refreshing");
+              refreshIndicator.style.transform = "translateX(-50%)";
+              refreshIndicator.querySelector("span").textContent = "Pull to refresh";
+            }, 500);
+          }
+        } else {
+          // Didn't pull enough, just reset
+          refreshIndicator.classList.remove("active");
+          refreshIndicator.style.transform = "translateX(-50%)";
+        }
+
+        touchStartY = 0;
+        touchCurrentY = 0;
+        isPulling = false;
+      }, { passive: true });
+    }
     
 async function renderJobs(reset = false) {
   // Use optimized loading state
@@ -4324,7 +5979,8 @@ async function renderJobs(reset = false) {
   if (reset) {
     currentJobsPage = 1;
     allLoadedJobs = [];
-    if (jobsList) jobsList.innerHTML = "";
+    // Show skeleton loaders while loading
+    if (jobsList) renderJobSkeletons(5);
     if (loadMoreContainer) loadMoreContainer.style.display = "none";
   }
 
@@ -4912,8 +6568,13 @@ async function renderJobs(reset = false) {
   // 7) Clear list
   jobsList.innerHTML = "";
   if (jobs.length === 0) {
-    // Show helpful message based on filters
-    const noJobsMsg = document.createElement("div");
+    // Show empty state with helpful message
+    const noJobsMsg = createEmptyState("jobs", {
+      message: activeJobsStatusFilter !== "all" 
+        ? `No ${activeJobsStatusFilter} jobs found. Try a different filter.`
+        : "No jobs available yet. Be the first to post one!",
+      showAction: activeJobsStatusFilter === "all"
+    });
     noJobsMsg.className = "muted";
     noJobsMsg.style.padding = "2rem";
     noJobsMsg.style.textAlign = "center";
@@ -5866,6 +7527,7 @@ async function renderJobs(reset = false) {
       // Store cleanup function
       let escapeHandler = null;
       const cleanup = function() {
+        cleanupTracking(jobId);
         if (overlay && overlay.parentNode) {
           overlay.remove();
         }
@@ -5899,6 +7561,7 @@ async function renderJobs(reset = false) {
       // Close on Escape key
       escapeHandler = (e) => {
         if (e.key === "Escape" && document.getElementById("jobModalOverlay")) {
+          cleanupTracking(jobId);
           cleanup();
         }
       };
@@ -5919,14 +7582,20 @@ async function renderJobs(reset = false) {
         const backBtn = document.createElement("button");
         backBtn.innerHTML = "← Back to Jobs";
         backBtn.style.cssText = "width: 100%; padding: 1rem; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; color: #374151; margin-bottom: 1rem; min-height: 48px; -webkit-tap-highlight-color: transparent;";
-        backBtn.addEventListener("click", cleanup);
+        backBtn.addEventListener("click", () => {
+          cleanupTracking(jobId);
+          cleanup();
+        });
         modal.appendChild(backBtn);
       } else {
         // Desktop: Close button (X)
       const closeBtn = document.createElement("button");
       closeBtn.className = "modal-close";
       closeBtn.innerHTML = "×";
-        closeBtn.addEventListener("click", cleanup);
+        closeBtn.addEventListener("click", () => {
+          cleanupTracking(jobId);
+          cleanup();
+        });
       modal.appendChild(closeBtn);
       }
 
@@ -7361,6 +9030,145 @@ async function renderJobs(reset = false) {
       }
 
       // Hustler View: Show Customer Profile if Accepted
+      // GPS Tracking Section (for hustlers - start tracking)
+      if (user && user.id === job.hustlerId && userMode === "hustler" && (statusUpper === "ASSIGNED" || statusUpper === "IN_PROGRESS")) {
+        const trackingSection = document.createElement("div");
+        trackingSection.style.marginTop = "1rem";
+        trackingSection.style.padding = "1rem";
+        trackingSection.style.background = "#f0fdf4";
+        trackingSection.style.borderRadius = "8px";
+        trackingSection.style.border = "2px solid #86efac";
+        
+        const trackingTitle = document.createElement("div");
+        trackingTitle.style.fontWeight = "600";
+        trackingTitle.style.fontSize = "1rem";
+        trackingTitle.style.marginBottom = "0.5rem";
+        trackingTitle.style.color = "#059669";
+        trackingTitle.textContent = "📍 Live Location Tracking";
+        trackingSection.appendChild(trackingTitle);
+        
+        const trackingDesc = document.createElement("div");
+        trackingDesc.style.fontSize = "0.85rem";
+        trackingDesc.style.color = "#047857";
+        trackingDesc.style.marginBottom = "0.75rem";
+        trackingDesc.textContent = "Share your live location so the customer can see when you're on the way.";
+        trackingSection.appendChild(trackingDesc);
+        
+        const trackingStatus = document.createElement("div");
+        trackingStatus.id = `trackingStatus_${job.id}`;
+        trackingStatus.style.fontSize = "0.9rem";
+        trackingStatus.style.marginBottom = "0.75rem";
+        trackingStatus.style.padding = "0.5rem";
+        trackingStatus.style.background = "#fff";
+        trackingStatus.style.borderRadius = "4px";
+        trackingStatus.style.color = "#6b7280";
+        trackingStatus.textContent = "Tracking not started";
+        trackingSection.appendChild(trackingStatus);
+        
+        const startTrackingBtn = document.createElement("button");
+        startTrackingBtn.id = `startTrackingBtn_${job.id}`;
+        startTrackingBtn.className = "btn btn-primary";
+        startTrackingBtn.style.width = "100%";
+        startTrackingBtn.textContent = "🚗 Start Sharing Location";
+        startTrackingBtn.addEventListener("click", async () => {
+          try {
+            // Request location permission
+            if (!navigator.geolocation) {
+              showToast("GPS not available on this device");
+              return;
+            }
+            
+            startTrackingBtn.disabled = true;
+            startTrackingBtn.textContent = "Starting...";
+            
+            // Start tracking via API
+            await window.hustlAPI.tracking.startTracking(job.id);
+            
+            // Start GPS tracking
+            startLocationTracking(job.id);
+            
+            trackingStatus.textContent = "✅ Sharing location...";
+            trackingStatus.style.color = "#059669";
+            startTrackingBtn.textContent = "🛑 Stop Sharing";
+            startTrackingBtn.className = "btn outline";
+            startTrackingBtn.style.borderColor = "#dc2626";
+            startTrackingBtn.style.color = "#dc2626";
+            startTrackingBtn.disabled = false;
+            
+            // Update click handler to stop tracking
+            startTrackingBtn.onclick = async () => {
+              try {
+                await stopLocationTracking(job.id);
+                await window.hustlAPI.tracking.stopTracking(job.id);
+                trackingStatus.textContent = "Tracking stopped";
+                trackingStatus.style.color = "#6b7280";
+                startTrackingBtn.textContent = "🚗 Start Sharing Location";
+                startTrackingBtn.className = "btn btn-primary";
+                startTrackingBtn.style.borderColor = "";
+                startTrackingBtn.style.color = "";
+                startTrackingBtn.onclick = arguments.callee.caller; // Restore original
+              } catch (error) {
+                showToast("Error stopping tracking: " + (error.message || "Unknown error"));
+              }
+            };
+            
+            showToast("Location sharing started");
+          } catch (error) {
+            showToast("Error: " + (error.message || "Failed to start tracking"));
+            startTrackingBtn.disabled = false;
+            startTrackingBtn.textContent = "🚗 Start Sharing Location";
+          }
+        });
+        trackingSection.appendChild(startTrackingBtn);
+        
+        actionsSection.appendChild(trackingSection);
+      }
+      
+      // GPS Tracking View (for customers - view hustler location)
+      if (user && user.id === job.customerId && job.hustlerId && (statusUpper === "ASSIGNED" || statusUpper === "IN_PROGRESS")) {
+        const trackingViewSection = document.createElement("div");
+        trackingViewSection.id = `trackingView_${job.id}`;
+        trackingViewSection.style.marginTop = "1rem";
+        trackingViewSection.style.padding = "1rem";
+        trackingViewSection.style.background = "#eff6ff";
+        trackingViewSection.style.borderRadius = "8px";
+        trackingViewSection.style.border = "2px solid #93c5fd";
+        
+        const trackingViewTitle = document.createElement("div");
+        trackingViewTitle.style.fontWeight = "600";
+        trackingViewTitle.style.fontSize = "1rem";
+        trackingViewTitle.style.marginBottom = "0.5rem";
+        trackingViewTitle.style.color = "#1e40af";
+        trackingViewTitle.textContent = "📍 Hustler Location";
+        trackingViewSection.appendChild(trackingViewTitle);
+        
+        const mapContainer = document.createElement("div");
+        mapContainer.id = `mapContainer_${job.id}`;
+        mapContainer.style.width = "100%";
+        mapContainer.style.height = "300px";
+        mapContainer.style.borderRadius = "8px";
+        mapContainer.style.background = "#e0e7ff";
+        mapContainer.style.marginBottom = "0.75rem";
+        mapContainer.style.display = "flex";
+        mapContainer.style.alignItems = "center";
+        mapContainer.style.justifyContent = "center";
+        mapContainer.style.color = "#4b5563";
+        mapContainer.textContent = "Loading map...";
+        trackingViewSection.appendChild(mapContainer);
+        
+        const trackingInfo = document.createElement("div");
+        trackingInfo.id = `trackingInfo_${job.id}`;
+        trackingInfo.style.fontSize = "0.85rem";
+        trackingInfo.style.color = "#475569";
+        trackingInfo.textContent = "Checking for location updates...";
+        trackingViewSection.appendChild(trackingInfo);
+        
+        // Load tracking data and display map
+        loadTrackingView(job.id, mapContainer, trackingInfo);
+        
+        actionsSection.appendChild(trackingViewSection);
+      }
+      
       if (user && user.id === job.hustlerId && userMode === "hustler" && job.status !== "OPEN") {
         const customerSection = document.createElement("div");
         customerSection.style.marginTop = "1.5rem";
@@ -8661,7 +10469,7 @@ async function renderJobs(reset = false) {
       }
     };
     
-    // Payment modal function - accepts offer after payment succeeds
+    // Payment modal function with Stripe Payment Element (in-app, no redirect)
     async function showPaymentModal(jobId, offerId = null) {
       try {
         const job = await window.hustlAPI.jobs.get(jobId);
@@ -8677,13 +10485,14 @@ async function renderJobs(reset = false) {
         
         // Create modal overlay
         const overlay = document.createElement("div");
+        overlay.id = "paymentModalOverlay";
         overlay.style.position = "fixed";
         overlay.style.inset = "0";
         overlay.style.background = "rgba(15,23,42,0.55)";
         overlay.style.display = "flex";
         overlay.style.alignItems = "center";
         overlay.style.justifyContent = "center";
-        overlay.style.zIndex = "100";
+        overlay.style.zIndex = "10000";
         
         const modal = document.createElement("div");
         modal.className = "card";
@@ -8727,6 +10536,7 @@ async function renderJobs(reset = false) {
           </div>`;
         
         // Add team size info if applicable
+        const teamSize = job.requirements?.teamSize || 1;
         if (teamSize > 1) {
           if (job.payType === "hourly") {
             const hourlyRate = Number(job.hourlyRate) || 0;
@@ -8757,89 +10567,190 @@ async function renderJobs(reset = false) {
         paymentDetails.innerHTML = paymentDetailsHTML;
         content.appendChild(paymentDetails);
         
+        // Stripe Payment Element container
+        const paymentElementContainer = document.createElement("div");
+        paymentElementContainer.id = "payment-element-container";
+        paymentElementContainer.style.marginBottom = "1.5rem";
+        paymentElementContainer.style.padding = "1rem";
+        paymentElementContainer.style.background = "white";
+        paymentElementContainer.style.border = "1px solid var(--border)";
+        paymentElementContainer.style.borderRadius = "8px";
+        content.appendChild(paymentElementContainer);
+        
+        // Loading state
+        paymentElementContainer.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading payment form...</div>';
+        
+        let stripe = null;
+        let elements = null;
+        let paymentElement = null;
+        
+        try {
+          // Get Stripe publishable key from backend
+          const configResponse = await fetch('/payments/config', {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('hustl_token')}`,
+            },
+          });
+          
+          if (!configResponse.ok) {
+            throw new Error('Failed to get Stripe config');
+          }
+          
+          const config = await configResponse.json();
+          
+          if (!config.publishableKey) {
+            throw new Error('Stripe publishable key not found');
+          }
+          
+          // Initialize Stripe
+          stripe = Stripe(config.publishableKey);
+          
+          // Create payment intent
+          const intentEndpoint = offerId 
+            ? `/payments/create-intent/offer/${offerId}`
+            : `/payments/create-intent/job/${jobId}`;
+          
+          const intentResponse = await fetch(intentEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('hustl_token')}`,
+            },
+          });
+          
+          if (!intentResponse.ok) {
+            const errorData = await intentResponse.json().catch(() => ({}));
+            
+            // Handle active jobs limit
+            if (errorData.error && errorData.error.includes('active jobs') || 
+                errorData.currentActiveJobs !== undefined) {
+              overlay.remove();
+              document.body.style.overflow = "";
+              if (typeof showActiveJobsLimitModal === 'function') {
+                showActiveJobsLimitModal(errorData.currentActiveJobs || 2, errorData.maxActiveJobs || 2);
+              }
+              return;
+            }
+            
+            throw new Error(errorData.error || errorData.message || 'Failed to create payment intent');
+          }
+          
+          const { clientSecret } = await intentResponse.json();
+          
+          if (!clientSecret) {
+            throw new Error('No client secret received');
+          }
+          
+          // Initialize Elements
+          elements = stripe.elements({ 
+            clientSecret,
+            appearance: {
+              theme: 'stripe',
+              variables: {
+                colorPrimary: '#2563eb',
+                colorBackground: '#ffffff',
+                colorText: '#0f172a',
+                colorDanger: '#ef4444',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                spacingUnit: '4px',
+                borderRadius: '8px',
+              },
+            },
+          });
+          
+          // Create and mount Payment Element
+          paymentElement = elements.create('payment');
+          paymentElement.mount('#payment-element-container');
+          
+        } catch (error) {
+          console.error('Payment Element setup error:', error);
+          paymentElementContainer.innerHTML = `
+            <div style="padding: 1rem; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 6px; color: #991b1b;">
+              <strong>Error loading payment form:</strong> ${error.message || 'Unknown error'}<br>
+              <small>You can try again or contact support.</small>
+            </div>
+          `;
+        }
+        
         // Payment button
         const payBtn = document.createElement("button");
         payBtn.className = "btn btn-primary";
         payBtn.style.width = "100%";
+        payBtn.id = "submit-payment-btn";
         payBtn.textContent = offerId ? `Pay $${total.toFixed(2)} & Accept` : `Pay $${total.toFixed(2)}`;
+        
         payBtn.addEventListener("click", async () => {
+          if (!stripe || !paymentElement) {
+            showToast("Payment form not ready. Please wait...");
+            return;
+          }
+          
           payBtn.disabled = true;
-          payBtn.textContent = "Redirecting to payment...";
+          payBtn.textContent = "Processing...";
+          
           try {
-            // If offerId is provided, redirect to Stripe checkout
-            if (offerId) {
-              const response = await fetch('/payments/checkout/offer/' + offerId, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${localStorage.getItem('hustl_token')}`,
-                },
-              });
+            // Confirm payment with Stripe
+            const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
+              elements,
+              confirmParams: {
+                return_url: `${window.location.origin}/success?jobId=${jobId}`,
+              },
+              redirect: 'if_required', // Only redirect if 3D Secure is required
+            });
+            
+            if (stripeError) {
+              // Show error to user
+              let errorMessage = stripeError.message || 'Payment failed';
               
-              if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                console.error('Checkout error:', errorData);
-                
-                // TEMPORARILY DISABLED - Stripe requirement check bypassed for testing
-                /*
-                if (errorData.requiresStripe) {
-                  showToast("⚠️ This hustler needs to connect their Stripe account first. They've been notified via email.");
-                  overlay.remove();
-                  document.body.style.overflow = "";
-                  renderJobs();
-                  return;
-                }
-                */
-                
-                // Better error messages - check for active jobs limit
-                let errorMsg = errorData.error || errorData.message || 'Failed to create checkout session';
-                if (response.status === 403) {
-                  errorMsg = "You don't have permission to checkout this offer. Make sure you're logged in as the customer who posted this job.";
-                } else if (response.status === 401) {
-                  errorMsg = "Please log in to continue.";
-                } else if (response.status === 400) {
-                  // Check for active jobs limit error
-                  if (errorData.error && errorData.error.includes('active jobs') || 
-                      errorData.currentActiveJobs !== undefined) {
-                    // Show special popup for active jobs limit
-                    overlay.remove();
-                    document.body.style.overflow = "";
-                    showActiveJobsLimitModal(errorData.currentActiveJobs || 2, errorData.maxActiveJobs || 2);
-                    return;
-                  }
-                  errorMsg = errorData.message || errorData.error || "Invalid request. The offer may have already been accepted or declined.";
-                } else if (response.status === 500) {
-                  errorMsg = "Server error. Please check the console for details and try again.";
-                  console.error("Server error details:", errorData);
-                }
-                
-                showToast("Error: " + errorMsg);
-                payBtn.disabled = false;
-                payBtn.textContent = offerId ? `Pay $${total.toFixed(2)} & Accept` : `Pay $${total.toFixed(2)}`;
-                return;
-              }
-              
-              const data = await response.json();
-              if (data.url) {
-                // Redirect to Stripe checkout
-                window.location.href = data.url;
+              // Handle specific error types
+              if (stripeError.type === 'card_error' || stripeError.type === 'validation_error') {
+                errorMessage = stripeError.message;
               } else {
-                throw new Error('No checkout URL received');
+                errorMessage = 'An error occurred. Please try again.';
               }
-            } else {
-              // Otherwise just process payment
-              await window.hustlAPI.payments.confirm(jobId);
-              showToast("Payment processed successfully!");
+              
+              showToast("Payment error: " + errorMessage);
+              payBtn.disabled = false;
+              payBtn.textContent = offerId ? `Pay $${total.toFixed(2)} & Accept` : `Pay $${total.toFixed(2)}`;
+              return;
+            }
+            
+            // Payment succeeded!
+            if (paymentIntent && paymentIntent.status === 'succeeded') {
+              // Show success message
+              showToast("✅ Payment successful!");
+              
+              // Close modal
               overlay.remove();
               document.body.style.overflow = "";
-              renderJobs();
+              
+              // Refresh jobs to show updated status
+              if (typeof renderJobs === 'function') {
+                renderJobs(true);
+              }
+              
+              // If accepting an offer, show success modal
+              if (offerId) {
+                setTimeout(() => {
+                  showToast("🎉 Hustler accepted! You can now message them.");
+                  if (typeof renderMessagesView === 'function') {
+                    renderMessagesView();
+                  }
+                }, 500);
+              }
+            } else {
+              // Payment requires additional action (3D Secure, etc.)
+              showToast("Please complete the additional verification steps.");
             }
+            
           } catch (error) {
+            console.error('Payment confirmation error:', error);
             showToast("Error: " + (error.message || "Payment failed"));
             payBtn.disabled = false;
             payBtn.textContent = offerId ? `Pay $${total.toFixed(2)} & Accept` : `Pay $${total.toFixed(2)}`;
           }
         });
+        
         content.appendChild(payBtn);
         
         // Close button
@@ -8849,6 +10760,10 @@ async function renderJobs(reset = false) {
         closeBtn.style.marginTop = "0.5rem";
         closeBtn.textContent = "Cancel";
         closeBtn.addEventListener("click", () => {
+          // Clean up Stripe Elements
+          if (paymentElement) {
+            paymentElement.unmount();
+          }
           overlay.remove();
           document.body.style.overflow = "";
         });
@@ -8861,6 +10776,18 @@ async function renderJobs(reset = false) {
         
         overlay.addEventListener("click", (e) => {
           if (e.target === overlay) {
+            if (paymentElement) {
+              paymentElement.unmount();
+            }
+            overlay.remove();
+            document.body.style.overflow = "";
+          }
+        });
+      } catch (error) {
+        console.error('Payment modal error:', error);
+        showToast("Error opening payment form: " + (error.message || "Unknown error"));
+      }
+    }
             overlay.remove();
             document.body.style.overflow = "";
           }
@@ -9027,12 +10954,19 @@ async function renderJobs(reset = false) {
     }
 
     async function renderMessagesView() {
-      const user = await window.hustlAPI.auth.getCurrentUser();
       const convList = document.getElementById("conversationList");
       const convTitle = document.getElementById("conversationTitle");
       const convSummary = document.getElementById("conversationJobSummary");
       const convMessages = document.getElementById("conversationMessages");
       if (!convList) return;
+      
+      // Show skeleton loaders while fetching data
+      renderMessageSkeletons(3);
+      if (convTitle) convTitle.textContent = "Loading...";
+      if (convSummary) convSummary.textContent = "";
+      if (convMessages) convMessages.innerHTML = "";
+      
+      const user = await window.hustlAPI.auth.getCurrentUser();
       
       // Setup archive/delete view toggles
       const showArchivedBtn = document.getElementById("showArchivedBtn");
@@ -9759,12 +11693,89 @@ async function renderJobs(reset = false) {
     async function initConversationInput() {
       const sendBtn = document.getElementById("conversationSendButton");
       const input = document.getElementById("conversationInput");
+      const convMessages = document.getElementById("conversationMessages");
       
       // Remove old listeners by cloning
       const newSendBtn = sendBtn.cloneNode(true);
       sendBtn.parentNode.replaceChild(newSendBtn, sendBtn);
       const newInput = input.cloneNode(true);
       input.parentNode.replaceChild(newInput, input);
+      
+      // Typing indicator state
+      let typingTimeout = null;
+      let isTyping = false;
+      const TYPING_DEBOUNCE = 1000; // Show typing indicator after 1 second of typing
+      const TYPING_DURATION = 3000; // Hide typing indicator after 3 seconds of no typing
+      
+      // Create typing indicator element
+      let typingIndicator = document.getElementById("typingIndicator");
+      if (!typingIndicator && convMessages) {
+        typingIndicator = document.createElement("div");
+        typingIndicator.id = "typingIndicator";
+        typingIndicator.className = "typing-indicator";
+        typingIndicator.style.cssText = `
+          display: none;
+          padding: 0.5rem 0.75rem;
+          color: var(--text-muted);
+          font-size: 0.85rem;
+          font-style: italic;
+          margin-bottom: 0.5rem;
+        `;
+        typingIndicator.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div class="typing-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <span>Someone is typing...</span>
+          </div>
+        `;
+        convMessages.appendChild(typingIndicator);
+      }
+      
+      // Function to show typing indicator (for other user - will be connected to backend later)
+      function showTypingIndicator(userName = "Someone") {
+        if (typingIndicator) {
+          typingIndicator.querySelector("span:last-child").textContent = `${userName} is typing...`;
+          typingIndicator.style.display = "block";
+        }
+      }
+      
+      // Function to hide typing indicator
+      function hideTypingIndicator() {
+        if (typingIndicator) {
+          typingIndicator.style.display = "none";
+        }
+      }
+      
+      // Track when user is typing and send via WebSocket
+      newInput.addEventListener("input", () => {
+        // Clear existing timeout
+        if (typingTimeout) {
+          clearTimeout(typingTimeout);
+        }
+        
+        // Send typing started
+        if (activeConversationJobId) {
+          window.hustlAPI.messages.getThreads().then(threads => {
+            const thread = threads.find(t => t.jobId === activeConversationJobId);
+            if (thread) {
+              sendTypingStatus(thread.id, true);
+            }
+          });
+        }
+        
+        // Set timeout to stop typing indicator
+        typingTimeout = setTimeout(() => {
+          if (activeConversationJobId) {
+            window.hustlAPI.messages.getThreads().then(threads => {
+              const thread = threads.find(t => t.jobId === activeConversationJobId);
+              if (thread) {
+                sendTypingStatus(thread.id, false);
+              }
+            });
+          }
+        }, TYPING_DURATION);
+      });
       
       newSendBtn.addEventListener("click", async () => {
         const user = await window.hustlAPI.auth.getCurrentUser();
@@ -9780,6 +11791,13 @@ async function renderJobs(reset = false) {
         const text = newInput.value.trim();
         if (!text) return;
         
+        // Hide typing indicator when sending
+        hideTypingIndicator();
+        if (typingTimeout) {
+          clearTimeout(typingTimeout);
+          typingTimeout = null;
+        }
+        
         try {
           // Find thread for this job
           const threads = await window.hustlAPI.messages.getThreads();
@@ -9790,17 +11808,23 @@ async function renderJobs(reset = false) {
             return;
           }
           
-          // Send message
+          // Send message via API
           await window.hustlAPI.messages.sendMessage(thread.id, text);
           newInput.value = "";
           
+          // Stop typing indicator
+          sendTypingStatus(thread.id, false);
+          if (typingTimeout) {
+            clearTimeout(typingTimeout);
+            typingTimeout = null;
+          }
+          
           // Mark that we should scroll to bottom (user sent a message)
-          const convMessages = document.getElementById("conversationMessages");
           if (convMessages) {
             convMessages.dataset.shouldScroll = "true";
           }
           
-          // Refresh messages
+          // Refresh messages (WebSocket will also update in real-time)
           renderConversation();
           
           // Update unread count (in case recipient views it)
@@ -9816,20 +11840,27 @@ async function renderJobs(reset = false) {
           newSendBtn.click();
         }
       });
+      
+      // Expose function to show typing indicator (for future WebSocket integration)
+      window.showTypingIndicator = showTypingIndicator;
+      window.hideTypingIndicator = hideTypingIndicator;
     }
 
     /* ---------- Profile ---------- */
 
     async function renderProfile(userOverride = null) {
+  const container = document.getElementById("profileContent");
+  const jobsList = document.getElementById("profileJobsList");
+  if (!container || !jobsList) return;
+
+  // Show skeleton loaders while fetching data
+  renderProfileSkeletons();
+
   // Use provided user or fetch from API
   let user = userOverride;
   if (!user) {
     user = await window.hustlAPI.auth.getCurrentUser();
   }
-  
-  const container = document.getElementById("profileContent");
-  const jobsList = document.getElementById("profileJobsList");
-  if (!container || !jobsList) return;
 
   if (!user) {
     container.innerHTML =
@@ -9887,6 +11918,63 @@ async function renderJobs(reset = false) {
   }, 0);
 
   container.innerHTML = "";
+
+  // Helper function to render verification badges
+  function renderVerificationBadges(user) {
+    const badges = [];
+    
+    // ID Verification
+    if (user.idVerified || (user.idVerificationStatus && user.idVerificationStatus === 'VERIFIED')) {
+      badges.push({
+        icon: '🆔',
+        text: 'ID Verified',
+        status: 'verified'
+      });
+    } else if (user.idVerificationStatus === 'PENDING') {
+      badges.push({
+        icon: '⏳',
+        text: 'ID Verification Pending',
+        status: 'pending'
+      });
+    } else if (user.idVerificationStatus === 'REJECTED') {
+      badges.push({
+        icon: '❌',
+        text: 'ID Verification Rejected',
+        status: 'rejected'
+      });
+    }
+    
+    // Phone Verification
+    if (user.phone && user.phoneVerified) {
+      badges.push({
+        icon: '📱',
+        text: 'Phone Verified',
+        status: 'verified'
+      });
+    }
+    
+    // Email Verification (assume verified if user exists)
+    if (user.email) {
+      badges.push({
+        icon: '✉️',
+        text: 'Email Verified',
+        status: 'verified'
+      });
+    }
+    
+    if (badges.length === 0) return '';
+    
+    return `
+      <div class="verification-badges-container">
+        ${badges.map(badge => `
+          <div class="verification-badge ${badge.status}">
+            <span class="verification-badge-icon">${badge.icon}</span>
+            <span>${badge.text}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
 
   // Modern profile header with gradient
   const profileHeader = document.createElement("div");
@@ -9987,6 +12075,21 @@ async function renderJobs(reset = false) {
   const emailEl = document.createElement("div");
   emailEl.style.fontSize = "0.9rem";
   emailEl.style.opacity = "0.9";
+  emailEl.textContent = user.email || "";
+  profileHeader.appendChild(emailEl);
+  
+  // Add verification badges
+  const badgesHTML = renderVerificationBadges(user);
+  if (badgesHTML) {
+    const badgesContainer = document.createElement("div");
+    badgesContainer.innerHTML = badgesHTML;
+    badgesContainer.style.marginTop = "1rem";
+    profileHeader.appendChild(badgesContainer);
+  }
+  
+  container.appendChild(profileHeader);
+  
+  // Remove old emailEl append if it exists later
   emailEl.textContent = user.email;
   profileHeader.appendChild(emailEl);
   
@@ -10361,6 +12464,7 @@ setTimeout(() => {
   statEarned.innerHTML =
     "<div class='stat-label'>Estimated total earned (as Hustler)</div><div class='stat-value'>" +
     formatMoney(totalEarned) +
+    "</div><div style='margin-top: 0.75rem;'><button class='btn btn-primary' id='viewEarningsBtn' style='width: 100%; font-size: 0.9rem; padding: 0.75rem;'>💰 View Earnings Dashboard</button></div>" +
     "</div>";
   statsRow.appendChild(statEarned);
 
@@ -10912,6 +13016,172 @@ setTimeout(() => {
   const saveProfileBtn = document.getElementById("saveProfileButton");
   const saveStatusEl = document.getElementById("saveStatus");
   
+  // Earnings dashboard button (for hustlers)
+  const viewEarningsBtn = document.getElementById("viewEarningsBtn");
+  if (viewEarningsBtn && hasHustlerRole) {
+    viewEarningsBtn.addEventListener("click", () => {
+      setView("earnings");
+    });
+  }
+
+  // Referral section (for all users)
+  const referralSection = document.createElement("div");
+  referralSection.style.background = "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)";
+  referralSection.style.border = "2px solid #86efac";
+  referralSection.style.borderRadius = "12px";
+  referralSection.style.padding = "1.5rem";
+  referralSection.style.marginTop = "1.5rem";
+  referralSection.style.marginBottom = "1rem";
+  
+  const referralTitle = document.createElement("div");
+  referralTitle.style.fontSize = "1.1rem";
+  referralTitle.style.fontWeight = "700";
+  referralTitle.style.color = "#166534";
+  referralTitle.style.marginBottom = "0.75rem";
+  referralTitle.textContent = "🎁 Invite Friends & Earn Rewards";
+  referralSection.appendChild(referralTitle);
+  
+  const referralDesc = document.createElement("div");
+  referralDesc.style.fontSize = "0.9rem";
+  referralDesc.style.color = "#15803d";
+  referralDesc.style.marginBottom = "1rem";
+  referralDesc.style.lineHeight = "1.6";
+  referralDesc.textContent = "Share your referral code and earn $10 when your friend completes their first job!";
+  referralSection.appendChild(referralDesc);
+  
+  // Load referral code and stats
+  let referralData = null;
+  try {
+    referralData = await window.hustlAPI.referrals.getMyReferrals();
+  } catch (error) {
+    console.error("Error loading referral data:", error);
+  }
+  
+  if (referralData) {
+    const referralCodeContainer = document.createElement("div");
+    referralCodeContainer.style.display = "flex";
+    referralCodeContainer.style.gap = "0.5rem";
+    referralCodeContainer.style.marginBottom = "1rem";
+    referralCodeContainer.style.alignItems = "center";
+    
+    const codeInput = document.createElement("input");
+    codeInput.type = "text";
+    codeInput.value = referralData.referralCode;
+    codeInput.readOnly = true;
+    codeInput.style.flex = "1";
+    codeInput.style.padding = "0.75rem";
+    codeInput.style.border = "1px solid #86efac";
+    codeInput.style.borderRadius = "8px";
+    codeInput.style.background = "white";
+    codeInput.style.fontSize = "1rem";
+    codeInput.style.fontWeight = "600";
+    codeInput.style.textAlign = "center";
+    codeInput.style.letterSpacing = "0.1em";
+    codeInput.style.color = "#166534";
+    referralCodeContainer.appendChild(codeInput);
+    
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "btn btn-primary";
+    copyBtn.textContent = "Copy";
+    copyBtn.style.padding = "0.75rem 1.5rem";
+    copyBtn.addEventListener("click", () => {
+      codeInput.select();
+      document.execCommand("copy");
+      copyBtn.textContent = "✓ Copied!";
+      setTimeout(() => {
+        copyBtn.textContent = "Copy";
+      }, 2000);
+      showToast("Referral code copied!");
+    });
+    referralCodeContainer.appendChild(copyBtn);
+    referralSection.appendChild(referralCodeContainer);
+    
+    // Share buttons
+    const shareContainer = document.createElement("div");
+    shareContainer.style.display = "flex";
+    shareContainer.style.gap = "0.5rem";
+    shareContainer.style.flexWrap = "wrap";
+    
+    const shareText = referralData.referralUrl;
+    
+    // Share via link
+    const shareLinkBtn = document.createElement("button");
+    shareLinkBtn.className = "btn outline";
+    shareLinkBtn.textContent = "📋 Copy Link";
+    shareLinkBtn.style.flex = "1";
+    shareLinkBtn.style.minWidth = "120px";
+    shareLinkBtn.addEventListener("click", () => {
+      navigator.clipboard.writeText(shareText).then(() => {
+        shareLinkBtn.textContent = "✓ Copied!";
+        setTimeout(() => {
+          shareLinkBtn.textContent = "📋 Copy Link";
+        }, 2000);
+        showToast("Referral link copied!");
+      });
+    });
+    shareContainer.appendChild(shareLinkBtn);
+    
+    // Share via native share (if available)
+    if (navigator.share) {
+      const shareNativeBtn = document.createElement("button");
+      shareNativeBtn.className = "btn outline";
+      shareNativeBtn.textContent = "📤 Share";
+      shareNativeBtn.style.flex = "1";
+      shareNativeBtn.style.minWidth = "120px";
+      shareNativeBtn.addEventListener("click", async () => {
+        try {
+          await navigator.share({
+            title: "Join Hustl - Local Jobs, Real Hustle",
+            text: `Join Hustl and earn money doing local jobs! Use my code: ${referralData.referralCode}`,
+            url: shareText,
+          });
+        } catch (error) {
+          // User cancelled or error
+          console.log("Share cancelled or failed");
+        }
+      });
+      shareContainer.appendChild(shareNativeBtn);
+    }
+    
+    referralSection.appendChild(shareContainer);
+    
+    // Stats
+    if (referralData.stats.totalReferrals > 0) {
+      const statsContainer = document.createElement("div");
+      statsContainer.style.marginTop = "1rem";
+      statsContainer.style.paddingTop = "1rem";
+      statsContainer.style.borderTop = "1px solid #86efac";
+      statsContainer.style.display = "grid";
+      statsContainer.style.gridTemplateColumns = "repeat(2, 1fr)";
+      statsContainer.style.gap = "0.75rem";
+      
+      const stat1 = document.createElement("div");
+      stat1.innerHTML = `<div style="font-size: 0.85rem; color: #15803d; margin-bottom: 0.25rem;">Referrals</div><div style="font-size: 1.25rem; font-weight: 700; color: #166534;">${referralData.stats.totalReferrals}</div>`;
+      statsContainer.appendChild(stat1);
+      
+      const stat2 = document.createElement("div");
+      stat2.innerHTML = `<div style="font-size: 0.85rem; color: #15803d; margin-bottom: 0.25rem;">Rewards Earned</div><div style="font-size: 1.25rem; font-weight: 700; color: #166534;">$${referralData.stats.earnedRewards.toFixed(2)}</div>`;
+      statsContainer.appendChild(stat2);
+      
+      const stat3 = document.createElement("div");
+      stat3.innerHTML = `<div style="font-size: 0.85rem; color: #15803d; margin-bottom: 0.25rem;">Completed Jobs</div><div style="font-size: 1.25rem; font-weight: 700; color: #166534;">${referralData.stats.completedJobs}</div>`;
+      statsContainer.appendChild(stat3);
+      
+      const stat4 = document.createElement("div");
+      stat4.innerHTML = `<div style="font-size: 0.85rem; color: #15803d; margin-bottom: 0.25rem;">Pending</div><div style="font-size: 1.25rem; font-weight: 700; color: #166534;">$${referralData.stats.pendingRewards.toFixed(2)}</div>`;
+      statsContainer.appendChild(stat4);
+      
+      referralSection.appendChild(statsContainer);
+    }
+  } else {
+    const loadingMsg = document.createElement("div");
+    loadingMsg.className = "muted";
+    loadingMsg.textContent = "Loading referral code...";
+    referralSection.appendChild(loadingMsg);
+  }
+  
+  container.appendChild(referralSection);
+
   if (saveProfileBtn) {
     saveProfileBtn.addEventListener("click", async () => {
       const name = nameInputEl?.value.trim() || "";
@@ -11434,6 +13704,635 @@ async function openUserProfile(userId) {
 
     /* ---------- Owner view ---------- */
 
+    /* ---------- Earnings Dashboard ---------- */
+    async function renderEarningsDashboard() {
+      const container = document.getElementById("earningsContent");
+      if (!container) return;
+
+      const user = await window.hustlAPI.auth.getCurrentUser();
+      if (!user || user.role !== 'HUSTLER') {
+        container.innerHTML = '<div class="muted" style="padding: 2rem; text-align: center;">Earnings dashboard is only available for hustlers.</div>';
+        return;
+      }
+
+      // Show loading state
+      container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading earnings data...</div>';
+
+      try {
+        // Fetch earnings data (default to month view)
+        const period = localStorage.getItem('earningsPeriod') || 'month';
+        const data = await window.hustlAPI.payments.getEarnings(period);
+
+        if (!data) {
+          container.innerHTML = '<div class="muted" style="padding: 2rem; text-align: center;">No earnings data available.</div>';
+          return;
+        }
+
+        // Build dashboard HTML
+        let html = '';
+
+        // Period selector
+        html += `
+          <div style="margin-bottom: 1.5rem;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn ${period === 'day' ? 'btn-primary' : 'outline'}" data-period="day" style="font-size: 0.85rem; padding: 0.5rem 1rem;">Today</button>
+              <button class="btn ${period === 'week' ? 'btn-primary' : 'outline'}" data-period="week" style="font-size: 0.85rem; padding: 0.5rem 1rem;">This Week</button>
+              <button class="btn ${period === 'month' ? 'btn-primary' : 'outline'}" data-period="month" style="font-size: 0.85rem; padding: 0.5rem 1rem;">This Month</button>
+              <button class="btn ${period === 'year' ? 'btn-primary' : 'outline'}" data-period="year" style="font-size: 0.85rem; padding: 0.5rem 1rem;">This Year</button>
+              <button class="btn ${period === 'all' ? 'btn-primary' : 'outline'}" data-period="all" style="font-size: 0.85rem; padding: 0.5rem 1rem;">All Time</button>
+            </div>
+          </div>
+        `;
+
+        // Stats cards
+        html += `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 1.5rem; color: white;">
+              <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">Total Earnings</div>
+              <div style="font-size: 1.75rem; font-weight: 700;">$${data.totals.earnings.toFixed(2)}</div>
+            </div>
+            <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 1.5rem;">
+              <div style="font-size: 0.85rem; color: #6b7280; margin-bottom: 0.5rem;">Jobs Completed</div>
+              <div style="font-size: 1.75rem; font-weight: 700; color: #16a34a;">${data.totals.jobsCompleted}</div>
+            </div>
+            <div style="background: #fef3c7; border: 1px solid #fde047; border-radius: 12px; padding: 1.5rem;">
+              <div style="font-size: 0.85rem; color: #6b7280; margin-bottom: 0.5rem;">Avg per Job</div>
+              <div style="font-size: 1.75rem; font-weight: 700; color: #d97706;">$${data.totals.avgPerJob.toFixed(2)}</div>
+            </div>
+            <div style="background: #fee2e2; border: 1px solid #fca5a5; border-radius: 12px; padding: 1.5rem;">
+              <div style="font-size: 0.85rem; color: #6b7280; margin-bottom: 0.5rem;">Total Tips</div>
+              <div style="font-size: 1.75rem; font-weight: 700; color: #dc2626;">$${data.totals.tips.toFixed(2)}</div>
+            </div>
+          </div>
+        `;
+
+        // Earnings chart (simple bar chart using SVG)
+        if (data.chartData && data.chartData.length > 0) {
+          const maxEarnings = Math.max(...data.chartData.map(d => d.earnings), 1);
+          const chartHeight = 200;
+          const chartWidth = Math.max(600, data.chartData.length * 30);
+          
+          html += `
+            <div style="background: white; border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; overflow-x: auto;">
+              <div style="font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem;">Earnings Trend</div>
+              <svg width="${chartWidth}" height="${chartHeight + 40}" style="display: block;">
+                ${data.chartData.map((d, i) => {
+                  const barHeight = maxEarnings > 0 ? (d.earnings / maxEarnings) * chartHeight : 0;
+                  const x = (i * (chartWidth / data.chartData.length)) + 10;
+                  const y = chartHeight - barHeight;
+                  const barWidth = (chartWidth / data.chartData.length) - 20;
+                  const date = new Date(d.date);
+                  const label = period === 'day' 
+                    ? date.getHours() + ':00'
+                    : period === 'week' || period === 'month'
+                    ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    : date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                  
+                  return `
+                    <g>
+                      <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" fill="#667eea" rx="4" opacity="0.8">
+                        <title>$${d.earnings.toFixed(2)} - ${d.jobs} job${d.jobs !== 1 ? 's' : ''}</title>
+                      </rect>
+                      <text x="${x + barWidth / 2}" y="${chartHeight + 20}" text-anchor="middle" font-size="10" fill="#6b7280" transform="rotate(-45 ${x + barWidth / 2} ${chartHeight + 20})">${label}</text>
+                    </g>
+                  `;
+                }).join('')}
+              </svg>
+            </div>
+          `;
+        }
+
+        // Recent payments table
+        if (data.recentPayments && data.recentPayments.length > 0) {
+          html += `
+            <div style="background: white; border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem;">
+              <div style="font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem;">Recent Payments</div>
+              <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                      <th style="text-align: left; padding: 0.75rem; font-size: 0.85rem; color: #6b7280; font-weight: 600;">Job</th>
+                      <th style="text-align: left; padding: 0.75rem; font-size: 0.85rem; color: #6b7280; font-weight: 600;">Amount</th>
+                      <th style="text-align: left; padding: 0.75rem; font-size: 0.85rem; color: #6b7280; font-weight: 600;">Tip</th>
+                      <th style="text-align: left; padding: 0.75rem; font-size: 0.85rem; color: #6b7280; font-weight: 600;">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${data.recentPayments.map(p => {
+                      const date = new Date(p.date);
+                      return `
+                        <tr style="border-bottom: 1px solid #f3f4f6;">
+                          <td style="padding: 0.75rem; font-size: 0.9rem;">
+                            <div style="font-weight: 500;">${p.jobTitle}</div>
+                            <div style="font-size: 0.8rem; color: #6b7280;">${p.category}</div>
+                          </td>
+                          <td style="padding: 0.75rem; font-size: 0.9rem; font-weight: 600;">$${p.amount.toFixed(2)}</td>
+                          <td style="padding: 0.75rem; font-size: 0.9rem; color: #16a34a;">${p.tip > 0 ? '$' + p.tip.toFixed(2) : '-'}</td>
+                          <td style="padding: 0.75rem; font-size: 0.85rem; color: #6b7280;">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        } else {
+          html += `
+            <div style="background: white; border: 1px solid var(--border); border-radius: 12px; padding: 2rem; text-align: center; color: var(--text-muted);">
+              No payments yet. Complete jobs to see your earnings here!
+            </div>
+          `;
+        }
+
+        container.innerHTML = html;
+
+        // Attach period selector event listeners
+        container.querySelectorAll('[data-period]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const newPeriod = btn.dataset.period;
+            localStorage.setItem('earningsPeriod', newPeriod);
+            await renderEarningsDashboard();
+          });
+        });
+
+      } catch (error) {
+        console.error('Error loading earnings:', error);
+        container.innerHTML = `
+          <div style="padding: 2rem; text-align: center; color: var(--danger);">
+            Error loading earnings data. Please try again later.
+          </div>
+        `;
+      }
+    }
+
+    /* ---------- GPS Location Tracking ---------- */
+    
+    // Start location tracking for a job
+    function startLocationTracking(jobId) {
+      if (!navigator.geolocation) {
+        showToast("GPS not available");
+        return;
+      }
+      
+      // Check if already tracking
+      if (window.trackingState.activeTrackings.has(jobId)) {
+        console.log(`Already tracking job ${jobId}`);
+        return;
+      }
+      
+      const options = {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      };
+      
+      // Watch position
+      const watchId = navigator.geolocation.watchPosition(
+        async (position) => {
+          const { latitude, longitude, accuracy, heading, speed } = position.coords;
+          
+          try {
+            // Send update to backend
+            await window.hustlAPI.tracking.updateLocation(
+              jobId,
+              latitude,
+              longitude,
+              accuracy,
+              heading || null,
+              speed || null
+            );
+            
+            // Broadcast via WebSocket
+            if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+              window.sendWebSocketMessage({
+                type: 'location_update',
+                jobId,
+                lat: latitude,
+                lng: longitude,
+                accuracy,
+                heading,
+                speed,
+                timestamp: new Date().toISOString(),
+              });
+            }
+          } catch (error) {
+            console.error('Error updating location:', error);
+          }
+        },
+        (error) => {
+          console.error('GPS error:', error);
+          showToast("GPS error: " + error.message);
+        },
+        options
+      );
+      
+      // Store tracking state
+      window.trackingState.activeTrackings.set(jobId, { watchId });
+      
+      console.log(`Started tracking job ${jobId}`);
+    }
+    
+    // Stop location tracking
+    function stopLocationTracking(jobId) {
+      const tracking = window.trackingState.activeTrackings.get(jobId);
+      if (tracking) {
+        navigator.geolocation.clearWatch(tracking.watchId);
+        if (tracking.intervalId) {
+          clearInterval(tracking.intervalId);
+        }
+        window.trackingState.activeTrackings.delete(jobId);
+        console.log(`Stopped tracking job ${jobId}`);
+      }
+    }
+    
+    // Load tracking view for customer
+    async function loadTrackingView(jobId, mapContainer, infoElement) {
+      try {
+        const trackingData = await window.hustlAPI.tracking.getTracking(jobId);
+        
+        if (!trackingData.latestLocation) {
+          infoElement.textContent = "Hustler hasn't started sharing location yet.";
+          mapContainer.textContent = "Waiting for location...";
+          return;
+        }
+        
+        const { lat, lng } = trackingData.latestLocation;
+        const jobLat = trackingData.job.lat;
+        const jobLng = trackingData.job.lng;
+        
+        // Update info
+        const distance = jobLat && jobLng 
+          ? calculateDistance(lat, lng, jobLat, jobLng)
+          : null;
+        
+        infoElement.innerHTML = `
+          <div style="margin-bottom: 0.25rem;"><strong>Last update:</strong> ${new Date(trackingData.latestLocation.timestamp).toLocaleTimeString()}</div>
+          ${distance ? `<div><strong>Distance:</strong> ${distance.toFixed(1)} miles away</div>` : ''}
+        `;
+        
+        // Create map using Google Maps embed
+        const mapUrl = `https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6d-s6U4uAbLh0&origin=${lat},${lng}&destination=${jobLat || lat},${jobLng || lng}&zoom=13`;
+        
+        mapContainer.innerHTML = `
+          <iframe
+            width="100%"
+            height="100%"
+            style="border:0; border-radius: 8px;"
+            loading="lazy"
+            allowfullscreen
+            src="${mapUrl}">
+          </iframe>
+        `;
+        
+        // Set up polling to refresh location
+        const pollInterval = setInterval(async () => {
+          try {
+            const updated = await window.hustlAPI.tracking.getTracking(jobId);
+            if (updated.latestLocation) {
+              const newLat = updated.latestLocation.lat;
+              const newLng = updated.latestLocation.lng;
+              
+              // Update map if location changed significantly
+              if (Math.abs(newLat - lat) > 0.001 || Math.abs(newLng - lng) > 0.001) {
+                const newDistance = jobLat && jobLng 
+                  ? calculateDistance(newLat, newLng, jobLat, jobLng)
+                  : null;
+                
+                infoElement.innerHTML = `
+                  <div style="margin-bottom: 0.25rem;"><strong>Last update:</strong> ${new Date(updated.latestLocation.timestamp).toLocaleTimeString()}</div>
+                  ${newDistance ? `<div><strong>Distance:</strong> ${newDistance.toFixed(1)} miles away</div>` : ''}
+                `;
+                
+                // Reload map
+                const googleMapsKey = 'YOUR_GOOGLE_MAPS_API_KEY'; // TODO: Add to environment variables
+                const newMapUrl = `https://www.google.com/maps/embed/v1/directions?key=${googleMapsKey}&origin=${newLat},${newLng}&destination=${jobLat || newLat},${jobLng || newLng}&zoom=13`;
+                mapContainer.querySelector('iframe').src = newMapUrl;
+              }
+            }
+          } catch (error) {
+            console.error('Error polling location:', error);
+          }
+        }, 10000); // Poll every 10 seconds
+        
+        // Store interval for cleanup
+        if (!window.trackingState.pollIntervals) {
+          window.trackingState.pollIntervals = new Map();
+        }
+        window.trackingState.pollIntervals.set(jobId, pollInterval);
+        
+      } catch (error) {
+        console.error('Error loading tracking view:', error);
+        infoElement.textContent = "Error loading location data.";
+        mapContainer.textContent = "Unable to load map";
+      }
+    }
+    
+    // Cleanup tracking when job details closed
+    function cleanupTracking(jobId) {
+      stopLocationTracking(jobId);
+      if (window.trackingState.pollIntervals) {
+        const interval = window.trackingState.pollIntervals.get(jobId);
+        if (interval) {
+          clearInterval(interval);
+          window.trackingState.pollIntervals.delete(jobId);
+        }
+      }
+    }
+
+    /* ---------- Help Center / FAQ ---------- */
+    
+    let helpFAQData = null;
+    
+    async function loadHelpCenter() {
+      const faqContent = document.getElementById('helpFAQContent');
+      const helpSearchInput = document.getElementById('helpSearchInput');
+      
+      if (!faqContent) return;
+      
+      try {
+        // Load FAQ data
+        const response = await fetch('/support/faq');
+        if (!response.ok) throw new Error('Failed to load FAQ');
+        helpFAQData = await response.json();
+        
+        renderFAQ(helpFAQData);
+        
+        // Setup search
+        if (helpSearchInput) {
+          helpSearchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            if (query) {
+              searchFAQ(query);
+            } else {
+              renderFAQ(helpFAQData);
+            }
+          });
+        }
+        
+        // Setup support form
+        const sendSupportBtn = document.getElementById('sendSupportBtn');
+        if (sendSupportBtn) {
+          sendSupportBtn.addEventListener('click', async () => {
+            const category = document.getElementById('supportCategory')?.value || 'general';
+            const subject = document.getElementById('supportSubject')?.value.trim() || '';
+            const message = document.getElementById('supportMessage')?.value.trim() || '';
+            const statusEl = document.getElementById('supportStatus');
+            
+            if (!subject || !message) {
+              statusEl.textContent = 'Please fill in both subject and message.';
+              statusEl.style.color = '#dc2626';
+              return;
+            }
+            
+            sendSupportBtn.disabled = true;
+            sendSupportBtn.textContent = 'Sending...';
+            statusEl.textContent = '';
+            
+            try {
+              const token = localStorage.getItem('hustl_token');
+              const response = await fetch('/support/contact', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ category, subject, message }),
+              });
+              
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to send message');
+              }
+              
+              statusEl.textContent = '✓ Message sent! We\'ll get back to you soon.';
+              statusEl.style.color = '#059669';
+              
+              // Clear form
+              document.getElementById('supportSubject').value = '';
+              document.getElementById('supportMessage').value = '';
+              document.getElementById('supportCategory').value = 'general';
+              
+              showToast('Support message sent successfully!');
+            } catch (error) {
+              statusEl.textContent = 'Error: ' + (error.message || 'Failed to send message');
+              statusEl.style.color = '#dc2626';
+              console.error('Send support error:', error);
+            } finally {
+              sendSupportBtn.disabled = false;
+              sendSupportBtn.textContent = 'Send Message';
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error loading help center:', error);
+        faqContent.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-muted);">Error loading FAQ. Please try again later.</div>';
+      }
+    }
+    
+    function renderFAQ(data, filteredQuestions = null) {
+      const faqContent = document.getElementById('helpFAQContent');
+      if (!faqContent || !data) return;
+      
+      let html = '';
+      
+      data.categories.forEach(category => {
+        const questions = filteredQuestions 
+          ? filteredQuestions.filter(q => q.categoryId === category.id)
+          : category.questions;
+        
+        if (questions.length === 0) return;
+        
+        html += `
+          <div style="margin-bottom: 2rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; font-size: 1.1rem; font-weight: 600; color: #1f2937;">
+              <span style="font-size: 1.5rem;">${category.icon}</span>
+              <span>${category.title}</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              ${questions.map(q => `
+                <div class="faq-item" data-question-id="${q.id}" style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; transition: all 0.2s;">
+                  <div class="faq-question" style="padding: 1rem; cursor: pointer; background: #f9fafb; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='#f9fafb'">
+                    <span style="font-weight: 600; color: #374151;">${q.question}</span>
+                    <span class="faq-toggle" style="font-size: 1.2rem; color: #6b7280; transition: transform 0.2s;">▼</span>
+                  </div>
+                  <div class="faq-answer" style="display: none; padding: 1rem; background: white; color: #4b5563; line-height: 1.6; border-top: 1px solid #e5e7eb;">
+                    ${q.answer}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      });
+      
+      faqContent.innerHTML = html || '<div style="padding: 2rem; text-align: center; color: var(--text-muted);">No results found.</div>';
+      
+      // Attach click handlers
+      faqContent.querySelectorAll('.faq-question').forEach(questionEl => {
+        questionEl.addEventListener('click', () => {
+          const item = questionEl.closest('.faq-item');
+          const answer = item.querySelector('.faq-answer');
+          const toggle = item.querySelector('.faq-toggle');
+          const isOpen = answer.style.display !== 'none';
+          
+          if (isOpen) {
+            answer.style.display = 'none';
+            toggle.style.transform = 'rotate(0deg)';
+            questionEl.style.background = '#f9fafb';
+          } else {
+            answer.style.display = 'block';
+            toggle.style.transform = 'rotate(180deg)';
+            questionEl.style.background = '#f3f4f6';
+          }
+        });
+      });
+    }
+    
+    function searchFAQ(query) {
+      if (!helpFAQData) return;
+      
+      const allQuestions = [];
+      helpFAQData.categories.forEach(category => {
+        category.questions.forEach(q => {
+          allQuestions.push({
+            ...q,
+            categoryId: category.id,
+            categoryTitle: category.title,
+            categoryIcon: category.icon,
+          });
+        });
+      });
+      
+      const filtered = allQuestions.filter(q => {
+        const questionMatch = q.question.toLowerCase().includes(query);
+        const answerMatch = q.answer.toLowerCase().includes(query);
+        return questionMatch || answerMatch;
+      });
+      
+      // Group by category
+      const grouped = {};
+      filtered.forEach(q => {
+        if (!grouped[q.categoryId]) {
+          grouped[q.categoryId] = {
+            id: q.categoryId,
+            title: q.categoryTitle,
+            icon: q.categoryIcon,
+            questions: [],
+          };
+        }
+        grouped[q.categoryId].questions.push({
+          id: q.id,
+          question: q.question,
+          answer: q.answer,
+        });
+      });
+      
+      renderFAQ({ categories: Object.values(grouped) }, filtered);
+    }
+
+    /* ---------- Quick Feedback Widget ---------- */
+    
+    function showQuickFeedback() {
+      const widget = document.getElementById('quickFeedbackWidget');
+      const modal = document.getElementById('quickFeedbackModal');
+      if (widget) widget.style.display = 'none';
+      if (modal) modal.style.display = 'block';
+    }
+    
+    function closeQuickFeedback() {
+      const widget = document.getElementById('quickFeedbackWidget');
+      const modal = document.getElementById('quickFeedbackModal');
+      if (widget) widget.style.display = 'block';
+      if (modal) modal.style.display = 'none';
+    }
+    
+    let quickFeedbackRating = null;
+    
+    function submitQuickRating(rating) {
+      quickFeedbackRating = rating;
+      // Highlight selected rating
+      document.querySelectorAll('#quickFeedbackModal button').forEach((btn, idx) => {
+        if (idx + 1 === rating) {
+          btn.style.borderColor = '#3b82f6';
+          btn.style.background = '#eff6ff';
+        } else {
+          btn.style.borderColor = '#e5e7eb';
+          btn.style.background = 'white';
+        }
+      });
+    }
+    
+    async function submitQuickFeedback() {
+      const text = document.getElementById('quickFeedbackText')?.value.trim() || '';
+      const rating = quickFeedbackRating;
+      
+      if (!rating) {
+        showErrorToast('Please select a rating');
+        return;
+      }
+      
+      try {
+        const token = localStorage.getItem('hustl_token');
+        const response = await fetch('/feedback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : '',
+          },
+          body: JSON.stringify({
+            name: 'Quick Feedback',
+            email: null,
+            message: `Rating: ${rating}/5\n\n${text || 'No additional comments'}`,
+            category: 'quick_feedback',
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to submit feedback');
+        }
+        
+        showSuccessToast('Thank you for your feedback! 🙏');
+        closeQuickFeedback();
+        quickFeedbackRating = null;
+        document.getElementById('quickFeedbackText').value = '';
+        
+        // Track feedback submission
+        if (window.analytics) {
+          window.analytics.track('feedback_submitted', {
+            type: 'quick',
+            rating,
+            hasComment: !!text,
+          });
+        }
+      } catch (error) {
+        showErrorToast('Failed to submit feedback. Please try again.');
+      }
+    }
+    
+    // Show quick feedback widget after user has been active for a while
+    function initQuickFeedbackWidget() {
+      // Only show if user is logged in and has been active
+      const user = localStorage.getItem('hustl_token');
+      if (!user) return;
+      
+      // Show widget after 2 minutes of activity
+      setTimeout(() => {
+        const widget = document.getElementById('quickFeedbackWidget');
+        if (widget && !localStorage.getItem('quickFeedbackDismissed')) {
+          widget.style.display = 'block';
+        }
+      }, 120000); // 2 minutes
+    }
+    
+    // Initialize quick feedback widget
+    if (typeof window !== 'undefined') {
+      window.showQuickFeedback = showQuickFeedback;
+      window.closeQuickFeedback = closeQuickFeedback;
+      window.submitQuickRating = submitQuickRating;
+      window.submitQuickFeedback = submitQuickFeedback;
+    }
+
     function renderOwnerView() {
       const user = getCurrentUser();
       const tab = document.getElementById("ownerTab");
@@ -11809,6 +14708,23 @@ meta.textContent =
             await renderProfile();
           }
           perfMonitor?.end('renderProfile');
+      } else if (activeView === "earnings") {
+          perfMonitor?.start('renderEarnings');
+          if (typeof renderEarningsDashboard === 'function') {
+            await renderEarningsDashboard();
+          }
+          perfMonitor?.end('renderEarnings');
+      } else if (activeView === "about") {
+        perfMonitor?.start('renderHelpCenter');
+        if (typeof loadHelpCenter === 'function') {
+          loadHelpCenter();
+        }
+        perfMonitor?.end('renderHelpCenter');
+          perfMonitor?.start('renderHelpCenter');
+          if (typeof loadHelpCenter === 'function') {
+            await loadHelpCenter();
+          }
+          perfMonitor?.end('renderHelpCenter');
       } else if (activeView === "owner") {
         renderOwnerView();
       }
@@ -12655,6 +15571,14 @@ if (document.readyState === 'loading') {
 window.addEventListener('load', () => {
   ensureClicksEnabled();
   setTimeout(forceReinitNavigation, 200);
+  
+  // Initialize WebSocket connection if user is logged in
+  const token = localStorage.getItem('hustl_token');
+  if (token && typeof initWebSocket === 'function') {
+    setTimeout(() => {
+      initWebSocket();
+    }, 2000);
+  }
 });
 
 // CRITICAL: Global recovery function - call this if UI is stuck
@@ -13157,6 +16081,13 @@ try {
   // Initialize error handling
   initErrorHandling();
   
+  // Initialize pull-to-refresh for jobs view (mobile only)
+  if (window.innerWidth <= 768 && activeView === "jobs") {
+    setTimeout(() => {
+      initPullToRefresh();
+    }, 500);
+  }
+  
   renderAll();
 } catch (error) {
   console.error("Initialization error:", error);
@@ -13601,6 +16532,11 @@ window.clearJobSearch = clearJobSearch;
 window.toggleNotificationsDropdown = toggleNotificationsDropdown;
 window.markAllNotificationsRead = markAllNotificationsRead;
 window.handleNotificationClick = handleNotificationClick;
+window.toggleFilter = toggleFilter;
+window.updateFilterChips = updateFilterChips;
+window.initWebSocket = initWebSocket;
+window.closeWebSocket = closeWebSocket;
+window.sendWebSocketMessage = sendWebSocketMessage;
   </script>
 </body>
 </html>

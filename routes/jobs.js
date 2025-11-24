@@ -6,6 +6,7 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const { geocodeAddress } = require('../services/mapbox');
 const { validateTennesseeZip } = require('../services/zipcode');
 const { calculateDistance, getBoundingBox, formatDistance } = require('../services/location');
+const { pauseRecurringJob, resumeRecurringJob, cancelRecurringJob } = require('../services/recurringJobs');
 
 const router = express.Router();
 
@@ -233,6 +234,9 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
       dropoffArea,
       dropoffCity,
       dropoffAddress,
+      // Recurring job fields
+      recurrenceType,
+      recurrenceEndDate,
     } = req.body;
 
     // Validate required fields in requirements
@@ -359,6 +363,19 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
       }
     }
 
+    // Calculate next recurrence date if recurring
+    let nextRecurrenceDate = null;
+    if (recurrenceType && (recurrenceType === 'weekly' || recurrenceType === 'monthly')) {
+      const baseDate = new Date(date);
+      if (recurrenceType === 'weekly') {
+        nextRecurrenceDate = new Date(baseDate);
+        nextRecurrenceDate.setDate(nextRecurrenceDate.getDate() + 7);
+      } else if (recurrenceType === 'monthly') {
+        nextRecurrenceDate = new Date(baseDate);
+        nextRecurrenceDate.setMonth(nextRecurrenceDate.getMonth() + 1);
+      }
+    }
+
     const job = await prisma.job.create({
       data: {
         customerId: req.user.id,
@@ -386,6 +403,11 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
           dropoffAddress: dropoffAddress || null,
         },
         status: 'OPEN',
+        // Recurring job fields
+        recurrenceType: recurrenceType || null,
+        recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : null,
+        recurrencePaused: false,
+        nextRecurrenceDate: nextRecurrenceDate,
       },
     });
 
@@ -2084,6 +2106,69 @@ router.post('/:id/update-status', authenticate, requireRole('HUSTLER'), [
     res.json(updated);
   } catch (error) {
     console.error('Update status error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /jobs/:jobId/recurring/pause - Pause recurring job series
+router.post('/:jobId/recurring/pause', authenticate, requireRole('CUSTOMER'), async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      select: { customerId: true },
+    });
+
+    if (!job || job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const result = await pauseRecurringJob(jobId);
+    res.json(result);
+  } catch (error) {
+    console.error('Pause recurring job error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /jobs/:jobId/recurring/resume - Resume recurring job series
+router.post('/:jobId/recurring/resume', authenticate, requireRole('CUSTOMER'), async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      select: { customerId: true },
+    });
+
+    if (!job || job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const result = await resumeRecurringJob(jobId);
+    res.json(result);
+  } catch (error) {
+    console.error('Resume recurring job error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /jobs/:jobId/recurring/cancel - Cancel recurring job series
+router.post('/:jobId/recurring/cancel', authenticate, requireRole('CUSTOMER'), async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      select: { customerId: true },
+    });
+
+    if (!job || job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const result = await cancelRecurringJob(jobId);
+    res.json(result);
+  } catch (error) {
+    console.error('Cancel recurring job error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

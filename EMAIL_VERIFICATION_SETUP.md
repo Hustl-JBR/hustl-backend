@@ -123,3 +123,6 @@ After running the migration and setting `FROM_EMAIL` in Railway:
 
 **Just run the migration and set FROM_EMAIL - everything else is already done!** 🎉
 
+
+
+

@@ -595,4 +595,38 @@ module.exports = {
   sendDisputeEmail,
   sendStatusUpdateEmail,
   sendJobExpiringEmail,
+  sendSupportEmail,
 };
+
+async function sendSupportEmail({ from, fromName, subject, message, userId }) {
+  if (!isEmailConfigured()) {
+    console.warn('Support email not sent: RESEND_API_KEY is not configured');
+    return;
+  }
+  try {
+    const supportEmail = process.env.SUPPORT_EMAIL || 'team.hustlapp@outlook.com';
+    
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: supportEmail,
+      subject: `[Support Request] ${subject}`,
+      html: `
+        <h2>New Support Request</h2>
+        <p><strong>From:</strong> ${fromName || 'Unknown'} (${from})</p>
+        <p><strong>User ID:</strong> ${userId || 'N/A'}</p>
+        <hr>
+        <p><strong>Subject:</strong> ${subject}</p>
+        <p><strong>Message:</strong></p>
+        <div style="background: #f9fafb; padding: 1rem; border-radius: 8px; margin: 1rem 0; border-left: 3px solid #2563eb;">
+          <p style="margin: 0; white-space: pre-wrap;">${message.replace(/\n/g, '<br>')}</p>
+        </div>
+        <hr>
+        <p style="color: #6b7280; font-size: 0.85rem;">Sent from Hustl help center</p>
+      `,
+      replyTo: from, // Allow replying directly to user
+    });
+  } catch (error) {
+    console.error('Send support email error:', error);
+    throw error;
+  }
+}

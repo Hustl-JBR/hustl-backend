@@ -144,3 +144,6 @@ FROM_EMAIL=Hustl <noreply@yourdomain.com>
 
 **Everything is ready - just run the migration and set FROM_EMAIL!** 🚀
 
+
+
+

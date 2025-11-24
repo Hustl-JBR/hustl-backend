@@ -11,3 +11,6 @@ CREATE INDEX IF NOT EXISTS "messages_read_idx" ON "messages"("read");
 -- Update existing messages to have read = false (backfill)
 UPDATE "messages" SET "read" = false WHERE "read" IS NULL;
 
+
+
+

@@ -193,3 +193,6 @@ All emails are **ready to send** as soon as you add the API key:
 
 **Bottom Line:** Get a Resend API key, add it to your environment, and emails will start working! Everything else is already done. ✅
 
+
+
+

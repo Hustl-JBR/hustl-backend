@@ -1,162 +1,106 @@
-# ⚡ Quick Deploy Guide - Get Live in 10 Minutes
+# ⚡ Quick Deployment Guide
 
-## Step 1: Prepare Your Code
+## 🚀 Deploy to Railway in 5 Steps
 
-1. **Remove Test Mode** (if enabled):
-   - Open `.env` file
-   - Remove or comment out: `SKIP_STRIPE_CHECK=true`
-   - Save file
+### Step 1: Prepare Your Code
+```bash
+# Make sure everything is committed
+git add .
+git commit -m "Ready for deployment"
+git push origin main
+```
 
-2. **Verify Environment Variables**:
-   Make sure you have these in `.env`:
-   ```env
-   DATABASE_URL="your-neon-connection-string"
-   JWT_SECRET="your-secret-key"
-   STRIPE_SECRET_KEY="sk_test_..."  # Start with test mode!
-   PORT=8080
-   NODE_ENV=production
-   FRONTEND_BASE_URL="https://your-app.railway.app"  # Update after deploy
-   ```
+### Step 2: Set Up Railway Project
+1. Go to [railway.app](https://railway.app)
+2. Click **"New Project"**
+3. Select **"Deploy from GitHub repo"**
+4. Choose your `hustl-backend` repository
+5. Railway will auto-detect Node.js
 
-## Step 2: Deploy to Railway (Easiest Option)
+### Step 3: Add PostgreSQL Database
+1. In Railway project, click **"New"**
+2. Select **"Database"** → **"Add PostgreSQL"**
+3. Railway automatically sets `DATABASE_URL` ✅
 
-### Option A: Deploy from GitHub
+### Step 4: Add Environment Variables
+In Railway → Your Project → **Variables** tab, add:
 
-1. **Push to GitHub** (if not already):
-   ```bash
-   git add .
-   git commit -m "Ready for production"
-   git push origin main
-   ```
+```bash
+# Required - Copy these exactly:
+JWT_SECRET=your-super-secret-jwt-key-here
+STRIPE_SECRET_KEY=sk_live_your_stripe_key
+STRIPE_PUBLISHABLE_KEY=pk_live_your_stripe_key
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+RESEND_API_KEY=re_your_resend_key
+R2_ACCOUNT_ID=your_r2_account_id
+R2_ACCESS_KEY_ID=your_r2_access_key
+R2_SECRET_ACCESS_KEY=your_r2_secret
+R2_BUCKET_NAME=your_bucket_name
+R2_PUBLIC_URL=https://your_r2_url.com
+GOOGLE_MAPS_API_KEY=your_google_maps_key
+ADMIN_EMAIL=team.hustlapp@outlook.com
+NODE_ENV=production
+PORT=8080
+```
 
-2. **Deploy on Railway**:
-   - Go to https://railway.app
-   - Click "New Project"
-   - Select "Deploy from GitHub repo"
-   - Choose your repo
-   - Railway auto-detects Node.js
+**Where to get these:**
+- `JWT_SECRET`: Generate a random string (keep it secret!)
+- `STRIPE_*`: From [Stripe Dashboard](https://dashboard.stripe.com)
+- `RESEND_API_KEY`: From [Resend Dashboard](https://resend.com)
+- `R2_*`: From [Cloudflare R2 Dashboard](https://dash.cloudflare.com)
+- `GOOGLE_MAPS_API_KEY`: From [Google Cloud Console](https://console.cloud.google.com)
 
-3. **Add Environment Variables**:
-   - Click on your project
-   - Go to "Variables" tab
-   - Add all variables from your `.env` file
-   - **IMPORTANT:** Don't add `SKIP_STRIPE_CHECK` (or set it to `false`)
+### Step 5: Run Database Migrations
+After first deployment:
 
-4. **Get Your URL**:
-   - Railway gives you a URL like: `https://your-app.railway.app`
-   - Update `FRONTEND_BASE_URL` in Railway variables
+1. In Railway → Your Project → **Deployments**
+2. Click **"..."** → **"Run Command"**
+3. Enter: `npx prisma migrate deploy`
+4. Click **"Run"**
 
-5. **Deploy!**
-   - Railway automatically deploys
-   - Wait 2-3 minutes
-   - Visit your URL!
+**OR** use Railway CLI:
+```bash
+railway login
+railway link
+railway run npx prisma migrate deploy
+```
 
-### Option B: Deploy from Local (Railway CLI)
+### ✅ Done! Your app is live!
 
-1. **Install Railway CLI**:
-   ```bash
-   npm install -g @railway/cli
-   ```
+Railway will give you a URL like: `https://your-app.railway.app`
 
-2. **Login**:
-   ```bash
-   railway login
-   ```
+---
 
-3. **Initialize**:
-   ```bash
-   railway init
-   ```
+## 🔍 Verify It Works
 
-4. **Add Variables**:
-   ```bash
-   railway variables set DATABASE_URL="your-url"
-   railway variables set JWT_SECRET="your-secret"
-   railway variables set STRIPE_SECRET_KEY="sk_test_..."
-   # ... add all other variables
-   ```
+1. **Open your Railway URL** in browser
+2. **Check browser console** (F12) - should see no errors
+3. **Test signup** - create a test account
+4. **Test job posting** - post a test job
+5. **Check Railway logs** - should see "Hustl backend running"
 
-5. **Deploy**:
-   ```bash
-   railway up
-   ```
+---
 
-## Step 3: Test Your Deployment
+## 🐛 If Something Breaks
 
-1. **Visit your URL**: `https://your-app.railway.app`
-2. **Create 2 test accounts**:
-   - Account 1: Customer (email: test1@example.com)
-   - Account 2: Hustler (email: test2@example.com)
-3. **Test the flow**:
-   - Customer posts a job ($5 test job)
-   - Hustler applies
-   - Hustler connects Stripe (test mode)
-   - Customer accepts & pays
-   - Complete job
-   - Confirm payment
+### Database Connection Error?
+- Check `DATABASE_URL` is set (Railway auto-sets this)
+- Verify database is running in Railway
 
-## Step 4: Set Up Stripe Connect (For Hustlers)
+### WebSocket Not Working?
+- Check `JWT_SECRET` is set
+- Verify token is being sent in WebSocket connection
 
-1. **Hustler Account**:
-   - Login as hustler
-   - Go to Profile
-   - Click "Connect Stripe"
-   - Complete Stripe Connect onboarding (test mode)
-   - This creates a Stripe Connect account
+### Static Files Not Loading?
+- Make sure `public` folder is in your repo
+- Check Railway logs for file serving errors
 
-2. **Verify**:
-   - Check Stripe Dashboard → Connect → Accounts
-   - You should see the connected account
+### Payment Not Working?
+- Verify Stripe keys are **live keys** (not test keys)
+- Check Stripe webhook is configured
 
-## Step 5: Test Real Transactions
-
-**Start with Stripe Test Mode:**
-- Use test card: `4242 4242 4242 4242`
-- Any future expiry date
-- Any CVC
-- Test with $1-5 transactions
-
-**When Ready for Real Money:**
-1. Switch Stripe to **Live Mode**
-2. Update `STRIPE_SECRET_KEY` to live key (`sk_live_...`)
-3. Complete Stripe Connect onboarding in live mode
-4. Start with small real transactions
-
-## 🎯 Quick Checklist
-
-- [ ] Code pushed to GitHub
-- [ ] Deployed to Railway/Render/etc.
-- [ ] Environment variables added
-- [ ] `SKIP_STRIPE_CHECK` removed/disabled
-- [ ] App accessible via URL
-- [ ] Can create accounts
-- [ ] Stripe Connect works
-- [ ] Payment flow works
-
-## 🐛 Common Issues
-
-**"Payment failed"**
-- Check Stripe dashboard for errors
-- Verify Stripe keys are correct
-- Check server logs
-
-**"Hustler needs Stripe"**
-- Hustler must complete Stripe Connect onboarding
-- Check Profile → Connect Stripe
-
-**"Database error"**
-- Verify `DATABASE_URL` is correct
-- Check Neon dashboard
+---
 
 ## 📞 Need Help?
 
-- Railway Docs: https://docs.railway.app
-- Stripe Docs: https://stripe.com/docs
-- Check server logs in Railway dashboard
-
-## 🚀 You're Live!
-
-Your app is now accessible at: `https://your-app.railway.app`
-
-Start testing with real accounts and small transactions!
-
+Check the full deployment guide: `DEPLOYMENT_CHECKLIST.md`

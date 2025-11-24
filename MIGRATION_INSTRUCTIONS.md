@@ -70,3 +70,6 @@ The migration will:
 **If you encounter any issues, check the migration file:**
 `prisma/migrations/20250120_add_message_read_status/migration.sql`
 
+
+
+

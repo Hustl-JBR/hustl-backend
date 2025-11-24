@@ -34,3 +34,6 @@ WHERE "status" = 'OPEN'
     AND "offers"."status" = 'ACCEPTED'
   );
 
+
+
+
