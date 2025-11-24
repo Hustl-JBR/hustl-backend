@@ -7538,6 +7538,9 @@ async function renderJobs(reset = false) {
       loadMoreContainer.style.display = "none";
     }
   }
+  } catch (error) {
+    console.error("Error in renderJobs:", error);
+    showToast("Error loading jobs: " + (error.message || "Unknown error"));
   } finally {
     // Always clear loading state
     loadingManager?.setLoading('jobs', false);
@@ -10888,14 +10891,6 @@ async function renderJobs(reset = false) {
       } catch (error) {
         console.error('Payment modal error:', error);
         showToast("Error opening payment form: " + (error.message || "Unknown error"));
-      }
-    }
-            overlay.remove();
-            document.body.style.overflow = "";
-          }
-        });
-      } catch (error) {
-        showToast("Error loading payment: " + (error.message || "Unknown error"));
       }
     }
 
@@ -15223,9 +15218,6 @@ meta.textContent =
           });
         }
         
-        // Get zip filter element (might not exist if using location filter)
-        const jobsZipFilter = document.getElementById("jobsZipFilter");
-        
         // Load saved zip filter on page load
         const savedZip = localStorage.getItem('savedZipFilter');
         if (savedZip && jobsZipFilter) {
@@ -16130,8 +16122,9 @@ try {
 } catch (e) {
   console.error('Error in checkAutoCompleteJobs (non-fatal):', e);
 }
-  
-  // Periodically update unread message count (every 30 seconds)
+
+// Periodically update unread message count (every 30 seconds)
+try {
   setInterval(() => {
     countUnreadMessages();
   }, 30 * 1000);
