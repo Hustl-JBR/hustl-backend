@@ -2336,6 +2336,39 @@
         console.error('Error in initHowItWorksToggle (non-fatal):', e);
       }
       
+      // 🚀 Wait for API to be ready before initializing auth
+      function waitForAPI(callback, maxAttempts = 50) {
+        let attempts = 0;
+        const checkAPI = () => {
+          attempts++;
+          if (window.hustlAPI && window.hustlAPI.auth) {
+            console.log('✅ API ready, initializing auth...');
+            callback();
+          } else if (attempts < maxAttempts) {
+            setTimeout(checkAPI, 100);
+          } else {
+            console.error('❌ API not ready after', maxAttempts * 100, 'ms');
+            // Still try to initialize - might work anyway
+            callback();
+          }
+        };
+        checkAPI();
+      }
+      
+      // 🚀 Initialize auth card AFTER API is ready
+      waitForAPI(() => {
+        try {
+          if (typeof initAuthCard === 'function') {
+            initAuthCard();
+            console.log('✅ Auth card initialized');
+          } else {
+            console.error('❌ initAuthCard function not found');
+          }
+        } catch (e) {
+          console.error('Error in initAuthCard (non-fatal):', e);
+        }
+      });
+      
       // 🚀 Start persistent login (auto-refresh tokens)
       if (window.appCore && window.appCore.tokenManager) {
         window.appCore.tokenManager.startAutoRefresh();
@@ -4549,6 +4582,13 @@ try {
   if (createAccountBtn) {
     createAccountBtn.addEventListener("click", async () => {
       try {
+        // Check if API is ready
+        if (!window.hustlAPI || !window.hustlAPI.auth) {
+          showToast("System is still loading. Please wait a moment and try again.");
+          console.error("window.hustlAPI not ready:", window.hustlAPI);
+          return;
+        }
+
         const name = document.getElementById("createName")?.value.trim();
         const email = document.getElementById("createEmail")?.value.trim();
         const password = document.getElementById("createPassword")?.value.trim();
@@ -4642,24 +4682,37 @@ try {
   console.error("Failed to attach createAccountButton listener:", error);
 }
 
-  document
-    .getElementById("loginButton")
-    .addEventListener("click", async () => {
-      const email = document.getElementById("loginEmail").value.trim();
-      const password =
-        document.getElementById("loginPassword").value.trim();
-      if (!email || !password)
-        return showToast("Enter email and password.");
+  // Wrap login button listener in try-catch
+  try {
+    const loginButton = document.getElementById("loginButton");
+    if (loginButton) {
+      loginButton.addEventListener("click", async () => {
+        try {
+          const email = document.getElementById("loginEmail")?.value.trim();
+          const password = document.getElementById("loginPassword")?.value.trim();
+          if (!email || !password) {
+            showToast("Enter email and password.");
+            return;
+          }
 
-      try {
-        await window.hustlAPI.auth.signIn(email, password);
-        showToast("Logged in.");
-        setView("jobs");
-        renderAll();
-      } catch (error) {
-        showToast("Login error: " + (error.message || "Unknown error"));
-      }
-    });
+          if (!window.hustlAPI || !window.hustlAPI.auth) {
+            showToast("System is still loading. Please wait a moment and try again.");
+            return;
+          }
+
+          await window.hustlAPI.auth.signIn(email, password);
+          showToast("Logged in.");
+          setView("jobs");
+          renderAll();
+        } catch (error) {
+          console.error("Login error:", error);
+          showToast("Login error: " + (error.message || "Unknown error"));
+        }
+      });
+    }
+  } catch (error) {
+    console.error("Failed to attach loginButton listener:", error);
+  }
 }
 
     /* ---------- Jobs ---------- */
@@ -15972,11 +16025,9 @@ try {
   }, 500);
 }
 
-try {
-  initAuthCard();
-} catch (e) {
-  console.error('Error in initAuthCard (non-fatal):', e);
-}
+// initAuthCard is now called in DOMContentLoaded after API is ready
+// This prevents initialization before API is loaded
+// Removed duplicate call to avoid conflicts
 
 try {
   initJobsForm();
