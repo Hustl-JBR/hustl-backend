@@ -4526,6 +4526,35 @@ async function renderAuthPill() {
   }
 }
 
+// Initialize "How it works" toggle (moved to global scope)
+function initHowItWorksToggle() {
+  const toggle = document.getElementById("howItWorksToggle");
+  const content = document.getElementById("howItWorksContent");
+  const arrow = document.getElementById("howItWorksArrow");
+  
+  if (toggle && content && arrow) {
+    // Always start closed
+    content.style.display = "none";
+    arrow.style.display = "block";
+    
+    // Single-tap toggle (no double-tap needed) - use passive listener
+    toggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const isOpen = content.style.display !== "none";
+      if (isOpen) {
+        content.style.display = "none";
+        arrow.style.transform = "rotate(0deg)";
+        toggle.style.background = "#f9fafb";
+      } else {
+        content.style.display = "block";
+        arrow.style.transform = "rotate(180deg)";
+        toggle.style.background = "#f3f4f6";
+      }
+    }, { passive: true }); // Passive listener for better mobile performance
+  }
+}
+
 function initAuthCard() {
   const authTitle = document.getElementById("authCardTitle");
   const authToggle = document.getElementById("authModeToggle");
@@ -13487,34 +13516,6 @@ setTimeout(() => {
       }
     }
 
-    // Initialize "How it works" toggle (always dropdown)
-    function initHowItWorksToggle() {
-      const toggle = document.getElementById("howItWorksToggle");
-      const content = document.getElementById("howItWorksContent");
-      const arrow = document.getElementById("howItWorksArrow");
-      
-      if (toggle && content && arrow) {
-        // Always start closed
-        content.style.display = "none";
-        arrow.style.display = "block";
-        
-        // Single-tap toggle (no double-tap needed) - use passive listener
-        toggle.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const isOpen = content.style.display !== "none";
-          if (isOpen) {
-            content.style.display = "none";
-            arrow.style.transform = "rotate(0deg)";
-            toggle.style.background = "#f9fafb";
-          } else {
-            content.style.display = "block";
-            arrow.style.transform = "rotate(180deg)";
-            toggle.style.background = "#f3f4f6";
-          }
-        }, { passive: true }); // Passive listener for better mobile performance
-      }
-    }
 
 
     async function initFeedback() {
