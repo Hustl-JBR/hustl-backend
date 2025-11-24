@@ -13,6 +13,9 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY || "");
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// Trust proxy for Railway (needed for rate limiting behind proxy)
+app.set('trust proxy', 1);
+
 // Create HTTP server for WebSocket support
 const server = http.createServer(app);
 
@@ -388,23 +391,37 @@ server.listen(PORT, host, () => {
     console.log(`   (Make sure your phone is on the same WiFi network)`);
   }
   
-      // Start cleanup job scheduler
-      const { cleanup72HourJobs, cleanupOldJobs, runAllCleanup } = require('./services/cleanup');
-      
-      // Run cleanup immediately on startup
-      runAllCleanup().catch(err => {
-        console.error('[Startup] Cleanup error (non-fatal):', err);
-      });
-      
-      // Run cleanup every 2 hours (more frequent for better UX)
-      const CLEANUP_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours
-      setInterval(() => {
+      // Start cleanup job scheduler (only if database is ready)
+      try {
+        const { cleanup72HourJobs, cleanupOldJobs, runAllCleanup } = require('./services/cleanup');
+        
+        // Run cleanup immediately on startup (with error handling)
         runAllCleanup().catch(err => {
-          console.error('[Scheduled Cleanup] Error (non-fatal):', err);
+          // Ignore migration errors - database might not be migrated yet
+          if (err.code === 'P2022' || err.message?.includes('does not exist')) {
+            console.warn('[Startup] Cleanup skipped - database migrations not run yet');
+          } else {
+            console.error('[Startup] Cleanup error (non-fatal):', err.message);
+          }
         });
-      }, CLEANUP_INTERVAL_MS);
-      
-      console.log(`🧹 Cleanup job scheduled: runs every 2 hours`);
-      console.log(`   - Cancels OPEN jobs older than 48-72h with no accepted offers`);
-      console.log(`   - Deletes all jobs older than 2 weeks`);
+        
+        // Run cleanup every 2 hours (more frequent for better UX)
+        const CLEANUP_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours
+        setInterval(() => {
+          runAllCleanup().catch(err => {
+            // Ignore migration errors
+            if (err.code === 'P2022' || err.message?.includes('does not exist')) {
+              // Silently skip - migrations not run yet
+              return;
+            }
+            console.error('[Scheduled Cleanup] Error (non-fatal):', err.message);
+          });
+        }, CLEANUP_INTERVAL_MS);
+        
+        console.log(`🧹 Cleanup job scheduled: runs every 2 hours`);
+        console.log(`   - Cancels OPEN jobs older than 48-72h with no accepted offers`);
+        console.log(`   - Deletes all jobs older than 2 weeks`);
+      } catch (cleanupError) {
+        console.warn('[Startup] Could not initialize cleanup service:', cleanupError.message);
+      }
 });

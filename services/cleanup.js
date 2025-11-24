@@ -22,6 +22,7 @@ async function cleanup72HourJobs() {
     const warningHoursAgo = new Date(Date.now() - warningHoursThreshold * 60 * 60 * 1000);
     
     // Find OPEN jobs older than threshold hours with no accepted offers
+    // Exclude fields that might not exist yet (like parentJobId) to avoid migration errors
     const oldOpenJobs = await prisma.job.findMany({
       where: {
         status: 'OPEN',
@@ -29,7 +30,11 @@ async function cleanup72HourJobs() {
           lt: hoursAgo,
         },
       },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        createdAt: true,
+        requirements: true,
         offers: {
           where: {
             status: 'ACCEPTED',

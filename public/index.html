@@ -2329,6 +2329,13 @@
       // 🚀 Initialize modern optimizations
       initModernFeatures();
       
+      // 🚀 Initialize "How it works" toggle
+      try {
+        initHowItWorksToggle();
+      } catch (e) {
+        console.error('Error in initHowItWorksToggle (non-fatal):', e);
+      }
+      
       // 🚀 Start persistent login (auto-refresh tokens)
       if (window.appCore && window.appCore.tokenManager) {
         window.appCore.tokenManager.startAutoRefresh();
@@ -2433,37 +2440,16 @@
       console.log('✅ Modern features initialized - Optimizations active');
     }
     
-    // ULTRA-AGGRESSIVE cleanup - runs IMMEDIATELY before anything else
+    // Cleanup blocking overlays (only age gate)
     (function() {
       try {
-        // Remove ALL possible blocking elements
-        var all = document.querySelectorAll('*');
-        for (var i = 0; i < all.length; i++) {
-          var el = all[i];
-          try {
-            var style = window.getComputedStyle(el);
-            if (style.position === 'fixed' && parseInt(style.zIndex) >= 1000) {
-              var rect = el.getBoundingClientRect();
-              if (rect.width > window.innerWidth * 0.5 || rect.height > window.innerHeight * 0.5) {
-                el.remove();
-              }
-            }
-          } catch(e) {}
-        }
-        // Remove by class/id
-        var overlays = document.querySelectorAll('.modal-overlay, [id*="Modal"], [id*="Overlay"], [class*="overlay"], [class*="modal"]');
-        for (var j = 0; j < overlays.length; j++) {
-          overlays[j].remove();
-        }
-        // Reset body
-        if (document.body) {
-          document.body.style.cssText = 'overflow: visible !important; pointer-events: auto !important;';
-        }
-        if (document.documentElement) {
-          document.documentElement.style.cssText = 'overflow: visible !important; pointer-events: auto !important;';
+        // Only remove age gate overlay (if it exists)
+        var ageGate = document.getElementById('ageGate');
+        if (ageGate) {
+          ageGate.style.display = 'none';
         }
       } catch(e) {
-        console.error('Cleanup error (non-fatal):', e);
+        console.warn('Cleanup error (non-fatal):', e);
       }
     })();
   </script>
