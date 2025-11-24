@@ -15,8 +15,6 @@ const PORT = process.env.PORT || 8080;
 
 // Create HTTP server for WebSocket support
 const server = http.createServer(app);
-const { WebSocketServer } = require('ws');
-const server = http.createServer(app);
 
 // WebSocket server
 const wss = new WebSocketServer({ 
