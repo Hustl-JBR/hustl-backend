@@ -2308,7 +2308,7 @@
       }
       
       // Log but don't let promise rejections stop execution
-      e.preventDefault();
+      // Don't prevent default - let errors propagate naturally
       return true;
     });
     
@@ -2373,29 +2373,86 @@
             initAuthCard();
             console.log('✅ Auth card initialized');
             
-            // Verify button listener was attached
+            // Verify button listener was attached and FORCE enable buttons
             setTimeout(() => {
               const createBtn = document.getElementById('createAccountButton');
+              const loginBtn = document.getElementById('loginButton');
+              
+              // Force enable create button
               if (createBtn) {
-                // Check if listener exists by checking if button is clickable
+                createBtn.style.pointerEvents = 'auto';
+                createBtn.style.cursor = 'pointer';
+                createBtn.disabled = false;
                 const hasListeners = createBtn.onclick !== null || 
                   createBtn.getAttribute('data-listener-attached') === 'true';
                 if (!hasListeners) {
-                  console.warn('⚠️ Create account button may not have listeners attached');
+                  console.warn('⚠️ Create button missing listener, but button is enabled');
                 } else {
-                  console.log('✅ Create account button has listeners');
+                  console.log('✅ Create account button has listeners and is enabled');
                 }
+              }
+              
+              // Force enable login button
+              if (loginBtn) {
+                loginBtn.style.pointerEvents = 'auto';
+                loginBtn.style.cursor = 'pointer';
+                loginBtn.disabled = false;
+                console.log('✅ Login button enabled and ready');
               }
             }, 500);
           } else {
             console.error('❌ initAuthCard function not found. Available functions:', 
               Object.keys(window).filter(k => typeof window[k] === 'function' && k.includes('Auth')));
+            
+            // Fallback: Force enable buttons even if function not found
+            setTimeout(() => {
+              const createBtn = document.getElementById('createAccountButton');
+              const loginBtn = document.getElementById('loginButton');
+              if (createBtn) {
+                createBtn.style.pointerEvents = 'auto';
+                createBtn.style.cursor = 'pointer';
+                createBtn.disabled = false;
+                console.log('✅ Create button force-enabled (fallback)');
+              }
+              if (loginBtn) {
+                loginBtn.style.pointerEvents = 'auto';
+                loginBtn.style.cursor = 'pointer';
+                loginBtn.disabled = false;
+                console.log('✅ Login button force-enabled (fallback)');
+              }
+            }, 1000);
           }
         } catch (e) {
           console.error('Error in initAuthCard (non-fatal):', e);
           console.error('Stack trace:', e.stack);
+          
+          // Emergency fallback: Force enable all buttons
+          setTimeout(() => {
+            document.querySelectorAll('button').forEach(btn => {
+              btn.style.pointerEvents = 'auto';
+              btn.style.cursor = 'pointer';
+              if (btn.id !== 'ageNoButton') btn.disabled = false;
+            });
+            console.log('✅ Emergency: All buttons force-enabled');
+          }, 1500);
         }
       });
+      
+      // 🚀 CRITICAL: Force enable all buttons after a delay (final safety net)
+      setTimeout(() => {
+        document.querySelectorAll('button, a.btn, input[type="button"], input[type="submit"]').forEach(btn => {
+          if (btn && btn.id !== 'ageNoButton') {
+            btn.style.pointerEvents = 'auto';
+            btn.style.cursor = 'pointer';
+            btn.disabled = false;
+            // Remove any inline styles that might block
+            if (btn.style.zIndex && parseInt(btn.style.zIndex) < 0) {
+              btn.style.zIndex = '';
+            }
+          }
+        });
+        console.log('✅ Final button enable check complete');
+      }, 2000);
       
       // 🚀 Start persistent login (auto-refresh tokens)
       if (window.appCore && window.appCore.tokenManager) {
@@ -4642,8 +4699,8 @@ try {
     console.log('🔧 Attaching click listener to createAccountButton...');
     createAccountBtn.addEventListener("click", async (e) => {
       console.log('🔘 Create account button clicked!', e);
-      e.preventDefault();
-      e.stopPropagation();
+      // Don't prevent default - let form submit naturally if needed
+      e.stopPropagation(); // Only stop bubbling, not default behavior
       try {
         // Check if API is ready
         if (!window.hustlAPI || !window.hustlAPI.auth) {
@@ -7545,7 +7602,6 @@ async function renderJobs(reset = false) {
     // Always clear loading state
     loadingManager?.setLoading('jobs', false);
   }
-}
 
     async function openJobDetails(jobId, options = {}) {
       // CRITICAL: Prevent double-triggering with global flag
@@ -16000,22 +16056,50 @@ async function showReviewModal(jobId, revieweeId, revieweeName) {
       initMobileMessageBackButtons();
     }
 
-// Run body cleanup on load
+// Run body cleanup on load - FORCE ENABLE ALL INTERACTIONS
 (function() {
   try {
+    // Remove any blocking overlays
     var stuck = document.querySelectorAll('.modal-overlay, [id*="Modal"], [id*="Overlay"], [class*="overlay"], [class*="modal"]');
-    stuck.forEach(function(e) { if(e && e.parentNode) e.remove(); });
+    stuck.forEach(function(e) { 
+      if(e && e.parentNode && e.id !== 'ageGate') {
+        e.remove(); 
+      }
+    });
+    
+    // Force enable body and html
     if(document.body) {
-      document.body.style.cssText = 'overflow: visible !important; pointer-events: auto !important;';
+      document.body.style.cssText = 'overflow: visible !important; pointer-events: auto !important; position: relative !important;';
     }
     if(document.documentElement) {
       document.documentElement.style.cssText = 'overflow: visible !important; pointer-events: auto !important;';
     }
+    
+    // Force enable all elements
     document.querySelectorAll('*').forEach(function(el) {
-      if(el.style && el.style.pointerEvents === 'none') {
-        el.style.pointerEvents = 'auto';
+      if(el.style) {
+        if(el.style.pointerEvents === 'none') {
+          el.style.pointerEvents = 'auto';
+        }
+        // Remove any z-index that might be blocking
+        if(el.style.zIndex && parseInt(el.style.zIndex) > 10000 && !el.classList.contains('toast')) {
+          el.style.zIndex = '';
+        }
       }
     });
+    
+    // CRITICAL: Force enable all buttons
+    document.querySelectorAll('button, a, input[type="button"], input[type="submit"]').forEach(function(btn) {
+      if(btn) {
+        btn.style.pointerEvents = 'auto';
+        btn.style.cursor = 'pointer';
+        if(btn.disabled && btn.id !== 'ageNoButton') {
+          btn.disabled = false;
+        }
+      }
+    });
+    
+    console.log('✅ Body cleanup complete - all interactions enabled');
   } catch(e) {
     console.error('Body cleanup error (non-fatal):', e);
   }

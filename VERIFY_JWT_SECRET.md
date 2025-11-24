@@ -106,3 +106,4 @@ Once `JWT_SECRET` is set correctly in Railway:
 
 The WebSocket uses the **same JWT_SECRET** as your authentication system to verify tokens.
 
+

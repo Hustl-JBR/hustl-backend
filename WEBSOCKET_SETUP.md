@@ -162,3 +162,4 @@ The WebSocket will automatically:
 3. Make sure you're logged in (WebSocket requires authentication)
 4. Verify `JWT_SECRET` is set correctly in Railway
 
+

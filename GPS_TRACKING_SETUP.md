@@ -81,3 +81,4 @@ No additional backend environment variables needed (uses existing JWT_SECRET for
 - Battery usage: Continuous GPS tracking uses more battery
 - Consider adding "battery saver" mode with less frequent updates
 
+

@@ -166,3 +166,4 @@ showSuccessModal('Payment completed!');
 - Quick feedback widget can be customized to show at different times or conditions
 - All animations use CSS for performance (no JavaScript animations)
 
+

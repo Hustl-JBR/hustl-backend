@@ -46,3 +46,4 @@ The section exists in the HTML (line 835). If it's not visible:
 3. **Verify static files are being served** - check Network tab
 4. **Test clicking** after migration is complete
 
+
