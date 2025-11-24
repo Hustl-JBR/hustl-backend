@@ -87,6 +87,7 @@ model User {
   referrals            Referral[]            @relation("Referrer")
   referredBy            User?                 @relation("ReferredBy", fields: [referredByUserId], references: [id])
   referredUsers         User[]                @relation("ReferredBy")
+  referredAs            Referral?             @relation("ReferredUser")
 
   @@index([email])
   @@index([username])
