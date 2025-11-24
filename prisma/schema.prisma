@@ -75,11 +75,11 @@ model User {
   // Relations
   jobsAsCustomer        Job[]                 @relation("CustomerJobs")
   jobsAsHustler         Job[]                 @relation("HustlerJobs")
-  locationUpdates       LocationUpdate[]      @relation
-  offers                Offer[]
+  locationUpdates       LocationUpdate[]      @relation("UserLocationUpdates")
+  offers                Offer[]               @relation("UserOffers")
   reviewsReceived       Review[]              @relation("Reviewee")
   reviewsGiven          Review[]              @relation("Reviewer")
-  messagesSent          Message[]
+  messagesSent          Message[]             @relation("UserMessages")
   threadsAsA            Thread[]              @relation("UserA")
   threadsAsB            Thread[]              @relation("UserB")
   paymentsAsCustomer    Payment[]             @relation("CustomerPayments")
@@ -160,7 +160,7 @@ model Offer {
 
   // Relations
   job                   Job                   @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  hustler               User                  @relation(fields: [hustlerId], references: [id])
+  hustler               User                  @relation("UserOffers", fields: [hustlerId], references: [id])
 
   @@index([jobId])
   @@index([hustlerId])
@@ -201,7 +201,7 @@ model Message {
 
   // Relations
   thread                Thread                @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  sender                User                  @relation(fields: [senderId], references: [id])
+  sender                User                  @relation("UserMessages", fields: [senderId], references: [id])
 
   @@index([threadId])
   @@index([senderId])
@@ -295,7 +295,7 @@ model LocationUpdate {
 
   // Relations
   job                   Job                   @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  hustler               User                  @relation(fields: [hustlerId], references: [id])
+  hustler               User                  @relation("UserLocationUpdates", fields: [hustlerId], references: [id])
 
   @@index([jobId])
   @@index([hustlerId])

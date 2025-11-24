@@ -85,6 +85,53 @@ const authenticate = async (req, res, next) => {
   }
 };
 
+const optionalAuth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      // No token provided - continue without user
+      req.user = null;
+      return next();
+    }
+
+    if (!process.env.JWT_SECRET) {
+      // No JWT_SECRET - continue without user
+      req.user = null;
+      return next();
+    }
+
+    const token = authHeader.substring(7);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtError) {
+      // Invalid token - continue without user
+      req.user = null;
+      return next();
+    }
+    
+    let user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        username: true,
+        roles: true,
+        idVerified: true,
+        stripeAccountId: true,
+      },
+    });
+
+    req.user = user || null;
+    next();
+  } catch (error) {
+    // On any error, continue without user
+    req.user = null;
+    next();
+  }
+};
+
 const requireRole = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -108,4 +155,4 @@ const requireRole = (...roles) => {
   };
 };
 
-module.exports = { authenticate, requireRole };
+module.exports = { authenticate, optionalAuth, requireRole };
