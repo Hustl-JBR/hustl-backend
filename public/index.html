@@ -2325,6 +2325,36 @@
       window.history.replaceState({}, '', newUrl);
     }
 
+    // CRITICAL: Define functions early so they're available when DOMContentLoaded fires
+    // Initialize "How it works" toggle (moved to global scope - MUST be accessible)
+    window.initHowItWorksToggle = function initHowItWorksToggle() {
+      const toggle = document.getElementById("howItWorksToggle");
+      const content = document.getElementById("howItWorksContent");
+      const arrow = document.getElementById("howItWorksArrow");
+      
+      if (toggle && content && arrow) {
+        // Always start closed
+        content.style.display = "none";
+        arrow.style.display = "block";
+        
+        // Single-tap toggle (no double-tap needed) - use passive listener
+        toggle.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const isOpen = content.style.display !== "none";
+          if (isOpen) {
+            content.style.display = "none";
+            arrow.style.transform = "rotate(0deg)";
+            toggle.style.background = "#f9fafb";
+          } else {
+            content.style.display = "block";
+            arrow.style.transform = "rotate(180deg)";
+            toggle.style.background = "#f3f4f6";
+          }
+        }, { passive: true }); // Passive listener for better mobile performance
+      }
+    };
+
     document.addEventListener('DOMContentLoaded', function() {
       // Check for duplicate IDs (common cause of issues)
       const ids = {};
@@ -2341,13 +2371,17 @@
       
       // 🚀 Initialize "How it works" toggle
       try {
-        if (typeof initHowItWorksToggle === 'function') {
-          initHowItWorksToggle();
+        if (typeof window.initHowItWorksToggle === 'function') {
+          window.initHowItWorksToggle();
+          console.log('✅ initHowItWorksToggle initialized');
         } else {
           console.warn('initHowItWorksToggle not defined yet, will retry...');
           setTimeout(() => {
-            if (typeof initHowItWorksToggle === 'function') {
-              initHowItWorksToggle();
+            if (typeof window.initHowItWorksToggle === 'function') {
+              window.initHowItWorksToggle();
+              console.log('✅ initHowItWorksToggle initialized (retry)');
+            } else {
+              console.error('❌ initHowItWorksToggle still not available after retry');
             }
           }, 1000);
         }
@@ -2377,10 +2411,11 @@
       // 🚀 Initialize auth card AFTER API is ready
       waitForAPI(() => {
         try {
-          // Double-check function exists
-          if (typeof initAuthCard === 'function') {
+          // Double-check function exists (check both window and global scope)
+          const authCardFn = window.initAuthCard || (typeof initAuthCard !== 'undefined' ? initAuthCard : null);
+          if (typeof authCardFn === 'function') {
             console.log('🔧 Calling initAuthCard...');
-            initAuthCard();
+            authCardFn();
             console.log('✅ Auth card initialized');
             
             // Verify button listener was attached and FORCE enable buttons
@@ -2462,6 +2497,44 @@
           }
         });
         console.log('✅ Final button enable check complete');
+        
+        // NUCLEAR OPTION: Directly attach click handlers to critical buttons if they don't have them
+        const createBtn = document.getElementById('createAccountButton');
+        const loginBtn = document.getElementById('loginButton');
+        
+        if (createBtn && !createBtn.getAttribute('data-listener-attached')) {
+          console.log('🔧 NUCLEAR: Directly attaching create account button handler');
+          createBtn.addEventListener('click', async function(e) {
+            e.stopPropagation();
+            console.log('🔘 Create account button clicked (nuclear handler)');
+            // Try to call the real handler if it exists
+            if (window.initAuthCard && typeof window.initAuthCard === 'function') {
+              window.initAuthCard();
+            }
+            // Show a message that system is initializing
+            if (typeof showToast === 'function') {
+              showToast('Please wait, system is initializing...');
+            }
+          });
+          createBtn.setAttribute('data-listener-attached', 'true');
+        }
+        
+        if (loginBtn && !loginBtn.getAttribute('data-listener-attached')) {
+          console.log('🔧 NUCLEAR: Directly attaching login button handler');
+          loginBtn.addEventListener('click', async function(e) {
+            e.stopPropagation();
+            console.log('🔘 Login button clicked (nuclear handler)');
+            // Try to call the real handler if it exists
+            if (window.initAuthCard && typeof window.initAuthCard === 'function') {
+              window.initAuthCard();
+            }
+            // Show a message that system is initializing
+            if (typeof showToast === 'function') {
+              showToast('Please wait, system is initializing...');
+            }
+          });
+          loginBtn.setAttribute('data-listener-attached', 'true');
+        }
       }, 2000);
       
       // 🚀 Start persistent login (auto-refresh tokens)
@@ -4621,34 +4694,37 @@ async function renderAuthPill() {
   }
 }
 
-// Initialize "How it works" toggle (moved to global scope - MUST be accessible)
-window.initHowItWorksToggle = function initHowItWorksToggle() {
-  const toggle = document.getElementById("howItWorksToggle");
-  const content = document.getElementById("howItWorksContent");
-  const arrow = document.getElementById("howItWorksArrow");
-  
-  if (toggle && content && arrow) {
-    // Always start closed
-    content.style.display = "none";
-    arrow.style.display = "block";
+// Initialize "How it works" toggle (already defined earlier in first script block)
+// This is a duplicate definition - keeping for backwards compatibility
+if (!window.initHowItWorksToggle) {
+  window.initHowItWorksToggle = function initHowItWorksToggle() {
+    const toggle = document.getElementById("howItWorksToggle");
+    const content = document.getElementById("howItWorksContent");
+    const arrow = document.getElementById("howItWorksArrow");
     
-    // Single-tap toggle (no double-tap needed) - use passive listener
-    toggle.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const isOpen = content.style.display !== "none";
-      if (isOpen) {
-        content.style.display = "none";
-        arrow.style.transform = "rotate(0deg)";
-        toggle.style.background = "#f9fafb";
-      } else {
-        content.style.display = "block";
-        arrow.style.transform = "rotate(180deg)";
-        toggle.style.background = "#f3f4f6";
-      }
-    }, { passive: true }); // Passive listener for better mobile performance
-  }
-};
+    if (toggle && content && arrow) {
+      // Always start closed
+      content.style.display = "none";
+      arrow.style.display = "block";
+      
+      // Single-tap toggle (no double-tap needed) - use passive listener
+      toggle.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const isOpen = content.style.display !== "none";
+        if (isOpen) {
+          content.style.display = "none";
+          arrow.style.transform = "rotate(0deg)";
+          toggle.style.background = "#f9fafb";
+        } else {
+          content.style.display = "block";
+          arrow.style.transform = "rotate(180deg)";
+          toggle.style.background = "#f3f4f6";
+        }
+      }, { passive: true }); // Passive listener for better mobile performance
+    }
+  };
+}
 
 // Make initAuthCard globally accessible
 window.initAuthCard = function initAuthCard() {
