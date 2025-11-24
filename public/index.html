@@ -2263,9 +2263,10 @@
       // Safely log error without causing additional errors
       try {
         const errorMsg = e.message || (e.error && e.error.message) || 'Unknown error';
-        const errorFile = e.filename || 'unknown';
-        const errorLine = e.lineno || 'unknown';
-        console.error('Global error caught:', errorMsg, 'at', errorFile + ':' + errorLine);
+        const errorFile = String(e.filename || 'unknown');
+        const errorLine = String(e.lineno || 'unknown');
+        const errorLocation = errorFile + ':' + errorLine;
+        console.error('Global error caught:', errorMsg, 'at', errorLocation);
       } catch (logError) {
         // If even logging fails, just continue
         console.error('Error in error handler (non-fatal)');
@@ -2340,7 +2341,16 @@
       
       // 🚀 Initialize "How it works" toggle
       try {
-        initHowItWorksToggle();
+        if (typeof initHowItWorksToggle === 'function') {
+          initHowItWorksToggle();
+        } else {
+          console.warn('initHowItWorksToggle not defined yet, will retry...');
+          setTimeout(() => {
+            if (typeof initHowItWorksToggle === 'function') {
+              initHowItWorksToggle();
+            }
+          }, 1000);
+        }
       } catch (e) {
         console.error('Error in initHowItWorksToggle (non-fatal):', e);
       }
@@ -4611,8 +4621,8 @@ async function renderAuthPill() {
   }
 }
 
-// Initialize "How it works" toggle (moved to global scope)
-function initHowItWorksToggle() {
+// Initialize "How it works" toggle (moved to global scope - MUST be accessible)
+window.initHowItWorksToggle = function initHowItWorksToggle() {
   const toggle = document.getElementById("howItWorksToggle");
   const content = document.getElementById("howItWorksContent");
   const arrow = document.getElementById("howItWorksArrow");
@@ -4638,9 +4648,10 @@ function initHowItWorksToggle() {
       }
     }, { passive: true }); // Passive listener for better mobile performance
   }
-}
+};
 
-function initAuthCard() {
+// Make initAuthCard globally accessible
+window.initAuthCard = function initAuthCard() {
   const authTitle = document.getElementById("authCardTitle");
   const authToggle = document.getElementById("authModeToggle");
   const authBodyCreate = document.getElementById("authBodyCreate");
@@ -4833,7 +4844,7 @@ try {
   } catch (error) {
     console.error("Failed to attach loginButton listener:", error);
   }
-}
+};
 
     /* ---------- Jobs ---------- */
 
