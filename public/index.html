@@ -2257,6 +2257,101 @@
     }
   </style>
   <script>
+    // ========== IMMEDIATE BUTTON FIX - RUNS FIRST ==========
+    // This script runs immediately to ensure buttons work
+    (function() {
+      'use strict';
+      
+      // Force enable all interactions immediately
+      function forceEnableButtons() {
+        // Remove all blocking overlays
+        const blockingOverlays = document.querySelectorAll('.modal-overlay, [id*="Modal"], [id*="Overlay"], [class*="overlay"]:not(.age-gate-overlay)');
+        blockingOverlays.forEach(el => {
+          if (el && el.parentNode && el.id !== 'ageGate') {
+            el.style.display = 'none';
+            el.style.pointerEvents = 'none';
+            el.style.zIndex = '-1';
+          }
+        });
+        
+        // Force enable body
+        if (document.body) {
+          document.body.style.overflow = 'visible';
+          document.body.style.pointerEvents = 'auto';
+          document.body.style.position = 'relative';
+        }
+        
+        // Force enable all buttons
+        const allButtons = document.querySelectorAll('button, a.btn, input[type="button"], input[type="submit"], .btn');
+        allButtons.forEach(btn => {
+          if (btn && btn.id !== 'ageNoButton') {
+            btn.style.pointerEvents = 'auto';
+            btn.style.cursor = 'pointer';
+            btn.style.opacity = '1';
+            btn.disabled = false;
+            
+            // Remove any blocking styles
+            if (btn.style.zIndex && parseInt(btn.style.zIndex) < 0) {
+              btn.style.zIndex = '';
+            }
+          }
+        });
+        
+        // Directly attach click handlers to critical buttons (WITHOUT replacing them)
+        const createBtn = document.getElementById('createAccountButton');
+        const loginBtn = document.getElementById('loginButton');
+        
+        if (createBtn) {
+          // DON'T clone/replace - just ensure it's enabled and has a listener
+          createBtn.style.pointerEvents = 'auto';
+          createBtn.style.cursor = 'pointer';
+          createBtn.disabled = false;
+          
+          // Only add listener if one doesn't exist (check data attribute)
+          if (!createBtn.getAttribute('data-listener-attached')) {
+            createBtn.addEventListener('click', function(e) {
+              e.stopPropagation();
+              console.log('🔘 Create account clicked (fallback handler)');
+              // This is a fallback - the real handler should be attached by initAuthCard
+            }, { capture: true, once: false });
+            createBtn.setAttribute('data-fallback-handler', 'true');
+          }
+        }
+        
+        if (loginBtn) {
+          // DON'T clone/replace - just ensure it's enabled and has a listener
+          loginBtn.style.pointerEvents = 'auto';
+          loginBtn.style.cursor = 'pointer';
+          loginBtn.disabled = false;
+          
+          // Only add listener if one doesn't exist
+          if (!loginBtn.getAttribute('data-listener-attached')) {
+            loginBtn.addEventListener('click', function(e) {
+              e.stopPropagation();
+              console.log('🔘 Login clicked (fallback handler)');
+              // This is a fallback - the real handler should be attached by initAuthCard
+            }, { capture: true, once: false });
+            loginBtn.setAttribute('data-fallback-handler', 'true');
+          }
+        }
+        
+        console.log('✅ Force button enable complete -', allButtons.length, 'buttons processed');
+      }
+      
+      // Run immediately
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', forceEnableButtons);
+      } else {
+        forceEnableButtons();
+      }
+      
+      // Also run after a short delay to catch dynamically added buttons
+      setTimeout(forceEnableButtons, 100);
+      setTimeout(forceEnableButtons, 500);
+      setTimeout(forceEnableButtons, 1000);
+      setTimeout(forceEnableButtons, 2000);
+    })();
+    
     // CRITICAL: Global error handler to prevent page freeze
     // This catches syntax errors and prevents them from completely freezing the page
     window.addEventListener('error', function(e) {
@@ -4781,10 +4876,12 @@ window.initAuthCard = function initAuthCard() {
 try {
   const createAccountBtn = document.getElementById("createAccountButton");
   if (createAccountBtn) {
-    // Mark as having listener to help with debugging
-    createAccountBtn.setAttribute('data-listener-attached', 'true');
-    console.log('🔧 Attaching click listener to createAccountButton...');
-    createAccountBtn.addEventListener("click", async (e) => {
+    // Remove any existing listeners by cloning (only if no listener attached yet)
+    if (!createAccountBtn.getAttribute('data-listener-attached')) {
+      // Mark as having listener to help with debugging
+      createAccountBtn.setAttribute('data-listener-attached', 'true');
+      console.log('🔧 Attaching click listener to createAccountButton...');
+      createAccountBtn.addEventListener("click", async (e) => {
       console.log('🔘 Create account button clicked!', e);
       // Don't prevent default - let form submit naturally if needed
       e.stopPropagation(); // Only stop bubbling, not default behavior
@@ -4893,29 +4990,35 @@ try {
   try {
     const loginButton = document.getElementById("loginButton");
     if (loginButton) {
-      loginButton.addEventListener("click", async () => {
-        try {
-          const email = document.getElementById("loginEmail")?.value.trim();
-          const password = document.getElementById("loginPassword")?.value.trim();
-          if (!email || !password) {
-            showToast("Enter email and password.");
-            return;
-          }
+      // Only attach if no listener exists yet
+      if (!loginButton.getAttribute('data-listener-attached')) {
+        loginButton.setAttribute('data-listener-attached', 'true');
+        loginButton.addEventListener("click", async () => {
+          try {
+            const email = document.getElementById("loginEmail")?.value.trim();
+            const password = document.getElementById("loginPassword")?.value.trim();
+            if (!email || !password) {
+              showToast("Enter email and password.");
+              return;
+            }
 
-          if (!window.hustlAPI || !window.hustlAPI.auth) {
-            showToast("System is still loading. Please wait a moment and try again.");
-            return;
-          }
+            if (!window.hustlAPI || !window.hustlAPI.auth) {
+              showToast("System is still loading. Please wait a moment and try again.");
+              return;
+            }
 
-          await window.hustlAPI.auth.signIn(email, password);
-          showToast("Logged in.");
-          setView("jobs");
-          renderAll();
-        } catch (error) {
-          console.error("Login error:", error);
-          showToast("Login error: " + (error.message || "Unknown error"));
-        }
-      });
+            await window.hustlAPI.auth.signIn(email, password);
+            showToast("Logged in.");
+            setView("jobs");
+            renderAll();
+          } catch (error) {
+            console.error("Login error:", error);
+            showToast("Login error: " + (error.message || "Unknown error"));
+          }
+        });
+      } else {
+        console.log('✅ loginButton already has listener attached');
+      }
     }
   } catch (error) {
     console.error("Failed to attach loginButton listener:", error);
