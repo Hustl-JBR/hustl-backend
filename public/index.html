@@ -2260,7 +2260,16 @@
     // CRITICAL: Global error handler to prevent page freeze
     // This catches syntax errors and prevents them from completely freezing the page
     window.addEventListener('error', function(e) {
-      console.error('Global error caught:', e.error, e.message, e.filename, e.lineno);
+      // Safely log error without causing additional errors
+      try {
+        const errorMsg = e.message || (e.error && e.error.message) || 'Unknown error';
+        const errorFile = e.filename || 'unknown';
+        const errorLine = e.lineno || 'unknown';
+        console.error('Global error caught:', errorMsg, 'at', errorFile + ':' + errorLine);
+      } catch (logError) {
+        // If even logging fails, just continue
+        console.error('Error in error handler (non-fatal)');
+      }
       
       // CRITICAL: If error might have broken UI, try to recover
       if (e.message && (
@@ -2277,8 +2286,8 @@
         }, 500);
       }
       
-      // Log but don't let errors stop execution
-      e.preventDefault();
+      // Don't prevent default - let errors propagate normally for debugging
+      // But return true to indicate we handled it
       return true;
     });
     
@@ -2358,14 +2367,33 @@
       // 🚀 Initialize auth card AFTER API is ready
       waitForAPI(() => {
         try {
+          // Double-check function exists
           if (typeof initAuthCard === 'function') {
+            console.log('🔧 Calling initAuthCard...');
             initAuthCard();
             console.log('✅ Auth card initialized');
+            
+            // Verify button listener was attached
+            setTimeout(() => {
+              const createBtn = document.getElementById('createAccountButton');
+              if (createBtn) {
+                // Check if listener exists by checking if button is clickable
+                const hasListeners = createBtn.onclick !== null || 
+                  createBtn.getAttribute('data-listener-attached') === 'true';
+                if (!hasListeners) {
+                  console.warn('⚠️ Create account button may not have listeners attached');
+                } else {
+                  console.log('✅ Create account button has listeners');
+                }
+              }
+            }, 500);
           } else {
-            console.error('❌ initAuthCard function not found');
+            console.error('❌ initAuthCard function not found. Available functions:', 
+              Object.keys(window).filter(k => typeof window[k] === 'function' && k.includes('Auth')));
           }
         } catch (e) {
           console.error('Error in initAuthCard (non-fatal):', e);
+          console.error('Stack trace:', e.stack);
         }
       });
       
@@ -4609,7 +4637,13 @@ function initAuthCard() {
 try {
   const createAccountBtn = document.getElementById("createAccountButton");
   if (createAccountBtn) {
-    createAccountBtn.addEventListener("click", async () => {
+    // Mark as having listener to help with debugging
+    createAccountBtn.setAttribute('data-listener-attached', 'true');
+    console.log('🔧 Attaching click listener to createAccountButton...');
+    createAccountBtn.addEventListener("click", async (e) => {
+      console.log('🔘 Create account button clicked!', e);
+      e.preventDefault();
+      e.stopPropagation();
       try {
         // Check if API is ready
         if (!window.hustlAPI || !window.hustlAPI.auth) {
