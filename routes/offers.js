@@ -6,6 +6,8 @@ const { createPaymentIntent } = require('../services/stripe');
 
 const router = express.Router();
 
+// GET /offers/:jobId - List offers for a job
+router.get('/:jobId', authenticate, async (req, res) => {
   try {
     const { jobId } = req.params;
 
@@ -63,6 +65,8 @@ const router = express.Router();
   }
 });
 
+// POST /offers/:jobId - Create an offer (Hustler only)
+router.post('/:jobId', authenticate, requireRole('HUSTLER'), [
   body('note').optional().trim().isLength({ max: 1000 }),
 ], async (req, res) => {
   try {
