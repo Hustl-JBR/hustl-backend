@@ -1416,16 +1416,7 @@ heart of Hustl.
   // Backend API configuration - using NestJS API with Neon database
   // No Supabase needed - we use Railway backend with Neon PostgreSQL
   
-  // Wait for api-integration.js to load before initializing
-  function initApp() {
-    // Check if hustlAPI is loaded, if not wait a bit and try again
-    if (typeof window.hustlAPI === 'undefined') {
-      setTimeout(initApp, 50);
-      return;
-    }
-    
-    // Now that hustlAPI is loaded, initialize the app
-    const STORAGE_KEY = "hustl_state_v3";
+  const STORAGE_KEY = "hustl_state_v3";
     // Get backend URL from config or default
     const BACKEND_URL = (window.HUSTL_CONFIG && window.HUSTL_CONFIG.API_URL) || 
                         (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
@@ -5796,28 +5787,20 @@ async function showReviewModal(jobId, revieweeId, revieweeName) {
   }
 }
 
-    // Boot
-    loadState();
-    initAgeGate();
-    initNav();
-    initAuthCard();
-    initJobsForm();
-    initConversationInput();
-    initFeedback();
-    initFooterLinks();
-    checkAgeGate();
-    handleStripeReturn();
-    checkAutoCompleteJobs();
-    setInterval(checkAutoCompleteJobs, 60 * 1000);
-    renderAll();
-  }
-  
-  // Start initialization when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
-  } else {
-    initApp();
-  }
+  // Boot - initialize immediately
+  loadState();
+  initAgeGate();
+  initNav();
+  initAuthCard();
+  initJobsForm();
+  initConversationInput();
+  initFeedback();
+  initFooterLinks();
+  checkAgeGate();
+  handleStripeReturn();
+  checkAutoCompleteJobs();
+  setInterval(checkAutoCompleteJobs, 60 * 1000);
+  renderAll();
   </script>
 </body>
 </html>

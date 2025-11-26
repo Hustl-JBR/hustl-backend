@@ -41,6 +41,7 @@ users-log.json
 # Prisma - keep migrations for deployment
 # prisma/migrations/ (commented out - Railway needs these)
 
+<<<<<<< HEAD
 # Untracked directories
 Hustl/
 
@@ -48,3 +49,5 @@ Hustl/
 *Personal Vault*
 *.lnk
 
+=======
+>>>>>>> parent of c729581 (Update .gitignore)
