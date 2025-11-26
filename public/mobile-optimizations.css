@@ -1,0 +1,1015 @@
+/**
+ * 🚀 MOBILE-FIRST OPTIMIZATIONS - Production Ready
+ * TaskRabbit/Rover-level mobile experience
+ */
+
+/* ========== BOTTOM NAVIGATION BAR (Mobile) ========== */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-top: 1px solid var(--border);
+  padding: 0.5rem 0;
+  z-index: 1000;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  /* Safe area for iPhone notches */
+  padding-bottom: env(safe-area-inset-bottom, 0.5rem);
+}
+
+.mobile-bottom-nav-items {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  max-width: 100%;
+}
+
+.mobile-bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.25rem;
+  min-height: 60px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  /* Thumb-friendly touch target: min 44x44px */
+  min-width: 44px;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.2s;
+}
+
+.mobile-bottom-nav-item.active {
+  color: var(--primary);
+}
+
+.mobile-bottom-nav-item:active {
+  opacity: 0.7;
+}
+
+.mobile-bottom-nav-icon {
+  width: 24px;
+  height: 24px;
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.mobile-bottom-nav-label {
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
+/* Badge for unread messages */
+.mobile-bottom-nav-badge {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  background: #ef4444;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.35rem;
+  border-radius: 999px;
+  min-width: 1.2rem;
+  text-align: center;
+  line-height: 1.2;
+  border: 2px solid white;
+  display: none;
+}
+
+.mobile-bottom-nav-badge[data-count]:not([data-count="0"]) {
+  display: block;
+}
+
+/* Show bottom nav on mobile only */
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    display: block;
+    z-index: 10000 !important; /* Higher than any dropdown content */
+    position: fixed !important;
+  }
+  
+  /* Add bottom padding to main content to avoid overlap */
+  main {
+    padding-bottom: 100px !important; /* Increased to ensure nav is never covered */
+    margin-bottom: 0 !important;
+  }
+  
+  /* Ensure footer is always above bottom nav */
+  footer {
+    margin-bottom: 80px !important;
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Ensure "How it works" dropdown doesn't push into footer/nav */
+  #howItWorksContent {
+    max-height: calc(100vh - 250px) !important; /* Prevent overflow */
+    overflow-y: auto !important;
+    margin-bottom: 20px !important;
+  }
+  
+  /* Ensure all cards and sections respect bottom nav */
+  .card, section {
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Hide desktop nav on mobile */
+  .nav-tabs {
+    display: none;
+  }
+}
+
+/* ========== SIMPLIFIED LOCATION TOOLS POPUP ========== */
+.location-tools-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  /* Safe area for iPhone */
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.location-tools-modal {
+  background: white;
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 500px;
+  max-height: 80vh;
+  padding: 1.5rem;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.location-tools-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.location-tools-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.location-tools-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.location-tools-close:active {
+  background: var(--bg);
+}
+
+.location-tools-option {
+  margin-bottom: 1.5rem;
+}
+
+.location-tools-option-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.location-tools-gps-btn {
+  width: 100%;
+  padding: 1rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s;
+}
+
+.location-tools-gps-btn:active {
+  background: #1e40af;
+}
+
+.location-tools-zip-input {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  min-height: 48px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.location-tools-zip-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.location-tools-radius-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.location-tools-radius-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+}
+
+.location-tools-radius-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: none;
+}
+
+.location-tools-radius-value {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: 0.5rem;
+}
+
+/* ========== OPTIMIZED MOBILE JOB CARDS ========== */
+.mobile-job-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  /* Thumb-friendly: larger tap targets */
+  min-height: 140px;
+}
+
+.mobile-job-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.mobile-job-card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  flex: 1;
+  line-height: 1.3;
+}
+
+.mobile-job-card-pay {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--success);
+  white-space: nowrap;
+}
+
+.mobile-job-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.mobile-job-card-distance {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.mobile-job-card-time {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.mobile-job-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.mobile-job-card-view-btn {
+  flex: 1;
+  padding: 0.75rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-job-card-seen-btn {
+  padding: 0.75rem 1rem;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ========== JOB FEED LOAD MORE ========== */
+.job-feed-load-more {
+  width: 100%;
+  padding: 1rem;
+  background: white;
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 1rem;
+  min-height: 48px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.job-feed-load-more:active {
+  background: var(--primary-soft);
+}
+
+/* ========== ONE-SCROLL JOB DETAILS PAGE ========== */
+.mobile-job-details {
+  padding: 1rem;
+  max-width: 100%;
+}
+
+.mobile-job-details-header {
+  margin-bottom: 1.5rem;
+}
+
+.mobile-job-details-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.mobile-job-details-pay {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--success);
+  margin-bottom: 0.5rem;
+}
+
+.mobile-job-details-pay-type {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.mobile-job-details-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.mobile-job-details-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.75rem;
+}
+
+.mobile-job-details-map {
+  width: 100%;
+  height: 200px;
+  border-radius: var(--radius);
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.mobile-job-details-description {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-main);
+}
+
+.mobile-job-details-photos {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.5rem;
+}
+
+.mobile-job-details-photo {
+  min-width: 150px;
+  width: 150px;
+  height: 150px;
+  border-radius: var(--radius);
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.mobile-job-details-actions {
+  position: sticky;
+  bottom: 80px; /* Above bottom nav */
+  left: 0;
+  right: 0;
+  background: white;
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 0.75rem;
+  z-index: 100;
+}
+
+.mobile-job-details-action-btn {
+  flex: 1;
+  padding: 1rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 48px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-job-details-action-btn.secondary {
+  background: transparent;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+}
+
+/* ========== FIXED MESSAGING INPUT ========== */
+@media (max-width: 768px) {
+  /* Make chat input fixed at bottom on mobile */
+  .chat-input-row {
+    position: fixed !important;
+    bottom: 80px !important; /* Above bottom nav */
+    left: 0 !important;
+    right: 0 !important;
+    background: white !important;
+    padding: 0.75rem !important;
+    border-top: 1px solid var(--border) !important;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1) !important;
+    z-index: 100 !important;
+    margin: 0 !important;
+    /* Safe area for iPhone */
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0)) !important;
+  }
+  
+  /* Add padding to messages list to avoid overlap */
+  .chat-messages {
+    padding: 1rem !important;
+    padding-bottom: 160px !important; /* Space for input + bottom nav */
+    max-height: calc(100vh - 200px) !important;
+  }
+  
+  /* Modern message styling - like iMessage/WhatsApp */
+  .chat-messages > div {
+    display: flex !important;
+    align-items: flex-end !important;
+    gap: 0.5rem !important;
+    margin-bottom: 0.75rem !important;
+    max-width: 85% !important;
+  }
+  
+  /* Sent messages align right */
+  .chat-messages > div[style*="row-reverse"] {
+    margin-left: auto !important;
+  }
+  
+  /* Received messages align left */
+  .chat-messages > div[style*="flex-direction: row"]:not([style*="row-reverse"]) {
+    margin-right: auto !important;
+  }
+  
+  /* Profile photos in messages */
+  .chat-messages > div > div[style*="width: 32px"] {
+    width: 32px !important;
+    height: 32px !important;
+    flex-shrink: 0 !important;
+    border-radius: 50% !important;
+  }
+  
+  /* Message bubbles */
+  .chat-messages > div > div > div[style*="border-radius: 18px"] {
+    padding: 0.625rem 0.875rem !important;
+    border-radius: 18px !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    line-height: 1.4 !important;
+    font-size: 0.95rem !important;
+  }
+  
+  /* Sent message bubble (blue) */
+  .chat-messages > div[style*="row-reverse"] > div > div[style*="background: var(--primary)"] {
+    background: var(--primary) !important;
+    color: white !important;
+    border-radius: 18px 18px 4px 18px !important;
+  }
+  
+  /* Received message bubble (gray) */
+  .chat-messages > div[style*="flex-direction: row"]:not([style*="row-reverse"]) > div > div[style*="background: #e5e7eb"] {
+    background: #e5e7eb !important;
+    color: var(--text-main) !important;
+    border-radius: 18px 18px 18px 4px !important;
+  }
+  
+  /* Make chat input larger on mobile */
+  .chat-input-row input {
+    min-height: 48px !important;
+    font-size: 1rem !important;
+  }
+  
+  .chat-input-row button {
+    min-height: 48px !important;
+    min-width: 60px !important;
+    font-size: 1rem !important;
+  }
+}
+
+.mobile-messages-input-container {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+  max-width: 100%;
+}
+
+.mobile-messages-input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 1rem;
+  min-height: 44px;
+  max-height: 120px;
+  resize: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-messages-send-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Messages list padding to avoid overlap */
+.mobile-messages-list {
+  padding-bottom: 160px; /* Space for input + bottom nav */
+}
+
+/* ========== YOU'RE HIRED BANNER ========== */
+.hired-banner {
+  background: linear-gradient(135deg, var(--success) 0%, #16a34a 100%);
+  color: white;
+  padding: 2rem 1rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.hired-banner-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.hired-banner-subtitle {
+  font-size: 1.1rem;
+  opacity: 0.95;
+}
+
+.hired-code-box {
+  background: white;
+  color: var(--text-main);
+  padding: 2rem;
+  border-radius: var(--radius);
+  text-align: center;
+  margin: 1.5rem 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.hired-code {
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: 0.5rem;
+  color: var(--primary);
+  font-family: 'Courier New', monospace;
+  margin: 1rem 0;
+}
+
+.hired-code-input {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.5rem;
+  font-family: 'Courier New', monospace;
+  min-height: 60px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ========== COLLAPSIBLE SECTIONS ========== */
+.collapsible-section {
+  margin-bottom: 1rem;
+}
+
+.collapsible-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 48px;
+}
+
+.collapsible-section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.collapsible-section-toggle {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.collapsible-section-header[aria-expanded="true"] .collapsible-section-toggle {
+  transform: rotate(180deg);
+}
+
+.collapsible-section-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.collapsible-section-header[aria-expanded="true"] + .collapsible-section-content {
+  max-height: 2000px;
+  padding: 1rem;
+  background: var(--bg);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+/* ========== QUICK ACTIONS ========== */
+.quick-actions-bar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: white;
+  border-top: 1px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.quick-action-btn {
+  padding: 0.75rem 1rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s;
+}
+
+.quick-action-btn:active {
+  background: var(--primary-soft);
+}
+
+/* ========== PROFILE PHOTO EVERYWHERE ========== */
+.profile-photo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+}
+
+.profile-photo-small {
+  width: 32px;
+  height: 32px;
+}
+
+.profile-photo-large {
+  width: 80px;
+  height: 80px;
+}
+
+/* ========== SWIPE ACTIONS (Advanced) ========== */
+.swipeable-job-card {
+  position: relative;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.swipeable-job-card-actions {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 1rem;
+  background: var(--danger);
+  transform: translateX(100%);
+  transition: transform 0.3s ease-out;
+}
+
+.swipeable-job-card.swiped .swipeable-job-card-actions {
+  transform: translateX(0);
+}
+
+.swipe-action-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ========== SKILL TAGS ========== */
+.skill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.skill-tag {
+  padding: 0.5rem 0.75rem;
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s;
+  min-height: 36px;
+}
+
+.skill-tag:active {
+  background: var(--primary);
+  color: white;
+}
+
+.skill-tag.active {
+  background: var(--primary);
+  color: white;
+}
+
+/* ========== MAP VIEW TOGGLE ========== */
+.map-list-toggle {
+  display: flex;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.map-list-toggle-btn {
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  background: transparent;
+  border-radius: calc(var(--radius) - 2px);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
+}
+
+.map-list-toggle-btn.active {
+  background: var(--primary);
+  color: white;
+}
+
+/* ========== LAZY LOADING ========== */
+.lazy-image {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.lazy-image.loaded {
+  opacity: 1;
+}
+
+/* ========== RESPONSIVE UTILITIES ========== */
+@media (max-width: 768px) {
+  /* Hide desktop elements on mobile */
+  .desktop-only {
+    display: none !important;
+  }
+  
+  /* Show mobile elements */
+  .mobile-only {
+    display: block !important;
+  }
+  
+  /* Larger touch targets */
+  button, a, input, select, textarea {
+    min-height: 44px;
+  }
+  
+  /* Better spacing */
+  .container {
+    padding: 1rem;
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+/* ========== RANGE SLIDER STYLING ========== */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: #e5e7eb;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #2563eb;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: all 0.2s;
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(1.2);
+  background: #1d4ed8;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #2563eb;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: all 0.2s;
+}
+
+input[type="range"]::-moz-range-thumb:active {
+  transform: scale(1.2);
+  background: #1d4ed8;
+}
+
+/* ========== STICKY FILTERS ON MOBILE ========== */
+@media (max-width: 768px) {
+  #jobFiltersBar {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 100;
+    padding: 0.75rem 0;
+    margin-bottom: 0.75rem !important;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  #showMoreFiltersBtn {
+    position: relative;
+    z-index: 101;
+  }
+  
+  /* Smooth filter panel animations */
+  #advancedFiltersContainer[style*="display: block"] {
+    animation: slideDown 0.3s ease-out;
+  }
+  
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+      max-height: 0;
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+      max-height: 600px;
+    }
+  }
+}
+
