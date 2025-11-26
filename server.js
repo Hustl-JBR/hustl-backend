@@ -390,6 +390,7 @@ server.listen(PORT, host, () => {
     console.log(`📱 Development mode - Access from your phone: http://[your-ip]:${PORT}`);
     console.log(`   (Make sure your phone is on the same WiFi network)`);
   }
+<<<<<<< HEAD
   
       // Start cleanup job scheduler (only if database is ready)
       try {
@@ -424,4 +425,6 @@ server.listen(PORT, host, () => {
       } catch (cleanupError) {
         console.warn('[Startup] Could not initialize cleanup service:', cleanupError.message);
       }
+=======
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
 });

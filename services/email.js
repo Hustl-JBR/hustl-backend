@@ -265,27 +265,6 @@ async function sendPaymentCompleteEmail(email, name, jobTitle, amount) {
   }
 }
 
-async function sendJobCompletedEmail(email, name, jobTitle, hustlerName) {
-  if (!isEmailConfigured()) return;
-  try {
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: email,
-      subject: `Job Complete: "${jobTitle}"`,
-      html: `
-        <h1>Job Complete! 🎉</h1>
-        <p>Hi ${name},</p>
-        <p>Great news! The job <strong>${jobTitle}</strong> has been completed by ${hustlerName}.</p>
-        <p>Payment has been released to the hustler. Please take a moment to review your experience!</p>
-        <p><a href="${process.env.APP_BASE_URL || 'http://localhost:8080'}/jobs">Review Hustler</a></p>
-        <p>Thank you for using Hustl!</p>
-      `,
-    });
-  } catch (error) {
-    console.error('Send job completed email error:', error);
-  }
-}
-
 async function sendAutoCompleteEmail(email, name, jobTitle) {
   if (!isEmailConfigured()) return;
   try {
@@ -478,6 +457,7 @@ async function sendFeedbackEmail(feedbackName, feedbackEmail, feedbackMessage) {
   }
 }
 
+<<<<<<< HEAD
 async function sendDisputeEmail(email, name, jobTitle, reason, description) {
   if (!isEmailConfigured()) return;
   try {
@@ -574,6 +554,8 @@ async function sendJobExpiringEmail(email, name, jobTitle, jobId) {
   }
 }
 
+=======
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
 module.exports = {
   sendSignupEmail,
   sendEmailVerificationEmail,
@@ -584,7 +566,6 @@ module.exports = {
   sendPaymentReceiptEmail,
   sendPayoutSentEmail,
   sendPaymentCompleteEmail,
-  sendJobCompletedEmail,
   sendAutoCompleteEmail,
   sendRefundEmail,
   sendAdminRefundNotification,
@@ -592,10 +573,13 @@ module.exports = {
   sendStripeRequiredEmail,
   sendFeedbackEmail,
   sendNewMessageEmail,
+<<<<<<< HEAD
   sendDisputeEmail,
   sendStatusUpdateEmail,
   sendJobExpiringEmail,
   sendSupportEmail,
+=======
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
 };
 
 async function sendSupportEmail({ from, fromName, subject, message, userId }) {

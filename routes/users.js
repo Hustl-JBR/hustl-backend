@@ -128,6 +128,7 @@ router.get('/:id', async (req, res) => {
 router.patch('/me', [
   body('name').optional().trim().notEmpty(),
   body('city').optional().trim().notEmpty(),
+<<<<<<< HEAD
   body('zip').optional().custom((value) => {
     // Allow null, empty string, or valid zip format (5 digits or 5+4)
     if (!value || value === '' || value === null) return true;
@@ -152,17 +153,17 @@ router.patch('/me', [
       return false;
     }
   }).withMessage('photoUrl must be a valid URL'),
+=======
+  body('zip').optional().trim().matches(/^\d{5}(-\d{4})?$/),
+  body('photoUrl').optional().isURL(),
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
   body('bio').optional().trim(),
   body('gender').optional().isIn(['male', 'female', 'other', 'prefer_not_to_say']),
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.error('[PATCH /users/me] Validation errors:', errors.array());
-      return res.status(400).json({ 
-        error: 'Validation failed',
-        errors: errors.array() 
-      });
+      return res.status(400).json({ errors: errors.array() });
     }
 
     const { name, city, zip, photoUrl, bio, gender } = req.body;

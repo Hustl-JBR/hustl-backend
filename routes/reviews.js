@@ -37,23 +37,10 @@ router.post('/', authenticate, [
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    // Check if job is paid or confirmed (allow reviews after customer confirms completion)
-    // In test mode, we also allow reviews if payment exists (even if not CAPTURED)
-    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
-    const forceTestMode = true; // TEMPORARY: Always bypass Stripe for testing
-    
-    const isPaidOrCompleted = job.status === 'PAID' || job.status === 'COMPLETED' || job.status === 'AWAITING_CUSTOMER_CONFIRM';
-    const hasPayment = job.payment && (job.payment.status === 'CAPTURED' || skipStripeCheck || forceTestMode);
-    
-    if (!isPaidOrCompleted || (!hasPayment && !skipStripeCheck && !forceTestMode)) {
+    // Check if job is paid
+    if (job.status !== 'PAID' || !job.payment || job.payment.status !== 'CAPTURED') {
       return res.status(400).json({ 
-        error: 'Can only review jobs that have been paid and confirmed',
-        debug: process.env.NODE_ENV !== 'production' ? {
-          jobStatus: job.status,
-          paymentStatus: job.payment?.status,
-          hasPayment: !!job.payment,
-          testMode: skipStripeCheck || forceTestMode
-        } : undefined
+        error: 'Can only review jobs that have been paid' 
       });
     }
 
@@ -135,9 +122,6 @@ router.post('/', authenticate, [
         ratingCount: allReviews.length,
       },
     });
-
-    // Don't mark as COMPLETED here - job is already marked COMPLETED when customer confirms with 6-digit code
-    // Reviews can still be submitted after job is completed
 
     res.status(201).json(review);
   } catch (error) {

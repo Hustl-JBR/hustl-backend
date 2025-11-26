@@ -4800,32 +4800,20 @@ try {
   }
 }
 
-  // Boot - wait for API then initialize
-  function bootApp() {
-    // Wait for API to be available
-    if (typeof window.hustlAPI === 'undefined') {
-      setTimeout(bootApp, 50);
-      return;
-    }
-    
-    // Initialize app
-    loadState();
-    initAgeGate();
-    initNav();
-    initAuthCard();
-    initJobsForm();
-    initConversationInput();
-    initFeedback();
-    initFooterLinks();
-    checkAgeGate();
-    handleStripeReturn();
-    checkAutoCompleteJobs();
-    setInterval(checkAutoCompleteJobs, 60 * 1000);
-    renderAll();
-  }
-  
-  // Start boot process
-  bootApp();
+  // Boot - initialize immediately
+  loadState();
+  initAgeGate();
+  initNav();
+  initAuthCard();
+  initJobsForm();
+  initConversationInput();
+  initFeedback();
+  initFooterLinks();
+  checkAgeGate();
+  handleStripeReturn();
+  checkAutoCompleteJobs();
+  setInterval(checkAutoCompleteJobs, 60 * 1000);
+  renderAll();
   </script>
 </body>
 </html>

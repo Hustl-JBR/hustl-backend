@@ -4,9 +4,12 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { geocodeAddress } = require('../services/mapbox');
+<<<<<<< HEAD
 const { validateTennesseeZip } = require('../services/zipcode');
 const { calculateDistance, getBoundingBox, formatDistance } = require('../services/location');
 const { pauseRecurringJob, resumeRecurringJob, cancelRecurringJob } = require('../services/recurringJobs');
+=======
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
 
 const router = express.Router();
 
@@ -181,12 +184,13 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      console.error('Validation errors:', errors.array());
+      const errorMessages = errors.array().map(e => `${e.param}: ${e.msg}`).join(', ');
+      return res.status(400).json({ 
+        error: 'Validation failed: ' + errorMessages,
+        details: errors.array() 
+      });
     }
-    
-    // NOTE: We do NOT validate the customer's profile zip code when posting a job
-    // The job's pickupZip is what matters, not where the customer lives
-    // This allows customers to post jobs anywhere in Tennessee, regardless of their home address
 
     // BUSINESS RULE: Hustler max 2 active jobs
     // Check if user is a Hustler and count their active jobs
@@ -218,6 +222,7 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
       title,
       category,
       description,
+      photos = [],
       address,
       date,
       startTime,
@@ -228,6 +233,7 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
       estHours,
       teamSize = 1,
       requirements = {},
+<<<<<<< HEAD
       pickupArea,
       pickupCity,
       pickupAddress,
@@ -237,130 +243,19 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
       // Recurring job fields
       recurrenceType,
       recurrenceEndDate,
+=======
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
     } = req.body;
 
-    // Validate required fields in requirements
-    if (!requirements.estimatedDuration) {
-      return res.status(400).json({ 
-        error: 'Estimated duration is required',
-        field: 'estimatedDuration'
-      });
-    }
-
-    if (!requirements.toolsNeeded || !Array.isArray(requirements.toolsNeeded) || requirements.toolsNeeded.length === 0) {
-      return res.status(400).json({ 
-        error: 'At least one tool or equipment is required',
-        field: 'toolsNeeded'
-      });
-    }
-
-    // SIMPLIFIED: Validate using ZIP code first, then geocode for coordinates
-    let lat = null;
-    let lng = null;
-    let isTennessee = false;
-    
-    // Priority 1: Check pickupZip from requirements (MOST RELIABLE)
-    const pickupZip = requirements?.pickupZip || '';
-    console.log(`[Tennessee Validation] Full request body:`, JSON.stringify(req.body, null, 2));
-    console.log(`[Tennessee Validation] Full requirements object:`, JSON.stringify(requirements, null, 2));
-    console.log(`[Tennessee Validation] pickupZip from requirements: "${pickupZip}" (type: ${typeof pickupZip})`);
-    
-    if (!pickupZip || pickupZip.toString().trim() === '') {
-      console.log(`[Tennessee Validation] ⚠ No pickupZip provided in requirements, will try geocoded address`);
-    }
-    
-    if (pickupZip && pickupZip.toString().trim() !== '') {
-      const zipToValidate = pickupZip.toString().trim();
-      console.log(`[Tennessee Validation] Validating zip: "${zipToValidate}"`);
-      isTennessee = await validateTennesseeZip(zipToValidate);
-      console.log(`[Tennessee Validation] pickupZip "${zipToValidate}" validation result: ${isTennessee ? '✓ VALID' : '✗ INVALID'}`);
-      
-      // Also geocode to get coordinates - include zip in address for better accuracy
-      try {
-        // Build address with zip code for better geocoding accuracy
-        const addressWithZip = pickupZip ? `${address}, ${pickupZip}` : address;
-        const geo = await geocodeAddress(addressWithZip);
-        if (geo) {
-          lat = geo.lat;
-          lng = geo.lng;
-          console.log(`[Tennessee Validation] Geocoded address for coordinates: lat=${lat}, lng=${lng}`);
-          
-          // If Mapbox confirms Tennessee, trust it (most reliable)
-          if (geo.isTennessee === true) {
-            isTennessee = true;
-            console.log(`[Tennessee Validation] ✓ Mapbox confirmed Tennessee location (US-TN found in context)`);
-          }
-          // If ZIP validation passed, we already have isTennessee = true, so keep it
-        }
-      } catch (geoError) {
-        console.error('Geocoding error (non-fatal):', geoError);
-        // If geocoding fails but ZIP validation passed, we'll trust the ZIP
-      }
-      
-      if (!isTennessee) {
-        return res.status(400).json({ 
-          error: 'Jobs can only be posted in Tennessee. The pickup zip code must be in Tennessee (37000-38999).',
-          field: 'pickupZip'
-        });
-      }
-    } else {
-      // No pickupZip provided - validate using geocoded address
-      console.log(`[Tennessee Validation] No pickupZip provided, validating via geocoded address`);
-      
-      try {
-        // Try to include zip from requirements if available for better geocoding
-        const addressWithZip = (requirements?.pickupZip) ? `${address}, ${requirements.pickupZip}` : address;
-        const geo = await geocodeAddress(addressWithZip);
-        if (geo) {
-          lat = geo.lat;
-          lng = geo.lng;
-          
-          // PRIORITY 1: Check if Mapbox detected US-TN directly
-          if (geo.isTennessee === true) {
-            isTennessee = true;
-            console.log(`[Tennessee Validation] ✓ Validated via Mapbox isTennessee flag`);
-          } else {
-            // PRIORITY 2: Try zip code validation from geocoded result
-            const geoZip = geo.zip || '';
-            if (geoZip) {
-              isTennessee = await validateTennesseeZip(geoZip);
-              console.log(`[Tennessee Validation] Geocoded zip "${geoZip}" validation: ${isTennessee ? '✓ VALID' : '✗ INVALID'}`);
-            }
-            
-            // PRIORITY 3: Check region/state codes as fallback
-            if (!isTennessee) {
-              const region = (geo.region || '').toUpperCase();
-              const state = (geo.state || '').toUpperCase();
-              
-              if (region === 'US-TN' || region === 'TN') {
-                isTennessee = true;
-                console.log(`[Tennessee Validation] ✓ Validated via region: ${region}`);
-              } else if (state === 'TN' || state === 'TENNESSEE') {
-                isTennessee = true;
-                console.log(`[Tennessee Validation] ✓ Validated via state: ${state}`);
-              }
-            }
-          }
-          
-          if (!isTennessee) {
-            return res.status(400).json({ 
-              error: 'Jobs can only be posted in Tennessee. Please provide a Tennessee zip code (37000-38999) in the pickup location field.',
-              field: 'pickupZip'
-            });
-          }
-        } else {
-          return res.status(400).json({ 
-            error: 'Could not validate location. Please provide a Tennessee zip code (37000-38999) in the pickup location field.',
-            field: 'pickupZip'
-          });
-        }
-      } catch (geoError) {
-        console.error('Geocoding error:', geoError);
-        return res.status(400).json({ 
-          error: 'Could not validate location. Please provide a Tennessee zip code (37000-38999) in the pickup location field.',
-          field: 'pickupZip'
-        });
-      }
+    // Geocode address (with error handling)
+    let lat = null, lng = null;
+    try {
+      const coords = await geocodeAddress(address);
+      lat = coords.lat;
+      lng = coords.lng;
+    } catch (geocodeError) {
+      console.error('Geocoding error:', geocodeError);
+      // Continue without coordinates - address will still be stored
     }
 
     // Calculate next recurrence date if recurring
@@ -382,6 +277,7 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
         title,
         category,
         description,
+        photos,
         address,
         lat,
         lng,
@@ -389,18 +285,12 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
         startTime: new Date(startTime),
         endTime: new Date(endTime),
         payType,
-        amount: Number(amount),
-        hourlyRate: hourlyRate ? Number(hourlyRate) : null,
-        estHours: estHours ? Number(estHours) : null,
+        amount: parseFloat(amount),
+        hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
+        estHours: estHours ? parseInt(estHours) : null,
         requirements: {
-          ...(requirements || {}),
-          // Store pickup/dropoff fields in requirements for easy access
-          pickupArea: pickupArea || null,
-          pickupCity: pickupCity || null,
-          pickupAddress: pickupAddress || null,
-          dropoffArea: dropoffArea || null,
-          dropoffCity: dropoffCity || null,
-          dropoffAddress: dropoffAddress || null,
+          ...requirements,
+          teamSize: parseInt(teamSize) || 1,
         },
         status: 'OPEN',
         // Recurring job fields
@@ -408,6 +298,17 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
         recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : null,
         recurrencePaused: false,
         nextRecurrenceDate: nextRecurrenceDate,
+      },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            ratingAvg: true,
+            ratingCount: true,
+          },
+        },
       },
     });
 
@@ -418,15 +319,19 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
   }
 });
 
-// GET /jobs - List jobs (with filters)
+// GET /jobs - List jobs with filters (public, optional auth)
 router.get('/', optionalAuth, [
-  query('status').optional().isIn(['OPEN', 'ASSIGNED', 'COMPLETED_BY_HUSTLER']),
   query('category').optional().trim(),
+  query('minPay').optional().isFloat({ min: 0 }),
+  query('payType').optional().isIn(['flat', 'hourly']),
+  query('dateFrom').optional().isISO8601(),
+  query('dateTo').optional().isISO8601(),
   query('lat').optional().isFloat(),
   query('lng').optional().isFloat(),
-  query('radius').optional().isInt({ min: 1, max: 100 }),
+  query('radius').optional().isFloat({ min: 0 }), // in miles
   query('zip').optional().trim(),
   query('city').optional().trim(),
+<<<<<<< HEAD
   query('page').optional().isInt({ min: 1 }),
   query('limit').optional().isInt({ min: 1, max: 100 }),
     ], async (req, res) => {
@@ -442,10 +347,40 @@ router.get('/', optionalAuth, [
 
         const { status, category, lat, lng, radius = 25, zip, city, page = 1, limit = 20, sortBy = 'newest', search } = req.query;
         const userId = req.user?.id;
+=======
+  query('status').optional().isIn(['OPEN', 'ASSIGNED', 'COMPLETED_BY_HUSTLER']),
+  query('page').optional().isInt({ min: 1 }),
+  query('limit').optional().isInt({ min: 1, max: 100 }),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-    const where = {};
-    if (status) where.status = status;
+    const {
+      category,
+      minPay,
+      payType,
+      dateFrom,
+      dateTo,
+      lat,
+      lng,
+      radius = 25, // default 25 miles
+      zip,
+      city,
+      status = 'OPEN',
+      page = 1,
+      limit = 20,
+    } = req.query;
+
+    const where = {
+      status,
+    };
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
+
     if (category) where.category = category;
+<<<<<<< HEAD
     
     // Search functionality - search in title and description
     if (search && search.trim()) {
@@ -564,11 +499,49 @@ router.get('/', optionalAuth, [
           }, // Has at least one accepted offer
         ],
       });
+=======
+    if (payType) where.payType = payType;
+    if (minPay) where.amount = { gte: parseFloat(minPay) };
+    if (dateFrom || dateTo) {
+      where.date = {};
+      if (dateFrom) where.date.gte = new Date(dateFrom);
+      if (dateTo) where.date.lte = new Date(dateTo);
+    }
+    
+    // Location filters (zip/city) - filter by customer location
+    if (zip || city) {
+      const customerWhere = {};
+      if (zip) {
+        customerWhere.zip = zip;
+      }
+      if (city) {
+        customerWhere.city = { contains: city, mode: 'insensitive' };
+      }
+      // Note: This requires the customer relation to be included in the query
+      // We'll filter client-side if needed, or use a subquery
+      // For now, we'll include customer in the query and filter after
     }
 
-    // NOTE: Show all jobs by default - no role-based filtering
-    // Tab-based filtering (My Jobs, Available Jobs, My Hustles) is handled client-side
+    // Distance filter (if lat/lng provided)
+    if (lat && lng) {
+      // Simple bounding box approximation (for MVP)
+      // In production, use PostGIS for proper distance queries
+      const latFloat = parseFloat(lat);
+      const lngFloat = parseFloat(lng);
+      const radiusFloat = parseFloat(radius);
+      
+      // Approximate: 1 degree lat ≈ 69 miles, 1 degree lng ≈ 69 * cos(lat) miles
+      const latDelta = radiusFloat / 69;
+      const lngDelta = radiusFloat / (69 * Math.cos(latFloat * Math.PI / 180));
+      
+      where.lat = { gte: latFloat - latDelta, lte: latFloat + latDelta };
+      where.lng = { gte: lngFloat - lngDelta, lte: lngFloat + lngDelta };
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
+    }
 
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+<<<<<<< HEAD
     // Pagination
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 20;
@@ -579,33 +552,51 @@ router.get('/', optionalAuth, [
 
     const jobs = await prisma.job.findMany({
       where,
+=======
+    // Auto-remove jobs where customer hasn't been active in 72 hours
+    const seventyTwoHoursAgo = new Date(Date.now() - 72 * 60 * 60 * 1000);
+    await prisma.job.updateMany({
+      where: {
+        status: 'OPEN',
+        updatedAt: { lt: seventyTwoHoursAgo },
+        hustlerId: null, // Only remove unassigned jobs
+      },
+      data: {
+        status: 'CANCELLED',
+      },
+    });
+    
+    // Auto-completion: If job date has passed and job is ASSIGNED, auto-complete after 24 hours
+    // This ensures hustlers get paid even if they forget to mark complete
+    const now = new Date();
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    
+    const jobsToAutoComplete = await prisma.job.findMany({
+      where: {
+        status: 'ASSIGNED',
+        date: { lt: twentyFourHoursAgo }, // Job date was more than 24 hours ago
+        hustlerId: { not: null },
+        payment: {
+          status: 'PREAUTHORIZED', // Payment is pre-authorized
+        },
+      },
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
       include: {
+        payment: true,
         customer: {
           select: {
-            id: true,
+            email: true,
             name: true,
-            username: true,
-            city: true,
-            zip: true,
-            photoUrl: true,
-            ratingAvg: true,
-            ratingCount: true,
           },
         },
         hustler: {
           select: {
-            id: true,
+            email: true,
             name: true,
-            username: true,
-            photoUrl: true,
-          },
-        },
-        _count: {
-          select: {
-            offers: true,
           },
         },
       },
+<<<<<<< HEAD
       // Optimized: Add database-level ordering for better performance
       // Default order by newest first (can be overridden by client-side sorting)
       orderBy: sortBy === 'pay' ? { amount: 'desc' } : { createdAt: 'desc' },
@@ -638,6 +629,62 @@ router.get('/', optionalAuth, [
         if (reqZip && reqZip.toString() === searchZip.toString()) return true;
         return false;
       });
+=======
+    });
+    
+    // Auto-complete these jobs and process payment
+    for (const job of jobsToAutoComplete) {
+      try {
+        // Mark as completed by hustler (auto)
+        await prisma.job.update({
+          where: { id: job.id },
+          data: { status: 'COMPLETED_BY_HUSTLER' },
+        });
+        
+        // Auto-confirm and capture payment (since customer already paid)
+        const { capturePaymentIntent } = require('../services/stripe');
+        await capturePaymentIntent(job.payment.providerId);
+        
+        // Calculate hustler fee (16% platform fee)
+        const hustlerFee = Number(job.payment.amount) * 0.16;
+        const hustlerAmount = Number(job.payment.amount) - hustlerFee;
+        
+        // Update payment
+        await prisma.payment.update({
+          where: { id: job.payment.id },
+          data: {
+            status: 'CAPTURED',
+            feeHustler: hustlerFee,
+          },
+        });
+        
+        // Update job to PAID
+        await prisma.job.update({
+          where: { id: job.id },
+          data: { status: 'PAID' },
+        });
+        
+        // Send email to hustler
+        const { sendPaymentCompleteEmail } = require('../services/email');
+        await sendPaymentCompleteEmail(
+          job.hustler.email,
+          job.hustler.name,
+          job.title,
+          hustlerAmount
+        );
+        
+        // Send email to customer
+        const { sendAutoCompleteEmail } = require('../services/email');
+        await sendAutoCompleteEmail(
+          job.customer.email,
+          job.customer.name,
+          job.title
+        );
+      } catch (error) {
+        console.error(`Error auto-completing job ${job.id}:`, error);
+        // Continue with other jobs even if one fails
+      }
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
     }
     
     // Calculate distance for each job and add to response
@@ -726,6 +773,7 @@ router.get('/', optionalAuth, [
       }
     }
 
+<<<<<<< HEAD
     // Apply pagination after filtering and sorting
     const totalFilteredCount = filteredJobs.length;
     const paginatedJobs = filteredJobs.slice(skip, skip + limitNum);
@@ -748,6 +796,53 @@ router.get('/', optionalAuth, [
         radius: searchRadius,
         zip: userZip || zip,
       } : null,
+=======
+    let [jobs, total] = await Promise.all([
+      prisma.job.findMany({
+        where,
+        skip,
+        take: parseInt(limit),
+        orderBy: { createdAt: 'desc' },
+        include: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              ratingAvg: true,
+              ratingCount: true,
+              city: true,
+              zip: true,
+            },
+          },
+          _count: {
+            select: { offers: true },
+          },
+        },
+      }),
+      prisma.job.count({ where }),
+    ]);
+    
+    // Filter by location (zip/city) if provided (client-side filtering)
+    if (zip || city) {
+      jobs = jobs.filter(job => {
+        if (!job.customer) return false;
+        if (zip && job.customer.zip !== zip) return false;
+        if (city && !job.customer.city?.toLowerCase().includes(city.toLowerCase())) return false;
+        return true;
+      });
+      total = jobs.length; // Update total after filtering
+    }
+
+    res.json({
+      jobs,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit)),
+      },
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
     });
   } catch (error) {
     console.error('List jobs error:', error);
@@ -755,9 +850,13 @@ router.get('/', optionalAuth, [
   }
 });
 
-// GET /jobs/:id - Get job detail
+// GET /jobs/:id (public, optional auth)
 router.get('/:id', optionalAuth, async (req, res) => {
   try {
+    // Optional auth - if user is logged in, show more details
+    const userId = req.user?.id;
+    const userRoles = req.user?.roles || [];
+
     const job = await prisma.job.findUnique({
       where: { id: req.params.id },
       include: {
@@ -768,11 +867,9 @@ router.get('/:id', optionalAuth, async (req, res) => {
             username: true,
             city: true,
             zip: true,
-            photoUrl: true,
             ratingAvg: true,
             ratingCount: true,
-            bio: true,
-            gender: true,
+            photoUrl: true,
           },
         },
         hustler: {
@@ -780,17 +877,28 @@ router.get('/:id', optionalAuth, async (req, res) => {
             id: true,
             name: true,
             username: true,
-            photoUrl: true,
             ratingAvg: true,
             ratingCount: true,
-            bio: true,
-            gender: true,
+            photoUrl: true,
           },
         },
-        _count: {
-          select: {
-            offers: true,
+        offers: userId ? {
+          where: userRoles.includes('HUSTLER') ? { hustlerId: userId } : undefined,
+          include: {
+            hustler: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                ratingAvg: true,
+                ratingCount: true,
+                photoUrl: true,
+              },
+            },
           },
+        } : false,
+        _count: {
+          select: { offers: true },
         },
       },
     });
@@ -990,19 +1098,11 @@ router.post('/:id/complete', authenticate, requireRole('HUSTLER'), async (req, r
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    // Allow completion for ASSIGNED, PAID, or IN_PROGRESS jobs
-    // IN_PROGRESS means hustler has entered the 4-digit start code
-    const allowedStatuses = ['ASSIGNED', 'PAID', 'IN_PROGRESS'];
-    if (!allowedStatuses.includes(job.status)) {
-      return res.status(400).json({ 
-        error: 'Job must be assigned and in progress to mark as complete',
-        currentStatus: job.status
-      });
+    if (job.status !== 'ASSIGNED') {
+      return res.status(400).json({ error: 'Job is not assigned' });
     }
 
     // Protection: Can't mark complete before job date (prevents premature completion scams)
-    // TEMPORARILY DISABLED FOR TESTING
-    /*
     const now = new Date();
     const jobDate = new Date(job.date);
     const oneDayBefore = new Date(jobDate.getTime() - 24 * 60 * 60 * 1000);
@@ -1012,19 +1112,14 @@ router.post('/:id/complete', authenticate, requireRole('HUSTLER'), async (req, r
         error: 'Cannot mark job complete before the scheduled date' 
       });
     }
-    */
-    console.log('[TEST MODE] Date check bypassed - allowing job completion');
 
-    // Generate verification code (6-digit code) - ensure it's always a string
-    const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
+    // Generate verification code (6-digit code)
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     
     // Update job with verification code and status
     const requirements = job.requirements || {};
-    requirements.verificationCode = verificationCode; // Store as string
+    requirements.verificationCode = verificationCode;
     requirements.completedAt = new Date().toISOString();
-    requirements.completedAtTimestamp = Date.now(); // Store timestamp for 48-hour auto-release
-    
-    console.log('[complete] Generated verification code:', verificationCode, 'for job:', req.params.id);
     
     // Only store photos if provided (optional)
     const { completionPhotos } = req.body;
@@ -1069,34 +1164,16 @@ router.post('/:id/complete', authenticate, requireRole('HUSTLER'), async (req, r
 });
 
 // POST /jobs/:id/confirm-complete - Customer confirms job completion (Customer only)
-router.post('/:id/confirm-complete', authenticate, requireRole('CUSTOMER'), [
-  body('verificationCode').trim().notEmpty(),
-], async (req, res) => {
+router.post('/:id/confirm-complete', authenticate, requireRole('CUSTOMER'), async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { verificationCode } = req.body;
-
     const job = await prisma.job.findUnique({
       where: { id: req.params.id },
-      include: {
+      include: { 
         payment: true,
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
         hustler: {
           select: {
-            id: true,
-            name: true,
             email: true,
-            username: true,
+            name: true,
           },
         },
       },
@@ -1110,6 +1187,7 @@ router.post('/:id/confirm-complete', authenticate, requireRole('CUSTOMER'), [
       return res.status(403).json({ error: 'Forbidden' });
     }
 
+<<<<<<< HEAD
     // Verify the 6-digit code
     // Handle requirements as JSON object (it might be stored as JSON string in DB)
     let requirements = job.requirements;
@@ -1132,86 +1210,73 @@ router.post('/:id/confirm-complete', authenticate, requireRole('CUSTOMER'), [
       match: storedCodeStr === providedCode,
       jobId: req.params.id
     });
+=======
+    if (job.status !== 'COMPLETED_BY_HUSTLER') {
+      return res.status(400).json({ error: 'Job has not been marked complete by hustler yet' });
+    }
+
+    // Verify the verification code
+    const { verificationCode } = req.body;
+    const jobVerificationCode = job.requirements?.verificationCode;
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
     
-    if (!storedCodeStr || storedCodeStr !== providedCode) {
+    if (!verificationCode || verificationCode !== jobVerificationCode) {
       return res.status(400).json({ 
+<<<<<<< HEAD
         error: 'Invalid verification code',
         message: storedCodeStr ? 'The code you entered does not match. Please check with the hustler.' : 'No verification code found for this job. The hustler may need to mark the job as complete first.'
+=======
+        error: 'Invalid verification code. Please enter the code provided by the hustler.' 
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
       });
     }
 
-    // Check test mode
+    // Check test mode once at the top
     const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
-    const forceTestMode = true; // TEMPORARY: Always bypass Stripe for testing
 
-    // Process payment if it exists
-    if (job.payment) {
-      if (job.payment.status === 'PREAUTHORIZED') {
-        if (!skipStripeCheck && !forceTestMode) {
-          try {
-            const { capturePaymentIntent } = require('../services/stripe');
-            await capturePaymentIntent(job.payment.providerId);
-          } catch (stripeError) {
-            console.error('[confirm-complete] Stripe capture error (non-fatal):', stripeError);
-            // Continue even if Stripe capture fails
-          }
-        }
+    // Update job status to AWAITING_CUSTOMER_CONFIRM (or PAID if payment already captured)
+    const updated = await prisma.job.update({
+      where: { id: req.params.id },
+      data: { status: 'AWAITING_CUSTOMER_CONFIRM' },
+    });
 
-        // Calculate hustler fee (16% platform fee)
-        const hustlerFee = Number(job.payment.amount || 0) * 0.16;
-
-        // Update payment status
-        try {
-          await prisma.payment.update({
-            where: { id: job.payment.id },
-            data: {
-              status: 'CAPTURED',
-              feeHustler: hustlerFee,
-            },
-          });
-          console.log('[confirm-complete] Payment updated to CAPTURED');
-        } catch (paymentUpdateError) {
-          console.error('[confirm-complete] Payment update error (non-fatal):', paymentUpdateError);
-          // Continue even if payment update fails
-        }
+    // If payment exists and is pre-authorized, capture it
+    if (job.payment && job.payment.status === 'PREAUTHORIZED') {
+      if (skipStripeCheck) {
+        console.log('[TEST MODE] Skipping Stripe payment capture');
       } else {
-        console.log('[confirm-complete] Payment status is:', job.payment.status, '- skipping capture');
+        const { capturePaymentIntent } = require('../services/stripe');
+        await capturePaymentIntent(job.payment.providerId);
       }
-    } else {
-      console.log('[confirm-complete] No payment record found - marking as COMPLETED anyway (test mode)');
-    }
 
-    // Mark job as COMPLETED - this is the main action
-    try {
+      // Calculate hustler fee (16% platform fee)
+      const hustlerFee = Number(job.payment.amount) * 0.16;
+      const hustlerAmount = Number(job.payment.amount) - hustlerFee;
+
+      // Update payment
+      await prisma.payment.update({
+        where: { id: job.payment.id },
+        data: {
+          status: 'CAPTURED',
+          feeHustler: hustlerFee,
+        },
+      });
+
+      // Update job to PAID
       await prisma.job.update({
         where: { id: req.params.id },
-        data: { status: 'COMPLETED' },
+        data: { status: 'PAID' },
       });
-      console.log('[confirm-complete] Job marked as COMPLETED:', req.params.id);
-    } catch (updateError) {
-      console.error('[confirm-complete] Error updating job status:', updateError);
-      console.error('[confirm-complete] Update error details:', {
-        jobId: req.params.id,
-        error: updateError.message,
-        stack: updateError.stack
-      });
-      return res.status(500).json({ 
-        error: 'Failed to update job status',
-        message: process.env.NODE_ENV !== 'production' ? updateError.message : undefined
-      });
-    }
-    
-    // After payment is released, job is now COMPLETED
-    // Both parties can still review each other even after job is completed
 
-    // Transfer payment to hustler via Stripe Connect (if they have account set up)
-    // TEMPORARILY DISABLED - Skip in test mode (keep code for when going live)
-    if (job.payment && !skipStripeCheck && !forceTestMode) {
-      try {
-        const hustler = await prisma.user.findUnique({
-          where: { id: job.hustlerId },
-        });
+      // Transfer payment to hustler via Stripe Connect (if they have account set up)
+      // Skip in test mode
+      if (!skipStripeCheck) {
+        try {
+          const hustler = await prisma.user.findUnique({
+            where: { id: job.hustlerId },
+          });
 
+<<<<<<< HEAD
         if (hustler && hustler.stripeAccountId) {
           const { transferToHustler } = require('../services/stripe');
           const jobAmount = Number(job.payment.amount) || 0;
@@ -1257,49 +1322,36 @@ router.post('/:id/confirm-complete', authenticate, requireRole('CUSTOMER'), [
           }
         } else {
           console.log(`Hustler ${job.hustlerId} does not have Stripe Connect account set up yet`);
+=======
+          if (hustler && hustler.stripeAccountId) {
+            const { transferToHustler } = require('../services/stripe');
+            await transferToHustler(
+              hustler.stripeAccountId,
+              hustlerAmount,
+              job.id,
+              `Payment for job: ${job.title}`
+            );
+          } else {
+            console.log(`Hustler ${job.hustlerId} does not have Stripe Connect account set up yet`);
+            // In production, you might want to queue this for later or notify the hustler
+          }
+        } catch (transferError) {
+          console.error('Error transferring payment to hustler:', transferError);
+          // Don't fail the confirmation if transfer fails - can retry later
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
         }
-      } catch (transferError) {
-        console.error('Error transferring payment to hustler:', transferError);
-        // Don't fail the confirmation if transfer fails - can retry later
       }
-    }
 
-    // Send email to customer - job is complete, review the hustler
-    if (job.customer && job.customer.email) {
-      try {
-        const { sendJobCompletedEmail } = require('../services/email');
-        const hustlerName = job.hustler?.name || job.hustler?.username || 'your hustler';
-        await sendJobCompletedEmail(
-          job.customer.email,
-          job.customer.name,
-          job.title,
-          hustlerName
-        );
-        console.log('[confirm-complete] Sent completion email to customer');
-      } catch (emailError) {
-        console.error('[confirm-complete] Customer email error (non-fatal):', emailError);
-      }
-    }
-
-    // Send email to hustler (if payment was processed and hustler exists)
-    if (job.payment && job.hustler && job.hustler.email) {
-      try {
-        const { sendPaymentCompleteEmail } = require('../services/email');
-        const hustlerAmount = job.payment.amount ? Number(job.payment.amount) * 0.84 : 0; // 84% after 16% fee
-        await sendPaymentCompleteEmail(
-          job.hustler.email,
-          job.hustler.name,
-          job.title,
-          hustlerAmount
-        );
-        console.log('[confirm-complete] Sent payment email to hustler');
-      } catch (emailError) {
-        console.error('[confirm-complete] Hustler email error (non-fatal):', emailError);
-      }
-    }
-    
-    // Return updated job - simplified to avoid spreading issues
-    try {
+      // Send email to hustler
+      const { sendPaymentCompleteEmail } = require('../services/email');
+      await sendPaymentCompleteEmail(
+        job.hustler.email,
+        job.hustler.name,
+        job.title,
+        hustlerAmount
+      );
+      
+      // Return updated job with payment info
       const finalJob = await prisma.job.findUnique({
         where: { id: req.params.id },
         include: {
@@ -1314,55 +1366,27 @@ router.post('/:id/confirm-complete', authenticate, requireRole('CUSTOMER'), [
         },
       });
       
-      if (!finalJob) {
-        console.error('[confirm-complete] Job not found after update:', req.params.id);
-        // Still return success since we already updated it
-        return res.json({
-          id: req.params.id,
-          status: 'COMPLETED',
-          message: 'Job confirmed and payment released to hustler',
-        });
-      }
-      
-      // Return job data safely
       return res.json({
-        id: finalJob.id,
-        status: finalJob.status,
-        title: finalJob.title,
-        customerId: finalJob.customerId,
-        hustlerId: finalJob.hustlerId,
-        payment: finalJob.payment,
-        hustler: finalJob.hustler,
-        message: 'Job confirmed and payment released to hustler',
-      });
-    } catch (fetchError) {
-      console.error('[confirm-complete] Error fetching updated job:', fetchError);
-      // Still return success even if we can't fetch the updated job
-      return res.json({
-        id: req.params.id,
-        status: 'COMPLETED',
+        ...finalJob,
         message: 'Job confirmed and payment released to hustler',
       });
     }
+
+    res.json(updated);
   } catch (error) {
     console.error('Confirm complete error:', error);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: process.env.NODE_ENV !== 'production' ? error.message : undefined
-    });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// DELETE /jobs/:id - Delete a job (Customer only, open jobs only)
+// DELETE /jobs/:id - Delete a job (Customer only, only if OPEN)
 router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) => {
   try {
     const job = await prisma.job.findUnique({
       where: { id: req.params.id },
       include: {
-        offers: {
-          where: { status: 'ACCEPTED' },
-        },
+        offers: true,
+        payment: true,
       },
     });
 
@@ -1371,9 +1395,10 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
     }
 
     if (job.customerId !== req.user.id) {
-      return res.status(403).json({ error: 'Forbidden' });
+      return res.status(403).json({ error: 'You can only delete your own jobs' });
     }
 
+<<<<<<< HEAD
     // BUSINESS RULE: Customer cannot delete after Hustler is OTW (IN_PROGRESS) or ASSIGNED
     if (job.status === 'IN_PROGRESS') {
       return res.status(400).json({ 
@@ -1389,6 +1414,9 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
       });
     }
     
+=======
+    // Can only delete if job is OPEN and has no accepted offers
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
     if (job.status !== 'OPEN') {
       return res.status(400).json({ 
         error: 'Can only delete open jobs that have not been assigned',
@@ -1415,6 +1443,7 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
   }
 });
 
+<<<<<<< HEAD
 // POST /jobs/:id/archive - Archive a job (soft delete, hides from feeds but keeps data)
 router.post('/:id/archive', authenticate, async (req, res) => {
   try {
@@ -2173,4 +2202,6 @@ router.post('/:jobId/recurring/cancel', authenticate, requireRole('CUSTOMER'), a
   }
 });
 
+=======
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
 module.exports = router;

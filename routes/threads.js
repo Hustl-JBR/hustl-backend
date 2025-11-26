@@ -8,13 +8,9 @@ const router = express.Router();
 // All routes require authentication
 router.use(authenticate);
 
-// GET /threads - List user's threads (optimized with pagination)
+// GET /threads - List user's threads
 router.get('/', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 50; // Default 50, max 100
-    const skip = parseInt(req.query.skip) || 0;
-    
-    // Optimized query - only fetch what we need
     const threads = await prisma.thread.findMany({
       where: {
         OR: [
@@ -22,10 +18,7 @@ router.get('/', async (req, res) => {
           { userBId: req.user.id },
         ],
       },
-      select: {
-        id: true,
-        jobId: true,
-        lastMessageAt: true,
+      include: {
         job: {
           select: {
             id: true,
@@ -49,17 +42,21 @@ router.get('/', async (req, res) => {
             photoUrl: true,
           },
         },
-        _count: {
+        messages: {
+          take: 1,
+          orderBy: { createdAt: 'desc' },
           select: {
-            messages: true,
+            id: true,
+            body: true,
+            senderId: true,
+            createdAt: true,
           },
         },
       },
       orderBy: { lastMessageAt: 'desc' },
-      take: Math.min(limit, 100),
-      skip: skip,
     });
 
+<<<<<<< HEAD
     // Get latest message for each thread - optimized single query
     const threadIds = threads.map(t => t.id);
     if (threadIds.length > 0) {
@@ -115,6 +112,9 @@ router.get('/', async (req, res) => {
     } else {
       res.json(threads.map(thread => ({ ...thread, messages: [], unreadCount: 0 })));
     }
+=======
+    res.json(threads);
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
   } catch (error) {
     console.error('List threads error:', error);
     res.status(500).json({ error: 'Internal server error' });

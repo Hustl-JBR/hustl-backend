@@ -72,6 +72,7 @@ async function geocodeAddress(address, options = {}) {
     }
 
     const [lng, lat] = data.features[0].center;
+<<<<<<< HEAD
     const context = data.features[0].context || [];
     const properties = data.features[0].properties || {};
     
@@ -130,6 +131,9 @@ async function geocodeAddress(address, options = {}) {
     }
     
     return result;
+=======
+    return { lat, lng };
+>>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
   } catch (error) {
     console.error('[Mapbox Geocoding] Error:', error.message);
     

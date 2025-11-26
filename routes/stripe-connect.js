@@ -35,20 +35,8 @@ router.post('/create-account', async (req, res) => {
       accountId = `acct_test_${user.id.substring(0, 24)}`;
       console.log('[TEST MODE] Creating fake Stripe account:', accountId);
     } else {
-      try {
-        const account = await createConnectedAccount(user.email);
-        accountId = account.id;
-      } catch (stripeError) {
-        console.error('Stripe API error:', stripeError);
-        // Provide more helpful error message
-        if (stripeError.message) {
-          return res.status(500).json({ 
-            error: 'Failed to create Stripe account',
-            details: stripeError.message 
-          });
-        }
-        throw stripeError;
-      }
+      const account = await createConnectedAccount(user.email);
+      accountId = account.id;
     }
 
     await prisma.user.update({
