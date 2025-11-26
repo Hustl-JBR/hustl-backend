@@ -76,4 +76,3 @@ When page freezes or shows errors:
 
 
 
-

@@ -397,6 +397,127 @@
       color: var(--text-main);
     }
 
+<<<<<<< HEAD
+=======
+    /* Modal Overlay */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      animation: fadeIn 0.2s ease;
+      pointer-events: auto !important; /* Ensure overlay is clickable */
+    }
+    
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-content {
+      background: var(--bg);
+      border-radius: 12px;
+      max-width: 700px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    @media (max-width: 768px) {
+      .modal-overlay {
+        padding: 0;
+        align-items: flex-end;
+      }
+      
+      .modal-content {
+        max-width: 100%;
+        max-height: 95vh;
+        border-radius: 16px 16px 0 0;
+        animation: slideUpMobile 0.3s ease;
+      }
+      
+      @keyframes slideUpMobile {
+        from {
+          opacity: 0;
+          transform: translateY(100%);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    
+    /* Smooth page transitions */
+    [id^="view-"] {
+      animation: fadeIn 0.2s ease-in;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    /* Better input focus for mobile */
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      transform: scale(1.01);
+      transition: all 0.2s;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.2rem;
+      color: var(--text);
+      z-index: 10;
+      transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+      background: #fff;
+      transform: scale(1.1);
+    }
+
+>>>>>>> parent of ee7c500 (Add hustler acceptance notifications, optimize mobile messaging, and improve performance)
     .job-detail {
       margin-top: 0.5rem;
       border-radius: var(--radius);
@@ -697,6 +818,88 @@
       margin-top: 0.3rem;
     }
 
+<<<<<<< HEAD
+=======
+    @media (max-width: 768px) {
+      header {
+        padding: 0.5rem 0.75rem;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 0.5rem;
+        justify-content: space-between;
+        position: relative;
+      }
+      
+      .logo-row {
+        gap: 0.5rem;
+        flex-shrink: 0;
+        order: 0; /* Logo on the left */
+      }
+      
+      .logo-mark {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+      }
+      
+      .logo-text-main {
+        font-size: 0.95rem;
+      }
+      
+      .logo-sub {
+        display: none; /* Hide on mobile to save space */
+      }
+      
+      .nav-tabs {
+        display: none; /* Hide all nav tabs on mobile */
+      }
+      
+      /* Show hamburger menu button - make it more prominent */
+      .mobile-menu-btn {
+        display: block !important;
+        flex-shrink: 0;
+        padding: 0.5rem 0.75rem;
+        font-size: 1.2rem;
+        order: 999; /* Put it at the end (right side) */
+      }
+      
+      /* Show mode toggle on mobile, centered between logo and hamburger */
+      .mode-toggle {
+        display: flex !important;
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        order: 1; /* Put it in the middle */
+        z-index: 10;
+        padding: 0.1rem;
+        gap: 0.1rem;
+      }
+      
+      .mode-toggle button {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.65rem;
+        min-height: 24px;
+      }
+      
+      .mobile-menu-btn {
+        order: 2; /* Hamburger on the right */
+        margin-left: auto;
+      }
+      
+      .auth-pill {
+        display: none; /* Hide auth pill on mobile, show in hamburger */
+      }
+      
+      .layout-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      
+      .jobs-list {
+        max-height: none;
+      }
+    }
+    
+>>>>>>> parent of ee7c500 (Add hustler acceptance notifications, optimize mobile messaging, and improve performance)
     @media (max-width: 800px) {
       header {
         flex-wrap: wrap;
@@ -1846,9 +2049,211 @@ async function renderJobs(reset = false) {
       card.className = "job-card";
       card.dataset.jobId = job.id;
 
+<<<<<<< HEAD
       // Top row: title and pay
       const titleRow = document.createElement("div");
       titleRow.className = "job-card-top";
+=======
+  // 5) Show/hide tabs based on mode and update title
+  const jobsTabs = document.getElementById("jobsTabs");
+  const myJobsTab = jobsTabs?.querySelector('[data-tab="my-jobs"]');
+  const availableTab = jobsTabs?.querySelector('[data-tab="available"]');
+  const myHustlesTab = jobsTabs?.querySelector('[data-tab="my-hustles"]');
+  
+  if (jobsTabs && user) {
+    jobsTabs.style.display = "flex";
+    
+    if (userMode === "customer") {
+      if (myJobsTab) {
+        myJobsTab.style.display = "inline-block";
+        myJobsTab.textContent = "My Jobs";
+      }
+      if (availableTab) {
+        availableTab.style.display = "inline-block";
+        availableTab.textContent = "Browse Jobs";
+      }
+      if (myHustlesTab) myHustlesTab.style.display = "none";
+      jobsCardTitle.textContent = "Jobs";
+    } else {
+      // Hustler mode
+      if (myJobsTab) myJobsTab.style.display = "none";
+      if (availableTab) {
+        availableTab.style.display = "inline-block";
+        availableTab.textContent = "Find Jobs";
+      }
+      if (myHustlesTab) {
+        myHustlesTab.style.display = "inline-block";
+        myHustlesTab.textContent = "My Hustles";
+        // Check if hustler has any assigned jobs - if so, make this the default active tab
+        // This will be set after jobs are loaded
+      }
+      jobsCardTitle.textContent = "Jobs";
+      
+      // Set default tab for hustlers - prefer "My Hustles" if they have any
+      // We'll check this after jobs load
+    }
+  } else if (jobsTabs) {
+    jobsTabs.style.display = "none";
+  }
+  
+  // 6) Create simplified status filters based on mode and active tab
+  const statusFilterContainer = document.getElementById("jobsStatusFilter");
+  if (statusFilterContainer && user) {
+    const activeTab = jobsTabs?.querySelector('.job-tab.active')?.dataset.tab;
+    
+    // Clear existing filters
+    statusFilterContainer.innerHTML = '';
+    
+    // Simplified filters: Only show relevant options
+    // Determine which filters are available for this tab
+    let availableFilters = [];
+    if (userMode === "hustler") {
+      // For hustlers: Just "All" and "Open" when browsing, or "All" and "Active" for their hustles
+      if (activeTab === "available" || !activeTab) {
+        availableFilters = ["all", "open"];
+      } else if (activeTab === "my-hustles") {
+        availableFilters = ["all", "active"];
+      }
+    } else {
+      // For customers: "All", "Open", "Active", "Done" for their jobs
+      if (activeTab === "my-jobs" || !activeTab) {
+        availableFilters = ["all", "open", "active", "done"];
+      } else if (activeTab === "available") {
+        availableFilters = ["all", "open"];
+      }
+    }
+    
+    // If current filter is not available for this tab, reset to "all"
+    if (!availableFilters.includes(activeJobsStatusFilter)) {
+      activeJobsStatusFilter = "all";
+    }
+    
+    // Build filter HTML with correct active state
+    const filterLabels = {
+      "all": "All",
+      "open": "Open",
+      "active": "Active",
+      "done": "Done"
+    };
+    
+    statusFilterContainer.innerHTML = availableFilters.map(filter => {
+      const isActive = filter === activeJobsStatusFilter;
+      return `<span data-status="${filter}" ${isActive ? 'class="active"' : ''}>${filterLabels[filter]}</span>`;
+    }).join('');
+    
+    // Show the filter container if we have filters
+    if (statusFilterContainer.innerHTML.trim()) {
+      statusFilterContainer.style.display = "flex";
+      
+      // Add click handlers to status filter buttons
+      statusFilterContainer.querySelectorAll('[data-status]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          // Remove active class from all
+          statusFilterContainer.querySelectorAll('[data-status]').forEach(b => b.classList.remove('active'));
+          // Add active to clicked
+          btn.classList.add('active');
+          activeJobsStatusFilter = btn.dataset.status;
+          renderJobs(true); // Reset pagination when status filter changes
+        });
+      });
+    } else {
+      statusFilterContainer.style.display = "none";
+    }
+  } else if (statusFilterContainer) {
+    statusFilterContainer.style.display = "none";
+  }
+  
+  // Wire up tab click handlers using event delegation on parent
+  // This works even when tabs are modified
+  if (jobsTabs) {
+    // Remove old handler if exists
+    if (jobsTabs._tabClickHandler) {
+      jobsTabs.removeEventListener("click", jobsTabs._tabClickHandler);
+    }
+    
+    // Create new handler
+    jobsTabs._tabClickHandler = function(e) {
+      const clickedTab = e.target.closest(".job-tab");
+      if (!clickedTab || !clickedTab.parentNode) return;
+      
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Remove active class from all tabs
+      const allTabs = jobsTabs.querySelectorAll(".job-tab");
+      allTabs.forEach(t => t.classList.remove("active"));
+      
+      // Add active class to clicked tab
+      clickedTab.classList.add("active");
+      
+      // Don't reset status filter when switching tabs - keep the current selection if it's valid for the new tab
+      // The renderJobs function will handle resetting if needed
+      
+      // Re-render jobs with new filter (this will also update status filters)
+      renderJobs(true); // Reset pagination when tab changes
+    };
+    
+    // Attach handler
+    jobsTabs.addEventListener("click", jobsTabs._tabClickHandler, true);
+  }
+  
+  // Filter jobs based on active tab
+  let activeTab = "available";
+  if (jobsTabs) {
+    const activeTabEl = jobsTabs.querySelector(".job-tab.active");
+    if (activeTabEl) activeTab = activeTabEl.dataset.tab;
+  }
+  
+  if (user && activeTab === "my-jobs" && userMode === "customer") {
+    // Show only jobs posted by this customer
+    jobs = jobs.filter(j => j.customerId === user.id);
+  } else if (user && activeTab === "my-hustles" && userMode === "hustler") {
+    // Show only jobs where this user is the hustler (all statuses - in progress, completed, etc.)
+    jobs = jobs.filter(j => j.hustlerId === user.id);
+    // Sort by status: ASSIGNED/PAID first (in progress), then others
+    jobs.sort((a, b) => {
+      const aStatus = (a.status || "").toUpperCase();
+      const bStatus = (b.status || "").toUpperCase();
+      const inProgress = ["ASSIGNED", "PAID", "AWAITING_CUSTOMER_CONFIRM"];
+      const aInProgress = inProgress.includes(aStatus);
+      const bInProgress = inProgress.includes(bStatus);
+      if (aInProgress && !bInProgress) return -1;
+      if (!aInProgress && bInProgress) return 1;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+  } else if (user && !activeTab && userMode === "hustler") {
+    // If no active tab and hustler has assigned jobs, default to "my-hustles"
+    const assignedJobs = jobs.filter(j => j.hustlerId === user.id);
+    if (assignedJobs.length > 0 && myHustlesTab) {
+      // Switch to "my-hustles" tab
+      const allTabs = jobsTabs?.querySelectorAll(".job-tab");
+      allTabs?.forEach(t => t.classList.remove("active"));
+      myHustlesTab.classList.add("active");
+      // Re-filter jobs for this tab
+      jobs = assignedJobs;
+      jobs.sort((a, b) => {
+        const aStatus = (a.status || "").toUpperCase();
+        const bStatus = (b.status || "").toUpperCase();
+        const inProgress = ["ASSIGNED", "PAID", "AWAITING_CUSTOMER_CONFIRM"];
+        const aInProgress = inProgress.includes(aStatus);
+        const bInProgress = inProgress.includes(bStatus);
+        if (aInProgress && !bInProgress) return -1;
+        if (!aInProgress && bInProgress) return 1;
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      });
+    }
+  } else if (activeTab === "available") {
+    // Show only open jobs
+    jobs = jobs.filter(j => (j.status || "").toUpperCase() === "OPEN");
+  }
+  
+  // Final filter: Remove COMPLETED jobs from all views (they're done and reviewed)
+  // This ensures COMPLETED jobs don't show up anywhere in the main listing
+  jobs = jobs.filter(j => {
+    const status = (j.status || "").toUpperCase();
+    return status !== "COMPLETED";
+  });
+>>>>>>> parent of ee7c500 (Add hustler acceptance notifications, optimize mobile messaging, and improve performance)
 
       const titleEl = document.createElement("div");
       titleEl.className = "job-title";
@@ -1947,7 +2352,169 @@ async function renderJobs(reset = false) {
       // Clicking the whole card opens details
       card.addEventListener("click", () => openJobDetails(job.id));
 
+<<<<<<< HEAD
       if (jobsList) jobsList.appendChild(card);
+=======
+    const requirements = job.requirements || {};
+    const pickupZip = requirements.pickupZip || '';
+    const pickupCity = requirements.pickupCity || job.customer?.city || '';
+    const pickupArea = requirements.pickupArea || '';
+    const pickupAddress = requirements.pickupAddress || '';
+    
+    // Build location string from pickup fields (NEVER use geocoded address - it can be wrong)
+    let locParts = [];
+    if (pickupAddress) {
+      locParts.push(pickupAddress);
+    }
+    if (pickupArea) {
+      locParts.push(pickupArea);
+    }
+    if (pickupCity) {
+      locParts.push(pickupCity);
+    }
+    if (pickupZip && !requirements.hideZipCode) {
+      locParts.push(pickupZip);
+    }
+    
+    // Always use pickup fields, never fall back to geocoded address
+    let locText = `📍 ${locParts.length > 0 ? locParts.join(' • ') : "Location TBD"}`;
+    if (requirements.onSiteOnly) {
+      locText += " • On-site only";
+    }
+    
+    loc.textContent = locText;
+    card.appendChild(loc);
+    
+    // Add applicant count badge - visible to both customers and hustlers
+    if (job._count && job._count.offers !== undefined) {
+      const applicantCount = job._count.offers;
+      if (applicantCount > 0) {
+        const countBadge = document.createElement("div");
+        countBadge.style.marginTop = "0.5rem";
+        countBadge.style.display = "inline-flex";
+        countBadge.style.alignItems = "center";
+        countBadge.style.gap = "0.25rem";
+        countBadge.style.padding = "0.25rem 0.5rem";
+        countBadge.style.background = "#dbeafe";
+        countBadge.style.color = "#1e40af";
+        countBadge.style.borderRadius = "6px";
+        countBadge.style.fontSize = "0.85rem";
+        countBadge.style.fontWeight = "600";
+        countBadge.innerHTML = `👥 <span>${applicantCount} ${applicantCount === 1 ? 'person applied' : 'people applied'}</span>`;
+        card.appendChild(countBadge);
+      }
+    }
+    
+    // Payment and team size info at bottom
+    const paymentInfo = document.createElement("div");
+    paymentInfo.className = "job-meta";
+    paymentInfo.style.marginTop = "0.5rem";
+    
+    const teamSize = (job.requirements?.teamSize || job.teamSize || 1);
+    let paymentText = "";
+    if (job.payType === "flat") {
+      paymentText = `💰 Payment: $${(Number(job.amount) || 0).toFixed(2)} flat`;
+    } else {
+      const hr = Number(job.hourlyRate) || 0;
+      const maxH = job.estHours || 0;
+      if (teamSize > 1) {
+        const totalPerHour = hr * teamSize;
+        const maxTotal = totalPerHour * maxH;
+        paymentText = `💰 Payment: $${hr.toFixed(2)}/hr per person (${teamSize} people = $${totalPerHour.toFixed(2)}/hr) · Max: $${maxTotal.toFixed(2)} for ${maxH}h`;
+      } else {
+        const maxTotal = hr * maxH;
+        paymentText = `💰 Payment: $${hr.toFixed(2)}/hr · Max: $${maxTotal.toFixed(2)} for ${maxH}h`;
+      }
+    }
+    
+    // Add team size info
+    if (teamSize > 1) {
+      paymentText += ` • 👥 Needs ${teamSize} people (you hire 1 person who brings ${teamSize - 1} friend${teamSize - 1 > 1 ? 's' : ''})`;
+    }
+    
+    paymentInfo.textContent = paymentText;
+    card.appendChild(paymentInfo);
+
+    // actions row
+    const actions = document.createElement("div");
+    actions.className = "job-card-actions";
+
+    const left = document.createElement("div");
+    const statusBadge = document.createElement("span");
+    statusBadge.className = "badge";
+
+    const status = (job.status || "OPEN").toUpperCase();
+    // requirements already declared above, reuse it
+    const startCodeUsed = requirements.startCodeUsed === true;
+    
+    // Simplified status display: Open, Assigned, In Progress, Completed
+    // Check if job is actually in progress (start code used) even if status is ASSIGNED
+    if (status === "OPEN") {
+      statusBadge.classList.add("status-open");
+      statusBadge.textContent = "Open";
+    } else if (status === "ASSIGNED" && !startCodeUsed) {
+      statusBadge.classList.add("status-assigned");
+      statusBadge.textContent = "Assigned";
+    } else if (status === "PAID" || startCodeUsed) {
+      // Job is In Progress if status is PAID OR start code has been used
+      statusBadge.classList.add("status-assigned");
+      statusBadge.style.background = "#fbbf24";
+      statusBadge.style.color = "#78350f";
+      statusBadge.textContent = "In Progress";
+    } else if (status === "COMPLETED_BY_HUSTLER" || status === "AWAITING_CUSTOMER_CONFIRM") {
+      statusBadge.classList.add("status-completed");
+      statusBadge.textContent = "Completed";
+    } else {
+      // Fallback for any other status
+      statusBadge.textContent = status === "CANCELLED" ? "Cancelled" : "Open";
+    }
+
+    left.appendChild(statusBadge);
+    
+    // Check if user has applied to this job (for hustlers) - async check
+    // Only check if job is OPEN and user is not the customer
+    const jobStatusForApply = (job.status || "").toUpperCase();
+    if (user && userMode === "hustler" && jobStatusForApply === "OPEN" && job.customerId !== user.id) {
+      // Check offers asynchronously and add badge when ready
+      // Silently fail if we don't have permission (403) - that's okay, just means they haven't applied
+      window.hustlAPI.offers.list(job.id).then(offers => {
+        const userOffer = offers.find(o => o.hustlerId === user.id);
+        if (userOffer) {
+          const appliedBadge = document.createElement("span");
+          appliedBadge.className = "badge";
+          appliedBadge.style.background = "#dbeafe";
+          appliedBadge.style.color = "#1e40af";
+          appliedBadge.style.marginLeft = "0.5rem";
+          const offerStatus = (userOffer.status || "PENDING").toUpperCase();
+          if (offerStatus === "ACCEPTED") {
+            appliedBadge.textContent = "✓ Accepted";
+            appliedBadge.style.background = "#d1fae5";
+            appliedBadge.style.color = "#065f46";
+          } else if (offerStatus === "DECLINED") {
+            appliedBadge.textContent = "Declined";
+            appliedBadge.style.background = "#fee2e2";
+            appliedBadge.style.color = "#991b1b";
+          } else {
+            appliedBadge.textContent = "Applied";
+          }
+          left.appendChild(appliedBadge);
+        }
+      }).catch(error => {
+        // Silently fail - 403 means user hasn't applied or doesn't have permission
+        // This is expected behavior, so we don't need to log or show errors
+      });
+    }
+    
+    actions.appendChild(left);
+
+    const right = document.createElement("div");
+    const viewBtn = document.createElement("button");
+    viewBtn.className = "small-btn outline";
+    viewBtn.textContent = "View";
+    viewBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openJobDetails(job.id);
+>>>>>>> parent of ee7c500 (Add hustler acceptance notifications, optimize mobile messaging, and improve performance)
     });
 
     // Add "Load More" button if there are more pages
@@ -2203,6 +2770,971 @@ async function renderJobs(reset = false) {
           payBtn.addEventListener("click", () => startPayment(job.id));
           btnRow.appendChild(payBtn);
 
+<<<<<<< HEAD
+=======
+            const hustlerInfo = document.createElement("div");
+            const hustlerName = document.createElement("div");
+            hustlerName.style.fontWeight = "600";
+            hustlerName.style.fontSize = "1rem";
+            hustlerName.textContent = offer.hustler?.name || offer.hustler?.username || "Hustler";
+            hustlerInfo.appendChild(hustlerName);
+
+            // Rating if available - show prominently
+            const ratingRow = document.createElement("div");
+            ratingRow.style.display = "flex";
+            ratingRow.style.alignItems = "center";
+            ratingRow.style.gap = "0.5rem";
+            ratingRow.style.marginTop = "0.25rem";
+            
+            if (offer.hustler?.ratingAvg) {
+              const ratingStars = document.createElement("span");
+              ratingStars.style.fontSize = "0.95rem";
+              ratingStars.style.fontWeight = "600";
+              ratingStars.style.color = "#f59e0b";
+              const ratingValue = offer.hustler.ratingAvg.toFixed(1);
+              const maxRating = 5;
+              ratingStars.textContent = `★ ${ratingValue} / ${maxRating}`;
+              ratingRow.appendChild(ratingStars);
+              
+              if (offer.hustler.ratingCount) {
+                const ratingCount = document.createElement("span");
+                ratingCount.className = "muted";
+                ratingCount.style.fontSize = "0.85rem";
+                ratingCount.textContent = `(${offer.hustler.ratingCount} review${offer.hustler.ratingCount !== 1 ? 's' : ''})`;
+                ratingRow.appendChild(ratingCount);
+              }
+            } else {
+              const noRating = document.createElement("span");
+              noRating.className = "muted";
+              noRating.style.fontSize = "0.85rem";
+              noRating.textContent = "No ratings yet";
+              ratingRow.appendChild(noRating);
+            }
+            hustlerInfo.appendChild(ratingRow);
+
+            headerRow.appendChild(hustlerInfo);
+
+            // Status badge
+            const statusBadge = document.createElement("span");
+            statusBadge.className = "badge";
+            const offerStatus = (offer.status || "PENDING").toUpperCase();
+            if (offerStatus === "ACCEPTED") {
+              statusBadge.classList.add("status-assigned");
+              statusBadge.textContent = "Accepted";
+            } else if (offerStatus === "DECLINED") {
+              statusBadge.style.background = "#fee2e2";
+              statusBadge.style.color = "#991b1b";
+              statusBadge.textContent = "Declined";
+            } else {
+              statusBadge.classList.add("status-open");
+              statusBadge.textContent = "Pending";
+            }
+            headerRow.appendChild(statusBadge);
+            offerCard.appendChild(headerRow);
+
+            // Show proposed amount if different from job amount
+            if (offer.proposedAmount && offer.proposedAmount !== Number(job.amount)) {
+              const proposedAmountDiv = document.createElement("div");
+              proposedAmountDiv.style.marginTop = "0.5rem";
+              proposedAmountDiv.style.padding = "0.5rem";
+              proposedAmountDiv.style.background = "#fef3c7";
+              proposedAmountDiv.style.borderRadius = "4px";
+              proposedAmountDiv.style.fontSize = "0.9rem";
+              proposedAmountDiv.style.fontWeight = "600";
+              const teamSize = (job.requirements?.teamSize || job.teamSize || 1);
+              const originalAmount = Number(job.amount);
+              proposedAmountDiv.innerHTML = `
+                <div>💰 Proposed Amount: $${Number(offer.proposedAmount).toFixed(2)}</div>
+                <div class="muted" style="font-size: 0.85rem; margin-top: 0.25rem;">Original: $${originalAmount.toFixed(2)}${teamSize > 1 && job.payType === "hourly" ? ` (${teamSize} people)` : ""}</div>
+              `;
+              offerCard.appendChild(proposedAmountDiv);
+            }
+
+            if (offer.note) {
+              const note = document.createElement("div");
+              note.className = "muted";
+              note.style.marginTop = "0.5rem";
+              note.style.padding = "0.5rem";
+              note.style.background = "#f9fafb";
+              note.style.borderRadius = "4px";
+              note.style.fontSize = "0.9rem";
+              note.textContent = offer.note;
+              offerCard.appendChild(note);
+            }
+
+            const actionsRow = document.createElement("div");
+            actionsRow.style.display = "flex";
+            actionsRow.style.flexDirection = "column";
+            actionsRow.style.gap = "0.5rem";
+            actionsRow.style.marginTop = "0.75rem";
+
+            // View Profile button (optional - not required)
+            const viewProfileBtn = document.createElement("button");
+            viewProfileBtn.className = "small-btn outline";
+            viewProfileBtn.textContent = "View Profile & Reviews";
+            viewProfileBtn.style.width = "100%";
+            viewProfileBtn.addEventListener("click", () => {
+              openUserProfile(offer.hustlerId);
+            });
+            actionsRow.appendChild(viewProfileBtn);
+
+            // Accept/Decline buttons (only if pending)
+            let payAndAcceptBtn = null;
+            if (offer.status === "PENDING" && job.status === "OPEN" && !job.hustlerId) {
+              payAndAcceptBtn = document.createElement("button");
+              payAndAcceptBtn.className = "small-btn btn-primary";
+              payAndAcceptBtn.textContent = "Pay & Accept";
+              payAndAcceptBtn.style.width = "100%";
+              
+              payAndAcceptBtn.addEventListener("click", async () => {
+                // Show payment modal first - payment must complete before accepting
+                overlay.remove();
+                document.body.style.overflow = "";
+                
+                // Show payment modal - on success, it will accept the offer
+                setTimeout(async () => {
+                  await showPaymentModal(job.id, offer.id);
+                }, 500);
+              });
+              actionsRow.appendChild(payAndAcceptBtn);
+
+              const declineBtn = document.createElement("button");
+              declineBtn.className = "small-btn";
+              declineBtn.style.background = "#fee2e2";
+              declineBtn.style.color = "#991b1b";
+              declineBtn.style.width = "100%";
+              declineBtn.textContent = "Decline";
+              declineBtn.addEventListener("click", async () => {
+                if (!confirm("Decline this application?")) return;
+                declineBtn.disabled = true;
+                declineBtn.textContent = "Declining...";
+                try {
+                  await window.hustlAPI.offers.decline(offer.id);
+                  showToast("Application declined.");
+                  overlay.remove();
+                  document.body.style.overflow = "";
+                  renderJobs();
+                } catch (error) {
+                  showToast("Error: " + (error.message || "Failed to decline"));
+                  declineBtn.disabled = false;
+                  declineBtn.textContent = "Decline";
+                }
+              });
+              actionsRow.appendChild(declineBtn);
+            }
+
+            offerCard.appendChild(actionsRow);
+            applicantsSection.appendChild(offerCard);
+          });
+        }
+
+        content.appendChild(applicantsSection);
+      }
+
+      // Show application count for hustlers (before apply section)
+      if (user && userMode === "hustler" && job.status === "OPEN" && job.customerId !== user.id) {
+        // Get application count
+        const applicationCount = job._count?.offers || 0;
+        if (applicationCount > 0) {
+          const countSection = document.createElement("div");
+          countSection.style.marginTop = "1.5rem";
+          countSection.style.padding = "0.75rem";
+          countSection.style.background = "#f0f9ff";
+          countSection.style.borderRadius = "8px";
+          countSection.style.border = "1px solid #bae6fd";
+          countSection.style.textAlign = "center";
+          
+          const countText = document.createElement("div");
+          countText.style.fontSize = "1rem";
+          countText.style.fontWeight = "600";
+          countText.style.color = "#1e40af";
+          countText.innerHTML = `👥 <span>${applicationCount} ${applicationCount === 1 ? 'person has' : 'people have'} applied for this job</span>`;
+          countSection.appendChild(countText);
+          
+          content.appendChild(countSection);
+        }
+      }
+
+      // Hustler View: Apply to Job (if open and not already applied/accepted)
+      if (user && userMode === "hustler" && job.status === "OPEN" && job.customerId !== user.id) {
+        // Check if user already applied
+        let userOffer = null;
+        let allOffers = [];
+        try {
+          const token = localStorage.getItem("hustl_token");
+          const response = await fetch(`/offers/${jobId}`, {
+            headers: token ? { "Authorization": `Bearer ${token}` } : {}
+          });
+          if (response.ok) {
+            const offersData = await response.json();
+            allOffers = Array.isArray(offersData) ? offersData : [];
+            userOffer = allOffers.find(o => o.hustlerId === user?.id);
+          }
+        } catch (error) {
+          console.error("Error fetching offers:", error);
+        }
+
+        const applySection = document.createElement("div");
+        applySection.style.marginTop = "1.5rem";
+        applySection.style.padding = "1rem";
+        applySection.style.background = "#f0f9ff";
+        applySection.style.borderRadius = "8px";
+        applySection.style.border = "1px solid #bae6fd";
+
+        if (userOffer) {
+          const appliedTitle = document.createElement("h3");
+          appliedTitle.style.margin = "0 0 0.5rem 0";
+          appliedTitle.style.fontSize = "1.1rem";
+          appliedTitle.textContent = "You've Applied";
+          applySection.appendChild(appliedTitle);
+
+          const appliedStatus = document.createElement("div");
+          appliedStatus.className = "muted";
+          appliedStatus.style.marginBottom = "0.5rem";
+          const offerStatus = (userOffer.status || "PENDING").toUpperCase();
+          if (offerStatus === "ACCEPTED") {
+            appliedStatus.textContent = "✓ Your application was accepted!";
+            appliedStatus.style.color = "#059669";
+          } else if (offerStatus === "DECLINED") {
+            appliedStatus.textContent = "Your application was declined.";
+            appliedStatus.style.color = "#dc2626";
+          } else {
+            appliedStatus.textContent = "Your application is pending customer review.";
+          }
+          applySection.appendChild(appliedStatus);
+
+          if (userOffer.note) {
+            const note = document.createElement("div");
+            note.style.marginTop = "0.5rem";
+            note.style.padding = "0.75rem";
+            note.style.background = "#fff";
+            note.style.borderRadius = "6px";
+            note.style.fontSize = "0.9rem";
+            note.textContent = userOffer.note;
+            applySection.appendChild(note);
+          }
+          
+          // Add message button if accepted
+          if (offerStatus === "ACCEPTED" && job.customerId) {
+            const messageBtn = document.createElement("button");
+            messageBtn.className = "btn btn-primary";
+            messageBtn.style.marginTop = "0.75rem";
+            messageBtn.style.width = "100%";
+            messageBtn.textContent = "💬 Message Customer";
+            messageBtn.addEventListener("click", () => {
+              // Set active conversation and switch to messages view
+              activeConversationJobId = job.id;
+              overlay.remove();
+              document.body.style.overflow = "";
+              setView("messages");
+              // Small delay to ensure messages view is rendered
+              setTimeout(() => {
+                renderMessagesView();
+              }, 100);
+            });
+            applySection.appendChild(messageBtn);
+          }
+        } else {
+          const applyTitle = document.createElement("h3");
+          applyTitle.style.margin = "0 0 1rem 0";
+          applyTitle.style.fontSize = "1.1rem";
+          applyTitle.textContent = "Apply for this Job";
+          applySection.appendChild(applyTitle);
+
+          // Show job amount and allow negotiation
+          const jobAmountDisplay = document.createElement("div");
+          jobAmountDisplay.style.marginBottom = "0.75rem";
+          jobAmountDisplay.style.padding = "0.75rem";
+          jobAmountDisplay.style.background = "#fff";
+          jobAmountDisplay.style.borderRadius = "6px";
+          jobAmountDisplay.style.border = "1px solid var(--border)";
+          
+          const teamSize = (job.requirements?.teamSize || job.teamSize || 1);
+          const originalAmount = job.payType === "flat" 
+            ? Number(job.amount || 0)
+            : (Number(job.hourlyRate || 0) * Number(job.estHours || 0) * teamSize);
+          
+          let amountDescription = "";
+          if (job.payType === "hourly") {
+            const hourlyRate = Number(job.hourlyRate || 0);
+            const estHours = job.estHours || 0;
+            if (teamSize > 1) {
+              amountDescription = `$${hourlyRate.toFixed(2)}/hr per person (${teamSize} people) · max ${estHours}h`;
+            } else {
+              amountDescription = `$${hourlyRate.toFixed(2)}/hr · max ${estHours}h`;
+            }
+          } else {
+            amountDescription = `$${originalAmount.toFixed(2)}`;
+          }
+          
+          jobAmountDisplay.innerHTML = `
+            <div style="font-weight: 600; margin-bottom: 0.25rem;">Job Amount: ${amountDescription}</div>
+            <div class="muted" style="font-size: 0.85rem;">${job.payType === "hourly" ? "You can propose a different hourly rate if needed" : "You can propose a different amount if needed"}</div>
+          `;
+          applySection.appendChild(jobAmountDisplay);
+          
+          // Price negotiation field (optional)
+          const negotiateContainer = document.createElement("div");
+          negotiateContainer.style.marginBottom = "0.75rem";
+          
+          const negotiateCheckbox = document.createElement("input");
+          negotiateCheckbox.type = "checkbox";
+          negotiateCheckbox.id = "negotiatePrice";
+          negotiateCheckbox.style.marginRight = "0.5rem";
+          
+          const negotiateLabel = document.createElement("label");
+          negotiateLabel.htmlFor = "negotiatePrice";
+          negotiateLabel.textContent = "Propose different amount";
+          negotiateLabel.style.cursor = "pointer";
+          
+          negotiateContainer.appendChild(negotiateCheckbox);
+          negotiateContainer.appendChild(negotiateLabel);
+          applySection.appendChild(negotiateContainer);
+          
+          const proposedAmountField = document.createElement("input");
+          proposedAmountField.type = "number";
+          proposedAmountField.id = "proposedAmount";
+          // For hourly jobs, show hourly rate placeholder; for flat, show total amount
+          if (job.payType === "hourly") {
+            proposedAmountField.placeholder = "Your proposed hourly rate ($/hr)";
+            proposedAmountField.value = Number(job.hourlyRate || 0).toFixed(2);
+          } else {
+            proposedAmountField.placeholder = "Your proposed amount ($)";
+            proposedAmountField.value = originalAmount.toFixed(2);
+          }
+          proposedAmountField.style.width = "100%";
+          proposedAmountField.style.padding = "0.75rem";
+          proposedAmountField.style.border = "1px solid var(--border)";
+          proposedAmountField.style.borderRadius = "6px";
+          proposedAmountField.style.display = "none";
+          proposedAmountField.style.marginTop = "0.5rem";
+          proposedAmountField.min = "0";
+          proposedAmountField.step = "0.01";
+          
+          negotiateCheckbox.addEventListener("change", () => {
+            proposedAmountField.style.display = negotiateCheckbox.checked ? "block" : "none";
+          });
+          applySection.appendChild(proposedAmountField);
+
+          // Review Profile button (before note field)
+          const reviewProfileBtn = document.createElement("button");
+          reviewProfileBtn.className = "small-btn outline";
+          reviewProfileBtn.textContent = "👤 Review Customer Profile";
+          reviewProfileBtn.style.width = "100%";
+          reviewProfileBtn.style.marginBottom = "0.75rem";
+          reviewProfileBtn.addEventListener("click", () => {
+            openUserProfile(job.customerId);
+          });
+          applySection.appendChild(reviewProfileBtn);
+
+          const noteField = document.createElement("textarea");
+          noteField.id = "applyNoteField";
+          noteField.placeholder = "Tell the customer why you're a good fit, when you can do it, if you have a truck, etc.";
+          noteField.style.width = "100%";
+          noteField.style.minHeight = "100px";
+          noteField.style.padding = "0.75rem";
+          noteField.style.border = "1px solid var(--border)";
+          noteField.style.borderRadius = "6px";
+          noteField.style.fontFamily = "inherit";
+          noteField.style.fontSize = "0.9rem";
+          noteField.style.marginBottom = "0.75rem";
+          applySection.appendChild(noteField);
+
+          const applyBtn = document.createElement("button");
+          applyBtn.className = "btn btn-primary";
+          applyBtn.textContent = "Apply as Hustler";
+          applyBtn.style.width = "100%";
+          applyBtn.style.minHeight = "48px"; // Better touch target
+          applyBtn.style.fontSize = "1rem";
+          applyBtn.style.fontWeight = "600";
+          
+          // Handle both click and touch events for better mobile support
+          const handleApply = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // NOTE: We do NOT validate hustler's profile zip code
+            // Hustlers can apply to any job in Tennessee, regardless of their profile location
+            // The backend validates that the JOB is in Tennessee (via pickupZip)
+            
+            const note = noteField.value.trim();
+            if (!note) {
+              showToast("Please add a note explaining why you're a good fit.");
+              noteField.focus();
+              return;
+            }
+
+            // Get proposed amount if negotiating
+            let proposedAmount = null;
+            if (negotiateCheckbox.checked) {
+              proposedAmount = parseFloat(proposedAmountField.value);
+              if (isNaN(proposedAmount) || proposedAmount <= 0) {
+                showToast("Please enter a valid proposed amount.");
+                proposedAmountField.focus();
+                return;
+              }
+            }
+            
+            // Disable button and show loading state
+            applyBtn.disabled = true;
+            applyBtn.style.opacity = "0.6";
+            applyBtn.style.cursor = "not-allowed";
+            applyBtn.textContent = "Applying...";
+
+            try {
+              const token = localStorage.getItem("hustl_token");
+              if (!token) {
+                showToast("You must be logged in to apply for jobs.");
+                applyBtn.disabled = false;
+                applyBtn.style.opacity = "1";
+                applyBtn.style.cursor = "pointer";
+                applyBtn.textContent = "Apply as Hustler";
+                return;
+              }
+              
+              console.log("Creating offer for job:", job.id, "with note:", note, "proposedAmount:", proposedAmount);
+              
+              const response = await fetch(`/offers/${job.id}`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  note,
+                  proposedAmount: proposedAmount ? Number(proposedAmount) : null
+                })
+              });
+              
+              const result = await response.json();
+              
+              if (!response.ok) {
+                throw new Error(result.error || `Failed to apply: ${response.statusText}`);
+              }
+              
+              console.log("Offer created successfully:", result);
+              // Show appropriate message based on job type
+              if (job.payType === "hourly" && proposedAmount) {
+                showToast(`✓ Application submitted with proposed hourly rate of $${proposedAmount.toFixed(2)}/hr!`);
+              } else if (proposedAmount) {
+                showToast(`✓ Application submitted with proposed amount of $${proposedAmount.toFixed(2)}!`);
+              } else {
+                showToast("✓ Application submitted!");
+              }
+              
+              // Small delay before closing to show success
+              setTimeout(() => {
+                overlay.remove();
+                document.body.style.overflow = "";
+                renderJobs();
+              }, 500);
+            } catch (error) {
+              console.error("Error applying for job:", error);
+              let errorMsg = error.message || error.toString() || "Failed to apply. Please try again.";
+              
+              // TEMPORARILY DISABLED - Stripe requirement check bypassed for testing
+              // Check if it's a Stripe requirement error
+              /*
+              if (errorMsg.includes("Stripe") || errorMsg.includes("stripe") || error.requiresStripe) {
+                errorMsg = "You must connect your Stripe account before applying to jobs. Go to your Profile to set it up.";
+                showToast("⚠️ " + errorMsg, 5000);
+                // Close modal and redirect to profile after a moment
+                setTimeout(() => {
+                  overlay.remove();
+                  document.body.style.overflow = "";
+                  setView("profile");
+                  renderAll();
+                  // Scroll to Stripe section
+                  setTimeout(() => {
+                    const stripeSection = document.querySelector('[id*="stripe"], [class*="stripe"]');
+                    if (stripeSection) {
+                      stripeSection.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }
+                  }, 500);
+                }, 2000);
+                applyBtn.disabled = false;
+                applyBtn.style.opacity = "1";
+                applyBtn.style.cursor = "pointer";
+                applyBtn.textContent = "Apply as Hustler";
+                return;
+              }
+              */
+              
+              // TEMPORARY: Just show error without Stripe redirect
+              showToast("Error: " + errorMsg);
+              
+              applyBtn.disabled = false;
+              applyBtn.style.opacity = "1";
+              applyBtn.style.cursor = "pointer";
+              applyBtn.textContent = "Apply as Hustler";
+            }
+          };
+          
+          applyBtn.addEventListener("click", handleApply);
+          applyBtn.addEventListener("touchend", handleApply); // Mobile touch support
+          applySection.appendChild(applyBtn);
+        }
+
+        content.appendChild(applySection);
+      }
+
+      // Hustler View: Show Customer Profile if Accepted
+      if (user && user.id === job.hustlerId && userMode === "hustler" && job.status !== "OPEN") {
+        const customerSection = document.createElement("div");
+        customerSection.style.marginTop = "1.5rem";
+        customerSection.style.padding = "1rem";
+        customerSection.style.background = "#f9fafb";
+        customerSection.style.borderRadius = "8px";
+
+        const customerTitle = document.createElement("h3");
+        customerTitle.style.margin = "0 0 1rem 0";
+        customerTitle.style.fontSize = "1.1rem";
+        customerTitle.textContent = "Customer";
+        customerSection.appendChild(customerTitle);
+
+        // Fetch customer info
+        if (job.customer) {
+          const customerCard = document.createElement("div");
+          customerCard.style.padding = "0.75rem";
+          customerCard.style.background = "#fff";
+          customerCard.style.borderRadius = "6px";
+
+          const customerName = document.createElement("div");
+          customerName.style.fontWeight = "600";
+          customerName.textContent = job.customer.name || job.customer.username || "Customer";
+          customerCard.appendChild(customerName);
+
+          if (job.customer.email) {
+            const email = document.createElement("div");
+            email.className = "muted";
+            email.style.marginTop = "0.25rem";
+            email.textContent = job.customer.email;
+            customerCard.appendChild(email);
+          }
+
+          const viewProfileBtn = document.createElement("button");
+          viewProfileBtn.className = "small-btn";
+          viewProfileBtn.style.marginTop = "0.5rem";
+          viewProfileBtn.textContent = "View Profile";
+          viewProfileBtn.addEventListener("click", () => {
+            // TODO: Open customer profile modal
+            showToast("Profile view coming soon!");
+          });
+          customerCard.appendChild(viewProfileBtn);
+
+          const messageBtn = document.createElement("button");
+          messageBtn.className = "btn btn-primary";
+          messageBtn.style.marginTop = "0.5rem";
+          messageBtn.style.width = "100%";
+          messageBtn.textContent = "💬 Message Customer";
+          messageBtn.addEventListener("click", () => {
+            // Set active conversation and switch to messages view
+            activeConversationJobId = job.id;
+            overlay.remove();
+            document.body.style.overflow = "";
+            setView("messages");
+            // Small delay to ensure messages view is rendered
+            setTimeout(() => {
+              renderMessagesView();
+            }, 100);
+          });
+          customerCard.appendChild(messageBtn);
+
+          customerSection.appendChild(customerCard);
+        }
+
+        content.appendChild(customerSection);
+      }
+
+      // Action Buttons Section
+      const actionsSection = document.createElement("div");
+      actionsSection.style.marginTop = "1.5rem";
+      actionsSection.style.paddingTop = "1.5rem";
+      actionsSection.style.borderTop = "1px solid var(--border)";
+
+      // Customer Actions: Payment, Delete/Cancel job
+      if (user && user.id === job.customerId && userMode === "customer") {
+        // Show accepted hustler info if one is assigned
+        if (job.hustlerId && job.hustler) {
+          const hustlerInfo = document.createElement("div");
+          hustlerInfo.style.marginBottom = "1rem";
+          hustlerInfo.style.padding = "1rem";
+          hustlerInfo.style.background = "#dcfce7";
+          hustlerInfo.style.borderRadius = "8px";
+          hustlerInfo.style.border = "1px solid #86efac";
+          
+          const statusUpper = (job.status || "").toUpperCase();
+          let statusText = "";
+          // Simplified status messages
+          if (statusUpper === "ASSIGNED") {
+            statusText = "Job is assigned. Share the start code with your hustler to begin.";
+          } else if (statusUpper === "PAID") {
+            statusText = "Job is in progress. The hustler will mark it complete when done.";
+          } else if (statusUpper === "COMPLETED_BY_HUSTLER" || statusUpper === "AWAITING_CUSTOMER_CONFIRM") {
+            statusText = "Hustler marked job as complete. Please confirm completion.";
+          } else {
+            statusText = "Job status: " + (statusUpper === "OPEN" ? "Open" : statusUpper === "CANCELLED" ? "Cancelled" : statusUpper);
+          }
+          
+          // Check for hustler status update
+          // requirements already declared above at line 4066, reuse it
+          const hustlerStatus = requirements.hustlerStatus;
+          const statusUpdatedAt = requirements.hustlerStatusUpdatedAt;
+          
+          let statusUpdateDisplay = "";
+          if (hustlerStatus) {
+            const statusMessages = {
+              on_the_way: "🚗 On the way",
+              starting: "🏁 Starting the job",
+              almost_done: "⚡ Almost done",
+              just_finished: "✅ Just finished",
+            };
+            const statusMsg = statusMessages[hustlerStatus] || hustlerStatus;
+            const updatedTime = statusUpdatedAt ? timeAgo(new Date(statusUpdatedAt).getTime()) : "recently";
+            statusUpdateDisplay = `
+              <div style="margin-top: 0.5rem; padding: 0.5rem; background: #fff; border-radius: 4px; border: 1px solid #86efac;">
+                <div style="font-weight: 600; font-size: 0.85rem; color: #059669; margin-bottom: 0.25rem;">📱 Hustler Status:</div>
+                <div style="font-size: 0.9rem; color: #047857; font-weight: 600;">${statusMsg}</div>
+                <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Updated ${updatedTime}</div>
+              </div>
+            `;
+          }
+          
+          // Show start code for customer (if job is ASSIGNED and not started yet)
+          let startCodeDisplay = "";
+          const startCode = requirements.startCode;
+          // startCodeUsed already declared above at line 4067, reuse it
+          
+          if (statusUpper === "ASSIGNED" && startCode && !startCodeUsed) {
+            startCodeDisplay = `
+              <div style="margin-top: 0.75rem; padding: 0.75rem; background: #dbeafe; border-radius: 6px; border: 2px solid #3b82f6;">
+                <div style="font-weight: 600; font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem;">🔐 Start Code (Give to Hustler)</div>
+                <div style="font-size: 1.5rem; font-weight: 700; letter-spacing: 0.2em; color: #1e40af; text-align: center; font-family: 'Courier New', monospace; margin: 0.5rem 0;">
+                  ${startCode}
+                </div>
+                <div style="font-size: 0.75rem; color: #dc2626; text-align: center; margin-top: 0.5rem; padding: 0.5rem; background: #fee2e2; border-radius: 4px; font-weight: 600;">
+                  ⚠️ Important: Only give this code to the hustler when they arrive and the job is starting. Do not share it beforehand.
+                </div>
+                <div style="font-size: 0.75rem; color: #1e3a8a; text-align: center; margin-top: 0.25rem;">
+                  Share this code with your hustler to officially start the job
+                </div>
+                <button id="regenerateStartCode_${job.id}" class="btn" style="width: 100%; margin-top: 0.5rem; background: #fff; color: #3b82f6; border: 1px solid #3b82f6; font-size: 0.8rem;">
+                  🔄 Regenerate Code
+                </button>
+              </div>
+            `;
+          }
+          
+          hustlerInfo.innerHTML = `
+            <div style="font-weight: 600; margin-bottom: 0.5rem; color: #059669;">✓ Hustler Assigned</div>
+            <div style="font-size: 0.9rem; margin-bottom: 0.25rem;">
+              <strong>${job.hustler.name || job.hustler.username || "Hustler"}</strong>
+              ${job.hustler.ratingAvg > 0 ? ` · ⭐ ${job.hustler.ratingAvg.toFixed(1)} (${job.hustler.ratingCount})` : ''}
+            </div>
+            <div style="font-size: 0.85rem; color: #047857;">
+              ${statusText}
+            </div>
+            ${statusUpdateDisplay}
+            ${startCodeDisplay}
+          `;
+          
+          // Add message button for customer to message hustler
+          const messageBtnRow = document.createElement("div");
+          messageBtnRow.style.display = "flex";
+          messageBtnRow.style.gap = "0.5rem";
+          messageBtnRow.style.marginTop = "0.75rem";
+          
+          const messageBtn = document.createElement("button");
+          messageBtn.className = "btn btn-primary";
+          messageBtn.style.flex = "1";
+          messageBtn.textContent = "💬 Message Hustler";
+          messageBtn.addEventListener("click", () => {
+            // Set active conversation and switch to messages view
+            activeConversationJobId = job.id;
+            overlay.remove();
+            document.body.style.overflow = "";
+            setView("messages");
+            // Small delay to ensure messages view is rendered
+            setTimeout(() => {
+              renderMessagesView();
+            }, 100);
+          });
+          messageBtnRow.appendChild(messageBtn);
+          
+          // Add view profile button
+          const viewProfileBtn = document.createElement("button");
+          viewProfileBtn.className = "btn";
+          viewProfileBtn.style.background = "#fff";
+          viewProfileBtn.style.color = "#059669";
+          viewProfileBtn.style.border = "1px solid #86efac";
+          viewProfileBtn.style.flex = "1";
+          viewProfileBtn.textContent = "View Profile & Reviews";
+          viewProfileBtn.addEventListener("click", () => {
+            overlay.remove();
+            document.body.style.overflow = "";
+            openUserProfile(job.hustlerId);
+          });
+          messageBtnRow.appendChild(viewProfileBtn);
+          
+          hustlerInfo.appendChild(messageBtnRow);
+          actionsSection.appendChild(hustlerInfo);
+          
+          // Add regenerate start code button handler
+          if (startCodeDisplay) {
+            const regenerateBtn = document.getElementById(`regenerateStartCode_${job.id}`);
+            if (regenerateBtn) {
+              regenerateBtn.addEventListener("click", async () => {
+                try {
+                  const result = await window.hustlAPI.jobs.getStartCode(job.id, true);
+                  showToast("✓ Start code regenerated");
+                  overlay.remove();
+                  document.body.style.overflow = "";
+                  openJobDetails(job.id);
+                } catch (error) {
+                  showToast("Error: " + (error.message || "Failed to regenerate code"));
+                }
+              });
+            }
+          }
+        }
+        
+        // Check if payment is needed (job is assigned but payment not completed)
+        const jobStatusCheck = (job.status || "").toUpperCase();
+        if (job.hustlerId && (jobStatusCheck === "ASSIGNED" || jobStatusCheck === "OPEN")) {
+          // Check payment status
+          let paymentNeeded = false;
+          let paymentStatus = null;
+          try {
+            const payment = await window.hustlAPI.payments.getByJobId(job.id);
+            paymentStatus = payment?.status;
+            if (!payment || payment.status === "PREAUTHORIZED") {
+              paymentNeeded = true;
+            }
+          } catch (error) {
+            // Payment might not exist yet, so payment is needed
+            paymentNeeded = true;
+          }
+          
+          if (paymentNeeded) {
+            const payBtn = document.createElement("button");
+            payBtn.className = "btn btn-primary";
+            payBtn.textContent = "Complete Payment";
+            payBtn.style.marginBottom = "0.5rem";
+            payBtn.addEventListener("click", async () => {
+              try {
+                // For now, show message - payment flow will be implemented
+                showToast("Payment processing will be available soon. The job is assigned and ready to proceed.");
+              } catch (error) {
+                showToast("Error: " + (error.message || "Cannot process payment"));
+              }
+            });
+            actionsSection.appendChild(payBtn);
+            
+            const paymentNote = document.createElement("div");
+            paymentNote.className = "muted";
+            paymentNote.style.fontSize = "0.85rem";
+            paymentNote.style.marginBottom = "0.5rem";
+            paymentNote.textContent = "Complete payment to finalize the job assignment.";
+            actionsSection.appendChild(paymentNote);
+          }
+        }
+        
+        // Customer confirmation when hustler marked job complete
+        const customerStatusCheck = (job.status || "").toUpperCase();
+        if ((customerStatusCheck === "COMPLETED_BY_HUSTLER" || customerStatusCheck === "AWAITING_CUSTOMER_CONFIRM") && user && user.id === job.customerId) {
+          const confirmBanner = document.createElement("div");
+          confirmBanner.style.padding = "1rem";
+          confirmBanner.style.marginBottom = "1rem";
+          confirmBanner.style.background = "#fef3c7";
+          confirmBanner.style.borderRadius = "8px";
+          confirmBanner.style.border = "2px solid #fbbf24";
+          
+          const bannerTitle = document.createElement("div");
+          bannerTitle.style.fontWeight = "600";
+          bannerTitle.style.fontSize = "1rem";
+          bannerTitle.style.marginBottom = "0.5rem";
+          bannerTitle.textContent = "✓ Hustler marked job as complete!";
+          confirmBanner.appendChild(bannerTitle);
+          
+          const bannerText = document.createElement("div");
+          bannerText.style.fontSize = "0.9rem";
+          bannerText.style.marginBottom = "0.75rem";
+          bannerText.innerHTML = `
+            <div style="margin-bottom: 0.5rem;">Please confirm that the job was completed to your satisfaction.</div>
+            <div style="font-weight: 600; color: #059669;">Once you confirm, payment will be immediately released to the hustler.</div>
+          `;
+          confirmBanner.appendChild(bannerText);
+          
+          // Verification code input
+          const verificationCode = job.requirements?.verificationCode;
+          if (verificationCode) {
+            const codeSection = document.createElement("div");
+            codeSection.style.marginTop = "0.75rem";
+            codeSection.style.marginBottom = "0.75rem";
+            codeSection.style.padding = "0.75rem";
+            codeSection.style.background = "#dbeafe";
+            codeSection.style.borderRadius = "6px";
+            codeSection.style.border = "1px solid #93c5fd";
+            
+            const codeLabel = document.createElement("div");
+            codeLabel.style.fontSize = "0.85rem";
+            codeLabel.style.fontWeight = "600";
+            codeLabel.style.marginBottom = "0.5rem";
+            codeLabel.textContent = "🔐 Enter Verification Code:";
+            codeSection.appendChild(codeLabel);
+            
+            const codeInput = document.createElement("input");
+            codeInput.type = "text";
+            codeInput.placeholder = "Enter 6-digit code from hustler";
+            codeInput.maxLength = 6;
+            codeInput.style.width = "100%";
+            codeInput.style.padding = "0.75rem";
+            codeInput.style.fontSize = "1.2rem";
+            codeInput.style.textAlign = "center";
+            codeInput.style.letterSpacing = "0.2em";
+            codeInput.style.border = "2px solid #93c5fd";
+            codeInput.style.borderRadius = "6px";
+            codeInput.style.fontWeight = "600";
+            codeInput.addEventListener("input", (e) => {
+              e.target.value = e.target.value.replace(/\D/g, ""); // Only numbers
+            });
+            codeSection.appendChild(codeInput);
+            
+            const codeHint = document.createElement("div");
+            codeHint.style.fontSize = "0.8rem";
+            codeHint.style.marginTop = "0.5rem";
+            codeHint.style.color = "#64748b";
+            codeHint.textContent = "The hustler should have shared this code with you. It confirms you're both on the same page.";
+            codeSection.appendChild(codeHint);
+            
+            confirmBanner.appendChild(codeSection);
+            
+            // Store code input for use in confirm button
+            confirmBanner.codeInput = codeInput;
+          }
+          
+          // Show completion photos only if there's an issue (optional)
+          if (job.requirements && job.requirements.completionPhotos && job.requirements.completionPhotos.length > 0) {
+            const photosDiv = document.createElement("div");
+            photosDiv.style.marginTop = "0.75rem";
+            photosDiv.style.marginBottom = "0.75rem";
+            photosDiv.style.padding = "0.75rem";
+            photosDiv.style.background = "#fff";
+            photosDiv.style.borderRadius = "6px";
+            photosDiv.style.border = "1px solid #e5e7eb";
+            
+            const photosLabel = document.createElement("div");
+            photosLabel.style.fontSize = "0.85rem";
+            photosLabel.style.fontWeight = "600";
+            photosLabel.style.marginBottom = "0.5rem";
+            photosLabel.textContent = "📸 Photos from hustler (optional):";
+            photosDiv.appendChild(photosLabel);
+            
+            const photosGrid = document.createElement("div");
+            photosGrid.style.display = "grid";
+            photosGrid.style.gridTemplateColumns = "repeat(auto-fill, minmax(100px, 1fr))";
+            photosGrid.style.gap = "0.5rem";
+            
+            job.requirements.completionPhotos.forEach(photoUrl => {
+              const img = document.createElement("img");
+              img.src = photoUrl;
+              img.style.width = "100%";
+              img.style.height = "100px";
+              img.style.objectFit = "cover";
+              img.style.borderRadius = "4px";
+              img.style.cursor = "pointer";
+              img.addEventListener("click", () => {
+                window.open(photoUrl, "_blank");
+              });
+              photosGrid.appendChild(img);
+            });
+            
+            photosDiv.appendChild(photosGrid);
+            confirmBanner.appendChild(photosDiv);
+          }
+          
+          const buttonRow = document.createElement("div");
+          buttonRow.style.display = "flex";
+          buttonRow.style.gap = "0.5rem";
+          
+          const confirmBtn = document.createElement("button");
+          confirmBtn.className = "btn btn-primary";
+          confirmBtn.style.flex = "1";
+          confirmBtn.textContent = "✓ Confirm & Release Payment";
+          confirmBtn.addEventListener("click", async () => {
+            const codeInput = confirmBanner.codeInput;
+            let enteredCode = codeInput ? codeInput.value.trim() : null;
+            
+            // Remove any non-digit characters
+            if (enteredCode) {
+              enteredCode = enteredCode.replace(/\D/g, '');
+            }
+            
+            if (verificationCode && (!enteredCode || enteredCode.length !== 6)) {
+              showToast("Please enter the 6-digit verification code from the hustler.");
+              if (codeInput) codeInput.focus();
+              return;
+            }
+            
+            if (!confirm("Confirm that the job was completed successfully? Payment will be released to the hustler.")) return;
+            
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = "Confirming...";
+            
+            try {
+              const result = await window.hustlAPI.jobs.confirmComplete(job.id, enteredCode);
+              showToast("✓ Job confirmed! Payment has been released to the hustler.");
+              
+              // Close the job details modal first
+              overlay.remove();
+              document.body.style.overflow = "";
+              
+              // Refresh jobs list and profile to show updated status (COMPLETED with purple badge)
+              renderJobs();
+              renderProfile();
+              
+              // Job is now COMPLETED - both parties can review each other
+              // Show review modal for customer to review hustler
+              if (job.hustlerId) {
+                setTimeout(() => {
+                  showReviewModal(job.id, job.hustlerId, job.hustler?.name || "Hustler");
+                }, 300);
+              }
+              
+              // Note: Hustler can also review customer - they'll see the option when they view the job
+            } catch (error) {
+              showToast("Error: " + (error.message || "Failed to confirm completion"));
+              confirmBtn.disabled = false;
+              confirmBtn.textContent = "✓ Confirm & Release Payment";
+            }
+          });
+          buttonRow.appendChild(confirmBtn);
+          
+          // Report issue button
+          const reportBtn = document.createElement("button");
+          reportBtn.className = "btn";
+          reportBtn.style.background = "#fee2e2";
+          reportBtn.style.color = "#991b1b";
+          reportBtn.style.border = "1px solid #fecaca";
+          reportBtn.textContent = "⚠ Report Issue";
+          reportBtn.addEventListener("click", () => {
+            const reason = prompt("What's the issue? (e.g., job not done, poor quality, wrong work)");
+            if (reason) {
+              showToast("Issue reported. Our team will review this. Payment is on hold until resolved.");
+              // In production, this would call an API endpoint to create a dispute
+            }
+          });
+          buttonRow.appendChild(reportBtn);
+          
+          confirmBanner.appendChild(buttonRow);
+          actionsSection.appendChild(confirmBanner);
+        }
+        
+        
+        const canDelete = job.status === "OPEN" && !job.hustlerId;
+        
+        if (canDelete) {
+>>>>>>> parent of ee7c500 (Add hustler acceptance notifications, optimize mobile messaging, and improve performance)
           const deleteBtn = document.createElement("button");
           deleteBtn.className = "small-btn outline";
           deleteBtn.style.marginLeft = "0.5rem";
@@ -2618,8 +4150,93 @@ async function renderJobs(reset = false) {
    
     /* ---------- Messages view ---------- */
 
+<<<<<<< HEAD
     function renderMessagesView() {
       const user = getCurrentUser();
+=======
+    // Track last viewed timestamp per thread to determine unread messages
+    function getLastViewedTimestamp(threadId) {
+      const key = `lastViewed_${threadId}`;
+      const timestamp = localStorage.getItem(key);
+      return timestamp ? parseInt(timestamp, 10) : 0;
+    }
+
+    function setLastViewedTimestamp(threadId) {
+      const key = `lastViewed_${threadId}`;
+      localStorage.setItem(key, Date.now().toString());
+    }
+
+    // Count conversations with unread messages (not total message count)
+    async function countUnreadMessages() {
+      try {
+        const user = await window.hustlAPI.auth.getCurrentUser();
+        if (!user) {
+          updateMessageBadge(0);
+          return;
+        }
+
+        const threads = await window.hustlAPI.messages.getThreads();
+        let conversationsWithUnread = 0;
+
+        for (const thread of threads) {
+          const lastViewed = getLastViewedTimestamp(thread.id);
+          const messages = await window.hustlAPI.messages.getMessages(thread.id);
+          
+          // Check if this conversation has any unread messages
+          const hasUnread = messages.some(m => {
+            const isFromMe = m.senderId === user.id || (m.sender && m.sender.id === user.id);
+            if (isFromMe) return false; // Don't count own messages
+            
+            const messageTime = m.createdAt ? new Date(m.createdAt).getTime() : 0;
+            return messageTime > lastViewed;
+          });
+
+          if (hasUnread) {
+            conversationsWithUnread++;
+          }
+        }
+
+        updateMessageBadge(conversationsWithUnread);
+      } catch (error) {
+        console.error("Error counting unread messages:", error);
+        updateMessageBadge(0);
+      }
+    }
+    
+    // Get unread count for a specific thread
+    async function getUnreadCountForThread(threadId, userId) {
+      try {
+        const lastViewed = getLastViewedTimestamp(threadId);
+        const messages = await window.hustlAPI.messages.getMessages(threadId);
+        
+        return messages.filter(m => {
+          const isFromMe = m.senderId === userId || (m.sender && m.sender.id === userId);
+          if (isFromMe) return false;
+          const messageTime = m.createdAt ? new Date(m.createdAt).getTime() : 0;
+          return messageTime > lastViewed;
+        }).length;
+      } catch (error) {
+        console.error("Error getting unread count for thread:", error);
+        return 0;
+      }
+    }
+
+    // Update the badge on Messages tab
+    function updateMessageBadge(count) {
+      const desktopTab = document.querySelector('.nav-tab[data-view="messages"]');
+      const mobileTab = document.querySelector('.mobile-menu-item[data-view="messages"]');
+      
+      if (desktopTab) {
+        desktopTab.setAttribute('data-badge-count', count);
+      }
+      if (mobileTab) {
+        mobileTab.setAttribute('data-badge-count', count);
+      }
+    }
+
+    async function renderMessagesView() {
+      const user = await window.hustlAPI.auth.getCurrentUser();
+>>>>>>> parent of ee7c500 (Add hustler acceptance notifications, optimize mobile messaging, and improve performance)
       const convList = document.getElementById("conversationList");
       const convTitle = document.getElementById("conversationTitle");
       const convSummary = document.getElementById("conversationJobSummary");
@@ -2637,6 +4254,7 @@ async function renderJobs(reset = false) {
         return;
       }
 
+<<<<<<< HEAD
       // Jobs that involve this user in ANY way
       const myJobs = state.jobs.filter(
         (j) =>
@@ -2644,6 +4262,117 @@ async function renderJobs(reset = false) {
           j.acceptedHustlerId === user.id ||
           (j.applicants || []).some((a) => a.userId === user.id)
       );
+=======
+      // Load jobs from API
+      // For messages, we need all jobs, so we'll fetch multiple pages if needed
+      let allJobs = [];
+      try {
+        // Fetch first page with a larger limit to get more jobs at once
+        let response = await window.hustlAPI.jobs.list({ page: 1, limit: 100 });
+        
+        // Handle paginated response
+        if (response && typeof response === 'object' && 'jobs' in response) {
+          allJobs = response.jobs || [];
+          
+          // If there are more pages, fetch them (up to a reasonable limit)
+          if (response.pagination && response.pagination.hasMore) {
+            let currentPage = 2;
+            const maxPages = 10; // Limit to prevent infinite loops
+            
+            while (currentPage <= maxPages) {
+              try {
+                const nextResponse = await window.hustlAPI.jobs.list({ page: currentPage, limit: 100 });
+                if (nextResponse && typeof nextResponse === 'object' && 'jobs' in nextResponse) {
+                  allJobs = allJobs.concat(nextResponse.jobs || []);
+                  if (!nextResponse.pagination || !nextResponse.pagination.hasMore) {
+                    break;
+                  }
+                } else {
+                  break;
+                }
+              } catch (pageError) {
+                console.error(`Error loading page ${currentPage} for messages:`, pageError);
+                break;
+              }
+              currentPage++;
+            }
+          }
+        } else if (Array.isArray(response)) {
+          // Fallback: if API returns array directly (old format)
+          allJobs = response;
+        }
+        
+        // Ensure allJobs is always an array
+        if (!Array.isArray(allJobs)) {
+          console.warn("jobs.list() did not return an array, defaulting to empty array");
+          allJobs = [];
+        }
+      } catch (error) {
+        console.error("Error loading jobs for messages:", error);
+        allJobs = []; // Ensure it's always an array
+      }
+
+      // Get threads from API
+      let threads = [];
+      try {
+        threads = await window.hustlAPI.messages.getThreads();
+      } catch (error) {
+        console.error("Error loading threads:", error);
+      }
+
+      // Get offers to find jobs where hustler applied (even if not accepted yet)
+      let allOffers = [];
+      try {
+        // For each job, try to get offers
+        for (const job of allJobs) {
+          if (job.customerId === user.id || job.hustlerId === user.id) {
+            try {
+              const offers = await window.hustlAPI.offers.list(job.id);
+              allOffers.push(...offers.map(o => ({ ...o, jobId: job.id })));
+            } catch (error) {
+              // Ignore errors for jobs we can't access offers for
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error loading offers for messages:", error);
+      }
+
+      // Filter archived and deleted conversations based on view mode
+      const archived = JSON.parse(localStorage.getItem("archivedConversations") || "[]");
+      const deleted = JSON.parse(localStorage.getItem("deletedConversations") || "[]");
+      
+      // Jobs that have threads OR have offers (hustler applied) OR are assigned
+      // This includes jobs where hustler applied but not yet accepted, and assigned jobs
+      const jobsWithThreads = allJobs.filter((j) => {
+        // Show/hide based on view mode
+        if (showArchivedConversations) {
+          // Only show archived
+          return archived.includes(j.id) && !deleted.includes(j.id);
+        } else if (showDeletedConversations) {
+          // Only show deleted
+          return deleted.includes(j.id);
+        } else {
+          // Normal view - hide archived and deleted
+          if (archived.includes(j.id) || deleted.includes(j.id)) {
+            return false;
+          }
+        }
+        // Jobs where user is customer and hustler applied (has offers) OR is assigned
+        if (j.customerId === user.id) {
+          const hasOffers = allOffers.some(o => o.jobId === j.id);
+          const isAssigned = j.hustlerId && (j.status === "ASSIGNED" || j.status === "PAID" || j.status === "COMPLETED_BY_HUSTLER" || j.status === "AWAITING_CUSTOMER_CONFIRM");
+          return hasOffers || isAssigned; // Show if has offers OR is assigned/paid
+        }
+        // Jobs where user is hustler and they applied or were accepted
+        if (j.hustlerId === user.id) {
+          return true; // Show all assigned jobs for hustler
+        }
+        // Check if user has an offer for this job (hustler applied)
+        const userOffer = allOffers.find(o => o.jobId === j.id && o.hustlerId === user.id);
+        return !!userOffer; // Show if user applied
+      });
+>>>>>>> parent of ee7c500 (Add hustler acceptance notifications, optimize mobile messaging, and improve performance)
 
       convList.innerHTML = "";
 
@@ -2708,6 +4437,84 @@ async function renderJobs(reset = false) {
             : "Job chat · ") + timeAgo(job.createdAt);
         item.appendChild(meta);
 
+<<<<<<< HEAD
+=======
+        // Archive/Delete buttons
+        const actionsRow = document.createElement("div");
+        actionsRow.style.display = "flex";
+        actionsRow.style.gap = "0.5rem";
+        actionsRow.style.marginTop = "0.5rem";
+        actionsRow.style.justifyContent = "flex-end";
+        
+        // Archive/Unarchive button
+        const archived = JSON.parse(localStorage.getItem("archivedConversations") || "[]");
+        const isArchived = archived.includes(job.id);
+        const archiveBtn = document.createElement("button");
+        archiveBtn.className = "small-btn";
+        archiveBtn.style.background = isArchived ? "#dbeafe" : "#f3f4f6";
+        archiveBtn.style.color = isArchived ? "#1e40af" : "#6b7280";
+        archiveBtn.style.padding = "0.25rem 0.5rem";
+        archiveBtn.style.fontSize = "0.75rem";
+        archiveBtn.textContent = isArchived ? "📦 Unarchive" : "📦 Archive";
+        archiveBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const archived = JSON.parse(localStorage.getItem("archivedConversations") || "[]");
+          if (isArchived) {
+            const index = archived.indexOf(job.id);
+            if (index > -1) {
+              archived.splice(index, 1);
+              localStorage.setItem("archivedConversations", JSON.stringify(archived));
+              showToast("Conversation unarchived");
+              renderMessagesView();
+            }
+          } else {
+            if (!archived.includes(job.id)) {
+              archived.push(job.id);
+              localStorage.setItem("archivedConversations", JSON.stringify(archived));
+              showToast("Conversation archived");
+              renderMessagesView();
+            }
+          }
+        });
+        actionsRow.appendChild(archiveBtn);
+        
+        // Delete/Restore button (available for all jobs)
+        const deleted = JSON.parse(localStorage.getItem("deletedConversations") || "[]");
+        const isDeleted = deleted.includes(job.id);
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "small-btn";
+        deleteBtn.style.background = isDeleted ? "#fecaca" : "#fee2e2";
+        deleteBtn.style.color = "#991b1b";
+        deleteBtn.style.padding = "0.25rem 0.5rem";
+        deleteBtn.style.fontSize = "0.75rem";
+        deleteBtn.textContent = isDeleted ? "↩ Restore" : "🗑 Delete";
+        deleteBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const deleted = JSON.parse(localStorage.getItem("deletedConversations") || "[]");
+          if (isDeleted) {
+            const index = deleted.indexOf(job.id);
+            if (index > -1) {
+              deleted.splice(index, 1);
+              localStorage.setItem("deletedConversations", JSON.stringify(deleted));
+              showToast("Conversation restored");
+              renderMessagesView();
+            }
+          } else {
+            if (confirm("Delete this conversation? This will hide it from your messages list. You can restore it later.")) {
+              if (!deleted.includes(job.id)) {
+                deleted.push(job.id);
+                localStorage.setItem("deletedConversations", JSON.stringify(deleted));
+                showToast("Conversation deleted");
+                renderMessagesView();
+              }
+            }
+          }
+        });
+        actionsRow.appendChild(deleteBtn);
+        
+        item.appendChild(actionsRow);
+
+>>>>>>> parent of ee7c500 (Add hustler acceptance notifications, optimize mobile messaging, and improve performance)
         item.addEventListener("click", () => {
           activeConversationJobId = job.id;
           // Re-render list (to update highlight) + right-hand chat
@@ -2737,6 +4544,7 @@ async function renderJobs(reset = false) {
       }
 
       convTitle.textContent = job.title;
+<<<<<<< HEAD
       convSummary.textContent =
         (job.category === "moving"
           ? "🚚 moving / hauling · "
@@ -2753,6 +4561,37 @@ async function renderJobs(reset = false) {
             "/hr · max " +
             (job.maxHours || 0) +
             "h");
+=======
+      
+      // Build summary
+      const categoryEmoji = {
+        moving: "🚚",
+        yard: "🌿",
+        cleaning: "🧹",
+        furniture: "🛠",
+      };
+      const catText = categoryEmoji[job.category] || "⭐";
+      const payText = job.payType === "flat" 
+        ? `$${(Number(job.amount) || 0).toFixed(2)} flat`
+        : `$${(Number(job.hourlyRate) || 0).toFixed(2)}/hr · max ${job.estHours || 0}h`;
+      convSummary.textContent = `${catText} ${job.category || "other"} · ${payText}`;
+
+      // Fetch messages from thread
+      convMessages.innerHTML = "<div class='muted'>Loading messages...</div>";
+      
+      let messages = [];
+      try {
+        // Find thread for this job
+        const threads = await window.hustlAPI.messages.getThreads();
+        const thread = threads.find(t => t.jobId === activeConversationJobId);
+        
+        if (thread) {
+          messages = await window.hustlAPI.messages.getMessages(thread.id);
+        }
+      } catch (error) {
+        console.error("Error loading messages:", error);
+      }
+>>>>>>> parent of ee7c500 (Add hustler acceptance notifications, optimize mobile messaging, and improve performance)
 
       convMessages.innerHTML = "";
       job.chatMessages = job.chatMessages || [];
@@ -2778,9 +4617,62 @@ async function renderJobs(reset = false) {
         }
         meta.append(" · " + timeAgo(m.createdAt));
 
+<<<<<<< HEAD
         convMessages.appendChild(meta);
       });
       convMessages.scrollTop = convMessages.scrollHeight;
+=======
+      if (messages.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "muted";
+        empty.style.padding = "1rem";
+        empty.textContent = "No messages yet. Start the conversation!";
+        convMessages.appendChild(empty);
+      } else {
+        messages.forEach((m) => {
+          const bubble = document.createElement("div");
+          const isMe = m.senderId === user.id || (m.sender && m.sender.id === user.id);
+          bubble.className = "chat-msg " + (isMe ? "me" : "them");
+          bubble.textContent = m.body || m.text || "";
+          convMessages.appendChild(bubble);
+          
+          const meta = document.createElement("div");
+          meta.className = "chat-meta";
+          
+          // Get sender name from message sender or job data
+          let senderName = "Unknown";
+          if (m.sender) {
+            senderName = m.sender.name || m.sender.username || "User";
+          } else if (isMe) {
+            senderName = user.name || user.username || "You";
+          } else {
+            senderName = job.customerId === user.id 
+              ? (job.hustler?.name || job.hustler?.username || "Hustler")
+              : (job.customer?.name || job.customer?.username || "Customer");
+          }
+          
+          meta.textContent = `${senderName} · ${timeAgo(m.createdAt ? new Date(m.createdAt).getTime() : Date.now())}`;
+          convMessages.appendChild(meta);
+        });
+      }
+      
+      convMessages.scrollTop = convMessages.scrollHeight;
+      
+      // Mark this thread as viewed (update last viewed timestamp)
+      if (activeConversationJobId) {
+        try {
+          const threads = await window.hustlAPI.messages.getThreads();
+          const thread = threads.find(t => t.jobId === activeConversationJobId);
+          if (thread) {
+            setLastViewedTimestamp(thread.id);
+            // Update unread count after marking as read
+            countUnreadMessages();
+          }
+        } catch (error) {
+          console.error("Error marking thread as viewed:", error);
+        }
+      }
+>>>>>>> parent of ee7c500 (Add hustler acceptance notifications, optimize mobile messaging, and improve performance)
     }
 
     function initConversationInput() {
@@ -2796,6 +4688,7 @@ async function renderJobs(reset = false) {
         if (!job) return;
         const text = input.value.trim();
         if (!text) return;
+<<<<<<< HEAD
         job.chatMessages = job.chatMessages || [];
         job.chatMessages.push({
           id: generateId("m"),
@@ -2807,6 +4700,38 @@ async function renderJobs(reset = false) {
         input.value = "";
         saveState();
         renderConversation();
+=======
+        
+        try {
+          // Find thread for this job
+          const threads = await window.hustlAPI.messages.getThreads();
+          const thread = threads.find(t => t.jobId === activeConversationJobId);
+          
+          if (!thread) {
+            showToast("Thread not found. The job may not be assigned yet.");
+            return;
+          }
+          
+          // Send message
+          await window.hustlAPI.messages.sendMessage(thread.id, text);
+          newInput.value = "";
+          
+          // Refresh messages
+          renderConversation();
+          
+          // Update unread count (in case recipient views it)
+          countUnreadMessages();
+        } catch (error) {
+          showToast("Error sending message: " + (error.message || "Unknown error"));
+        }
+      });
+      
+      // Also send on Enter key
+      newInput.addEventListener("keypress", async (e) => {
+        if (e.key === "Enter") {
+          newSendBtn.click();
+        }
+>>>>>>> parent of ee7c500 (Add hustler acceptance notifications, optimize mobile messaging, and improve performance)
       });
     }
 
@@ -3539,6 +5464,35 @@ meta.textContent =
       } else if (activeView === "owner") {
         renderOwnerView();
       }
+<<<<<<< HEAD
+=======
+      
+      // Always update unread message count (works even when not on messages view)
+      countUnreadMessages();
+    }
+
+    /* ---------- Mode Toggle ---------- */
+    
+    function initModeToggle() {
+      const customerBtn = document.getElementById("modeCustomerBtn");
+      const hustlerBtn = document.getElementById("modeHustlerBtn");
+      
+      if (customerBtn) {
+        customerBtn.addEventListener("click", () => {
+          userMode = "customer";
+          localStorage.setItem("hustl_userMode", userMode);
+          renderAll();
+        });
+      }
+      
+      if (hustlerBtn) {
+        hustlerBtn.addEventListener("click", () => {
+          userMode = "hustler";
+          localStorage.setItem("hustl_userMode", userMode);
+          renderAll();
+        });
+      }
+>>>>>>> parent of ee7c500 (Add hustler acceptance notifications, optimize mobile messaging, and improve performance)
     }
 
     /* ---------- Init ---------- */
@@ -3612,6 +5566,213 @@ async function startPayment(jobId) {
   const platformFee = Math.round(total * platformPercent);
   const amountToCharge = total * 100; // Convert to cents
 
+<<<<<<< HEAD
+=======
+// Review Modal Function
+async function showReviewModal(jobId, revieweeId, revieweeName) {
+  // Remove any existing review modals
+  document.querySelectorAll('[id^="reviewModalOverlay"]').forEach(ov => {
+    if (ov && ov.parentNode) ov.remove();
+  });
+  
+  const overlay = document.createElement("div");
+  overlay.id = "reviewModalOverlay";
+  overlay.className = "modal-overlay";
+  overlay.style.zIndex = "10000";
+  
+  const modal = document.createElement("div");
+  modal.className = "modal-content";
+  modal.style.maxWidth = "500px";
+  modal.style.width = "90%";
+  modal.style.padding = "1.5rem";
+  
+  const title = document.createElement("h2");
+  title.style.margin = "0 0 1rem 0";
+  title.textContent = "Leave a Review";
+  modal.appendChild(title);
+  
+  const subtitle = document.createElement("div");
+  subtitle.className = "muted";
+  subtitle.style.marginBottom = "1.5rem";
+  subtitle.textContent = `How was your experience with ${revieweeName}?`;
+  modal.appendChild(subtitle);
+  
+  // Star rating
+  const starsContainer = document.createElement("div");
+  starsContainer.style.marginBottom = "1rem";
+  starsContainer.style.display = "flex";
+  starsContainer.style.gap = "0.5rem";
+  starsContainer.style.justifyContent = "center";
+  
+  let selectedStars = 0;
+  const stars = [];
+  for (let i = 1; i <= 5; i++) {
+    const star = document.createElement("button");
+    star.textContent = "★";
+    star.style.fontSize = "2rem";
+    star.style.background = "none";
+    star.style.border = "none";
+    star.style.cursor = "pointer";
+    star.style.color = "#d1d5db";
+    star.style.padding = "0";
+    star.dataset.rating = i;
+    
+    star.addEventListener("mouseenter", () => {
+      for (let j = 1; j <= i; j++) {
+        stars[j - 1].style.color = "#fbbf24";
+      }
+    });
+    
+    star.addEventListener("mouseleave", () => {
+      stars.forEach((s, idx) => {
+        s.style.color = idx < selectedStars ? "#fbbf24" : "#d1d5db";
+      });
+    });
+    
+    star.addEventListener("click", () => {
+      selectedStars = i;
+      stars.forEach((s, idx) => {
+        s.style.color = idx < selectedStars ? "#fbbf24" : "#d1d5db";
+      });
+    });
+    
+    stars.push(star);
+    starsContainer.appendChild(star);
+  }
+  modal.appendChild(starsContainer);
+  
+  // Review text
+  const textLabel = document.createElement("label");
+  textLabel.textContent = "Your review (min 10 characters):";
+  textLabel.style.display = "block";
+  textLabel.style.marginBottom = "0.5rem";
+  textLabel.style.fontWeight = "600";
+  modal.appendChild(textLabel);
+  
+  const textArea = document.createElement("textarea");
+  textArea.placeholder = "Tell others about your experience...";
+  textArea.style.width = "100%";
+  textArea.style.minHeight = "100px";
+  textArea.style.padding = "0.75rem";
+  textArea.style.border = "1px solid var(--border)";
+  textArea.style.borderRadius = "6px";
+  textArea.style.fontFamily = "inherit";
+  textArea.style.fontSize = "0.9rem";
+  textArea.style.marginBottom = "1rem";
+  modal.appendChild(textArea);
+  
+  // Buttons
+  const buttonRow = document.createElement("div");
+  buttonRow.style.display = "flex";
+  buttonRow.style.gap = "0.5rem";
+  
+  const submitBtn = document.createElement("button");
+  submitBtn.className = "btn btn-primary";
+  submitBtn.style.flex = "1";
+  submitBtn.textContent = "Submit Review";
+  
+  submitBtn.addEventListener("click", async () => {
+    if (selectedStars === 0) {
+      showToast("Please select a star rating");
+      return;
+    }
+    
+    const text = textArea.value.trim();
+    if (text.length < 10) {
+      showToast("Please write at least 10 characters");
+      textArea.focus();
+      return;
+    }
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
+    
+    try {
+      const token = localStorage.getItem("hustl_token");
+      if (!token) {
+        throw new Error("You must be logged in to submit a review");
+      }
+      
+      const response = await fetch("/reviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          jobId,
+          revieweeId,
+          stars: selectedStars,
+          text,
+          photos: []
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to submit review");
+      }
+      
+      showToast("✓ Review submitted! Thank you.");
+      
+      // Close the review modal
+      overlay.remove();
+      document.body.style.overflow = "";
+      
+      // Refresh jobs list and profile to update job status
+      renderJobs();
+      renderProfile();
+    } catch (error) {
+      console.error("Error submitting review:", error);
+      showToast("Error: " + (error.message || "Failed to submit review"));
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Review";
+    }
+  });
+  
+  buttonRow.appendChild(submitBtn);
+  
+  const skipBtn = document.createElement("button");
+  skipBtn.className = "btn outline";
+  skipBtn.textContent = "Skip";
+  skipBtn.addEventListener("click", () => {
+    overlay.remove();
+    document.body.style.overflow = "";
+    renderJobs();
+  });
+  buttonRow.appendChild(skipBtn);
+  
+  modal.appendChild(buttonRow);
+  
+  // Close button
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "modal-close";
+  closeBtn.innerHTML = "×";
+  closeBtn.addEventListener("click", () => {
+    overlay.remove();
+    document.body.style.overflow = "";
+  });
+  modal.appendChild(closeBtn);
+  
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  document.body.style.overflow = "hidden";
+  
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) {
+      overlay.remove();
+      document.body.style.overflow = "";
+    }
+  });
+  
+  // Focus textarea
+  setTimeout(() => textArea.focus(), 100);
+}
+
+// Run body cleanup on load
+(function() {
+>>>>>>> parent of ee7c500 (Add hustler acceptance notifications, optimize mobile messaging, and improve performance)
   try {
     const res = await fetch("http://localhost:8080/create-checkout-session", {
       method: "POST",

@@ -54,4 +54,3 @@ Everything should work end-to-end without Stripe!
 
 
 
-
