@@ -313,12 +313,22 @@ router.get('/', optionalAuth, [
   query('radius').optional().isFloat({ min: 0 }), // in miles
   query('zip').optional().trim(),
   query('city').optional().trim(),
+], async (req, res) => {
+  try {
+    const { status, category, lat, lng, radius = 25, zip, city, page = 1, limit = 20, sortBy = 'newest', search } = req.query;
+    const userId = req.user?.id;
 
+    // Build where clause
+    const where = {};
+    if (status) where.status = status;
     if (category) where.category = category;
-    }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
+    const jobs = await prisma.job.findMany({
+      where,
+      skip,
+      take: parseInt(limit),
       include: {
         payment: true,
         customer: {
@@ -334,9 +344,14 @@ router.get('/', optionalAuth, [
           },
         },
       },
-    }
+    });
     
     // Calculate distance for each job and add to response
+    let filteredJobs = jobs;
+    const userLat = parseFloat(lat);
+    const userLng = parseFloat(lng);
+    const searchRadius = parseFloat(radius) || 25;
+    
     if (userLat && userLng && !isNaN(userLat) && !isNaN(userLng)) {
       filteredJobs = filteredJobs.map(job => {
         // Only calculate distance if job has valid coordinates
@@ -422,6 +437,15 @@ router.get('/', optionalAuth, [
       }
     }
 
+    // Return jobs with pagination
+    res.json({
+      jobs: filteredJobs,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: filteredJobs.length,
+        hasMore: filteredJobs.length === parseInt(limit)
+      }
     });
   } catch (error) {
     console.error('List jobs error:', error);
@@ -816,7 +840,9 @@ router.post('/:id/confirm-complete', authenticate, requireRole('CUSTOMER'), asyn
           const hustler = await prisma.user.findUnique({
             where: { id: job.hustlerId },
           });
-
+          // Stripe transfer logic would go here
+        } catch (stripeError) {
+          console.error('Stripe transfer error:', stripeError);
         }
       }
 
