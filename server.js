@@ -222,11 +222,7 @@ app.use((req, res, next) => {
 app.use(
   cors({
     origin: process.env.NODE_ENV === "production" 
-      ? [
-          process.env.FRONTEND_BASE_URL || "https://hustljobs.com",
-          "https://hustljobs.com",
-          "https://hustl-production.up.railway.app"
-        ]
+      ? process.env.FRONTEND_BASE_URL 
       : true,
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
