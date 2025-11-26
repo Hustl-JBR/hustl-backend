@@ -2257,10 +2257,228 @@
     }
   </style>
   <script>
-    // ========== IMMEDIATE BUTTON FIX - RUNS FIRST ==========
-    // This script runs immediately to ensure buttons work
+    // ========== ULTRA-AGGRESSIVE BUTTON FIX - RUNS FIRST ==========
+    // This MUST run before anything else to ensure buttons work
     (function() {
       'use strict';
+      
+      // DIRECT VIEW SWITCHER - Works independently of everything
+      function switchViewDirectly(viewName) {
+        console.log('[DIRECT SWITCH] Switching to:', viewName);
+        try {
+          // Hide ALL views
+          const allViews = document.querySelectorAll('[id^="view-"]');
+          allViews.forEach(v => {
+            if (v) {
+              v.style.display = 'none';
+              v.style.visibility = 'hidden';
+            }
+          });
+          
+          // Show target view
+          const target = document.getElementById('view-' + viewName);
+          if (target) {
+            target.style.display = 'block';
+            target.style.visibility = 'visible';
+            console.log('[DIRECT SWITCH] ✅ View shown:', viewName);
+          } else {
+            console.error('[DIRECT SWITCH] ❌ View not found: view-' + viewName);
+          }
+          
+          // Update ALL nav tabs
+          const allNavTabs = document.querySelectorAll('.nav-tab, .mobile-menu-item');
+          allNavTabs.forEach(tab => {
+            if (tab) {
+              tab.classList.remove('active');
+              const tabView = tab.getAttribute('data-view');
+              if (tabView === viewName) {
+                tab.classList.add('active');
+              }
+            }
+          });
+          
+          // Also try calling setView if it exists (but don't wait for it)
+          if (typeof window.setView === 'function') {
+            try {
+              window.setView(viewName);
+            } catch(e) {
+              console.warn('[DIRECT SWITCH] setView error (non-fatal):', e);
+            }
+          }
+        } catch (err) {
+          console.error('[DIRECT SWITCH] Error:', err);
+        }
+      }
+      
+      // Make it globally available immediately
+      window.switchViewDirectly = switchViewDirectly;
+      
+      // DEBUG: Function to check if buttons have listeners
+      window.debugButtonHandlers = function() {
+        console.log('=== BUTTON HANDLER DEBUG ===');
+        const navTabs = document.querySelectorAll('.nav-tab');
+        navTabs.forEach(tab => {
+          const view = tab.getAttribute('data-view');
+          const hasWired = tab.hasAttribute('data-wired');
+          const listeners = getEventListeners ? getEventListeners(tab) : 'N/A (use DevTools)';
+          console.log(`Nav tab "${view}": wired=${hasWired}, listeners=${listeners ? 'yes' : 'no'}`);
+        });
+        console.log('switchViewDirectly available:', typeof window.switchViewDirectly === 'function');
+        console.log('setView available:', typeof window.setView === 'function');
+        console.log('===========================');
+      };
+      
+      // ========== SIMPLE BUTTON HANDLERS - Clean Approach ==========
+      // Wire up nav tabs using simple, direct approach
+      function wireUpNavTabs() {
+        // Get all nav tabs
+        const navTabs = document.querySelectorAll('.nav-tab');
+        console.log('[NUCLEAR FIX] Found', navTabs.length, 'nav tabs');
+        
+        navTabs.forEach(tab => {
+          if (tab) {
+            // CRITICAL FIX: Don't clone - just add listener directly
+            // Cloning removes all existing event listeners!
+            const view = tab.getAttribute('data-view');
+            
+            if (!tab.hasAttribute('data-wired')) {
+              tab.setAttribute('data-wired', 'true');
+              
+              // Simple click handler - just call setView
+              tab.addEventListener('click', function handleNavClick(e) {
+                e.preventDefault();
+                const view = tab.getAttribute('data-view');
+                console.log('[NAV] Tab clicked:', view);
+                
+                if (view && typeof window.setView === 'function') {
+                  window.setView(view);
+                } else if (view) {
+                  // Fallback if setView not available
+                  document.querySelectorAll('[id^="view-"]').forEach(v => {
+                    if (v) v.style.display = 'none';
+                  });
+                  const target = document.getElementById('view-' + view);
+                  if (target) target.style.display = 'block';
+                  document.querySelectorAll('.nav-tab').forEach(t => {
+                    t.classList.toggle('active', t.getAttribute('data-view') === view);
+                  });
+                }
+              });
+              
+              // Force enable
+              tab.style.pointerEvents = 'auto';
+              tab.style.cursor = 'pointer';
+              tab.disabled = false;
+              tab.style.opacity = '1';
+            }
+          }
+        });
+        
+        // Wire up home page buttons
+        const homeCtaPost = document.getElementById('homeCtaPost');
+        const homeCtaBrowse = document.getElementById('homeCtaBrowse');
+        
+        if (homeCtaPost && !homeCtaPost.hasAttribute('data-wired')) {
+          homeCtaPost.setAttribute('data-wired', 'true');
+          homeCtaPost.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation(); // Don't stop immediate
+            console.log('[NAV] Post job clicked');
+            if (typeof window.setView === 'function') {
+              window.setView('post');
+            }
+          }, { capture: false, passive: false });
+          homeCtaPost.style.pointerEvents = 'auto';
+          homeCtaPost.style.cursor = 'pointer';
+          homeCtaPost.disabled = false;
+        }
+        
+        if (homeCtaBrowse && !homeCtaBrowse.hasAttribute('data-wired')) {
+          homeCtaBrowse.setAttribute('data-wired', 'true');
+          homeCtaBrowse.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation(); // Don't stop immediate
+            console.log('[NAV] Browse jobs clicked');
+            if (typeof window.setView === 'function') {
+              window.setView('jobs');
+            }
+          }, { capture: false, passive: false });
+          homeCtaBrowse.style.pointerEvents = 'auto';
+          homeCtaBrowse.style.cursor = 'pointer';
+          homeCtaBrowse.disabled = false;
+        }
+      }
+      
+      // Run immediately and multiple times
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', wireUpNavTabs);
+      } else {
+        wireUpNavTabs();
+      }
+      
+      setTimeout(wireUpNavTabs, 100);
+      setTimeout(wireUpNavTabs, 500);
+      setTimeout(wireUpNavTabs, 1000);
+      setTimeout(wireUpNavTabs, 2000);
+      setTimeout(wireUpNavTabs, 3000);
+      
+      // EVENT DELEGATION - Catch ALL clicks on nav tabs, even if added later
+      // FIXED: Use bubbling phase, don't stop immediate propagation
+      // This allows direct handlers to work first, then this as fallback
+      document.addEventListener('click', function(e) {
+        // Check if clicked element is a nav tab or inside one
+        let target = e.target;
+        let navTab = null;
+        
+        // Walk up the DOM tree to find nav tab
+        while (target && target !== document.body) {
+          if (target.classList && (target.classList.contains('nav-tab') || target.classList.contains('mobile-menu-item'))) {
+            navTab = target;
+            break;
+          }
+          target = target.parentElement;
+        }
+        
+        if (navTab) {
+          const view = navTab.getAttribute('data-view');
+          if (view) {
+            // Only handle if event hasn't been handled yet
+            // Check if view was already switched (prevent double-handling)
+            const currentView = document.querySelector('[id^="view-"]:not([style*="display: none"])');
+            const targetView = document.getElementById('view-' + view);
+            
+            // Only switch if not already on this view
+            if (targetView && targetView.style.display !== 'block') {
+              e.preventDefault();
+              e.stopPropagation(); // Don't stop immediate - let other handlers work
+              console.log('[EVENT DELEGATION] 🔘 Caught nav tab click:', view);
+              
+              // Use direct switcher
+              if (typeof window.switchViewDirectly === 'function') {
+                window.switchViewDirectly(view);
+              } else {
+                // Fallback direct manipulation
+                document.querySelectorAll('[id^="view-"]').forEach(v => {
+                  if (v) { v.style.display = 'none'; v.style.visibility = 'hidden'; }
+                });
+                if (targetView) {
+                  targetView.style.display = 'block';
+                  targetView.style.visibility = 'visible';
+                }
+                document.querySelectorAll('.nav-tab, .mobile-menu-item').forEach(t => {
+                  if (t) {
+                    t.classList.remove('active');
+                    if (t.getAttribute('data-view') === view) t.classList.add('active');
+                  }
+                });
+              }
+            }
+          }
+        }
+      }, { capture: false, passive: false }); // Use bubbling phase, not capture
+      
+      // ========== IMMEDIATE BUTTON FIX - RUNS FIRST ==========
+      // This script runs immediately to ensure buttons work
       
       // Force enable all interactions immediately
       function forceEnableButtons() {
@@ -2421,6 +2639,173 @@
     }
 
     // CRITICAL: Define functions early so they're available when DOMContentLoaded fires
+    
+    // ========== DEFINE initAuthCard EARLY ==========
+    // This MUST be defined before it's called
+    window.initAuthCard = function initAuthCard() {
+      const authTitle = document.getElementById("authCardTitle");
+      const authToggle = document.getElementById("authModeToggle");
+      const authBodyCreate = document.getElementById("authBodyCreate");
+      const authBodyLogin = document.getElementById("authBodyLogin");
+      let mode = "create";
+
+      function wireToggle() {
+        const span = authToggle?.querySelector("span.linkish");
+        if (span) {
+          span.addEventListener("click", (e) => {
+            const m = e.target.dataset.authMode;
+            setMode(m);
+          });
+        }
+      }
+
+      function setMode(next) {
+        mode = next;
+        if (mode === "create") {
+          if (authTitle) authTitle.textContent = "Create account";
+          if (authBodyCreate) authBodyCreate.style.display = "";
+          if (authBodyLogin) authBodyLogin.style.display = "none";
+          if (authToggle) authToggle.innerHTML =
+            'Already have an account? <span class="linkish" data-auth-mode="login">Log in</span>';
+        } else {
+          if (authTitle) authTitle.textContent = "Log in";
+          if (authBodyCreate) authBodyCreate.style.display = "none";
+          if (authBodyLogin) authBodyLogin.style.display = "";
+          if (authToggle) authToggle.innerHTML =
+            'Need a new account? <span class="linkish" data-auth-mode="create">Create one</span>';
+        }
+        wireToggle();
+      }
+
+      if (authTitle && authToggle && authBodyCreate && authBodyLogin) {
+        setMode("create");
+      }
+
+      // Show/hide Stripe notice based on role selection
+      const createRoleSelect = document.getElementById("createRole");
+      const stripeNotice = document.getElementById("stripeNoticeForHustlers");
+      if (createRoleSelect && stripeNotice) {
+        createRoleSelect.addEventListener("change", () => {
+          if (createRoleSelect.value === "hustler") {
+            stripeNotice.style.display = "block";
+          } else {
+            stripeNotice.style.display = "none";
+          }
+        });
+      }
+
+      // Wrap in try-catch to prevent errors from freezing the page
+      try {
+        const createAccountBtn = document.getElementById("createAccountButton");
+        if (createAccountBtn && !createAccountBtn.getAttribute('data-listener-attached')) {
+          createAccountBtn.setAttribute('data-listener-attached', 'true');
+          console.log('🔧 Attaching click listener to createAccountButton...');
+          createAccountBtn.addEventListener("click", async (e) => {
+            console.log('🔘 Create account button clicked!', e);
+            e.stopPropagation();
+            try {
+              if (!window.hustlAPI || !window.hustlAPI.auth) {
+                showToast("System is still loading. Please wait a moment and try again.");
+                return;
+              }
+
+              const name = document.getElementById("createName")?.value.trim();
+              const email = document.getElementById("createEmail")?.value.trim();
+              const password = document.getElementById("createPassword")?.value.trim();
+              const role = document.getElementById("createRole")?.value;
+              const agreeTerms = document.getElementById("agreeTerms")?.checked;
+              const confirmAge = document.getElementById("confirmAge")?.checked;
+
+              if (!name || !email || !password) {
+                showToast("Please fill name, email, and password.");
+                return;
+              }
+              if (password.length < 8) {
+                showToast("Password should be at least 8 characters.");
+                return;
+              }
+              if (!agreeTerms) {
+                showToast("Please agree to the Terms of Service and Privacy Policy.");
+                return;
+              }
+              if (!confirmAge) {
+                showToast("You must be 18 years or older to use Hustl.");
+                return;
+              }
+
+              let username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+              if (username.length < 3) username = username + '123';
+              if (username.length > 20) username = username.substring(0, 20);
+              username = username + Math.floor(Math.random() * 1000);
+
+              const referralCode = localStorage.getItem('hustl_referral_code');
+              await window.hustlAPI.auth.signUp(email, password, name, username, role, referralCode);
+              
+              if (referralCode) localStorage.removeItem('hustl_referral_code');
+              localStorage.setItem('hustl_account_created', Date.now().toString());
+              
+              setTimeout(() => { if (typeof initWebSocket === 'function') initWebSocket(); }, 500);
+              
+              showToast("Account created successfully!");
+              
+              if (role === "hustler") {
+                showToast("Now let's set up your Stripe account to receive payments!", 5000);
+                setView("profile");
+                renderAll();
+              } else {
+                setView("jobs");
+                renderAll();
+              }
+            } catch (error) {
+              console.error("Sign up error:", error);
+              let errorMsg = error.message || "Unknown error";
+              const lowerMsg = errorMsg.toLowerCase();
+              if (lowerMsg.includes('zip') || lowerMsg.includes('city') || lowerMsg.includes('location')) {
+                errorMsg = "Account creation failed. Please try again.";
+              }
+              showToast("Sign up error: " + errorMsg);
+              const btn = document.getElementById("createAccountButton");
+              if (btn) btn.disabled = false;
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Failed to attach createAccountButton listener:", error);
+      }
+
+      try {
+        const loginButton = document.getElementById("loginButton");
+        if (loginButton && !loginButton.getAttribute('data-listener-attached')) {
+          loginButton.setAttribute('data-listener-attached', 'true');
+          loginButton.addEventListener("click", async () => {
+            try {
+              const email = document.getElementById("loginEmail")?.value.trim();
+              const password = document.getElementById("loginPassword")?.value.trim();
+              if (!email || !password) {
+                showToast("Enter email and password.");
+                return;
+              }
+
+              if (!window.hustlAPI || !window.hustlAPI.auth) {
+                showToast("System is still loading. Please wait a moment and try again.");
+                return;
+              }
+
+              await window.hustlAPI.auth.signIn(email, password);
+              showToast("Logged in.");
+              setView("jobs");
+              renderAll();
+            } catch (error) {
+              console.error("Login error:", error);
+              showToast("Login error: " + (error.message || "Unknown error"));
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Failed to attach loginButton listener:", error);
+      }
+    };
+    
     // Initialize "How it works" toggle (moved to global scope - MUST be accessible)
     window.initHowItWorksToggle = function initHowItWorksToggle() {
       const toggle = document.getElementById("howItWorksToggle");
@@ -2506,12 +2891,14 @@
       // 🚀 Initialize auth card AFTER API is ready
       waitForAPI(() => {
         try {
-          // Double-check function exists (check both window and global scope)
-          const authCardFn = window.initAuthCard || (typeof initAuthCard !== 'undefined' ? initAuthCard : null);
-          if (typeof authCardFn === 'function') {
-            console.log('🔧 Calling initAuthCard...');
-            authCardFn();
-            console.log('✅ Auth card initialized');
+          // Wait a bit more to ensure initAuthCard is defined
+          setTimeout(() => {
+            // Double-check function exists (check both window and global scope)
+            const authCardFn = window.initAuthCard || (typeof initAuthCard !== 'undefined' ? initAuthCard : null);
+            if (typeof authCardFn === 'function') {
+              console.log('🔧 Calling initAuthCard...');
+              authCardFn();
+              console.log('✅ Auth card initialized');
             
             // Verify button listener was attached and FORCE enable buttons
             setTimeout(() => {
@@ -3943,7 +4330,8 @@
        </style>
 
     <!-- Age gate disabled: popup hidden -->
-    <div class="age-gate-overlay" id="ageGate" style="display:none !important; pointer-events:none !important; z-index:-1 !important;">
+    <!-- Age gate disabled - completely hidden and non-blocking -->
+    <div class="age-gate-overlay" id="ageGate" style="display:none !important; pointer-events:none !important; z-index:-9999 !important; visibility:hidden !important; opacity:0 !important; position:fixed !important; top:-9999px !important; left:-9999px !important;">
       <div class="age-gate-card">
         <h2>Are you 18 or older?</h2>
         <p>
@@ -4535,131 +4923,138 @@ if (job.acceptedHustlerId) {
     function setView(view) {
       // CRITICAL: Ensure view is valid
       if (!view) {
-        console.error('setView called with invalid view:', view);
+        console.error('[setView] No view provided');
         return;
       }
       
-      console.log('[setView] Switching to view:', view);
-      activeView = view;
-      
-      // Save route to URL hash (for page reload persistence)
       try {
-        if (window.appCore && window.appCore.routeManager) {
-          window.appCore.routeManager.saveRoute(view);
+        console.log('[setView] Switching to view:', view);
+        activeView = view;
+        
+        // Hide all views
+        document.querySelectorAll("[id^='view-']").forEach((sec) => {
+          if (sec) sec.style.display = "none";
+        });
+        
+        // Show target view
+        const target = document.getElementById("view-" + view);
+        if (target) {
+          target.style.display = "block";
         } else {
-          // Fallback: use URL hash directly
-          if (view && view !== 'home') {
-            window.location.hash = view;
-          } else {
-            window.location.hash = '';
-          }
+          console.error('[setView] Target view not found: view-' + view);
         }
-      } catch (e) {
-        console.error('[setView] Error saving route:', e);
-      }
-      
-      // Hide all views
-      try {
-        document
-          .querySelectorAll("[id^='view-']")
-          .forEach((sec) => {
-            if (sec) sec.style.display = "none";
-          });
-      } catch (e) {
-        console.error('[setView] Error hiding views:', e);
-      }
-      
-      // Show target view
-      const target = document.getElementById("view-" + view);
-      if (target) {
-        target.style.display = "block";
-        console.log('[setView] View displayed:', view);
-      } else {
-        console.error('[setView] Target view not found: view-' + view);
-      }
 
-      // Update nav tabs
-      try {
+        // Update nav tab active states
         document.querySelectorAll(".nav-tab").forEach((tab) => {
           if (tab) {
             tab.classList.toggle("active", tab.dataset.view === view);
           }
         });
-      } catch (e) {
-        console.error('[setView] Error updating nav tabs:', e);
-      }
 
-      // Update mobile menu items
-      try {
-        document.querySelectorAll(".mobile-menu-item").forEach((item) => {
-          if (item) {
-            item.classList.toggle("active", item.dataset.view === view);
-          }
-        });
-      } catch (e) {
-        console.error('[setView] Error updating mobile menu:', e);
-      }
-
-      // Close mobile menu when navigating
-      const mobileMenu = document.getElementById("mobileMenu");
-      if (mobileMenu) {
-        mobileMenu.classList.remove("show");
-        mobileMenu.style.display = "none";
-      }
-
-      // Render all (with error handling)
-      try {
+        // Call renderAll if available
         if (typeof renderAll === 'function') {
           renderAll();
         } else {
-          console.error('[setView] renderAll is not a function');
+          console.warn('[setView] renderAll function not available');
+        }
+        
+        // Save route to URL hash (for page reload persistence)
+        try {
+          if (window.appCore && window.appCore.routeManager) {
+            window.appCore.routeManager.saveRoute(view);
+          } else {
+            // Fallback: use URL hash directly
+            if (view && view !== 'home') {
+              window.location.hash = view;
+            } else {
+              window.location.hash = '';
+            }
+          }
+        } catch (e) {
+          console.error('[setView] Error saving route:', e);
+        }
+
+        // Update mobile menu items
+        try {
+          document.querySelectorAll(".mobile-menu-item").forEach((item) => {
+            if (item) {
+              item.classList.toggle("active", item.dataset.view === view);
+            }
+          });
+        } catch (e) {
+          console.error('[setView] Error updating mobile menu:', e);
+        }
+
+        // Close mobile menu when navigating
+        const mobileMenu = document.getElementById("mobileMenu");
+        if (mobileMenu) {
+          mobileMenu.classList.remove("show");
+          mobileMenu.style.display = "none";
+        }
+
+        // Render all (with error handling)
+        try {
+          if (typeof renderAll === 'function') {
+            renderAll();
+          } else {
+            console.error('[setView] renderAll is not a function');
+          }
+        } catch (e) {
+          console.error('[setView] Error in renderAll:', e);
+        }
+        
+        // 🚀 MOBILE: Update bottom nav active tab
+        try {
+          if (window.mobileCore && window.mobileCore.bottomNav) {
+            window.mobileCore.bottomNav.updateActiveTab(view);
+          }
+        } catch (e) {
+          console.error('[setView] Error updating mobile bottom nav:', e);
+        }
+        
+        // Start/stop real-time polling based on view (optimized)
+        if (window.appCore && window.appCore.pollingManager) {
+          const polling = window.appCore.pollingManager;
+          
+          // Stop all polling first
+          polling.stopAll();
+          
+          // Small delay before starting polling to avoid immediate calls
+          setTimeout(() => {
+            // Start polling based on current view (only when view is visible)
+            if (view === "jobs" && document.getElementById('view-jobs')?.style.display !== 'none') {
+              // Poll for jobs every 30 seconds
+              polling.startJobsPolling(() => {
+                if (document.getElementById('view-jobs')?.style.display !== 'none') {
+                  renderJobs(false); // Don't reset pagination
+                }
+              }, 30000);
+            } else if (view === "messages" && document.getElementById('view-messages')?.style.display !== 'none') {
+              // Poll for messages every 15 seconds
+              polling.startMessagesPolling(() => {
+                if (document.getElementById('view-messages')?.style.display !== 'none') {
+                  if (typeof renderMessagesView === 'function') {
+                    renderMessagesView();
+                  }
+                }
+              }, 15000);
+            }
+          }, 1000); // Wait 1 second before starting polling
+        }
+        
+        // Check for accepted offers when switching to jobs view
+        if (view === "jobs" && typeof checkForAcceptedOffers === 'function') {
+          setTimeout(() => {
+            checkForAcceptedOffers();
+          }, 1500); // Wait for jobs to load first
         }
       } catch (e) {
-        console.error('[setView] Error in renderAll:', e);
-      }
-      
-      // 🚀 MOBILE: Update bottom nav active tab
-      if (window.mobileCore && window.mobileCore.bottomNav) {
-        window.mobileCore.bottomNav.updateActiveTab(view);
-      }
-      
-      // Start/stop real-time polling based on view (optimized)
-      if (window.appCore && window.appCore.pollingManager) {
-        const polling = window.appCore.pollingManager;
-        
-        // Stop all polling first
-        polling.stopAll();
-        
-        // Small delay before starting polling to avoid immediate calls
-        setTimeout(() => {
-          // Start polling based on current view (only when view is visible)
-          if (view === "jobs" && document.getElementById('view-jobs')?.style.display !== 'none') {
-            // Poll for jobs every 30 seconds
-            polling.startJobsPolling(() => {
-              if (document.getElementById('view-jobs')?.style.display !== 'none') {
-                renderJobs(false); // Don't reset pagination
-              }
-            }, 30000);
-          } else if (view === "messages" && document.getElementById('view-messages')?.style.display !== 'none') {
-            // Poll for messages every 15 seconds
-            polling.startMessagesPolling(() => {
-              if (document.getElementById('view-messages')?.style.display !== 'none') {
-                if (typeof renderMessagesView === 'function') {
-                  renderMessagesView();
-                }
-              }
-            }, 15000);
-          }
-        }, 1000); // Wait 1 second before starting polling
-      }
-      
-      // Check for accepted offers when switching to jobs view
-      if (view === "jobs" && typeof checkForAcceptedOffers === 'function') {
-        setTimeout(() => {
-          checkForAcceptedOffers();
-        }, 1500); // Wait for jobs to load first
+        console.error('[setView] Error:', e);
       }
     }
+    
+    // Make setView globally accessible IMMEDIATELY
+    window.setView = setView;
 
     /* ---------- Auth visibility ---------- */
 
@@ -4820,210 +5215,7 @@ if (!window.initHowItWorksToggle) {
     }
   };
 }
-
-// Make initAuthCard globally accessible
-window.initAuthCard = function initAuthCard() {
-  const authTitle = document.getElementById("authCardTitle");
-  const authToggle = document.getElementById("authModeToggle");
-  const authBodyCreate = document.getElementById("authBodyCreate");
-  const authBodyLogin = document.getElementById("authBodyLogin");
-  let mode = "create";
-
-  function wireToggle() {
-    const span = authToggle.querySelector("span.linkish");
-    if (span) {
-      span.addEventListener("click", (e) => {
-        const m = e.target.dataset.authMode;
-        setMode(m);
-      });
-    }
-  }
-
-  function setMode(next) {
-    mode = next;
-    if (mode === "create") {
-      authTitle.textContent = "Create account";
-      authBodyCreate.style.display = "";
-      authBodyLogin.style.display = "none";
-      authToggle.innerHTML =
-        'Already have an account? <span class="linkish" data-auth-mode="login">Log in</span>';
-    } else {
-      authTitle.textContent = "Log in";
-      authBodyCreate.style.display = "none";
-      authBodyLogin.style.display = "";
-      authToggle.innerHTML =
-        'Need a new account? <span class="linkish" data-auth-mode="create">Create one</span>';
-    }
-    wireToggle();
-  }
-
-  setMode("create");
-
-  // Show/hide Stripe notice based on role selection
-  const createRoleSelect = document.getElementById("createRole");
-  const stripeNotice = document.getElementById("stripeNoticeForHustlers");
-  if (createRoleSelect && stripeNotice) {
-    createRoleSelect.addEventListener("change", () => {
-      if (createRoleSelect.value === "hustler") {
-        stripeNotice.style.display = "block";
-      } else {
-        stripeNotice.style.display = "none";
-      }
-    });
-  }
-
-// Wrap in try-catch to prevent errors from freezing the page
-try {
-  const createAccountBtn = document.getElementById("createAccountButton");
-  if (createAccountBtn) {
-    // Remove any existing listeners by cloning (only if no listener attached yet)
-    if (!createAccountBtn.getAttribute('data-listener-attached')) {
-      // Mark as having listener to help with debugging
-      createAccountBtn.setAttribute('data-listener-attached', 'true');
-      console.log('🔧 Attaching click listener to createAccountButton...');
-      createAccountBtn.addEventListener("click", async (e) => {
-      console.log('🔘 Create account button clicked!', e);
-      // Don't prevent default - let form submit naturally if needed
-      e.stopPropagation(); // Only stop bubbling, not default behavior
-      try {
-        // Check if API is ready
-        if (!window.hustlAPI || !window.hustlAPI.auth) {
-          showToast("System is still loading. Please wait a moment and try again.");
-          console.error("window.hustlAPI not ready:", window.hustlAPI);
-          return;
-        }
-
-        const name = document.getElementById("createName")?.value.trim();
-        const email = document.getElementById("createEmail")?.value.trim();
-        const password = document.getElementById("createPassword")?.value.trim();
-        const role = document.getElementById("createRole")?.value;
-        const agreeTerms = document.getElementById("agreeTerms")?.checked;
-        const confirmAge = document.getElementById("confirmAge")?.checked;
-
-        if (!name || !email || !password) {
-          showToast("Please fill name, email, and password.");
-          return;
-        }
-        if (password.length < 8) {
-          showToast("Password should be at least 8 characters.");
-          return;
-        }
-        if (!agreeTerms) {
-          showToast("Please agree to the Terms of Service and Privacy Policy.");
-          return;
-        }
-        if (!confirmAge) {
-          showToast("You must be 18 years or older to use Hustl.");
-          return;
-        }
-
-        // Sign up with new API - NO city/zip required
-        // Generate username from email (take part before @, make alphanumeric)
-        let username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
-        // Ensure it's at least 3 characters and max 20
-        if (username.length < 3) {
-          username = username + '123';
-        }
-        if (username.length > 20) {
-          username = username.substring(0, 20);
-        }
-        // Add random suffix to ensure uniqueness
-        const randomSuffix = Math.floor(Math.random() * 1000);
-        username = username + randomSuffix;
-
-        // Get referral code from localStorage (set when user visits with ?ref=code)
-        const referralCode = localStorage.getItem('hustl_referral_code');
-        
-        await window.hustlAPI.auth.signUp(email, password, name, username, role, referralCode);
-        
-        // Clear referral code after use
-        if (referralCode) {
-          localStorage.removeItem('hustl_referral_code');
-        }
-        
-        // Mark account as newly created for onboarding
-        localStorage.setItem('hustl_account_created', Date.now().toString());
-        
-        // Initialize WebSocket connection after signup
-        setTimeout(() => {
-          initWebSocket();
-        }, 500);
-        
-        showToast("Account created successfully!");
-        
-        // If hustler, redirect to profile to set up Stripe
-        if (role === "hustler") {
-          showToast("Now let's set up your Stripe account to receive payments!", 5000);
-          setView("profile");
-          renderAll();
-          // Scroll to Stripe section after a moment
-          setTimeout(() => {
-            const stripeSection = document.querySelector('[id*="stripe"], [class*="stripe"]');
-            if (stripeSection) {
-              stripeSection.scrollIntoView({ behavior: "smooth", block: "center" });
-            }
-          }, 1000);
-        } else {
-          setView("jobs");
-          renderAll();
-        }
-      } catch (error) {
-        console.error("Sign up error:", error);
-        // Filter out any city/zip related error messages
-        let errorMsg = error.message || "Unknown error";
-        const lowerMsg = errorMsg.toLowerCase();
-        if (lowerMsg.includes('zip') || lowerMsg.includes('city') || lowerMsg.includes('location')) {
-          errorMsg = "Account creation failed. Please try again.";
-        }
-        showToast("Sign up error: " + errorMsg);
-        // Ensure button is never stuck disabled
-        const btn = document.getElementById("createAccountButton");
-        if (btn) btn.disabled = false;
-      }
-    });
-  }
-} catch (error) {
-  console.error("Failed to attach createAccountButton listener:", error);
-}
-
-  // Wrap login button listener in try-catch
-  try {
-    const loginButton = document.getElementById("loginButton");
-    if (loginButton) {
-      // Only attach if no listener exists yet
-      if (!loginButton.getAttribute('data-listener-attached')) {
-        loginButton.setAttribute('data-listener-attached', 'true');
-        loginButton.addEventListener("click", async () => {
-          try {
-            const email = document.getElementById("loginEmail")?.value.trim();
-            const password = document.getElementById("loginPassword")?.value.trim();
-            if (!email || !password) {
-              showToast("Enter email and password.");
-              return;
-            }
-
-            if (!window.hustlAPI || !window.hustlAPI.auth) {
-              showToast("System is still loading. Please wait a moment and try again.");
-              return;
-            }
-
-            await window.hustlAPI.auth.signIn(email, password);
-            showToast("Logged in.");
-            setView("jobs");
-            renderAll();
-          } catch (error) {
-            console.error("Login error:", error);
-            showToast("Login error: " + (error.message || "Unknown error"));
-          }
-        });
-      } else {
-        console.log('✅ loginButton already has listener attached');
-      }
-    }
-  } catch (error) {
-    console.error("Failed to attach loginButton listener:", error);
-  }
-};
+// Duplicate initAuthCard removed - using the one defined earlier
 
     /* ---------- Jobs ---------- */
 
@@ -15204,45 +15396,54 @@ meta.textContent =
     function initNav() {
       console.log('[initNav] Initializing navigation...');
       
-      // Regular nav tabs
+      // Check if setView is available
+      const setViewFn = window.setView || (typeof setView !== 'undefined' ? setView : null);
+      if (!setViewFn || typeof setViewFn !== 'function') {
+        console.error('[initNav] setView function not available!');
+        // Retry after a delay
+        setTimeout(() => {
+          if (typeof setView === 'function' || window.setView) {
+            initNav();
+          }
+        }, 500);
+        return;
+      }
+      
+      // Regular nav tabs - DON'T clone/replace, just add listeners
       const navTabs = document.querySelectorAll(".nav-tab");
       console.log('[initNav] Found', navTabs.length, 'nav tabs');
       navTabs.forEach((tab) => {
-        if (tab) {
-          // Remove any existing listeners first
-          const newTab = tab.cloneNode(true);
-          tab.parentNode.replaceChild(newTab, tab);
-          
-          newTab.addEventListener("click", (e) => {
+        if (tab && !tab.getAttribute('data-nav-initialized')) {
+          tab.setAttribute('data-nav-initialized', 'true');
+          tab.addEventListener("click", (e) => {
+            e.preventDefault();
             e.stopPropagation();
-            const v = newTab.dataset.view;
+            const v = tab.dataset.view;
             console.log('[initNav] Nav tab clicked:', v);
-            if (v && typeof setView === 'function') {
-              setView(v);
+            if (v) {
+              setViewFn(v);
             } else {
-              console.error('[initNav] Invalid view or setView not available:', v);
+              console.error('[initNav] No data-view attribute on tab');
             }
           });
         }
       });
 
-      // Mobile menu items
+      // Mobile menu items - DON'T clone/replace, just add listeners
       const mobileMenuItems = document.querySelectorAll(".mobile-menu-item");
       console.log('[initNav] Found', mobileMenuItems.length, 'mobile menu items');
       mobileMenuItems.forEach((item) => {
-        if (item) {
-          // Remove any existing listeners first
-          const newItem = item.cloneNode(true);
-          item.parentNode.replaceChild(newItem, item);
-          
-          newItem.addEventListener("click", (e) => {
+        if (item && !item.getAttribute('data-nav-initialized')) {
+          item.setAttribute('data-nav-initialized', 'true');
+          item.addEventListener("click", (e) => {
+            e.preventDefault();
             e.stopPropagation();
-            const view = newItem.dataset.view;
+            const view = item.dataset.view;
             console.log('[initNav] Mobile menu item clicked:', view);
-            if (view && typeof setView === 'function') {
-              setView(view);
+            if (view) {
+              setViewFn(view);
             } else {
-              console.error('[initNav] Invalid view or setView not available:', view);
+              console.error('[initNav] No data-view attribute on mobile item');
             }
           });
         }
@@ -15308,18 +15509,46 @@ meta.textContent =
         });
       }
 
-      document
-        .getElementById("homeCtaPost")
-        .addEventListener("click", () => {
-          setView("post");
-          const formCard = document.getElementById("jobFormCard");
-          if (formCard) {
-            formCard.scrollIntoView({ behavior: "smooth" });
+      // Wire up home page CTA buttons with error handling
+      const homeCtaPost = document.getElementById("homeCtaPost");
+      if (homeCtaPost) {
+        homeCtaPost.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('[initNav] Home CTA Post clicked');
+          const setViewFn = window.setView || (typeof setView !== 'undefined' ? setView : null);
+          if (setViewFn && typeof setViewFn === 'function') {
+            setViewFn("post");
+            setTimeout(() => {
+              const formCard = document.getElementById("jobFormCard");
+              if (formCard) {
+                formCard.scrollIntoView({ behavior: "smooth" });
+              }
+            }, 100);
+          } else {
+            console.error('[initNav] setView not available for homeCtaPost');
           }
         });
-      document
-        .getElementById("homeCtaBrowse")
-        .addEventListener("click", () => setView("jobs"));
+      } else {
+        console.warn('[initNav] homeCtaPost button not found');
+      }
+
+      const homeCtaBrowse = document.getElementById("homeCtaBrowse");
+      if (homeCtaBrowse) {
+        homeCtaBrowse.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('[initNav] Home CTA Browse clicked');
+          const setViewFn = window.setView || (typeof setView !== 'undefined' ? setView : null);
+          if (setViewFn && typeof setViewFn === 'function') {
+            setViewFn("jobs");
+          } else {
+            console.error('[initNav] setView not available for homeCtaBrowse');
+          }
+        });
+      } else {
+        console.warn('[initNav] homeCtaBrowse button not found');
+      }
 
       document
         .getElementById("jobsStatusFilter")
@@ -15716,7 +15945,9 @@ meta.textContent =
       const amountToCharge = total * 100; // Convert to cents
 
       try {
-        const res = await fetch("http://localhost:3000/create-checkout-session", {
+        // Use same origin for checkout session (backend serves frontend)
+        const checkoutUrl = window.location.origin + "/api/stripe/create-checkout-session";
+        const res = await fetch(checkoutUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -15870,19 +16101,177 @@ ensureClicksEnabled();
 
 // Also run after DOM is ready
 if (document.readyState === 'loading') {
+  // ========== COMPREHENSIVE INITIALIZATION - RUNS ON DOM READY ==========
+  function initializeAllFeatures() {
+    console.log('[INIT] Starting comprehensive initialization...');
+    
+    try {
+      // 1. Initialize auth card (login/signup)
+      if (typeof window.initAuthCard === 'function') {
+        console.log('[INIT] Initializing auth card...');
+        window.initAuthCard();
+      } else {
+        console.warn('[INIT] initAuthCard not found');
+      }
+      
+      // 2. Initialize jobs form (post job button)
+      if (typeof initJobsForm === 'function') {
+        console.log('[INIT] Initializing jobs form...');
+        initJobsForm();
+      } else {
+        console.warn('[INIT] initJobsForm not found');
+      }
+      
+      // 3. Initialize terms/privacy links
+      const termsLink = document.getElementById("footerTermsLink");
+      const privacyLink = document.getElementById("footerPrivacyLink");
+      
+      if (termsLink) {
+        termsLink.style.cursor = "pointer";
+        termsLink.style.textDecoration = "underline";
+        // Remove existing listeners
+        const newTermsLink = termsLink.cloneNode(true);
+        termsLink.parentNode.replaceChild(newTermsLink, termsLink);
+        newTermsLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('[INIT] Terms link clicked');
+          window.open("terms.html", "_blank");
+        });
+      }
+      
+      if (privacyLink) {
+        privacyLink.style.cursor = "pointer";
+        privacyLink.style.textDecoration = "underline";
+        // Remove existing listeners
+        const newPrivacyLink = privacyLink.cloneNode(true);
+        privacyLink.parentNode.replaceChild(newPrivacyLink, privacyLink);
+        newPrivacyLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('[INIT] Privacy link clicked');
+          window.open("privacy.html", "_blank");
+        });
+      }
+      
+      // 4. Force enable all buttons
+      const allButtons = document.querySelectorAll('button, .btn, [role="button"]');
+      allButtons.forEach(btn => {
+        if (btn) {
+          btn.style.pointerEvents = 'auto';
+          btn.style.cursor = 'pointer';
+          btn.disabled = false;
+        }
+      });
+      
+      console.log('[INIT] ✅ Comprehensive initialization complete');
+    } catch (error) {
+      console.error('[INIT] ❌ Error during initialization:', error);
+    }
+  }
+  
+  // Run immediately if DOM is ready, otherwise wait
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeAllFeatures);
+  } else {
+    initializeAllFeatures();
+  }
+  
+  // Also run after a delay to catch late-loading elements
+  setTimeout(initializeAllFeatures, 500);
+  setTimeout(initializeAllFeatures, 1000);
+  setTimeout(initializeAllFeatures, 2000);
+  
+  // Make it globally available
+  window.initializeAllFeatures = initializeAllFeatures;
+  
   document.addEventListener('DOMContentLoaded', () => {
     ensureClicksEnabled();
+    // Call initNav to set up navigation
+    if (typeof initNav === 'function') {
+      initNav();
+    }
     setTimeout(forceReinitNavigation, 100);
+    // Also call comprehensive init
+    initializeAllFeatures();
   });
 } else {
+  // DOM already loaded - run immediately
+  function initializeAllFeatures() {
+    console.log('[INIT] Starting comprehensive initialization (DOM already loaded)...');
+    
+    try {
+      // 1. Initialize auth card (login/signup)
+      if (typeof window.initAuthCard === 'function') {
+        console.log('[INIT] Initializing auth card...');
+        window.initAuthCard();
+      }
+      
+      // 2. Initialize jobs form (post job button)
+      if (typeof initJobsForm === 'function') {
+        console.log('[INIT] Initializing jobs form...');
+        initJobsForm();
+      }
+      
+      // 3. Initialize terms/privacy links
+      const termsLink = document.getElementById("footerTermsLink");
+      const privacyLink = document.getElementById("footerPrivacyLink");
+      
+      if (termsLink) {
+        const newTermsLink = termsLink.cloneNode(true);
+        termsLink.parentNode.replaceChild(newTermsLink, termsLink);
+        newTermsLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          window.open("terms.html", "_blank");
+        });
+        newTermsLink.style.cursor = "pointer";
+      }
+      
+      if (privacyLink) {
+        const newPrivacyLink = privacyLink.cloneNode(true);
+        privacyLink.parentNode.replaceChild(newPrivacyLink, privacyLink);
+        newPrivacyLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          window.open("privacy.html", "_blank");
+        });
+        newPrivacyLink.style.cursor = "pointer";
+      }
+      
+      // 4. Force enable all buttons
+      const allButtons = document.querySelectorAll('button, .btn, [role="button"]');
+      allButtons.forEach(btn => {
+        if (btn) {
+          btn.style.pointerEvents = 'auto';
+          btn.style.cursor = 'pointer';
+          btn.disabled = false;
+        }
+      });
+      
+      console.log('[INIT] ✅ Comprehensive initialization complete');
+    } catch (error) {
+      console.error('[INIT] ❌ Error during initialization:', error);
+    }
+  }
+  
   ensureClicksEnabled();
   setTimeout(forceReinitNavigation, 100);
+  initializeAllFeatures();
+  setTimeout(initializeAllFeatures, 500);
+  setTimeout(initializeAllFeatures, 1000);
+  window.initializeAllFeatures = initializeAllFeatures;
 }
 
 // Run on window load as well
 window.addEventListener('load', () => {
   ensureClicksEnabled();
   setTimeout(forceReinitNavigation, 200);
+  
+  // Run comprehensive initialization on window load
+  if (typeof window.initializeAllFeatures === 'function') {
+    window.initializeAllFeatures();
+  }
   
   // Initialize WebSocket connection if user is logged in
   const token = localStorage.getItem('hustl_token');

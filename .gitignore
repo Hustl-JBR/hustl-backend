@@ -44,3 +44,7 @@ users-log.json
 # Untracked directories
 Hustl/
 
+# OneDrive Personal Vault files
+*Personal Vault*
+*.lnk
+
