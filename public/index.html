@@ -2688,6 +2688,68 @@ async function renderJobs(reset = false) {
           applyBtn.style.minHeight = "48px"; // Better touch target
           applyBtn.style.fontSize = "1rem";
           applyBtn.style.fontWeight = "600";
+
+          // Check Stripe Connect status before showing apply button
+          let stripeConnected = false;
+          try {
+            const stripeStatus = await window.hustlAPI.stripeConnect.getStatus();
+            stripeConnected = stripeStatus?.connected === true;
+          } catch (stripeError) {
+            console.warn("Could not check Stripe status:", stripeError);
+            stripeConnected = false;
+          }
+
+          if (!stripeConnected) {
+            // Show Stripe Connect prompt instead of apply button
+            const stripePrompt = document.createElement("div");
+            stripePrompt.style.padding = "1.5rem";
+            stripePrompt.style.background = "#fef3c7";
+            stripePrompt.style.borderRadius = "8px";
+            stripePrompt.style.border = "1px solid #fbbf24";
+            stripePrompt.style.marginTop = "1rem";
+            stripePrompt.innerHTML = "
+              <div style='display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;'>
+                <span style='font-size: 1.5rem;'>âš ï¸</span>
+                <h3 style='margin: 0; font-size: 1.1rem; color: #92400e;'>Connect Stripe to Apply</h3>
+              </div>
+              <p style='margin: 0 0 1rem 0; color: #78350f; line-height: 1.5;'>
+                You must connect your Stripe account before you can apply for jobs. This ensures secure payments and faster payouts.
+              </p>
+              <button class='btn btn-primary' id='connectStripeBtn' style='width: 100%; min-height: 48px;'>
+                Connect Stripe Account
+              </button>
+            ";
+            
+            const connectBtn = stripePrompt.querySelector("#connectStripeBtn");
+            connectBtn.addEventListener("click", async () => {
+              try {
+                connectBtn.disabled = true;
+                connectBtn.textContent = "Connecting...";
+                
+                // Create account if needed
+                if (!stripeConnected) {
+                  await window.hustlAPI.stripeConnect.createAccount();
+                }
+                
+                // Get onboarding link
+                const linkResult = await window.hustlAPI.stripeConnect.getOnboardingLink();
+                if (linkResult?.url) {
+                  window.location.href = linkResult.url;
+                } else {
+                  throw new Error("Failed to get Stripe onboarding link");
+                }
+              } catch (error) {
+                console.error("Error connecting Stripe:", error);
+                showToast("Error: " + (error.message || "Failed to connect Stripe account"));
+                connectBtn.disabled = false;
+                connectBtn.textContent = "Connect Stripe Account";
+              }
+            });
+            
+            applySection.appendChild(stripePrompt);
+            applySection.appendChild(applyBtn); // Still add button but hide it
+            applyBtn.style.display = "none";
+          } else {
           
           // Handle both click and touch events for better mobile support
           const handleApply = async (e) => {
@@ -2773,12 +2835,10 @@ async function renderJobs(reset = false) {
               console.error("Error applying for job:", error);
               let errorMsg = error.message || error.toString() || "Failed to apply. Please try again.";
               
-              // TEMPORARILY DISABLED - Stripe requirement check bypassed for testing
               // Check if it's a Stripe requirement error
-              /*
-              if (errorMsg.includes("Stripe") || errorMsg.includes("stripe") || error.requiresStripe) {
+              if (errorMsg.includes("Stripe") || errorMsg.includes("stripe") || errorMsg.includes("requiresStripe") || result?.requiresStripe) {
                 errorMsg = "You must connect your Stripe account before applying to jobs. Go to your Profile to set it up.";
-                showToast("⚠️ " + errorMsg, 5000);
+                showToast("âš ï¸ " + errorMsg, 5000);
                 // Close modal and redirect to profile after a moment
                 setTimeout(() => {
                   overlay.remove();
@@ -2799,7 +2859,7 @@ async function renderJobs(reset = false) {
                 applyBtn.textContent = "Apply as Hustler";
                 return;
               }
-              */
+              
               
               // TEMPORARY: Just show error without Stripe redirect
               showToast("Error: " + errorMsg);
@@ -2811,6 +2871,8 @@ async function renderJobs(reset = false) {
             }
           };
           
+                    }
+
           applyBtn.addEventListener("click", handleApply);
           applyBtn.addEventListener("touchend", handleApply); // Mobile touch support
           applySection.appendChild(applyBtn);
