@@ -457,105 +457,6 @@ async function sendFeedbackEmail(feedbackName, feedbackEmail, feedbackMessage) {
   }
 }
 
-<<<<<<< HEAD
-async function sendDisputeEmail(email, name, jobTitle, reason, description) {
-  if (!isEmailConfigured()) return;
-  try {
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: email,
-      subject: `Issue reported for "${jobTitle}"`,
-      html: `
-        <h1>Issue Reported</h1>
-        <p>Hi ${name},</p>
-        <p>An issue has been reported for the job <strong>${jobTitle}</strong>.</p>
-        <p><strong>Reason:</strong> ${reason}</p>
-        ${description ? `<p><strong>Description:</strong> ${description}</p>` : ''}
-        <p>Payment will not be automatically released while this dispute is pending. Please review the issue and contact support if needed.</p>
-        <p><a href="${process.env.APP_BASE_URL || 'http://localhost:8080'}/jobs">View Job Details</a></p>
-      `,
-    });
-  } catch (error) {
-    console.error('Send dispute email error:', error);
-  }
-}
-
-async function sendStatusUpdateEmail(email, name, jobTitle, statusMessage) {
-  if (!isEmailConfigured()) return;
-  try {
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: email,
-      subject: `Status update for "${jobTitle}"`,
-      html: `
-        <h1>Status Update</h1>
-        <p>Hi ${name},</p>
-        <p>Your hustler has updated the status for the job <strong>${jobTitle}</strong>.</p>
-        <p><strong>Status:</strong> ${statusMessage}</p>
-        <p><a href="${process.env.APP_BASE_URL || 'http://localhost:8080'}/jobs">View Job Details</a></p>
-      `,
-    });
-  } catch (error) {
-    console.error('Send status update email error:', error);
-  }
-}
-
-async function sendJobExpiringEmail(email, name, jobTitle, jobId) {
-  if (!isEmailConfigured()) return;
-  try {
-    const jobUrl = `${process.env.APP_BASE_URL || 'http://localhost:8080'}/jobs/${jobId}`;
-    const renewUrl = `${process.env.APP_BASE_URL || 'http://localhost:8080'}/jobs/${jobId}?renew=true`;
-    
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: email,
-      subject: `⚠️ Your Hustl job is about to expire`,
-      html: `
-        <div style="max-width: 600px; margin: 0 auto; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-          <h1 style="color: #dc2626; font-size: 1.75rem; margin-bottom: 1rem;">⚠️ Your Job is About to Expire</h1>
-          <p style="font-size: 1.1rem; color: #1f2937; margin-bottom: 1.5rem;">Hi <strong>${name}</strong>,</p>
-          
-          <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
-            <p style="font-size: 1.05rem; color: #92400e; margin: 0 0 0.5rem 0; font-weight: 600;">
-              Your job posted on Hustl is about to expire in the next 24 hours:
-            </p>
-            <h2 style="color: #78350f; font-size: 1.5rem; margin: 0.5rem 0;">
-              ${jobTitle}
-            </h2>
-          </div>
-          
-          <p style="color: #374151; line-height: 1.6; margin: 1.5rem 0;">
-            If you still need help with this job, you can renew it to keep it posted and visible to hustlers.
-          </p>
-          
-          <div style="margin: 2rem 0; text-align: center;">
-            <a href="${renewUrl}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
-              Renew Job →
-            </a>
-          </div>
-          
-          <div style="margin: 1.5rem 0; text-align: center;">
-            <a href="${jobUrl}" style="color: #2563eb; text-decoration: underline; font-size: 0.95rem;">View Job Details</a>
-          </div>
-          
-          <p style="color: #6b7280; font-size: 0.9rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
-            If you don't renew it, the job will automatically be removed to keep the app clean for other users.
-          </p>
-          
-          <p style="color: #6b7280; font-size: 0.85rem; margin-top: 1rem;">
-            Questions? Reply to this email or contact support through the app.
-          </p>
-        </div>
-      `,
-    });
-  } catch (error) {
-    console.error('Send job expiring email error:', error);
-    throw error; // Important - we want to know if this fails
-  }
-}
-
-=======
->>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
 module.exports = {
   sendSignupEmail,
   sendEmailVerificationEmail,
@@ -573,13 +474,6 @@ module.exports = {
   sendStripeRequiredEmail,
   sendFeedbackEmail,
   sendNewMessageEmail,
-<<<<<<< HEAD
-  sendDisputeEmail,
-  sendStatusUpdateEmail,
-  sendJobExpiringEmail,
-  sendSupportEmail,
-=======
->>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
 };
 
 async function sendSupportEmail({ from, fromName, subject, message, userId }) {

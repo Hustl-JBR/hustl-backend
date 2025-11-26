@@ -6,40 +6,6 @@ const { createPaymentIntent } = require('../services/stripe');
 
 const router = express.Router();
 
-<<<<<<< HEAD
-// GET /offers/user/me - Get all offers for the current user (optimized for profile page)
-router.get('/user/me', authenticate, async (req, res) => {
-  try {
-    const offers = await prisma.offer.findMany({
-      where: { hustlerId: req.user.id },
-      include: {
-        job: {
-          select: {
-            id: true,
-            title: true,
-            status: true,
-            customerId: true,
-            hustlerId: true,
-            createdAt: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    res.json(offers);
-  } catch (error) {
-    console.error('Get user offers error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// GET /offers/:jobId - List offers for a job
-router.get('/:jobId', authenticate, async (req, res) => {
-=======
-// GET /jobs/:jobId/offers - List offers for a job
-router.get('/jobs/:jobId/offers', authenticate, async (req, res) => {
->>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
   try {
     const { jobId } = req.params;
 
@@ -97,54 +63,6 @@ router.get('/jobs/:jobId/offers', authenticate, async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-// POST /offers/:jobId - Create an offer (Hustler only)
-router.post('/:jobId', authenticate, requireRole('HUSTLER'), async (req, res, next) => {
-    // Check email verification before allowing offers
-    // TEMPORARILY DISABLED: Email verification field doesn't exist in production database yet
-    // TODO: Re-enable after running migration to add emailVerified field
-    try {
-      const emailVerificationRequired = process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
-      
-      if (emailVerificationRequired) {
-        try {
-          // Don't select specific fields - get all and check if emailVerified exists
-          const user = await prisma.user.findUnique({
-            where: { id: req.user.id },
-          });
-
-          if (!user) {
-            return res.status(401).json({ error: 'User not found' });
-          }
-
-          // Check if emailVerified exists and is false
-          if (user.emailVerified !== undefined && !user.emailVerified) {
-            return res.status(403).json({ 
-              error: 'Email verification required',
-              message: 'Please verify your email address before applying to jobs. Check your email for a verification code.',
-              requiresEmailVerification: true,
-            });
-          }
-        } catch (schemaError) {
-          // If emailVerified field doesn't exist, log warning and continue
-          if (schemaError.message && schemaError.message.includes('emailVerified')) {
-            console.warn('[POST /offers/:jobId] emailVerified field not found in schema, skipping verification check');
-            // Continue without email verification check
-          } else {
-            throw schemaError; // Re-throw other errors
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Email verification check error:', error);
-      return res.status(500).json({ error: 'Internal server error' });
-    }
-  next();
-}, [
-=======
-// POST /jobs/:id/offers - Create an offer (Hustler only)
-router.post('/jobs/:jobId/offers', authenticate, requireRole('HUSTLER'), [
->>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
   body('note').optional().trim().isLength({ max: 1000 }),
 ], async (req, res) => {
   try {

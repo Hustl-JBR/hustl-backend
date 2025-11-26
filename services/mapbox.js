@@ -72,68 +72,6 @@ async function geocodeAddress(address, options = {}) {
     }
 
     const [lng, lat] = data.features[0].center;
-<<<<<<< HEAD
-    const context = data.features[0].context || [];
-    const properties = data.features[0].properties || {};
-    
-    // Extract state and zip from context
-    let state = null;
-    let zip = null;
-    let region = null;
-    let isTennessee = false;
-    
-    // PRIMARY METHOD: Look for short_code: "US-TN" anywhere in context array
-    for (const item of context) {
-      if (item.short_code) {
-        const shortCode = item.short_code.toUpperCase();
-        
-        // Check if this is US-TN (Tennessee)
-        if (shortCode === 'US-TN') {
-          isTennessee = true;
-          region = 'US-TN';
-          state = 'TN';
-        } else if (shortCode === 'TN' && !region) {
-          // Also accept just "TN" as state code
-          region = 'US-TN';
-          state = 'TN';
-        }
-      }
-      
-      // Postcode (zip code)
-      if (item.id && item.id.startsWith('postcode')) {
-        zip = item.text;
-      }
-      
-      // Also capture state text for display
-      if (item.id && item.id.startsWith('region') && !state) {
-        state = item.text || state;
-      }
-    }
-    
-    // FALLBACK: Check properties for short_code
-    if (!isTennessee && properties.short_code) {
-      const propShortCode = properties.short_code.toUpperCase();
-      if (propShortCode === 'US-TN' || propShortCode === 'TN') {
-        isTennessee = true;
-        region = 'US-TN';
-        state = 'TN';
-      }
-    }
-    
-    const result = { lat, lng, state, zip, region, isTennessee };
-    
-    // Cache the result (especially useful for zip codes)
-    if (useCache) {
-      geocodeCache.set(address, {
-        result,
-        timestamp: Date.now(),
-      });
-    }
-    
-    return result;
-=======
-    return { lat, lng };
->>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
   } catch (error) {
     console.error('[Mapbox Geocoding] Error:', error.message);
     

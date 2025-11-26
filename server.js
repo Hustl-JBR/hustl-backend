@@ -390,41 +390,38 @@ server.listen(PORT, host, () => {
     console.log(`📱 Development mode - Access from your phone: http://[your-ip]:${PORT}`);
     console.log(`   (Make sure your phone is on the same WiFi network)`);
   }
-<<<<<<< HEAD
   
-      // Start cleanup job scheduler (only if database is ready)
-      try {
-        const { cleanup72HourJobs, cleanupOldJobs, runAllCleanup } = require('./services/cleanup');
-        
-        // Run cleanup immediately on startup (with error handling)
-        runAllCleanup().catch(err => {
-          // Ignore migration errors - database might not be migrated yet
-          if (err.code === 'P2022' || err.message?.includes('does not exist')) {
-            console.warn('[Startup] Cleanup skipped - database migrations not run yet');
-          } else {
-            console.error('[Startup] Cleanup error (non-fatal):', err.message);
-          }
-        });
-        
-        // Run cleanup every 2 hours (more frequent for better UX)
-        const CLEANUP_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours
-        setInterval(() => {
-          runAllCleanup().catch(err => {
-            // Ignore migration errors
-            if (err.code === 'P2022' || err.message?.includes('does not exist')) {
-              // Silently skip - migrations not run yet
-              return;
-            }
-            console.error('[Scheduled Cleanup] Error (non-fatal):', err.message);
-          });
-        }, CLEANUP_INTERVAL_MS);
-        
-        console.log(`🧹 Cleanup job scheduled: runs every 2 hours`);
-        console.log(`   - Cancels OPEN jobs older than 48-72h with no accepted offers`);
-        console.log(`   - Deletes all jobs older than 2 weeks`);
-      } catch (cleanupError) {
-        console.warn('[Startup] Could not initialize cleanup service:', cleanupError.message);
+  // Start cleanup job scheduler (only if database is ready)
+  try {
+    const { cleanup72HourJobs, cleanupOldJobs, runAllCleanup } = require('./services/cleanup');
+    
+    // Run cleanup immediately on startup (with error handling)
+    runAllCleanup().catch(err => {
+      // Ignore migration errors - database might not be migrated yet
+      if (err.code === 'P2022' || err.message?.includes('does not exist')) {
+        console.warn('[Startup] Cleanup skipped - database migrations not run yet');
+      } else {
+        console.error('[Startup] Cleanup error (non-fatal):', err.message);
       }
-=======
->>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
+    });
+    
+    // Run cleanup every 2 hours (more frequent for better UX)
+    const CLEANUP_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours
+    setInterval(() => {
+      runAllCleanup().catch(err => {
+        // Ignore migration errors
+        if (err.code === 'P2022' || err.message?.includes('does not exist')) {
+          // Silently skip - migrations not run yet
+          return;
+        }
+        console.error('[Scheduled Cleanup] Error (non-fatal):', err.message);
+      });
+    }, CLEANUP_INTERVAL_MS);
+    
+    console.log(`🧹 Cleanup job scheduled: runs every 2 hours`);
+    console.log(`   - Cancels OPEN jobs older than 48-72h with no accepted offers`);
+    console.log(`   - Deletes all jobs older than 2 weeks`);
+  } catch (cleanupError) {
+    console.warn('[Startup] Could not initialize cleanup service:', cleanupError.message);
+  }
 });

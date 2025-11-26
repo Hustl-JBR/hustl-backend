@@ -56,65 +56,6 @@ router.get('/', async (req, res) => {
       orderBy: { lastMessageAt: 'desc' },
     });
 
-<<<<<<< HEAD
-    // Get latest message for each thread - optimized single query
-    const threadIds = threads.map(t => t.id);
-    if (threadIds.length > 0) {
-      const allMessages = await prisma.message.findMany({
-        where: {
-          threadId: { in: threadIds },
-        },
-        select: {
-          id: true,
-          threadId: true,
-          body: true,
-          senderId: true,
-          read: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: 'desc' },
-        take: threadIds.length * 2, // Get enough messages to find latest per thread
-      });
-
-      // Get unread counts per thread for current user
-      const unreadCounts = await prisma.message.groupBy({
-        by: ['threadId'],
-        where: {
-          threadId: { in: threadIds },
-          read: false,
-          senderId: { not: req.user.id }, // Only count messages NOT sent by current user
-        },
-        _count: {
-          id: true,
-        },
-      });
-
-      // Create map of threadId -> unread count
-      const unreadCountMap = new Map();
-      unreadCounts.forEach(item => {
-        unreadCountMap.set(item.threadId, item._count.id);
-      });
-
-      // Group by threadId and take the latest (first due to desc order)
-      const messageMap = new Map();
-      for (const msg of allMessages) {
-        if (!messageMap.has(msg.threadId)) {
-          messageMap.set(msg.threadId, msg);
-        }
-      }
-      const threadsWithMessages = threads.map(thread => ({
-        ...thread,
-        messages: messageMap.get(thread.id) ? [messageMap.get(thread.id)] : [],
-        unreadCount: unreadCountMap.get(thread.id) || 0, // Add unread count
-      }));
-
-      res.json(threadsWithMessages);
-    } else {
-      res.json(threads.map(thread => ({ ...thread, messages: [], unreadCount: 0 })));
-    }
-=======
-    res.json(threads);
->>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
   } catch (error) {
     console.error('List threads error:', error);
     res.status(500).json({ error: 'Internal server error' });
