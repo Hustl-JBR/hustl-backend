@@ -78,37 +78,15 @@ router.post('/:jobId', authenticate, requireRole('HUSTLER'), [
     const { jobId } = req.params;
     const { note, proposedAmount } = req.body;
 
-    // REQUIRE STRIPE ACCOUNT - Hustler must have Stripe connected to apply
-    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
-    
-    const hustler = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: { stripeAccountId: true, email: true, name: true },
-    });
+    // Check if hustler is verified (optional for now - can be enabled later)
+    // const user = await prisma.user.findUnique({
+    //   where: { id: req.user.id },
+    //   select: { idVerified: true },
+    // });
 
-    if (!hustler.stripeAccountId && !skipStripeCheck) {
-      // Send email to hustler about needing Stripe
-      try {
-        const { sendStripeRequiredEmail } = require('../services/email');
-        await sendStripeRequiredEmail(
-          hustler.email,
-          hustler.name,
-          'apply to jobs'
-        );
-      } catch (emailError) {
-        console.error('Error sending Stripe required email:', emailError);
-      }
-      
-      return res.status(400).json({ 
-        error: 'Cannot apply: You must connect your Stripe account first. Check your email for instructions.',
-        requiresStripe: true 
-      });
-    }
-    
-    // In test mode, log that we're skipping the check
-    if (skipStripeCheck && !hustler.stripeAccountId) {
-      console.log('[TEST MODE] Skipping Stripe account check for apply');
-    }
+    // if (!user.idVerified) {
+    //   return res.status(403).json({ error: 'ID verification required to request jobs' });
+    // }
 
     const job = await prisma.job.findUnique({
       where: { id: jobId },
