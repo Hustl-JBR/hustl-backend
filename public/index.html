@@ -5512,6 +5512,11 @@ try {
     }
   }
 
+  // Expose functions globally for inline onclick handlers
+  window.setView = setView;
+  window.openAuthModal = openAuthModal;
+  window.closeAuthModal = closeAuthModal;
+
   // Boot - initialize immediately
   loadState();
   initAgeGate();

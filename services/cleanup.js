@@ -143,19 +143,38 @@ async function cleanupOldJobs() {
   try {
     const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
     
-    // Optimized: Direct delete without counting first (faster)
-    const result = await prisma.job.deleteMany({
+    // First, find old jobs
+    const oldJobs = await prisma.job.findMany({
       where: {
         createdAt: {
           lt: twoWeeksAgo,
         },
       },
+      select: { id: true },
     });
 
-    if (result.count === 0) {
+    if (oldJobs.length === 0) {
       console.log('[Cleanup 2w] No very old jobs to delete');
       return { deleted: 0 };
     }
+
+    const jobIds = oldJobs.map(j => j.id);
+
+    // Delete related records first (in order of dependencies)
+    await prisma.review.deleteMany({
+      where: { jobId: { in: jobIds } },
+    });
+    
+    await prisma.locationUpdate.deleteMany({
+      where: { jobId: { in: jobIds } },
+    });
+
+    // Now delete the jobs
+    const result = await prisma.job.deleteMany({
+      where: {
+        id: { in: jobIds },
+      },
+    });
 
     console.log(`[Cleanup 2w] Deleted ${result.count} very old jobs (older than 2 weeks)`);
     
