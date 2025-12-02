@@ -1826,7 +1826,9 @@ if (job.acceptedHustlerId) {
     async function renderAuthSectionVisibility() {
   const authSection = document.getElementById("authSection");
   const user = await window.hustlAPI.auth.getCurrentUser();
-  authSection.style.display = user ? "none" : "block";
+  // Only show auth section on home view AND when not logged in
+  const shouldShow = !user && activeView === 'home';
+  authSection.style.display = shouldShow ? "block" : "none";
 }
 
     
