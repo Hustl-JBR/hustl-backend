@@ -12,64 +12,125 @@ function isEmailConfigured() {
   return true;
 }
 
-// TODO: Update this email address when you get your domain
-// You'll need to verify the domain in Resend and update this to match
-// Example: 'Hustl <noreply@yourdomain.com>'
-const FROM_EMAIL = process.env.FROM_EMAIL || 'Hustl <noreply@hustl.app>';
+// Use Resend's onboarding domain for testing, or set FROM_EMAIL with your verified domain
+// Example: 'Hustl <hello@hustljobs.com>' (after verifying hustljobs.com in Resend)
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Hustl <onboarding@resend.dev>';
 
 async function sendSignupEmail(email, name) {
   if (!isEmailConfigured()) return;
   try {
+    console.log('[Email] Sending welcome email to:', email);
     await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
-      subject: 'Welcome to Hustl!',
+      subject: '🎉 Welcome to Hustl - Let\'s get started!',
       html: `
-        <h1>Welcome to Hustl, ${name}!</h1>
-        <p>Thanks for joining Hustl. You're all set to start posting jobs or finding work.</p>
-        <p>Get started by:</p>
-        <ul>
-          <li>Completing your profile</li>
-          <li>Posting your first job (if you're a customer)</li>
-          <li>Browsing available jobs (if you're a hustler)</li>
-        </ul>
-        <p>Happy hustling!</p>
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #ffffff; padding: 0;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">Welcome to Hustl! 🎉</h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hey <strong>${name}</strong>! 👋
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              You're now part of Tennessee's local help community. Whether you want to post jobs or make extra cash, Hustl connects you with real people in your area.
+            </p>
+            
+            <div style="background: white; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; border: 1px solid #e2e8f0;">
+              <h3 style="color: #1e293b; margin: 0 0 1rem 0; font-size: 1rem;">🚀 What's next?</h3>
+              <ul style="color: #475569; padding-left: 1.25rem; margin: 0; line-height: 1.8;">
+                <li><strong>Need help?</strong> Post a job and get offers from local hustlers</li>
+                <li><strong>Want to earn?</strong> Browse jobs and start making money today</li>
+                <li><strong>Stay safe:</strong> All payments are secure through Stripe</li>
+              </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 2rem 0;">
+              <a href="https://hustljobs.com" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                Start Hustling →
+              </a>
+            </div>
+            
+            <p style="color: #64748b; font-size: 0.9rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0; text-align: center;">
+              Questions? Just reply to this email — we're here to help!
+            </p>
+          </div>
+        </div>
       `,
     });
+    console.log('[Email] Welcome email sent successfully to:', email);
   } catch (error) {
-    console.error('Send signup email error:', error);
+    console.error('[Email] Send signup email error:', error);
     // Don't throw - email failures shouldn't break signup
   }
 }
 
 async function sendEmailVerificationEmail(email, name, verificationCode) {
-  if (!isEmailConfigured()) return;
+  if (!isEmailConfigured()) {
+    console.warn('[Email] Verification email not sent - RESEND_API_KEY not configured');
+    return;
+  }
   try {
-    const verifyUrl = `${process.env.APP_BASE_URL || 'http://localhost:8080'}/verify-email?code=${verificationCode}&email=${encodeURIComponent(email)}`;
+    console.log('[Email] Sending verification email to:', email, 'with code:', verificationCode);
     
     await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
-      subject: 'Verify your Hustl email address',
+      subject: `🔐 Your Hustl verification code: ${verificationCode}`,
       html: `
-        <h1>Verify Your Email</h1>
-        <p>Hi ${name},</p>
-        <p>Thanks for signing up for Hustl! Please verify your email address to get started.</p>
-        <div style="background: #f0f9ff; border: 2px solid #0ea5e9; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; text-align: center;">
-          <div style="font-size: 2rem; font-weight: 700; color: #0ea5e9; letter-spacing: 0.5rem; margin-bottom: 0.5rem;">${verificationCode}</div>
-          <p style="margin: 0; color: #64748b; font-size: 0.9rem;">Enter this code on the verification page, or click the link below</p>
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #ffffff;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.5rem;">Verify Your Email 🔐</h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hey <strong>${name}</strong>!
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              You're almost ready! Enter this 6-digit code to verify your email and start using Hustl:
+            </p>
+            
+            <!-- Code Box -->
+            <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border: 3px solid #2563eb; border-radius: 12px; padding: 2rem; margin: 1.5rem 0; text-align: center;">
+              <div style="font-size: 2.5rem; font-weight: 800; color: #1e40af; letter-spacing: 0.75rem; font-family: 'Courier New', monospace;">
+                ${verificationCode}
+              </div>
+              <p style="margin: 1rem 0 0 0; color: #3b82f6; font-size: 0.9rem; font-weight: 500;">
+                Your verification code
+              </p>
+            </div>
+            
+            <p style="color: #64748b; font-size: 0.9rem; text-align: center; margin: 1.5rem 0;">
+              ⏰ This code expires in <strong>24 hours</strong>
+            </p>
+            
+            <!-- Security Note -->
+            <div style="background: #fef3c7; border-radius: 8px; padding: 1rem; margin-top: 1.5rem; border-left: 4px solid #f59e0b;">
+              <p style="color: #92400e; margin: 0; font-size: 0.85rem;">
+                <strong>🔒 Security tip:</strong> Never share this code with anyone. Hustl will never ask for your code over the phone.
+              </p>
+            </div>
+            
+            <p style="color: #94a3b8; font-size: 0.8rem; margin-top: 1.5rem; text-align: center;">
+              If you didn't create a Hustl account, you can safely ignore this email.
+            </p>
+          </div>
         </div>
-        <p style="margin-top: 1.5rem;">
-          <a href="${verifyUrl}" style="display: inline-block; padding: 0.75rem 1.5rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px;">Verify Email Address</a>
-        </p>
-        <p style="color: #64748b; font-size: 0.85rem; margin-top: 1.5rem;">
-          This code will expire in 24 hours. If you didn't create an account, you can safely ignore this email.
-        </p>
       `,
     });
+    console.log('[Email] Verification email sent successfully to:', email);
   } catch (error) {
-    console.error('Send email verification error:', error);
-    throw error; // This is important, so we should know if it fails
+    console.error('[Email] Send email verification error:', error);
+    // Don't throw - allow signup to continue even if email fails
   }
 }
 
