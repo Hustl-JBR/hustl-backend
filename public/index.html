@@ -875,81 +875,88 @@
 
     <main>
       <!-- AUTH CARD -->
-      <section id="authSection" class="card" style="margin-bottom: 0.8rem;">
-        <div class="card-header">
-          <div class="card-title" id="authCardTitle">Create account</div>
+      <section id="authSection" class="card" style="margin-bottom: 0.8rem; border: 2px solid var(--primary-soft);">
+        <div class="card-header" style="background: linear-gradient(135deg, var(--primary-soft) 0%, #eff6ff 100%); margin: -1rem -1rem 1rem -1rem; padding: 1rem; border-radius: var(--radius) var(--radius) 0 0;">
+          <div>
+            <div class="card-title" id="authCardTitle" style="font-size: 1.2rem;">🚀 Join Hustl</div>
+            <div class="muted" style="font-size: 0.8rem;">Start earning or get help today</div>
+          </div>
           <div class="muted" id="authModeToggle">
-            Already have an account?
-            <span class="linkish" data-auth-mode="login">Log in</span>
+            <span class="linkish" data-auth-mode="login" style="background: white; padding: 0.4rem 0.8rem; border-radius: 999px; font-weight: 500;">Log in</span>
           </div>
         </div>
+        
         <div id="authBodyCreate">
-          <div class="field-inline">
-            <div class="field">
-              <label for="createName">Name</label>
-              <input id="createName" type="text" placeholder="Example: Jack Ready" />
-            </div>
-            <div class="field">
-              <label for="createEmail">Email</label>
-              <input id="createEmail" type="email" placeholder="you@example.com" />
-            </div>
+          <!-- Step indicator -->
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+            <div style="flex: 1; height: 4px; background: var(--primary); border-radius: 2px;"></div>
+            <div style="flex: 1; height: 4px; background: var(--border); border-radius: 2px;"></div>
           </div>
-          <div class="field-inline">
-            <div class="field">
-              <label for="createPassword">Password (demo only)</label>
-              <input id="createPassword" type="password" placeholder="At least 6 characters" />
-            </div>
-            <div class="field">
-              <label for="createRole">Role</label>
-              <select id="createRole">
-                <option value="customer">Customer (post jobs)</option>
-                <option value="hustler">Hustler (do jobs)</option>
-              </select>
-            </div>
+          
+          <div class="field">
+            <label for="createName">Your Name</label>
+            <input id="createName" type="text" placeholder="John Smith" style="font-size: 1rem; padding: 0.75rem;" />
           </div>
-<!-- Payout preferences (required) -->
-<div class="section-title" style="margin-top:0.6rem;">Payout preference</div>
-<div class="field-inline">
-  <div class="field">
-    <label for="createPayoutMethod">Method (required)</label>
-    <select id="createPayoutMethod">
-      <option value="">Choose one</option>
-      <option value="venmo">Venmo</option>
-      <option value="cashapp">Cash App</option>
-      <option value="zelle">Zelle</option>
-    </select>
-  </div>
-  <div class="field">
-    <label for="createPayoutHandle">Handle / Account (required)</label>
-    <input id="createPayoutHandle" type="text" placeholder="@your-handle or phone/email for Zelle" />
-  </div>
-</div>
-<div class="field">
-  <label for="createPayoutName">Full name for payout (required only for Zelle)</label>
-  <input id="createPayoutName" type="text" placeholder="Legal/Bank name used on the payout" />
-</div>
-
-          <div class="muted" style="margin-bottom:0.4rem;">
-            This is a prototype – accounts and passwords are stored only on this device for testing.
+          
+          <div class="field">
+            <label for="createEmail">Email Address</label>
+            <input id="createEmail" type="email" placeholder="john@example.com" style="font-size: 1rem; padding: 0.75rem;" />
           </div>
-          <button class="btn btn-primary" id="createAccountButton">Create account</button>
+          
+          <div class="field">
+            <label for="createPassword">Create Password</label>
+            <input id="createPassword" type="password" placeholder="At least 8 characters" style="font-size: 1rem; padding: 0.75rem;" />
+          </div>
+          
+          <div class="field" style="display: none;">
+            <label for="createRole">I want to</label>
+            <select id="createRole" style="font-size: 1rem; padding: 0.75rem;">
+              <option value="both" selected>Do both - Post jobs & earn money</option>
+              <option value="customer">Only post jobs (Customer)</option>
+              <option value="hustler">Only earn money (Hustler)</option>
+            </select>
+          </div>
+          
+          <!-- Hidden fields for backwards compatibility -->
+          <div style="display: none;">
+            <select id="createPayoutMethod"><option value="">Choose one</option></select>
+            <input id="createPayoutHandle" type="text" />
+            <input id="createPayoutName" type="text" />
+          </div>
+          
+          <button class="btn btn-primary" id="createAccountButton" style="width: 100%; padding: 0.9rem; font-size: 1rem; margin-top: 0.5rem;">
+            Create Free Account →
+          </button>
+          
+          <p class="muted" style="text-align: center; margin-top: 0.75rem; font-size: 0.75rem;">
+            By signing up, you agree to our Terms of Service.<br>
+            <span style="color: var(--success);">✓ Free to join</span> • <span style="color: var(--success);">✓ No monthly fees</span>
+          </p>
         </div>
 
         <div id="authBodyLogin" style="display:none;">
-          <div class="field-inline">
-            <div class="field">
-              <label for="loginEmail">Email</label>
-              <input id="loginEmail" type="email" placeholder="you@example.com" />
-            </div>
-            <div class="field">
-              <label for="loginPassword">Password</label>
-              <input id="loginPassword" type="password" placeholder="Your password" />
-            </div>
+          <div style="text-align: center; margin-bottom: 1rem;">
+            <span style="font-size: 2rem;">👋</span>
+            <div style="font-weight: 600; margin-top: 0.25rem;">Welcome back!</div>
           </div>
-          <div class="muted" style="margin-bottom:0.4rem;">
-            This just matches what you used when creating your prototype account.
+          
+          <div class="field">
+            <label for="loginEmail">Email</label>
+            <input id="loginEmail" type="email" placeholder="you@example.com" style="font-size: 1rem; padding: 0.75rem;" />
           </div>
-          <button class="btn btn-primary" id="loginButton">Log in</button>
+          
+          <div class="field">
+            <label for="loginPassword">Password</label>
+            <input id="loginPassword" type="password" placeholder="Your password" style="font-size: 1rem; padding: 0.75rem;" />
+          </div>
+          
+          <button class="btn btn-primary" id="loginButton" style="width: 100%; padding: 0.9rem; font-size: 1rem;">
+            Log In →
+          </button>
+          
+          <p class="muted" style="text-align: center; margin-top: 0.75rem; font-size: 0.8rem;">
+            Don't have an account? <span class="linkish" data-auth-mode="create">Sign up free</span>
+          </p>
         </div>
       </section>
 
@@ -966,41 +973,78 @@
               <button class="btn btn-primary" id="homeCtaPost">Post a job</button>
               <button class="btn btn-ghost" id="homeCtaBrowse">Browse jobs</button>
             </div>
-            <div class="section-title">How Hustl works</div>
-            <div class="step-row">
-              <div class="step-card">
-                <div class="step-title">
-                  <span class="step-emoji">📝</span>Post a job
+            <!-- How It Works - Collapsible Sections -->
+            <div style="margin-top: 0.5rem;">
+              <details class="how-it-works-dropdown" open>
+                <summary style="font-weight: 700; font-size: 1rem; cursor: pointer; padding: 0.75rem; background: var(--primary-soft); border-radius: var(--radius); display: flex; align-items: center; justify-content: space-between;">
+                  <span>📋 How Hustl Works</span>
+                  <span style="font-size: 0.8rem; color: var(--primary);">▼</span>
+                </summary>
+                <div class="step-row" style="margin-top: 0.75rem;">
+                  <div class="step-card" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-color: #fbbf24;">
+                    <div class="step-title" style="font-size: 1.1rem;">
+                      <span class="step-emoji">📝</span>1. Post a Job
+                    </div>
+                    <div style="color: #92400e;">
+                      Describe what you need done, set your location, and name your price. Takes 30 seconds.
+                    </div>
+                  </div>
+                  <div class="step-card" style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-color: #3b82f6;">
+                    <div class="step-title" style="font-size: 1.1rem;">
+                      <span class="step-emoji">💪</span>2. Get Offers
+                    </div>
+                    <div style="color: #1e40af;">
+                      Local hustlers apply with their pitch. Compare offers and chat before deciding.
+                    </div>
+                  </div>
+                  <div class="step-card" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-color: #10b981;">
+                    <div class="step-title" style="font-size: 1.1rem;">
+                      <span class="step-emoji">💰</span>3. Pay & Done
+                    </div>
+                    <div style="color: #065f46;">
+                      Accept an offer, pay securely through Stripe. Hustler gets paid automatically!
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  Say what you need, where it is, and what you’ll pay. Pick a category and add a note.
+              </details>
+              
+              <details class="how-it-works-dropdown" style="margin-top: 0.5rem;">
+                <summary style="font-weight: 600; font-size: 0.9rem; cursor: pointer; padding: 0.6rem; background: #f8fafc; border-radius: var(--radius); border: 1px solid var(--border);">
+                  💵 For Hustlers: How to Get Paid
+                </summary>
+                <div style="padding: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">
+                  <ol style="margin: 0; padding-left: 1.2rem;">
+                    <li style="margin-bottom: 0.5rem;"><strong>Create your account</strong> and go to your Profile</li>
+                    <li style="margin-bottom: 0.5rem;"><strong>Connect your Stripe account</strong> (takes 5 min, one-time setup)</li>
+                    <li style="margin-bottom: 0.5rem;"><strong>Apply to jobs</strong> that match your skills</li>
+                    <li><strong>Complete work, get paid instantly</strong> - money goes directly to your bank!</li>
+                  </ol>
+                  <div style="margin-top: 0.75rem; padding: 0.5rem; background: #ecfdf5; border-radius: 6px; color: #065f46;">
+                    💡 <strong>Pro tip:</strong> Hustlers with completed profiles and good reviews get more jobs!
+                  </div>
                 </div>
-              </div>
-              <div class="step-card">
-                <div class="step-title">
-                  <span class="step-emoji">💪</span>Hustlers apply
+              </details>
+              
+              <details class="how-it-works-dropdown" style="margin-top: 0.5rem;">
+                <summary style="font-weight: 600; font-size: 0.9rem; cursor: pointer; padding: 0.6rem; background: #f8fafc; border-radius: var(--radius); border: 1px solid var(--border);">
+                  🛡️ Payments & Safety
+                </summary>
+                <div style="padding: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">
+                  <p style="margin: 0 0 0.5rem 0;">✅ <strong>Secure payments</strong> powered by Stripe</p>
+                  <p style="margin: 0 0 0.5rem 0;">✅ <strong>Money is held safely</strong> until the job is done</p>
+                  <p style="margin: 0 0 0.5rem 0;">✅ <strong>Hustlers get paid automatically</strong> via direct deposit</p>
+                  <p style="margin: 0;">✅ <strong>Both parties can leave reviews</strong> after completion</p>
                 </div>
-                <div>
-                  People nearby apply with a short message and can suggest a slightly different price.
+              </details>
+              
+              <details class="how-it-works-dropdown" style="margin-top: 0.5rem;">
+                <summary style="font-weight: 600; font-size: 0.9rem; cursor: pointer; padding: 0.6rem; background: #f8fafc; border-radius: var(--radius); border: 1px solid var(--border);">
+                  💬 Why Hustl Exists
+                </summary>
+                <div style="padding: 0.75rem; font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+                  Hustl was built because I wanted to help people take off with side hustles. College students, locals - anyone looking to make extra money while keeping their freedom. I did plenty of odd jobs myself and there was never an easy, local way to find them. Hustl puts all those opportunities in one place so anyone can find work, do solid jobs, and get paid.
                 </div>
-              </div>
-              <div class="step-card">
-                <div class="step-title">
-                  <span class="step-emoji">✅</span>Accept and pay
-                </div>
-                <div>
-                  You pick your Hustler. Once you accept, payment runs through Hustl (test mode here),
-                  and then you handle the job together.
-                </div>
-              </div>
-            </div>
-            <div class="section-title" style="margin-top:0.8rem;">Why this exists</div>
-            <div class="about-text">
-Hustl was made because I want to see people be able to take off on side hustles.
-I want to see college students and locals make more money on the side while still
-having freedom. I did a lot of jobs like this myself and there was never a simple,
-local way to find them. Hustl is my way of putting all those jobs in one place so
-anyone can hop on, do solid work, and get paid.
+              </details>
             </div>
           </div>
 
@@ -4057,32 +4101,137 @@ async function renderJobs(reset = false) {
     "<textarea id='profileBioInput' placeholder='Tell people a little about yourself. Jobs you like, if you have a truck, experience, etc.'></textarea>" +
     "<button class='btn btn-primary' id='saveBioButton' style='margin-top:0.35rem;'>Save profile</button>";
   container.appendChild(bioField);
-// --- Payout preferences (edit in Profile) ---
+// --- Stripe Connect Section (for automatic payouts) ---
+const stripeConnectWrap = document.createElement("div");
+stripeConnectWrap.className = "field";
+stripeConnectWrap.style.marginTop = "0.8rem";
+stripeConnectWrap.style.padding = "1rem";
+stripeConnectWrap.style.background = "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)";
+stripeConnectWrap.style.borderRadius = "var(--radius)";
+stripeConnectWrap.style.border = "1px solid #bae6fd";
+stripeConnectWrap.innerHTML = `
+  <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+    <span style="font-size: 1.5rem;">💳</span>
+    <strong style="color: #0369a1;">Get Paid Automatically</strong>
+  </div>
+  <p class="muted" style="margin: 0 0 0.75rem 0; font-size: 0.85rem;">
+    Connect your Stripe account to receive payments directly when customers pay for completed jobs. No more waiting for manual payouts!
+  </p>
+  <div id="stripeConnectStatus" style="margin-bottom: 0.75rem;"></div>
+  <button class="btn btn-primary" id="connectStripeBtn" style="background: #635bff; width: 100%;">
+    🔗 Connect Stripe Account
+  </button>
+`;
+container.appendChild(stripeConnectWrap);
+
+// Check Stripe Connect status
+setTimeout(async () => {
+  const statusDiv = document.getElementById("stripeConnectStatus");
+  const connectBtn = document.getElementById("connectStripeBtn");
+  if (!statusDiv || !connectBtn) return;
+  
+  try {
+    const token = localStorage.getItem("hustl_token");
+    if (!token) {
+      statusDiv.innerHTML = '<span class="muted">Log in to connect Stripe</span>';
+      return;
+    }
+    
+    const res = await fetch("/stripe-connect/status", {
+      headers: { "Authorization": "Bearer " + token }
+    });
+    const data = await res.json();
+    
+    if (data.connected) {
+      statusDiv.innerHTML = '<span style="color: var(--success); font-weight: 600;">✅ Stripe Connected!</span><br><span class="muted" style="font-size: 0.8rem;">You\'ll receive payments automatically</span>';
+      connectBtn.textContent = "✓ Connected - Manage Account";
+      connectBtn.style.background = "var(--success)";
+    } else {
+      statusDiv.innerHTML = '<span style="color: #dc2626; font-size: 0.85rem;">⚠️ Not connected yet</span>';
+    }
+  } catch (e) {
+    console.error("Error checking Stripe status:", e);
+  }
+}, 100);
+
+// Handle Stripe Connect button click
+setTimeout(() => {
+  const connectBtn = document.getElementById("connectStripeBtn");
+  if (connectBtn) {
+    connectBtn.addEventListener("click", async () => {
+      connectBtn.disabled = true;
+      connectBtn.textContent = "Connecting...";
+      
+      try {
+        const token = localStorage.getItem("hustl_token");
+        
+        // First create account if needed
+        await fetch("/stripe-connect/create-account", {
+          method: "POST",
+          headers: { 
+            "Authorization": "Bearer " + token,
+            "Content-Type": "application/json"
+          }
+        });
+        
+        // Then get onboarding link
+        const res = await fetch("/stripe-connect/onboarding-link", {
+          headers: { "Authorization": "Bearer " + token }
+        });
+        const data = await res.json();
+        
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          showToast("Could not get Stripe link. Try again.");
+          connectBtn.disabled = false;
+          connectBtn.textContent = "🔗 Connect Stripe Account";
+        }
+      } catch (e) {
+        console.error("Stripe connect error:", e);
+        showToast("Error connecting to Stripe. Please try again.");
+        connectBtn.disabled = false;
+        connectBtn.textContent = "🔗 Connect Stripe Account";
+      }
+    });
+  }
+}, 150);
+
+// --- Manual Payout preferences (backup option) ---
 const payoutWrap = document.createElement("div");
 payoutWrap.className = "field";
-payoutWrap.style.marginTop = "0.6rem";
+payoutWrap.style.marginTop = "0.8rem";
 payoutWrap.innerHTML = `
-  <label>Payout preferences</label>
-  <div class="field-inline">
-    <div class="field">
-      <label for="profilePayoutMethod">Payout method</label>
-      <select id="profilePayoutMethod">
-        <option value="">Choose one</option>
-        <option value="venmo">Venmo</option>
-        <option value="cashapp">Cash App</option>
-        <option value="zelle">Zelle</option>
-      </select>
+  <details style="cursor: pointer;">
+    <summary style="font-weight: 600; color: var(--text-muted); padding: 0.5rem 0;">
+      📱 Manual Payout Options (Venmo/Cash App/Zelle)
+    </summary>
+    <div style="padding-top: 0.5rem;">
+      <p class="muted" style="font-size: 0.8rem; margin-bottom: 0.5rem;">
+        If you can't use Stripe, you can receive manual payouts via Venmo, Cash App, or Zelle (may take 1-2 business days).
+      </p>
+      <div class="field-inline">
+        <div class="field">
+          <label for="profilePayoutMethod">Payout method</label>
+          <select id="profilePayoutMethod">
+            <option value="">Choose one</option>
+            <option value="venmo">Venmo</option>
+            <option value="cashapp">Cash App</option>
+            <option value="zelle">Zelle</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="profilePayoutHandle">Payout handle / account</label>
+          <input id="profilePayoutHandle" type="text" placeholder="@username or email/phone" />
+        </div>
+      </div>
+      <div class="field" style="margin-top:0.35rem;">
+        <label for="profilePayoutName">Payout name (for Zelle)</label>
+        <input id="profilePayoutName" type="text" placeholder="Full name on Zelle account" />
+      </div>
+      <button class="btn btn-ghost" id="savePayoutButton" style="margin-top:0.35rem;">Save manual payout info</button>
     </div>
-    <div class="field">
-      <label for="profilePayoutHandle">Payout handle / account</label>
-      <input id="profilePayoutHandle" type="text" placeholder="@username (Venmo/Cash App) or email/phone (Zelle)" />
-    </div>
-  </div>
-  <div class="field" style="margin-top:0.35rem;">
-    <label for="profilePayoutName">Payout name (optional; required for Zelle)</label>
-    <input id="profilePayoutName" type="text" placeholder="Full name that shows on Zelle (optional for Venmo/Cash App)" />
-  </div>
-  <button class="btn btn-primary" id="savePayoutButton" style="margin-top:0.35rem;">Save payout preferences</button>
+  </details>
 `;
 container.appendChild(payoutWrap);
 
