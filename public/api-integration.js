@@ -50,24 +50,30 @@
       const data = await response.json();
 
       if (!response.ok) {
-        const error = new Error(data.message || `HTTP error! status: ${response.status}`);
+        // Try to get detailed error message
+        const errorMsg = data.error || data.message || `HTTP ${response.status}`;
+        const details = data.details ? `: ${JSON.stringify(data.details)}` : '';
+        const error = new Error(errorMsg + details);
+        // Preserve additional error flags (like requiresStripe)
+        if (data.requiresStripe) {
+          error.requiresStripe = true;
+        }
+        // Store full error data for better error handling
+        error.details = data;
         error.status = response.status;
-        error.data = data;
         throw error;
       }
 
       return data;
     } catch (error) {
-      if (error.status) {
-        throw error;
-      }
-      throw new Error(`Network error: ${error.message}`);
+      console.error('API request failed:', error);
+      throw error;
     }
   }
 
   // Auth API
   const auth = {
-    async signUp(email, password, name, username, role) {
+    async signUp(email, password, name, username, city, zip, role = 'CUSTOMER') {
       const result = await apiRequest('/auth/signup', {
         method: 'POST',
         body: JSON.stringify({
@@ -75,7 +81,9 @@
           password,
           name,
           username,
-          role,
+          city,
+          zip,
+          role: role.toUpperCase(),
         }),
       });
 
@@ -125,7 +133,7 @@
       }
 
       try {
-        const user = await apiRequest('/auth/me');
+        const user = await apiRequest('/users/me');
         localStorage.setItem('hustl_user', JSON.stringify(user));
         return user;
       } catch (error) {
@@ -152,6 +160,9 @@
       if (filters.category) queryParams.append('category', filters.category);
       if (filters.page) queryParams.append('page', filters.page);
       if (filters.limit) queryParams.append('limit', filters.limit);
+      if (filters.zip) queryParams.append('zip', filters.zip);
+      if (filters.radius) queryParams.append('radius', filters.radius);
+      if (filters.sortBy) queryParams.append('sortBy', filters.sortBy);
 
       const queryString = queryParams.toString();
       const endpoint = `/jobs${queryString ? `?${queryString}` : ''}`;
@@ -175,12 +186,203 @@
         method: 'POST',
       });
     },
+    
+    async getMyJobs() {
+      return apiRequest('/jobs/my-jobs');
+    },
+  };
+
+  // Users API
+  const users = {
+    async getProfile(userId) {
+      return apiRequest(`/users/${userId}`);
+    },
+
+    async updateProfile(data) {
+      return apiRequest('/users/me', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
+
+    async getCurrentUser() {
+      return apiRequest('/users/me');
+    },
+  };
+
+  // Offers API
+  const offers = {
+    async create(jobId, data) {
+      return apiRequest(`/jobs/${jobId}/offers`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    async list(jobId) {
+      return apiRequest(`/jobs/${jobId}/offers`);
+    },
+
+    async accept(offerId) {
+      return apiRequest(`/offers/${offerId}/accept`, {
+        method: 'POST',
+      });
+    },
+
+    async reject(offerId) {
+      return apiRequest(`/offers/${offerId}/reject`, {
+        method: 'POST',
+      });
+    },
+
+    async getMyOffers() {
+      return apiRequest('/offers/user/me');
+    },
+  };
+
+  // Threads/Messages API
+  const threads = {
+    async list() {
+      return apiRequest('/threads');
+    },
+
+    async get(threadId) {
+      return apiRequest(`/threads/${threadId}`);
+    },
+
+    async getMessages(threadId) {
+      return apiRequest(`/threads/${threadId}/messages`);
+    },
+
+    async sendMessage(threadId, content) {
+      return apiRequest(`/threads/${threadId}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ content }),
+      });
+    },
+
+    async create(recipientId, jobId = null, initialMessage = null) {
+      const body = { recipientId };
+      if (jobId) body.jobId = jobId;
+      if (initialMessage) body.initialMessage = initialMessage;
+      
+      return apiRequest('/threads', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+    },
+
+    async markAsRead(threadId) {
+      return apiRequest(`/threads/${threadId}/read`, {
+        method: 'POST',
+      });
+    },
+  };
+
+  // Reviews API
+  const reviews = {
+    async create(data) {
+      return apiRequest('/reviews', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    async getForUser(userId) {
+      return apiRequest(`/reviews/user/${userId}`);
+    },
+  };
+
+  // Payments API
+  const payments = {
+    async createCheckout(offerId) {
+      return apiRequest('/payments/create-checkout', {
+        method: 'POST',
+        body: JSON.stringify({ offerId }),
+      });
+    },
+
+    async getStatus(offerId) {
+      return apiRequest(`/payments/status/${offerId}`);
+    },
+  };
+
+  // Stripe Connect API
+  const stripeConnect = {
+    async getOnboardingLink() {
+      return apiRequest('/stripe-connect/onboarding-link', {
+        method: 'POST',
+      });
+    },
+
+    async getStatus() {
+      return apiRequest('/stripe-connect/status');
+    },
+  };
+
+  // Notifications API
+  const notifications = {
+    async list() {
+      return apiRequest('/notifications');
+    },
+
+    async markAsRead(notificationId) {
+      return apiRequest(`/notifications/${notificationId}/read`, {
+        method: 'POST',
+      });
+    },
+
+    async markAllAsRead() {
+      return apiRequest('/notifications/read-all', {
+        method: 'POST',
+      });
+    },
+  };
+
+  // Upload API
+  const uploads = {
+    async getPresignedUrl(filename, contentType) {
+      return apiRequest('/r2/presign', {
+        method: 'POST',
+        body: JSON.stringify({ filename, contentType }),
+      });
+    },
+
+    async uploadFile(file) {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const token = localStorage.getItem('hustl_token');
+      const response = await fetch(`${BACKEND_URL}/r2/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Upload failed');
+      }
+      
+      return response.json();
+    },
   };
 
   // Export to window
   window.hustlAPI = {
     auth,
     jobs,
+    users,
+    offers,
+    threads,
+    reviews,
+    payments,
+    stripeConnect,
+    notifications,
+    uploads,
+    // Also expose the raw request function for custom calls
+    request: apiRequest,
   };
 })();
-

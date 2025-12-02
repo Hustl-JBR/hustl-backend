@@ -1596,11 +1596,83 @@ document.getElementById("createAccountButton").addEventListener("click", async (
     return;
   }
 
+<<<<<<< HEAD
   // Generate username from email (take part before @, make alphanumeric)
   let username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
   // Ensure it's at least 3 characters and max 20
   if (username.length < 3) {
     username = username + '123';
+=======
+// Wrap in try-catch to prevent errors from freezing the page
+try {
+  const createAccountBtn = document.getElementById("createAccountButton");
+  if (createAccountBtn) {
+    createAccountBtn.addEventListener("click", async () => {
+      try {
+        const name = document.getElementById("createName")?.value.trim();
+        const email = document.getElementById("createEmail")?.value.trim();
+        const password = document.getElementById("createPassword")?.value.trim();
+        const role = document.getElementById("createRole")?.value;
+        const agreeTerms = document.getElementById("agreeTerms")?.checked;
+        const confirmAge = document.getElementById("confirmAge")?.checked;
+
+        if (!name || !email || !password) {
+          showToast("Please fill name, email, and password.");
+          return;
+        }
+        if (password.length < 8) {
+          showToast("Password should be at least 8 characters.");
+          return;
+        }
+        if (!agreeTerms) {
+          showToast("Please agree to the Terms of Service and Privacy Policy.");
+          return;
+        }
+        if (!confirmAge) {
+          showToast("You must be 18 years or older to use Hustl.");
+          return;
+        }
+
+        // Sign up with new API
+        // Get city/zip from form - require them
+        const city = document.getElementById("signupCity")?.value.trim();
+        const zip = document.getElementById("signupZip")?.value.trim();
+        
+        if (!city || !zip) {
+          showToast("Please enter your city and zip code");
+          return;
+        }
+        const username = email.split("@")[0]; // Simple username from email
+
+        await window.hustlAPI.auth.signUp(email, password, name, username, city, zip, role);
+        
+        showToast("Account created successfully!");
+        
+        // If hustler, redirect to profile to set up Stripe
+        if (role === "hustler") {
+          showToast("Now let's set up your Stripe account to receive payments!", 5000);
+          setView("profile");
+          renderAll();
+          // Scroll to Stripe section after a moment
+          setTimeout(() => {
+            const stripeSection = document.querySelector('[id*="stripe"], [class*="stripe"]');
+            if (stripeSection) {
+              stripeSection.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+          }, 1000);
+        } else {
+          setView("jobs");
+          renderAll();
+        }
+      } catch (error) {
+        console.error("Sign up error:", error);
+        showToast("Sign up error: " + (error.message || "Unknown error"));
+        // Ensure button is never stuck disabled
+        const btn = document.getElementById("createAccountButton");
+        if (btn) btn.disabled = false;
+      }
+    });
+>>>>>>> parent of 18e2f0b (Fix sign-in issue - ready for deployment)
   }
   if (username.length > 20) {
     username = username.substring(0, 20);

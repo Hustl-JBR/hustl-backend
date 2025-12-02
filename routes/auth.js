@@ -13,6 +13,8 @@ router.post('/signup', [
   body('password').isLength({ min: 8 }),
   body('name').trim().notEmpty(),
   body('username').trim().isAlphanumeric().isLength({ min: 3, max: 20 }),
+  body('city').trim().notEmpty(),
+  body('zip').trim().matches(/^\d{5}(-\d{4})?$/),
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -25,9 +27,13 @@ router.post('/signup', [
       });
     }
 
+<<<<<<< HEAD
     const { email, password, name, username, role, referralCode } = req.body;
     
     console.log('[signup] Request body:', { email, name, username, role, hasCity: !!req.body.city, hasZip: !!req.body.zip, referralCode });
+=======
+    const { email, password, name, username, city, zip, role } = req.body;
+>>>>>>> parent of 18e2f0b (Fix sign-in issue - ready for deployment)
 
     // Check if user exists
     const existing = await prisma.user.findFirst({
@@ -43,6 +49,7 @@ router.post('/signup', [
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
+<<<<<<< HEAD
     // Generate 6-digit verification code
     const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
     const verificationCodeExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
@@ -63,8 +70,19 @@ router.post('/signup', [
     
     console.log('[signup] Creating user with data (no city/zip):', { ...userData, passwordHash: '[HIDDEN]', emailVerificationCode: '[HIDDEN]' });
     
+=======
+    // Create user with both roles (users can be both customer and hustler)
+>>>>>>> parent of 18e2f0b (Fix sign-in issue - ready for deployment)
     const user = await prisma.user.create({
-      data: userData,
+      data: {
+        email,
+        passwordHash,
+        name,
+        username,
+        city,
+        zip,
+        roles: ['CUSTOMER', 'HUSTLER'], // All users can be both
+      },
       select: {
         id: true,
         email: true,
@@ -121,28 +139,8 @@ router.post('/signup', [
       message: 'Account created! Please check your email for a verification code.'
     });
   } catch (error) {
-    console.error('Signup error full details:', {
-      message: error.message,
-      code: error.code,
-      meta: error.meta,
-      stack: error.stack
-    });
-    
-    // Provide more detailed error message
-    let errorMessage = 'Account creation failed. Please try again.';
-    if (error.code === 'P2002') {
-      errorMessage = 'Email or username already exists';
-    } else if (error.message) {
-      // Completely hide any city/zip related errors
-      const lowerMsg = error.message.toLowerCase();
-      if (lowerMsg.includes('city') || lowerMsg.includes('zip') || lowerMsg.includes('location')) {
-        console.error('BLOCKED city/zip error from reaching user:', error.message);
-        errorMessage = 'Account creation failed. Please try again or contact support.';
-      } else {
-        errorMessage = error.message;
-      }
-    }
-    res.status(500).json({ error: errorMessage });
+    console.error('Signup error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

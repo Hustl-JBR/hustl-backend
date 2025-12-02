@@ -180,23 +180,24 @@ global.broadcastToThread = broadcastToThread;
 
 // Rate limiting - Production-ready limits (can handle hundreds of concurrent users)
 // IMPORTANT: Limits are PER IP ADDRESS, so different users from different IPs each get their own limits
+// NOTE: Increased limits because frontend makes many parallel requests (threads, messages, etc.)
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // Limit each IP to 500 requests per 15 minutes (increased to handle profile page loading)
+  windowMs: 1 * 60 * 1000, // 1 minute window (shorter window = faster recovery)
+  max: 300, // Limit each IP to 300 requests per minute (5 per second sustained)
   message: { error: 'Too many requests from this IP, please try again later.' },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   skip: (req) => {
-    // Skip rate limiting for health checks
+    // Skip rate limiting for health checks and static files
     return req.path === '/health';
   },
 });
 
 // Rate limiting for auth endpoints (supports hundreds of signups from different IPs)
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // Limit each IP to 50 auth requests per 15 minutes (allows for many signups from different IPs)
-  message: { error: 'Too many authentication attempts from this IP, please wait a few minutes and try again.' },
+  windowMs: 1 * 60 * 1000, // 1 minute window
+  max: 20, // Limit each IP to 20 auth requests per minute
+  message: { error: 'Too many authentication attempts from this IP, please wait a moment and try again.' },
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {

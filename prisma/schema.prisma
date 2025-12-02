@@ -52,8 +52,8 @@ model User {
   passwordHash          String                @map("password_hash")
   name                  String
   username              String                @unique
-  city                  String?
-  zip                   String?
+  city                  String
+  zip                   String
   photoUrl              String?               @map("photo_url")
   bio                   String?               @db.Text
   gender                String?               // "male", "female", "other", "prefer_not_to_say"
