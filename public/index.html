@@ -2030,9 +2030,8 @@ function showEmailVerification(email) {
     
     try {
       const result = await window.hustlAPI.auth.verifyEmail(email, code);
-      showToast("✅ Email verified! Welcome to Hustl!");
-      setView("jobs");
-      renderAll();
+      // Show success screen
+      showVerificationSuccess();
     } catch (error) {
       showToast("Invalid code. Please try again.");
     }
@@ -2047,6 +2046,124 @@ function showEmailVerification(email) {
       showToast("Could not resend code. Please try again.");
     }
   });
+}
+
+// Show verification success screen with options
+function showVerificationSuccess() {
+  const authBodyCreate = document.getElementById("authBodyCreate");
+  if (!authBodyCreate) {
+    // If auth section is hidden, show a modal instead
+    showWelcomeModal();
+    return;
+  }
+  
+  authBodyCreate.innerHTML = `
+    <div style="text-align: center; padding: 1.5rem;">
+      <div style="width: 80px; height: 80px; margin: 0 auto 1rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 2.5rem;">✓</span>
+      </div>
+      
+      <h2 style="margin: 0 0 0.5rem 0; color: var(--success); font-size: 1.5rem;">
+        🎉 Verification Successful!
+      </h2>
+      
+      <p style="color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.5;">
+        Congratulations! Your email is verified and your account is ready to go.
+      </p>
+      
+      <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; padding: 1rem; margin: 1rem 0; border: 1px solid #f59e0b;">
+        <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: #92400e;">💡 Want to earn money?</p>
+        <p style="margin: 0; font-size: 0.9rem; color: #78350f;">
+          Connect your Stripe account to apply for jobs and get paid instantly!
+        </p>
+      </div>
+      
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.5rem;">
+        <button class="btn btn-primary" onclick="goToStripeSetup()" style="padding: 1rem; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+          <span>💳</span> Connect Stripe & Start Earning
+        </button>
+        
+        <button class="btn btn-ghost" onclick="startExploring()" style="padding: 0.875rem; font-size: 1rem;">
+          Browse Jobs First →
+        </button>
+      </div>
+      
+      <p style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
+        You can always connect Stripe later in your Profile
+      </p>
+    </div>
+  `;
+}
+
+// Show welcome modal (for when auth section is hidden)
+function showWelcomeModal() {
+  // Create modal overlay
+  const modal = document.createElement('div');
+  modal.id = 'welcomeModal';
+  modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem;';
+  
+  modal.innerHTML = `
+    <div style="background: white; border-radius: 16px; max-width: 400px; width: 100%; padding: 2rem; text-align: center; animation: slideUp 0.3s ease;">
+      <div style="width: 80px; height: 80px; margin: 0 auto 1rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 2.5rem; color: white;">✓</span>
+      </div>
+      
+      <h2 style="margin: 0 0 0.5rem 0; color: #059669; font-size: 1.5rem;">
+        🎉 Verification Successful!
+      </h2>
+      
+      <p style="color: #64748b; margin-bottom: 1.5rem; line-height: 1.5;">
+        Congratulations! Your account is ready. What would you like to do?
+      </p>
+      
+      <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; padding: 1rem; margin: 1rem 0; border: 1px solid #f59e0b;">
+        <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: #92400e;">💡 Want to earn money?</p>
+        <p style="margin: 0; font-size: 0.9rem; color: #78350f;">
+          Connect Stripe to apply for jobs and get paid instantly!
+        </p>
+      </div>
+      
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.5rem;">
+        <button class="btn btn-primary" onclick="goToStripeSetup(); closeWelcomeModal();" style="padding: 1rem; font-size: 1rem; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+          <span>💳</span> Connect Stripe & Start Earning
+        </button>
+        
+        <button class="btn" onclick="startExploring(); closeWelcomeModal();" style="padding: 0.875rem; font-size: 1rem; background: white; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;">
+          Browse Jobs First →
+        </button>
+      </div>
+      
+      <p style="margin-top: 1rem; font-size: 0.8rem; color: #94a3b8;">
+        You can connect Stripe anytime in your Profile
+      </p>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+}
+
+function closeWelcomeModal() {
+  const modal = document.getElementById('welcomeModal');
+  if (modal) modal.remove();
+}
+
+function goToStripeSetup() {
+  closeWelcomeModal();
+  setView('profile');
+  renderAll();
+  // Scroll to Stripe section after a short delay
+  setTimeout(() => {
+    const stripeSection = document.getElementById('stripeConnectSection');
+    if (stripeSection) {
+      stripeSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 300);
+}
+
+function startExploring() {
+  closeWelcomeModal();
+  setView('jobs');
+  renderAll();
 }
 
   document
@@ -5488,6 +5605,10 @@ try {
   window.setView = setView;
   window.openAuthModal = openAuthModal;
   window.closeAuthModal = closeAuthModal;
+  window.goToStripeSetup = goToStripeSetup;
+  window.startExploring = startExploring;
+  window.closeWelcomeModal = closeWelcomeModal;
+  window.showVerificationSuccess = showVerificationSuccess;
 
   // Boot - initialize immediately
   loadState();
