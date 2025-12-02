@@ -25,7 +25,8 @@
       : 'https://hustl-production.up.railway.app';
   }
   
-  const API_BASE = `${BACKEND_URL}/api`;
+  // Backend routes don't have /api prefix - routes are at /auth, /users, /jobs, etc.
+  const API_BASE = BACKEND_URL;
 
   // Helper function to make API requests
   async function apiRequest(endpoint, options = {}) {
