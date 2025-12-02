@@ -27,13 +27,9 @@ router.post('/signup', [
       });
     }
 
-<<<<<<< HEAD
-    const { email, password, name, username, role, referralCode } = req.body;
+const { email, password, name, username, city, zip, role, referralCode } = req.body;
     
-    console.log('[signup] Request body:', { email, name, username, role, hasCity: !!req.body.city, hasZip: !!req.body.zip, referralCode });
-=======
-    const { email, password, name, username, city, zip, role } = req.body;
->>>>>>> parent of 18e2f0b (Fix sign-in issue - ready for deployment)
+    console.log('[signup] Request body:', { email, name, username, role, hasCity: !!city, hasZip: !!zip, referralCode });
 
     // Check if user exists
     const existing = await prisma.user.findFirst({
@@ -49,30 +45,11 @@ router.post('/signup', [
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-<<<<<<< HEAD
-    // Generate 6-digit verification code
+// Generate 6-digit verification code
     const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
     const verificationCodeExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
 
-    // Create user - simple signup, no city/zip required
-    // Store verification code in a JSON field or separate field (we'll use a simple approach for now)
-    const userData = {
-      email,
-      passwordHash,
-      name,
-      username,
-      roles: ['CUSTOMER', 'HUSTLER'], // All users can be both
-      emailVerified: false, // Email not verified yet
-      emailVerificationCode: verificationCode, // Store code temporarily
-      emailVerificationExpiry: verificationCodeExpiry, // Code expires in 24 hours
-      // city and zip are NOT included - they are optional
-    };
-    
-    console.log('[signup] Creating user with data (no city/zip):', { ...userData, passwordHash: '[HIDDEN]', emailVerificationCode: '[HIDDEN]' });
-    
-=======
     // Create user with both roles (users can be both customer and hustler)
->>>>>>> parent of 18e2f0b (Fix sign-in issue - ready for deployment)
     const user = await prisma.user.create({
       data: {
         email,
@@ -82,6 +59,9 @@ router.post('/signup', [
         city,
         zip,
         roles: ['CUSTOMER', 'HUSTLER'], // All users can be both
+        emailVerified: false,
+        emailVerificationCode: verificationCode,
+        emailVerificationExpiry: verificationCodeExpiry,
       },
       select: {
         id: true,

@@ -123,9 +123,3 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS gender VARCHAR(50);
 
 That's it! Your changes will be live in a few minutes! 🚀
 
-<<<<<<< HEAD
-
-
-
-=======
->>>>>>> parent of 48d5431 (Add deployment configuration and finalize for production)
