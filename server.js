@@ -219,13 +219,31 @@ app.use((req, res, next) => {
   limiter(req, res, next);
 });
 
-// CORS: allow all origins in development, configure for production
+// CORS: allow hustljobs.com and localhost
+const allowedOrigins = [
+  'https://hustljobs.com',
+  'https://www.hustljobs.com',
+  'http://localhost:3000',
+  'http://localhost:8080',
+  process.env.FRONTEND_BASE_URL,
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.NODE_ENV === "production" 
-      ? process.env.FRONTEND_BASE_URL 
-      : true,
-    methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
+    origin: function(origin, callback) {
+      // Allow requests with no origin (mobile apps, curl, etc)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      // In development, allow all
+      if (process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
+      }
+      console.warn('[CORS] Blocked origin:', origin);
+      return callback(null, false);
+    },
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
