@@ -161,13 +161,22 @@ async function cleanupOldJobs() {
     const jobIds = oldJobs.map(j => j.id);
 
     // Delete related records first (in order of dependencies)
-    await prisma.review.deleteMany({
-      where: { jobId: { in: jobIds } },
-    });
+    // Wrap each in try-catch in case table doesn't exist yet
+    try {
+      await prisma.review.deleteMany({
+        where: { jobId: { in: jobIds } },
+      });
+    } catch (e) {
+      if (e.code !== 'P2021') throw e; // Ignore missing table error
+    }
     
-    await prisma.locationUpdate.deleteMany({
-      where: { jobId: { in: jobIds } },
-    });
+    try {
+      await prisma.locationUpdate.deleteMany({
+        where: { jobId: { in: jobIds } },
+      });
+    } catch (e) {
+      if (e.code !== 'P2021') throw e; // Ignore missing table error
+    }
 
     // Now delete the jobs
     const result = await prisma.job.deleteMany({
@@ -189,9 +198,21 @@ async function cleanupOldJobs() {
  * Run all cleanup tasks
  */
 async function runAllCleanup() {
+  try {
+    // First, verify database is accessible by checking if tables exist
+    await prisma.user.count();
+  } catch (dbError) {
+    // Database not ready or migrations not run yet
+    if (dbError.code === 'P2021' || dbError.message?.includes('does not exist')) {
+      console.log('[Startup] Cleanup skipped - database migrations not run yet');
+      return { skipped: true };
+    }
+    throw dbError;
+  }
+  
   const results = {
-    '72h': await cleanup72HourJobs(),
-    '2w': await cleanupOldJobs(),
+    '72h': await cleanup72HourJobs().catch(e => ({ error: e.message })),
+    '2w': await cleanupOldJobs().catch(e => ({ error: e.message })),
   };
   return results;
 }
