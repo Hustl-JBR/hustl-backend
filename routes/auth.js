@@ -125,18 +125,21 @@ const { email, password, name, username, city, zip, role, referralCode } = req.b
     }
 
     // Send welcome email (non-blocking)
+    console.log('[signup] About to send welcome email to:', user.email);
     try {
       await sendSignupEmail(user.email, user.name);
+      console.log('[signup] ✅ Welcome email sent successfully');
     } catch (welcomeEmailError) {
-      console.error('[signup] Failed to send welcome email (non-fatal):', welcomeEmailError.message);
+      console.error('[signup] ❌ Failed to send welcome email:', welcomeEmailError.message);
     }
     
     // Send email verification email with code (non-blocking)
+    console.log('[signup] About to send verification email to:', user.email, 'with code:', verificationCode);
     try {
       await sendEmailVerificationEmail(user.email, user.name, verificationCode);
-      console.log('[signup] Verification email sent to:', user.email);
+      console.log('[signup] ✅ Verification email sent successfully to:', user.email);
     } catch (emailError) {
-      console.error('[signup] Failed to send verification email (non-fatal):', emailError.message);
+      console.error('[signup] ❌ Failed to send verification email:', emailError.message, emailError.stack);
       // Don't fail signup if email fails
     }
 
