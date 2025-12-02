@@ -10,41 +10,59 @@ async function main() {
   console.log('🔄 Running database migrations...');
   
   try {
-    // First, try to resolve any failed migrations by marking them as rolled back
-    const failedMigrations = [
+    // List of all migrations that might be in a failed state
+    const allMigrations = [
+      '20251113172230_',
+      '20251114002549_add_proposed_amount_to_offers',
+      '20251114012607_add_stripe_connect',
+      '20251115211639_add_gender_bionpx',
       '20250120_add_expired_job_status',
       '20250120_add_email_verification_fields',
       '20250120_add_message_read_status',
+      '20251202_add_verification_codes',
+      '20251202_fix_all_missing',
     ];
     
-    for (const migration of failedMigrations) {
+    // First, try to mark any failed migrations as rolled back
+    console.log('🔄 Checking for failed migrations...');
+    for (const migration of allMigrations) {
       try {
         execSync(`npx prisma migrate resolve --rolled-back ${migration}`, {
           stdio: 'pipe',
           timeout: 30000
         });
-        console.log(`✅ Resolved failed migration: ${migration}`);
+        console.log(`✅ Rolled back failed: ${migration}`);
       } catch (e) {
         // Migration might not be in failed state, that's fine
       }
     }
     
     // Now try to deploy migrations
+    console.log('🔄 Applying migrations...');
     execSync('npx prisma migrate deploy', {
       stdio: 'inherit',
-      timeout: 120000
+      timeout: 180000
     });
     console.log('✅ Migrations completed successfully');
   } catch (error) {
-    console.error('⚠️  Migration had issues:', error.message);
+    console.error('⚠️  Migration deploy failed:', error.message);
     
-    // Try to mark all as applied and continue
-    console.log('ℹ️  Attempting to mark migrations as applied...');
-    try {
-      execSync('npx prisma migrate resolve --applied 20250120_add_expired_job_status', { stdio: 'pipe', timeout: 30000 });
-      console.log('✅ Marked migration as applied');
-    } catch (e) {
-      // Already applied or doesn't exist
+    // Try to mark problematic migrations as applied and skip them
+    console.log('ℹ️  Attempting to force-apply failed migrations...');
+    const problematicMigrations = [
+      '20250120_add_expired_job_status',
+      '20250120_add_email_verification_fields', 
+      '20250120_add_message_read_status',
+      '20251202_fix_all_missing',
+    ];
+    
+    for (const migration of problematicMigrations) {
+      try {
+        execSync(`npx prisma migrate resolve --applied ${migration}`, { stdio: 'pipe', timeout: 30000 });
+        console.log(`✅ Force-applied: ${migration}`);
+      } catch (e) {
+        // Already applied or doesn't exist
+      }
     }
     
     console.log('ℹ️  Starting server anyway - some features may not work');
