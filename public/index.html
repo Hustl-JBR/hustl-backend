@@ -1317,11 +1317,11 @@
             <span style="font-weight: 600;">Currently serving Tennessee</span>
           </div>
           <ul style="list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">
-            <li>• Knoxville, Nashville, Memphis & surrounding areas</li>
-            <li>• Hustl takes only 15% — the rest goes to hustlers</li>
+            <li>• All of Tennessee — Knoxville, Nashville, Memphis & more</li>
+            <li>• Hustl takes only 16% — the rest goes to hustlers</li>
             <li>• Chat with hustlers before you hire</li>
-              <li>You must be 18+ to use Hustl. This prototype runs in your browser only.</li>
-            </ul>
+            <li>• You must be 18+ to use Hustl</li>
+          </ul>
             <div class="section-title" style="margin-top:0.8rem;">Example categories</div>
             <div class="pill-row">
               <div class="pill">🚚 Moving & dump runs</div>
@@ -1446,8 +1446,7 @@
           <button class="btn btn-primary" id="postJobButton">Post job to Hustl</button>
 
           <div class="muted" style="margin-top:0.4rem;">
-            In this prototype, your job is stored only in this browser so you can test flows. In a live version,
-            this would send email confirmations and save to a shared database.
+            Your job will be posted and visible to hustlers across Tennessee.
           </div>
         </div>
       </section>
@@ -1456,7 +1455,7 @@
       <section id="view-jobs" style="display:none;">
         <div class="card">
           <div class="card-header">
-            <div class="card-title" id="jobsCardTitle">Jobs near you (demo)</div>
+            <div class="card-title" id="jobsCardTitle">Jobs in Tennessee</div>
             <span class="muted" id="jobsFilterSummary"></span>
           </div>
           <div class="job-status-group" id="jobsStatusFilter">
@@ -1563,8 +1562,7 @@
           </div>
           <button class="btn btn-primary" id="feedbackButton">Send feedback</button>
           <div class="feedback-note">
-            In this prototype, feedback is just stored on your device and not actually emailed. In a live version,
-            this would send to the Hustl team inbox and be used to improve the app.
+            Your feedback will be sent to the Hustl team. We read every message!
           </div>
         </div>
       </section>
@@ -1624,8 +1622,7 @@ heart of Hustl.
       <div class="age-gate-card">
         <h2>Are you 18 or older?</h2>
         <p>
-          Hustl is for adults only. By continuing, you confirm that you are at least 18 years old
-          and understand this is a prototype, not a fully live service.
+          Hustl is for adults only. By continuing, you confirm that you are at least 18 years old.
         </p>
         <div class="age-gate-buttons">
           <button class="btn btn-primary" id="ageYesButton">Yes, I’m 18+</button>
@@ -2616,7 +2613,7 @@ async function renderJobs(reset = false) {
 
         if (job.paymentStatus === "paid") {
           html +=
-            "<div class='muted' style='margin-top:0.25rem;'>Marked as paid in this prototype only – no real money moved.</div>";
+            "<div class='muted' style='margin-top:0.25rem;'>Payment processed via Stripe.</div>";
         }
 
         payBox.innerHTML = html;
