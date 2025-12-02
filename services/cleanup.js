@@ -160,23 +160,35 @@ async function cleanupOldJobs() {
 
     const jobIds = oldJobs.map(j => j.id);
 
-    // Delete related records first (in order of dependencies)
+    // Delete ALL related records first (in order of dependencies)
     // Wrap each in try-catch in case table doesn't exist yet
-    try {
-      await prisma.review.deleteMany({
-        where: { jobId: { in: jobIds } },
-      });
-    } catch (e) {
-      if (e.code !== 'P2021') throw e; // Ignore missing table error
+    const safeDelete = async (model, where) => {
+      try {
+        await model.deleteMany({ where });
+      } catch (e) {
+        if (e.code !== 'P2021') console.error(`[Cleanup] Delete error (non-fatal):`, e.message);
+      }
+    };
+
+    // Delete in correct order (deepest dependencies first)
+    console.log(`[Cleanup 2w] Deleting related records for ${jobIds.length} jobs...`);
+    
+    // Messages depend on threads
+    const threads = await prisma.thread.findMany({
+      where: { jobId: { in: jobIds } },
+      select: { id: true }
+    }).catch(() => []);
+    const threadIds = threads.map(t => t.id);
+    if (threadIds.length > 0) {
+      await safeDelete(prisma.message, { threadId: { in: threadIds } });
     }
     
-    try {
-      await prisma.locationUpdate.deleteMany({
-        where: { jobId: { in: jobIds } },
-      });
-    } catch (e) {
-      if (e.code !== 'P2021') throw e; // Ignore missing table error
-    }
+    // Now delete other related records
+    await safeDelete(prisma.thread, { jobId: { in: jobIds } });
+    await safeDelete(prisma.review, { jobId: { in: jobIds } });
+    await safeDelete(prisma.locationUpdate, { jobId: { in: jobIds } });
+    await safeDelete(prisma.offer, { jobId: { in: jobIds } });
+    await safeDelete(prisma.payment, { jobId: { in: jobIds } });
 
     // Now delete the jobs
     const result = await prisma.job.deleteMany({
