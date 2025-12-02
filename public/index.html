@@ -6,8 +6,24 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Hustl – Local help, real hustle [v2.0]</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hustl – Local help, real hustle</title>
+  
+  <!-- Mobile App Experience -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="theme-color" content="#2563eb" />
+  
+  <!-- Performance: Preconnect to external resources -->
+  <link rel="preconnect" href="https://hustl-production.up.railway.app" crossorigin />
+  
+  <!-- Mobile Optimizations CSS (load early for faster paint) -->
+  <link rel="stylesheet" href="mobile-optimizations.css" />
+  
+  <!-- Preload critical scripts -->
+  <link rel="modulepreload" href="app-core.js" />
+  <link rel="modulepreload" href="mobile-core.js" />
   <style>
     :root {
       --bg: #f3f4f6;
@@ -4819,7 +4835,16 @@ try {
   checkAutoCompleteJobs();
   setInterval(checkAutoCompleteJobs, 60 * 1000);
   renderAll();
+  
+  // Start token auto-refresh for persistent login
+  if (window.appCore && window.appCore.tokenManager) {
+    window.appCore.tokenManager.startAutoRefresh();
+  }
   </script>
+  
+  <!-- Performance-optimized script loading -->
+  <script src="/app-core.js" defer></script>
+  <script src="/mobile-core.js" defer></script>
 </body>
 </html>
 

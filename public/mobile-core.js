@@ -1,7 +1,332 @@
 /**
  * 🚀 MOBILE-FIRST CORE - Production Ready
  * TaskRabbit/Rover-level mobile experience with advanced optimizations
+ * Native app feel with pull-to-refresh, haptic feedback, and smooth animations
  */
+
+// ========== PULL TO REFRESH ==========
+
+class PullToRefresh {
+  constructor() {
+    this.startY = 0;
+    this.currentY = 0;
+    this.pulling = false;
+    this.refreshing = false;
+    this.threshold = 80;
+    this.refreshCallback = null;
+    this.element = null;
+    this.init();
+  }
+
+  init() {
+    // Only on mobile
+    if (window.innerWidth > 768) return;
+    
+    this.createRefreshIndicator();
+    this.attachEvents();
+  }
+
+  createRefreshIndicator() {
+    this.element = document.createElement('div');
+    this.element.className = 'pull-to-refresh';
+    this.element.innerHTML = `
+      <svg class="pull-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12a9 9 0 11-6.219-8.56"/>
+      </svg>
+      <span class="pull-text">Pull to refresh</span>
+    `;
+    document.body.insertBefore(this.element, document.body.firstChild);
+  }
+
+  attachEvents() {
+    let scrollableParent = null;
+
+    document.addEventListener('touchstart', (e) => {
+      // Only trigger at top of page
+      if (window.scrollY > 5) return;
+      if (this.refreshing) return;
+      
+      this.startY = e.touches[0].clientY;
+      this.pulling = true;
+      scrollableParent = this.getScrollableParent(e.target);
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+      if (!this.pulling || this.refreshing) return;
+      if (scrollableParent && scrollableParent.scrollTop > 0) return;
+      
+      this.currentY = e.touches[0].clientY;
+      const diff = this.currentY - this.startY;
+      
+      if (diff > 0 && window.scrollY <= 0) {
+        const progress = Math.min(diff / this.threshold, 1);
+        this.element.style.transform = `translateY(${Math.min(diff * 0.5, 60) - 60}px)`;
+        this.element.querySelector('.pull-text').textContent = 
+          progress >= 1 ? 'Release to refresh' : 'Pull to refresh';
+      }
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => {
+      if (!this.pulling) return;
+      
+      const diff = this.currentY - this.startY;
+      
+      if (diff >= this.threshold && !this.refreshing) {
+        this.triggerRefresh();
+      } else {
+        this.reset();
+      }
+      
+      this.pulling = false;
+    });
+  }
+
+  getScrollableParent(element) {
+    while (element) {
+      const style = window.getComputedStyle(element);
+      if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+        return element;
+      }
+      element = element.parentElement;
+    }
+    return null;
+  }
+
+  triggerRefresh() {
+    this.refreshing = true;
+    this.element.classList.add('visible', 'refreshing');
+    this.element.style.transform = 'translateY(0)';
+    this.element.querySelector('.pull-text').textContent = 'Refreshing...';
+    
+    // Haptic feedback if available
+    if (navigator.vibrate) {
+      navigator.vibrate(10);
+    }
+
+    // Call the refresh callback
+    if (this.refreshCallback) {
+      Promise.resolve(this.refreshCallback())
+        .then(() => this.completeRefresh())
+        .catch(() => this.completeRefresh());
+    } else {
+      // Default: reload current view
+      setTimeout(() => {
+        if (typeof renderAll === 'function') {
+          renderAll();
+        }
+        this.completeRefresh();
+      }, 800);
+    }
+  }
+
+  completeRefresh() {
+    this.element.querySelector('.pull-text').textContent = 'Updated!';
+    
+    setTimeout(() => {
+      this.reset();
+      this.refreshing = false;
+    }, 500);
+  }
+
+  reset() {
+    this.element.classList.remove('visible', 'refreshing');
+    this.element.style.transform = 'translateY(-100%)';
+    this.startY = 0;
+    this.currentY = 0;
+  }
+
+  onRefresh(callback) {
+    this.refreshCallback = callback;
+  }
+}
+
+// ========== HAPTIC FEEDBACK ==========
+
+class HapticFeedback {
+  constructor() {
+    this.supported = 'vibrate' in navigator;
+  }
+
+  light() {
+    if (this.supported) navigator.vibrate(5);
+  }
+
+  medium() {
+    if (this.supported) navigator.vibrate(10);
+  }
+
+  heavy() {
+    if (this.supported) navigator.vibrate(20);
+  }
+
+  success() {
+    if (this.supported) navigator.vibrate([10, 50, 10]);
+  }
+
+  error() {
+    if (this.supported) navigator.vibrate([50, 30, 50]);
+  }
+
+  selection() {
+    if (this.supported) navigator.vibrate(3);
+  }
+}
+
+// ========== SKELETON LOADER HELPER ==========
+
+class SkeletonLoader {
+  createJobCardSkeleton() {
+    return `
+      <div class="skeleton-card card-animate">
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-meta"></div>
+        <div class="skeleton skeleton-body"></div>
+      </div>
+    `;
+  }
+
+  createMessageSkeleton() {
+    return `
+      <div class="skeleton-card" style="display: flex; gap: 12px; align-items: center;">
+        <div class="skeleton skeleton-avatar"></div>
+        <div style="flex: 1;">
+          <div class="skeleton skeleton-text" style="width: 40%;"></div>
+          <div class="skeleton skeleton-text-sm"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  showInContainer(container, type = 'job', count = 3) {
+    if (!container) return;
+    
+    let html = '';
+    const generator = type === 'job' ? this.createJobCardSkeleton : this.createMessageSkeleton;
+    
+    for (let i = 0; i < count; i++) {
+      html += generator.call(this);
+    }
+    
+    container.innerHTML = html;
+  }
+
+  hide(container) {
+    if (!container) return;
+    // Content will be replaced by actual data
+  }
+}
+
+// ========== ENHANCED TOAST SYSTEM ==========
+
+class ToastManager {
+  constructor() {
+    this.container = null;
+    this.init();
+  }
+
+  init() {
+    this.container = document.createElement('div');
+    this.container.className = 'toast-container';
+    document.body.appendChild(this.container);
+  }
+
+  show(message, type = 'default', duration = 3000) {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    
+    this.container.appendChild(toast);
+    
+    // Haptic feedback
+    if (window.mobileCore?.haptics) {
+      if (type === 'success') {
+        window.mobileCore.haptics.success();
+      } else if (type === 'error') {
+        window.mobileCore.haptics.error();
+      } else {
+        window.mobileCore.haptics.light();
+      }
+    }
+    
+    setTimeout(() => {
+      toast.classList.add('hiding');
+      setTimeout(() => toast.remove(), 200);
+    }, duration);
+  }
+
+  success(message) {
+    this.show(message, 'success');
+  }
+
+  error(message) {
+    this.show(message, 'error');
+  }
+}
+
+// ========== PAGE TRANSITION MANAGER ==========
+
+class PageTransitionManager {
+  constructor() {
+    this.currentView = null;
+  }
+
+  transition(newView, element) {
+    if (!element) return;
+    
+    // Add entrance animation
+    element.classList.remove('page-enter', 'page-enter-active');
+    void element.offsetWidth; // Force reflow
+    element.classList.add('page-enter');
+    
+    // Haptic feedback on page change
+    if (window.mobileCore?.haptics) {
+      window.mobileCore.haptics.selection();
+    }
+    
+    this.currentView = newView;
+  }
+
+  animateCards(container) {
+    if (!container) return;
+    
+    const cards = container.querySelectorAll('.job-card, .card');
+    cards.forEach((card, index) => {
+      card.classList.remove('card-animate');
+      card.style.animationDelay = `${index * 0.05}s`;
+      void card.offsetWidth; // Force reflow
+      card.classList.add('card-animate');
+    });
+  }
+}
+
+// ========== NETWORK STATUS INDICATOR ==========
+
+class NetworkStatus {
+  constructor() {
+    this.online = navigator.onLine;
+    this.init();
+  }
+
+  init() {
+    window.addEventListener('online', () => {
+      this.online = true;
+      if (window.mobileCore?.toasts) {
+        window.mobileCore.toasts.success('Back online');
+      }
+    });
+
+    window.addEventListener('offline', () => {
+      this.online = false;
+      if (window.mobileCore?.toasts) {
+        window.mobileCore.toasts.error('You\'re offline');
+      }
+    });
+  }
+
+  isOnline() {
+    return this.online;
+  }
+}
 
 // ========== MOBILE BOTTOM NAVIGATION ==========
 
@@ -487,12 +812,41 @@ class SwipeHandler {
 // ========== EXPORTS ==========
 
 window.mobileCore = {
+  // Navigation & UI
   bottomNav: new MobileBottomNav(),
   locationTools: new LocationTools(),
+  
+  // Performance & Loading
   jobFeed: new MobileJobFeed(),
   lazyImages: new LazyImageLoader(),
+  skeleton: new SkeletonLoader(),
+  
+  // Native App Features
+  pullToRefresh: new PullToRefresh(),
+  haptics: new HapticFeedback(),
+  toasts: new ToastManager(),
+  pageTransitions: new PageTransitionManager(),
+  networkStatus: new NetworkStatus(),
+  
+  // Gestures
   swipeHandler: new SwipeHandler(),
 };
 
-console.log('✅ Mobile Core loaded - TaskRabbit/Rover-level mobile experience active');
+// Set up pull-to-refresh callback for jobs view
+if (window.mobileCore.pullToRefresh) {
+  window.mobileCore.pullToRefresh.onRefresh(async () => {
+    // Invalidate cache and refresh
+    if (window.optimizedApi) {
+      window.optimizedApi.invalidateCache('/jobs');
+    }
+    if (typeof renderAll === 'function') {
+      await new Promise(resolve => {
+        renderAll();
+        setTimeout(resolve, 300);
+      });
+    }
+  });
+}
+
+console.log('✅ Mobile Core loaded - Native app experience with pull-to-refresh, haptics, and smooth animations');
 
