@@ -1088,8 +1088,8 @@
       </nav>
       
       <div class="header-auth desktop-only" id="headerAuthDesktop">
-        <button class="btn-login-header" id="headerLoginBtn">Log In</button>
-        <button class="btn-signup-header" id="headerSignupBtn">Sign Up Free</button>
+        <button class="btn-login-header" id="headerLoginBtn" onclick="openAuthModal('login')">Log In</button>
+        <button class="btn-signup-header" id="headerSignupBtn" onclick="openAuthModal('create')">Sign Up Free</button>
       </div>
       
       <!-- Hamburger for mobile -->
@@ -1114,8 +1114,8 @@
       <button class="mobile-menu-item" data-view="messages">💬 Messages</button>
       <button class="mobile-menu-item" data-view="profile">👤 Profile</button>
       <div class="header-auth">
-        <button class="btn-login-header" id="mobileLoginBtn">Log In</button>
-        <button class="btn-signup-header" id="mobileSignupBtn">Sign Up Free</button>
+        <button class="btn-login-header" id="mobileLoginBtn" onclick="document.getElementById('mobileMenu').classList.remove('open'); document.getElementById('hamburgerBtn').classList.remove('open'); openAuthModal('login')">Log In</button>
+        <button class="btn-signup-header" id="mobileSignupBtn" onclick="document.getElementById('mobileMenu').classList.remove('open'); document.getElementById('hamburgerBtn').classList.remove('open'); openAuthModal('create')">Sign Up Free</button>
       </div>
     </div>
 
@@ -1242,10 +1242,10 @@
           
           <!-- CTA Buttons -->
           <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-bottom: 1.5rem;">
-            <button class="btn btn-primary" id="homeCtaPost" style="padding: 0.875rem 1.75rem; font-size: 1rem; font-weight: 600; border-radius: 10px; background: var(--primary); border: none; color: white;">
+            <button class="btn btn-primary" id="homeCtaPost" onclick="setView('post')" style="padding: 0.875rem 1.75rem; font-size: 1rem; font-weight: 600; border-radius: 10px; background: var(--primary); border: none; color: white;">
               Post a Job
             </button>
-            <button class="btn btn-ghost" id="homeCtaBrowse" style="padding: 0.875rem 1.75rem; font-size: 1rem; font-weight: 600; border-radius: 10px; background: white; border: 1px solid var(--border); color: var(--text-main);">
+            <button class="btn btn-ghost" id="homeCtaBrowse" onclick="setView('jobs')" style="padding: 0.875rem 1.75rem; font-size: 1rem; font-weight: 600; border-radius: 10px; background: white; border: 1px solid var(--border); color: var(--text-main);">
               Browse Jobs
             </button>
           </div>
