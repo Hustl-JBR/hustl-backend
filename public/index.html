@@ -1895,9 +1895,14 @@ document.getElementById("createAccountButton").addEventListener("click", async (
   const password = document.getElementById("createPassword").value.trim();
   const role = document.getElementById("createRole").value;
 
-  const payoutMethod = document.getElementById("createPayoutMethod").value;
-  const payoutHandle = document.getElementById("createPayoutHandle").value.trim();
-  const payoutName = document.getElementById("createPayoutName").value.trim();
+  // Get hidden fields for backwards compatibility
+  const payoutMethod = document.getElementById("createPayoutMethod").value || "venmo";
+  const payoutHandle = document.getElementById("createPayoutHandle").value.trim() || "pending";
+  const payoutName = document.getElementById("createPayoutName").value.trim() || "";
+
+  // Get checkbox values
+  const ageCheckbox = document.getElementById("ageCheckbox");
+  const termsCheckbox = document.getElementById("termsCheckbox");
 
   if (!name || !email || !password) {
     showToast("Please fill name, email, and password.");
@@ -1907,16 +1912,12 @@ document.getElementById("createAccountButton").addEventListener("click", async (
     showToast("Password should be at least 8 characters.");
     return;
   }
-  if (!payoutMethod) {
-    showToast("Choose a payout method.");
+  if (ageCheckbox && !ageCheckbox.checked) {
+    showToast("You must be 18 or older to use Hustl.");
     return;
   }
-  if (!payoutHandle) {
-    showToast("Enter your payout handle/account.");
-    return;
-  }
-  if (payoutMethod === "zelle" && !payoutName) {
-    showToast("Enter the payout name for Zelle.");
+  if (termsCheckbox && !termsCheckbox.checked) {
+    showToast("Please agree to the Terms of Use and Privacy Policy.");
     return;
   }
 
@@ -5454,28 +5455,32 @@ try {
       return;
     }
     
-    // Show auth section and scroll to it, or show modal
-    const authSection = document.getElementById('authSection');
-    if (authSection) {
-      authSection.style.display = 'block';
-      authSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      
-      // Toggle to correct mode
-      const authTitle = document.getElementById("authCardTitle");
-      const authToggle = document.getElementById("authModeToggle");
-      const authBodyCreate = document.getElementById("authBodyCreate");
-      const authBodyLogin = document.getElementById("authBodyLogin");
-      
-      if (mode === 'login') {
-        if (authTitle) authTitle.textContent = "👋 Welcome Back";
-        if (authBodyCreate) authBodyCreate.style.display = 'none';
-        if (authBodyLogin) authBodyLogin.style.display = 'block';
-      } else {
-        if (authTitle) authTitle.textContent = "🚀 Join Hustl";
-        if (authBodyCreate) authBodyCreate.style.display = 'block';
-        if (authBodyLogin) authBodyLogin.style.display = 'none';
+    // Switch to home view first, then show auth section
+    setView('home');
+    
+    // Small delay to ensure home view is rendered
+    setTimeout(() => {
+      const authSection = document.getElementById('authSection');
+      if (authSection) {
+        authSection.style.display = 'block';
+        authSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Toggle to correct mode
+        const authTitle = document.getElementById("authCardTitle");
+        const authBodyCreate = document.getElementById("authBodyCreate");
+        const authBodyLogin = document.getElementById("authBodyLogin");
+        
+        if (mode === 'login') {
+          if (authTitle) authTitle.textContent = "👋 Welcome Back";
+          if (authBodyCreate) authBodyCreate.style.display = 'none';
+          if (authBodyLogin) authBodyLogin.style.display = 'block';
+        } else {
+          if (authTitle) authTitle.textContent = "🚀 Join Hustl";
+          if (authBodyCreate) authBodyCreate.style.display = 'block';
+          if (authBodyLogin) authBodyLogin.style.display = 'none';
+        }
       }
-    }
+    }, 50);
   }
   
   function closeAuthModal() {
