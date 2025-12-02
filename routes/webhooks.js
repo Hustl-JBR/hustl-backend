@@ -117,12 +117,17 @@ async function handleCheckoutSessionCompleted(session) {
       data: { status: 'DECLINED' },
     });
 
-    // Update job
+    // Generate verification codes (Uber-style safety)
+    const generateCode = () => String(Math.floor(1000 + Math.random() * 9000));
+    
+    // Update job with hustler and verification codes
     await prisma.job.update({
       where: { id: offer.job.id },
       data: {
         status: 'ASSIGNED',
         hustlerId: offer.hustlerId,
+        arrivalCode: generateCode(),
+        completionCode: generateCode(),
       },
     });
 

@@ -2895,6 +2895,95 @@ async function renderJobs(reset = false) {
               }, 100);
             });
             applySection.appendChild(messageBtn);
+            
+            // Hustler verification codes section
+            const hustlerVerifySection = document.createElement("div");
+            hustlerVerifySection.style.marginTop = "1rem";
+            
+            const arrivalVerified = job.arrivalCodeVerified;
+            const completionCode = job.completionCode;
+            const completionVerified = job.completionCodeVerified;
+            
+            if (!arrivalVerified) {
+              // Hustler needs to enter arrival code from customer
+              hustlerVerifySection.innerHTML = `
+                <div style="padding: 0.75rem; background: #fef3c7; border-radius: 8px; border: 2px solid #f59e0b;">
+                  <div style="font-weight: 600; font-size: 0.9rem; color: #92400e; margin-bottom: 0.5rem;">🔐 Step 1: Enter Arrival Code</div>
+                  <div style="font-size: 0.8rem; color: #92400e; margin-bottom: 0.5rem;">When you arrive, ask the customer for their 4-digit arrival code.</div>
+                  <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="hustlerArrivalInput_${job.id}" placeholder="Enter code" maxlength="4"
+                      style="flex: 1; padding: 0.75rem; font-size: 1.25rem; text-align: center; letter-spacing: 0.2em; border: 2px solid #f59e0b; border-radius: 8px; font-family: 'Courier New', monospace;" />
+                    <button id="verifyArrivalBtn_${job.id}" class="btn" style="padding: 0.75rem 1rem; background: #f59e0b; color: white; border: none;">I Arrived</button>
+                  </div>
+                </div>
+              `;
+            } else if (completionCode && !completionVerified) {
+              // Hustler gives completion code to customer
+              hustlerVerifySection.innerHTML = `
+                <div style="padding: 0.75rem; background: #dcfce7; border-radius: 8px; border: 2px solid #16a34a; margin-bottom: 0.5rem;">
+                  <div style="font-weight: 600; color: #166534; margin-bottom: 0.25rem;">✅ Arrival Confirmed!</div>
+                  <div style="font-size: 0.85rem; color: #166534;">You can now start the job.</div>
+                </div>
+                <div style="padding: 0.75rem; background: #dbeafe; border-radius: 8px; border: 2px solid #3b82f6;">
+                  <div style="font-weight: 600; font-size: 0.9rem; color: #1e40af; margin-bottom: 0.5rem;">🔐 Step 2: Completion Code</div>
+                  <div style="font-size: 0.8rem; color: #1e3a8a; margin-bottom: 0.5rem;">When job is done, give this code to the customer to release payment:</div>
+                  <div style="font-size: 2rem; font-weight: 700; letter-spacing: 0.3em; color: #1e40af; text-align: center; font-family: 'Courier New', monospace; padding: 0.5rem; background: white; border-radius: 8px;">
+                    ${completionCode}
+                  </div>
+                </div>
+              `;
+            } else if (completionVerified) {
+              hustlerVerifySection.innerHTML = `
+                <div style="padding: 1rem; background: #dcfce7; border-radius: 8px; border: 2px solid #16a34a; text-align: center;">
+                  <div style="font-weight: 600; font-size: 1rem; color: #166534;">✅ Job Complete!</div>
+                  <div style="font-size: 0.85rem; color: #166534; margin-top: 0.25rem;">Payment has been released to you.</div>
+                </div>
+              `;
+            }
+            
+            applySection.appendChild(hustlerVerifySection);
+            
+            // Add event listener for arrival code verification
+            if (!arrivalVerified) {
+              const verifyBtn = document.getElementById(`verifyArrivalBtn_${job.id}`);
+              const codeInput = document.getElementById(`hustlerArrivalInput_${job.id}`);
+              if (verifyBtn && codeInput) {
+                verifyBtn.addEventListener("click", async () => {
+                  const code = codeInput.value.trim();
+                  if (!code || code.length !== 4) {
+                    showToast("Please enter a 4-digit code");
+                    return;
+                  }
+                  try {
+                    verifyBtn.disabled = true;
+                    verifyBtn.textContent = "...";
+                    const response = await fetch(`${API_BASE}/verification/job/${job.id}/verify-arrival`, {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${authToken}`
+                      },
+                      body: JSON.stringify({ code })
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                      throw new Error(data.error || "Verification failed");
+                    }
+                    showToast("✅ Arrival verified! Start the job.");
+                    overlay.remove();
+                    document.body.style.overflow = "";
+                    openJobDetails(job.id); // Refresh
+                  } catch (error) {
+                    showToast("Error: " + (error.message || "Failed to verify"));
+                    verifyBtn.disabled = false;
+                    verifyBtn.textContent = "I Arrived";
+                  }
+                });
+                codeInput.addEventListener("keypress", (e) => {
+                  if (e.key === "Enter") verifyBtn.click();
+                });
+              }
+            }
           }
         } else {
           const applyTitle = document.createElement("h3");
@@ -3232,11 +3321,17 @@ async function renderJobs(reset = false) {
           
           const statusUpper = (job.status || "").toUpperCase();
           let statusText = "";
-          // Simplified status messages
+          // Simplified status messages with verification flow
           if (statusUpper === "ASSIGNED") {
-            statusText = "Job is assigned. Share the start code with your hustler to begin.";
+            if (!job.arrivalCodeVerified) {
+              statusText = "Give the arrival code to the hustler when they arrive.";
+            } else if (!job.completionCodeVerified) {
+              statusText = "Job in progress. Enter completion code when done.";
+            } else {
+              statusText = "Job verified. Payment released!";
+            }
           } else if (statusUpper === "PAID") {
-            statusText = "Job is in progress. The hustler will mark it complete when done.";
+            statusText = "Job is complete. Payment released!";
           } else if (statusUpper === "COMPLETED_BY_HUSTLER" || statusUpper === "AWAITING_CUSTOMER_CONFIRM") {
             statusText = "Hustler marked job as complete. Please confirm completion.";
           } else {
@@ -3267,29 +3362,55 @@ async function renderJobs(reset = false) {
             `;
           }
           
-          // Show start code for customer (if job is ASSIGNED and not started yet)
-          let startCodeDisplay = "";
-          const startCode = requirements.startCode;
-          // startCodeUsed already declared above at line 4067, reuse it
+          // Uber-style verification codes
+          let verificationCodeDisplay = "";
+          const arrivalCode = job.arrivalCode;
+          const arrivalVerified = job.arrivalCodeVerified;
+          const completionCode = job.completionCode;
+          const completionVerified = job.completionCodeVerified;
           
-          if (statusUpper === "ASSIGNED" && startCode && !startCodeUsed) {
-            startCodeDisplay = `
-              <div style="margin-top: 0.75rem; padding: 0.75rem; background: #dbeafe; border-radius: 6px; border: 2px solid #3b82f6;">
-                <div style="font-weight: 600; font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem;">🔐 Start Code (Give to Hustler)</div>
-                <div style="font-size: 1.5rem; font-weight: 700; letter-spacing: 0.2em; color: #1e40af; text-align: center; font-family: 'Courier New', monospace; margin: 0.5rem 0;">
-                  ${startCode}
+          // Customer sees: arrival code to give to hustler, then completion code input
+          if (statusUpper === "ASSIGNED" && arrivalCode) {
+            if (!arrivalVerified) {
+              // Step 1: Customer gives arrival code to hustler
+              verificationCodeDisplay = `
+                <div style="margin-top: 0.75rem; padding: 0.75rem; background: #dbeafe; border-radius: 6px; border: 2px solid #3b82f6;">
+                  <div style="font-weight: 600; font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem;">🔐 Step 1: Arrival Code</div>
+                  <div style="font-size: 0.8rem; color: #1e3a8a; margin-bottom: 0.5rem;">Give this code to the hustler when they arrive to verify their identity.</div>
+                  <div style="font-size: 2rem; font-weight: 700; letter-spacing: 0.3em; color: #1e40af; text-align: center; font-family: 'Courier New', monospace; padding: 0.5rem; background: white; border-radius: 8px;">
+                    ${arrivalCode}
+                  </div>
+                  <div style="font-size: 0.75rem; color: #dc2626; text-align: center; margin-top: 0.5rem; padding: 0.5rem; background: #fee2e2; border-radius: 4px; font-weight: 600;">
+                    ⚠️ Only share when the hustler arrives in person
+                  </div>
                 </div>
-                <div style="font-size: 0.75rem; color: #dc2626; text-align: center; margin-top: 0.5rem; padding: 0.5rem; background: #fee2e2; border-radius: 4px; font-weight: 600;">
-                  ⚠️ Important: Only give this code to the hustler when they arrive and the job is starting. Do not share it beforehand.
+              `;
+            } else if (!completionVerified) {
+              // Step 2: Hustler arrived, now awaiting completion code
+              verificationCodeDisplay = `
+                <div style="margin-top: 0.75rem; padding: 0.75rem; background: #dcfce7; border-radius: 6px; border: 2px solid #16a34a;">
+                  <div style="font-weight: 600; font-size: 0.85rem; color: #166534; margin-bottom: 0.5rem;">✅ Hustler Arrived!</div>
+                  <div style="font-size: 0.8rem; color: #166534; margin-bottom: 0.75rem;">Job in progress. When complete, the hustler will give you a completion code.</div>
                 </div>
-                <div style="font-size: 0.75rem; color: #1e3a8a; text-align: center; margin-top: 0.25rem;">
-                  Share this code with your hustler to officially start the job
+                <div style="margin-top: 0.5rem; padding: 0.75rem; background: #fef3c7; border-radius: 6px; border: 2px solid #f59e0b;">
+                  <div style="font-weight: 600; font-size: 0.85rem; color: #92400e; margin-bottom: 0.5rem;">🔐 Step 2: Enter Completion Code</div>
+                  <div style="font-size: 0.8rem; color: #92400e; margin-bottom: 0.5rem;">When the job is done, enter the code from the hustler to release payment.</div>
+                  <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="completionCodeInput_${job.id}" placeholder="Enter 4-digit code" maxlength="4" 
+                      style="flex: 1; padding: 0.75rem; font-size: 1.25rem; text-align: center; letter-spacing: 0.2em; border: 2px solid #f59e0b; border-radius: 8px; font-family: 'Courier New', monospace;" />
+                    <button id="verifyCompletionBtn_${job.id}" class="btn btn-primary" style="padding: 0.75rem 1rem; background: #f59e0b; border: none;">Verify</button>
+                  </div>
                 </div>
-                <button id="regenerateStartCode_${job.id}" class="btn" style="width: 100%; margin-top: 0.5rem; background: #fff; color: #3b82f6; border: 1px solid #3b82f6; font-size: 0.8rem;">
-                  🔄 Regenerate Code
-                </button>
-              </div>
-            `;
+              `;
+            } else {
+              // Both verified!
+              verificationCodeDisplay = `
+                <div style="margin-top: 0.75rem; padding: 0.75rem; background: #dcfce7; border-radius: 6px; border: 2px solid #16a34a;">
+                  <div style="font-weight: 600; font-size: 1rem; color: #166534; text-align: center;">✅ Job Complete!</div>
+                  <div style="font-size: 0.85rem; color: #166534; text-align: center; margin-top: 0.25rem;">Payment has been released to the hustler.</div>
+                </div>
+              `;
+            }
           }
           
           hustlerInfo.innerHTML = `
@@ -3302,7 +3423,7 @@ async function renderJobs(reset = false) {
               ${statusText}
             </div>
             ${statusUpdateDisplay}
-            ${startCodeDisplay}
+            ${verificationCodeDisplay}
           `;
           
           // Add message button for customer to message hustler
@@ -3346,20 +3467,45 @@ async function renderJobs(reset = false) {
           hustlerInfo.appendChild(messageBtnRow);
           actionsSection.appendChild(hustlerInfo);
           
-          // Add regenerate start code button handler
-          if (startCodeDisplay) {
-            const regenerateBtn = document.getElementById(`regenerateStartCode_${job.id}`);
-            if (regenerateBtn) {
-              regenerateBtn.addEventListener("click", async () => {
+          // Add completion code verification handler
+          if (verificationCodeDisplay && !completionVerified && arrivalVerified) {
+            const verifyBtn = document.getElementById(`verifyCompletionBtn_${job.id}`);
+            const codeInput = document.getElementById(`completionCodeInput_${job.id}`);
+            if (verifyBtn && codeInput) {
+              verifyBtn.addEventListener("click", async () => {
+                const code = codeInput.value.trim();
+                if (!code || code.length !== 4) {
+                  showToast("Please enter a 4-digit code");
+                  return;
+                }
                 try {
-                  const result = await window.hustlAPI.jobs.getStartCode(job.id, true);
-                  showToast("✓ Start code regenerated");
+                  verifyBtn.disabled = true;
+                  verifyBtn.textContent = "...";
+                  const response = await fetch(`${API_BASE}/verification/job/${job.id}/verify-completion`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "Authorization": `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ code })
+                  });
+                  const data = await response.json();
+                  if (!response.ok) {
+                    throw new Error(data.error || "Verification failed");
+                  }
+                  showToast("✅ Job complete! Payment released.");
                   overlay.remove();
                   document.body.style.overflow = "";
-                  openJobDetails(job.id);
+                  openJobDetails(job.id); // Refresh
                 } catch (error) {
-                  showToast("Error: " + (error.message || "Failed to regenerate code"));
+                  showToast("Error: " + (error.message || "Failed to verify"));
+                  verifyBtn.disabled = false;
+                  verifyBtn.textContent = "Verify";
                 }
+              });
+              // Allow Enter key
+              codeInput.addEventListener("keypress", (e) => {
+                if (e.key === "Enter") verifyBtn.click();
               });
             }
           }

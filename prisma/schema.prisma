@@ -115,6 +115,11 @@ model Job {
   requirements          Json                  // { vehicle, stairs, team_size }
   status                JobStatus             @default(OPEN)
   hustlerId             String?               @map("hustler_id")
+  // Verification codes (Uber-style safety)
+  arrivalCode           String?               @map("arrival_code")        // 4-digit code customer gives hustler
+  arrivalCodeVerified   Boolean               @default(false) @map("arrival_verified")
+  completionCode        String?               @map("completion_code")     // 4-digit code hustler gives customer
+  completionCodeVerified Boolean              @default(false) @map("completion_verified")
   // Recurring job fields
   parentJobId           String?               @map("parent_job_id")
   recurrenceType        String?               @map("recurrence_type") // "weekly" | "monthly" | null

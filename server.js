@@ -257,6 +257,7 @@ const referralsRouter = require("./routes/referrals");
 const trackingRouter = require("./routes/tracking");
 const supportRouter = require("./routes/support");
 const analyticsRouter = require("./routes/analytics");
+const verificationRouter = require("./routes/verification");
 
 // CRITICAL: API Routes MUST come BEFORE static files to ensure they're matched first
 app.use("/auth", authLimiter, authRouter); // Stricter rate limiting for auth
@@ -276,6 +277,7 @@ app.use("/referrals", referralsRouter);
 app.use("/tracking", trackingRouter);
 app.use("/support", supportRouter);
 app.use("/analytics", analyticsRouter);
+app.use("/verification", verificationRouter);
 
 // Serve static files from /public folder (AFTER API routes)
 const publicPath = path.join(__dirname, "public");
@@ -346,6 +348,7 @@ app.use((req, res, next) => {
     req.path.startsWith("/r2/") ||
     req.path.startsWith("/stripe-connect/") ||
     req.path.startsWith("/reviews/") ||
+    req.path.startsWith("/verification/") ||
     req.path.startsWith("/health") ||
     req.path.startsWith("/create-checkout-session") ||
     req.path.includes(".") // Exclude direct file requests (e.g., /style.css, /api-integration.js)

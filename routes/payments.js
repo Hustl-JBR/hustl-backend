@@ -279,16 +279,21 @@ router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), a
         data: { status: 'DECLINED' },
       });
 
-      // Update job
+      // Generate verification codes (Uber-style safety)
+      const generateCode = () => String(Math.floor(1000 + Math.random() * 9000));
+      
+      // Update job with hustler and verification codes
       const updatedJob = await prisma.job.update({
         where: { id: offer.job.id },
         data: {
           status: 'ASSIGNED',
           hustlerId: offer.hustlerId,
+          arrivalCode: generateCode(),
+          completionCode: generateCode(),
         },
       });
       
-      console.log(`[TEST MODE] Job ${updatedJob.id} updated: status=ASSIGNED, hustlerId=${updatedJob.hustlerId}`);
+      console.log(`[TEST MODE] Job ${updatedJob.id} updated: status=ASSIGNED, hustlerId=${updatedJob.hustlerId}, codes generated`);
 
       // Create fake payment record
       const fakePaymentIntent = {
