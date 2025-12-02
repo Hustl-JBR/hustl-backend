@@ -91,15 +91,20 @@ const { email, password, name, username, city, zip, role, referralCode } = req.b
       }
     }
 
-    // Send welcome email
-    await sendSignupEmail(user.email, user.name);
+    // Send welcome email (non-blocking)
+    try {
+      await sendSignupEmail(user.email, user.name);
+    } catch (welcomeEmailError) {
+      console.error('[signup] Failed to send welcome email (non-fatal):', welcomeEmailError.message);
+    }
     
-    // Send email verification email with code
+    // Send email verification email with code (non-blocking)
     try {
       await sendEmailVerificationEmail(user.email, user.name, verificationCode);
+      console.log('[signup] Verification email sent to:', user.email);
     } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
-      // Don't fail signup if email fails, but log it
+      console.error('[signup] Failed to send verification email (non-fatal):', emailError.message);
+      // Don't fail signup if email fails
     }
 
     // Generate token (but user won't be able to post jobs until verified)
