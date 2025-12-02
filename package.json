@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "dev": "nodemon server.js",
-    "start": "prisma migrate deploy && node server.js",
+    "start": "node scripts/migrate-and-start.js",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
