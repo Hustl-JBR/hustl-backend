@@ -26,16 +26,23 @@
   <link rel="modulepreload" href="mobile-core.js" />
   <style>
     :root {
-      --bg: #f3f4f6;
-      --card: #ffffff;
-      --primary: #2563eb;
-      --primary-soft: #dbeafe;
-      --text-main: #0f172a;
-      --text-muted: #6b7280;
-      --border: #e5e7eb;
-      --danger: #b91c1c;
-      --success: #15803d;
-      --radius: 10px;
+      --bg: #0f172a;
+      --bg-light: #1e293b;
+      --card: #1e293b;
+      --card-glass: rgba(30, 41, 59, 0.8);
+      --primary: #3b82f6;
+      --primary-glow: rgba(59, 130, 246, 0.5);
+      --primary-soft: rgba(59, 130, 246, 0.15);
+      --accent: #06b6d4;
+      --accent-glow: rgba(6, 182, 212, 0.4);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border: rgba(148, 163, 184, 0.2);
+      --danger: #ef4444;
+      --success: #22c55e;
+      --success-glow: rgba(34, 197, 94, 0.4);
+      --radius: 16px;
+      --radius-lg: 24px;
     }
 
     * {
@@ -44,13 +51,27 @@
 
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-        sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: var(--bg);
       color: var(--text-main);
+      min-height: 100vh;
     }
     
-    /* VERSION 2.0 - PAGINATION UPDATE */
+    /* Modern gradient background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(ellipse at 20% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(139, 92, 246, 0.05) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: -1;
+    }
 
     a {
       color: inherit;
@@ -68,17 +89,20 @@
       flex-direction: column;
     }
 
+    /* MODERN GLASSMORPHISM HEADER */
     header {
-      background: #ffffff;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
-      padding: 0.75rem 1.25rem;
+      padding: 0.75rem 1.5rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
       position: sticky;
       top: 0;
-      z-index: 20;
+      z-index: 100;
     }
 
     .logo-row {
@@ -88,24 +112,28 @@
     }
 
     .logo-mark {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      background: var(--primary);
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
       display: flex;
       align-items: center;
       justify-content: center;
       color: #fff;
       font-weight: 800;
       letter-spacing: 0.08em;
-      font-size: 0.9rem;
+      font-size: 1rem;
+      box-shadow: 0 4px 20px var(--primary-glow);
     }
 
     .logo-text-main {
       font-weight: 800;
-      font-size: 1.15rem;
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
+      font-size: 1.3rem;
+      letter-spacing: 0.05em;
+      background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
     .logo-sub {
@@ -113,43 +141,169 @@
       color: var(--text-muted);
     }
 
+    /* Desktop nav tabs */
     .nav-tabs {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.3rem;
+      gap: 0.25rem;
       font-size: 0.85rem;
     }
 
     .nav-tab {
-      padding: 0.35rem 0.7rem;
+      padding: 0.5rem 1rem;
       border-radius: 999px;
       border: 1px solid transparent;
       background: transparent;
       color: var(--text-muted);
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .nav-tab:hover {
+      color: var(--text-main);
+      background: var(--primary-soft);
     }
 
     .nav-tab.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      box-shadow: 0 2px 10px var(--primary-glow);
+    }
+
+    /* Header auth buttons */
+    .header-auth {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .btn-login-header {
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-main);
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .btn-login-header:hover {
       background: var(--primary-soft);
-      color: var(--primary);
       border-color: var(--primary);
     }
 
-    .auth-pill {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      text-align: right;
-    }
-
-    .auth-pill button {
+    .btn-signup-header {
+      padding: 0.5rem 1.25rem;
       border: none;
-      background: var(--primary);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
       color: #fff;
       border-radius: 999px;
-      padding: 0.25rem 0.75rem;
-      font-size: 0.7rem;
-      margin-left: 0.5rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: 0 2px 15px var(--primary-glow);
+      transition: all 0.2s ease;
+    }
+
+    .btn-signup-header:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px var(--primary-glow);
+    }
+
+    /* HAMBURGER MENU */
+    .hamburger-btn {
+      display: none;
+      width: 44px;
+      height: 44px;
+      border: none;
+      background: var(--card);
+      border-radius: 12px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .hamburger-btn span {
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: var(--text-main);
+      border-radius: 2px;
+      transition: all 0.3s ease;
+    }
+
+    .hamburger-btn.open span:nth-child(1) {
+      transform: rotate(45deg) translate(5px, 5px);
+    }
+
+    .hamburger-btn.open span:nth-child(2) {
+      opacity: 0;
+    }
+
+    .hamburger-btn.open span:nth-child(3) {
+      transform: rotate(-45deg) translate(5px, -5px);
+    }
+
+    /* Mobile menu overlay */
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.98);
+      backdrop-filter: blur(20px);
+      z-index: 99;
+      padding: 80px 1.5rem 2rem;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .mobile-menu.open {
+      display: flex;
+    }
+
+    .mobile-menu-item {
+      width: 100%;
+      padding: 1rem 1.25rem;
+      font-size: 1.1rem;
+      text-align: left;
+      border-radius: var(--radius);
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .mobile-menu-item:hover,
+    .mobile-menu-item.active {
+      background: var(--primary-soft);
+      color: var(--text-main);
+    }
+
+    .mobile-menu .header-auth {
+      margin-top: auto;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .mobile-menu .btn-login-header,
+    .mobile-menu .btn-signup-header {
+      width: 100%;
+      padding: 1rem;
+      font-size: 1rem;
+    }
+
+    /* Hide old auth pill */
+    .auth-pill {
+      display: none;
     }
 
     main {
@@ -166,12 +320,136 @@
       gap: 1rem;
     }
 
+    /* GLASSMORPHISM CARDS */
     .card {
-      background: var(--card);
+      background: var(--card-glass);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border-radius: var(--radius);
       border: 1px solid var(--border);
+      padding: 1.25rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Mobile responsive for hamburger */
+    @media (max-width: 768px) {
+      .nav-tabs {
+        display: none !important;
+      }
+
+      .header-auth.desktop-only {
+        display: none !important;
+      }
+
+      .hamburger-btn {
+        display: flex !important;
+      }
+    }
+
+    /* Floating animation */
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+
+    /* Auth Modal Popup */
+    .auth-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
       padding: 1rem;
-      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+    }
+
+    .auth-modal-overlay.open {
+      display: flex;
+    }
+
+    .auth-modal {
+      background: var(--card);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      padding: 2rem;
+      max-width: 420px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: modalSlideIn 0.3s ease;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .auth-modal-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: var(--bg-light);
+      border-radius: 50%;
+      color: var(--text-muted);
+      font-size: 1.25rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .auth-modal-close:hover {
+      background: var(--danger);
+      color: white;
+    }
+
+    /* Modern form inputs for dark theme */
+    .auth-modal input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 0.875rem 1rem;
+      border-radius: 12px;
+      font-size: 1rem;
+      width: 100%;
+      transition: all 0.2s ease;
+    }
+
+    .auth-modal input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-soft);
+    }
+
+    .auth-modal input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .auth-modal label {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .auth-modal .field {
+      margin-bottom: 1rem;
     }
 
     .card-header {
@@ -851,38 +1129,62 @@
       <div class="logo-row">
         <div class="logo-mark">H</div>
         <div>
-         <div class="logo-text-main">
-  HUSTL<span class="logo-tm">™</span>
-</div>
-          <div class="logo-sub">Local help. Real hustle. Knoxville TN.</div>
+          <div class="logo-text-main">HUSTL</div>
+          <div class="logo-sub">Tennessee's Gig Marketplace</div>
         </div>
       </div>
+      
       <nav class="nav-tabs">
         <button class="nav-tab active" data-view="home">Home</button>
-        <button class="nav-tab" data-view="jobs">Jobs</button>
-        <button class="nav-tab" data-view="post">Post a job</button>
+        <button class="nav-tab" data-view="jobs">Browse Jobs</button>
+        <button class="nav-tab" data-view="post">Post a Job</button>
         <button class="nav-tab" data-view="messages">Messages</button>
         <button class="nav-tab" data-view="profile">Profile</button>
         <button class="nav-tab" data-view="owner" id="ownerTab" style="display:none;">Owner</button>
-        <button class="nav-tab" data-view="feedback">Feedback</button>
-        <button class="nav-tab" data-view="about">About</button>
       </nav>
-      <div class="auth-pill" id="authPill">
+      
+      <div class="header-auth desktop-only" id="headerAuthDesktop">
+        <button class="btn-login-header" id="headerLoginBtn">Log In</button>
+        <button class="btn-signup-header" id="headerSignupBtn">Sign Up Free</button>
+      </div>
+      
+      <!-- Hamburger for mobile -->
+      <button class="hamburger-btn" id="hamburgerBtn">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      
+      <!-- Old auth pill (hidden but kept for JS compatibility) -->
+      <div class="auth-pill" id="authPill" style="display:none;">
         Not signed in
         <button id="openAuthButton">Sign in / Create account</button>
       </div>
     </header>
+    
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu" id="mobileMenu">
+      <button class="mobile-menu-item active" data-view="home">🏠 Home</button>
+      <button class="mobile-menu-item" data-view="jobs">💼 Browse Jobs</button>
+      <button class="mobile-menu-item" data-view="post">➕ Post a Job</button>
+      <button class="mobile-menu-item" data-view="messages">💬 Messages</button>
+      <button class="mobile-menu-item" data-view="profile">👤 Profile</button>
+      <div class="header-auth">
+        <button class="btn-login-header" id="mobileLoginBtn">Log In</button>
+        <button class="btn-signup-header" id="mobileSignupBtn">Sign Up Free</button>
+      </div>
+    </div>
 
     <main>
       <!-- AUTH CARD -->
-      <section id="authSection" class="card" style="margin-bottom: 0.8rem; border: 2px solid var(--primary-soft);">
-        <div class="card-header" style="background: linear-gradient(135deg, var(--primary-soft) 0%, #eff6ff 100%); margin: -1rem -1rem 1rem -1rem; padding: 1rem; border-radius: var(--radius) var(--radius) 0 0;">
+      <section id="authSection" class="card" style="margin-bottom: 1.5rem; border: 1px solid rgba(59, 130, 246, 0.3); background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, var(--card-glass) 100%); display: none;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
           <div>
-            <div class="card-title" id="authCardTitle" style="font-size: 1.2rem;">🚀 Join Hustl</div>
-            <div class="muted" style="font-size: 0.8rem;">Start earning or get help today</div>
+            <div class="card-title" id="authCardTitle" style="font-size: 1.3rem; margin-bottom: 0.25rem;">🚀 Join Hustl</div>
+            <div style="color: var(--text-muted); font-size: 0.85rem;">Start earning or get help today</div>
           </div>
-          <div class="muted" id="authModeToggle">
-            <span class="linkish" data-auth-mode="login" style="background: white; padding: 0.4rem 0.8rem; border-radius: 999px; font-weight: 500;">Log in</span>
+          <div id="authModeToggle">
+            <span class="linkish" data-auth-mode="login" style="background: var(--bg-light); padding: 0.5rem 1rem; border-radius: 999px; font-weight: 500; color: var(--text-main); cursor: pointer; border: 1px solid var(--border);">Log in</span>
           </div>
         </div>
         
@@ -960,102 +1262,115 @@
         </div>
       </section>
 
-      <!-- HOME VIEW -->
+      <!-- HOME VIEW - MODERN HERO -->
       <section id="view-home">
-        <div class="layout-grid">
-          <div class="card">
-            <div class="hero-heading">Find help or extra cash in a few taps.</div>
-            <div class="hero-sub">
-              Hustl connects people in Knoxville with local Hustlers for moving, dump runs,
-              yard work, errands, and more – with a simple flat fee and a 12% platform cut.
+        <!-- Hero Section -->
+        <div style="text-align: center; padding: 2rem 1rem 3rem; max-width: 700px; margin: 0 auto;">
+          
+          <!-- Animated Briefcase Icon -->
+          <div style="width: 100px; height: 100px; margin: 0 auto 1.5rem; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); border-radius: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 40px var(--primary-glow); animation: float 3s ease-in-out infinite;">
+            <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            </svg>
+          </div>
+          
+          <!-- Main Headline -->
+          <h1 style="font-size: 2.5rem; font-weight: 800; line-height: 1.1; margin: 0 0 1rem; background: linear-gradient(135deg, #fff 0%, var(--accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+            Find Help or<br>Make Extra Cash
+          </h1>
+          
+          <!-- Subheadline -->
+          <p style="font-size: 1.1rem; color: var(--text-muted); margin: 0 0 2rem; line-height: 1.6;">
+            Connect with local hustlers in Tennessee for <span style="color: var(--accent);">moving</span>, <span style="color: var(--primary);">yard work</span>, <span style="color: var(--success);">errands</span>, and more.
+          </p>
+          
+          <!-- CTA Buttons -->
+          <div style="display: flex; flex-direction: column; gap: 0.75rem; max-width: 320px; margin: 0 auto 2rem;">
+            <button class="btn btn-primary" id="homeCtaPost" style="width: 100%; padding: 1rem 2rem; font-size: 1.1rem; font-weight: 600; border-radius: 999px; background: linear-gradient(135deg, var(--primary) 0%, #2563eb 100%); border: none; color: white; box-shadow: 0 4px 20px var(--primary-glow); transition: all 0.3s ease;">
+              ✨ Post a Job
+            </button>
+            <button class="btn btn-ghost" id="homeCtaBrowse" style="width: 100%; padding: 1rem 2rem; font-size: 1.1rem; font-weight: 600; border-radius: 999px; background: transparent; border: 2px solid var(--border); color: var(--text-main); transition: all 0.3s ease;">
+              💼 Browse Jobs & Earn
+            </button>
+          </div>
+          
+          <!-- Trust badges -->
+          <div style="display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 2rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">
+              <span style="color: var(--success);">✓</span> Free to join
             </div>
-            <div class="hero-cta-row">
-              <button class="btn btn-primary" id="homeCtaPost">Post a job</button>
-              <button class="btn btn-ghost" id="homeCtaBrowse">Browse jobs</button>
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">
+              <span style="color: var(--success);">✓</span> Secure payments
             </div>
-            <!-- How It Works - Collapsible Sections -->
-            <div style="margin-top: 0.5rem;">
-              <details class="how-it-works-dropdown" open>
-                <summary style="font-weight: 700; font-size: 1rem; cursor: pointer; padding: 0.75rem; background: var(--primary-soft); border-radius: var(--radius); display: flex; align-items: center; justify-content: space-between;">
-                  <span>📋 How Hustl Works</span>
-                  <span style="font-size: 0.8rem; color: var(--primary);">▼</span>
-                </summary>
-                <div class="step-row" style="margin-top: 0.75rem;">
-                  <div class="step-card" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-color: #fbbf24;">
-                    <div class="step-title" style="font-size: 1.1rem;">
-                      <span class="step-emoji">📝</span>1. Post a Job
-                    </div>
-                    <div style="color: #92400e;">
-                      Describe what you need done, set your location, and name your price. Takes 30 seconds.
-                    </div>
-                  </div>
-                  <div class="step-card" style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-color: #3b82f6;">
-                    <div class="step-title" style="font-size: 1.1rem;">
-                      <span class="step-emoji">💪</span>2. Get Offers
-                    </div>
-                    <div style="color: #1e40af;">
-                      Local hustlers apply with their pitch. Compare offers and chat before deciding.
-                    </div>
-                  </div>
-                  <div class="step-card" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-color: #10b981;">
-                    <div class="step-title" style="font-size: 1.1rem;">
-                      <span class="step-emoji">💰</span>3. Pay & Done
-                    </div>
-                    <div style="color: #065f46;">
-                      Accept an offer, pay securely through Stripe. Hustler gets paid automatically!
-                    </div>
-                  </div>
-                </div>
-              </details>
-              
-              <details class="how-it-works-dropdown" style="margin-top: 0.5rem;">
-                <summary style="font-weight: 600; font-size: 0.9rem; cursor: pointer; padding: 0.6rem; background: #f8fafc; border-radius: var(--radius); border: 1px solid var(--border);">
-                  💵 For Hustlers: How to Get Paid
-                </summary>
-                <div style="padding: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">
-                  <ol style="margin: 0; padding-left: 1.2rem;">
-                    <li style="margin-bottom: 0.5rem;"><strong>Create your account</strong> and go to your Profile</li>
-                    <li style="margin-bottom: 0.5rem;"><strong>Connect your Stripe account</strong> (takes 5 min, one-time setup)</li>
-                    <li style="margin-bottom: 0.5rem;"><strong>Apply to jobs</strong> that match your skills</li>
-                    <li><strong>Complete work, get paid instantly</strong> - money goes directly to your bank!</li>
-                  </ol>
-                  <div style="margin-top: 0.75rem; padding: 0.5rem; background: #ecfdf5; border-radius: 6px; color: #065f46;">
-                    💡 <strong>Pro tip:</strong> Hustlers with completed profiles and good reviews get more jobs!
-                  </div>
-                </div>
-              </details>
-              
-              <details class="how-it-works-dropdown" style="margin-top: 0.5rem;">
-                <summary style="font-weight: 600; font-size: 0.9rem; cursor: pointer; padding: 0.6rem; background: #f8fafc; border-radius: var(--radius); border: 1px solid var(--border);">
-                  🛡️ Payments & Safety
-                </summary>
-                <div style="padding: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">
-                  <p style="margin: 0 0 0.5rem 0;">✅ <strong>Secure payments</strong> powered by Stripe</p>
-                  <p style="margin: 0 0 0.5rem 0;">✅ <strong>Money is held safely</strong> until the job is done</p>
-                  <p style="margin: 0 0 0.5rem 0;">✅ <strong>Hustlers get paid automatically</strong> via direct deposit</p>
-                  <p style="margin: 0;">✅ <strong>Both parties can leave reviews</strong> after completion</p>
-                </div>
-              </details>
-              
-              <details class="how-it-works-dropdown" style="margin-top: 0.5rem;">
-                <summary style="font-weight: 600; font-size: 0.9rem; cursor: pointer; padding: 0.6rem; background: #f8fafc; border-radius: var(--radius); border: 1px solid var(--border);">
-                  💬 Why Hustl Exists
-                </summary>
-                <div style="padding: 0.75rem; font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
-                  Hustl was built because I wanted to help people take off with side hustles. College students, locals - anyone looking to make extra money while keeping their freedom. I did plenty of odd jobs myself and there was never an easy, local way to find them. Hustl puts all those opportunities in one place so anyone can find work, do solid jobs, and get paid.
-                </div>
-              </details>
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">
+              <span style="color: var(--success);">✓</span> Instant payouts
             </div>
           </div>
-
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">Quick facts</div>
+        </div>
+        
+        <!-- How It Works Cards -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+          
+          <!-- Card 1: Post -->
+          <div class="card" style="text-align: center; padding: 1.5rem; border: 1px solid rgba(251, 191, 36, 0.3); background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, transparent 100%);">
+            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📝</div>
+            <h3 style="font-size: 1.1rem; margin: 0 0 0.5rem; color: #fbbf24;">1. Post Your Job</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">Describe what you need, set your price. Takes 30 seconds.</p>
+          </div>
+          
+          <!-- Card 2: Connect -->
+          <div class="card" style="text-align: center; padding: 1.5rem; border: 1px solid rgba(59, 130, 246, 0.3); background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, transparent 100%);">
+            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">💪</div>
+            <h3 style="font-size: 1.1rem; margin: 0 0 0.5rem; color: var(--primary);">2. Get Offers</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">Local hustlers apply. Compare, chat, and pick your favorite.</p>
+          </div>
+          
+          <!-- Card 3: Pay -->
+          <div class="card" style="text-align: center; padding: 1.5rem; border: 1px solid rgba(34, 197, 94, 0.3); background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, transparent 100%);">
+            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">💰</div>
+            <h3 style="font-size: 1.1rem; margin: 0 0 0.5rem; color: var(--success);">3. Pay Securely</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">Pay through Stripe. Hustler gets paid instantly to their bank.</p>
+          </div>
+        </div>
+        
+        <!-- Why Stripe Section -->
+        <div class="card" style="margin-bottom: 1.5rem; border: 1px solid rgba(99, 91, 255, 0.3);">
+          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #635bff 0%, #a855f7 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+              <span style="font-size: 1.5rem;">💳</span>
             </div>
-            <ul class="muted" style="list-style:disc;margin-left:1rem;font-size:0.8rem;">
-              <li>Currently focused on Knoxville, TN and nearby areas.</li>
-              <li>Hustl takes a 15% cut on each job. The rest goes to the Hustler.</li>
-              <li>Customers and Hustlers can chat inside each job to work out details.</li>
+            <div>
+              <h3 style="margin: 0; font-size: 1.1rem;">Powered by Stripe</h3>
+              <p style="margin: 0; color: var(--text-muted); font-size: 0.85rem;">Same payments as Uber, Lyft, DoorDash & Instacart</p>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.85rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted);">
+              <span style="color: var(--success);">✓</span> Bank-level security
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted);">
+              <span style="color: var(--success);">✓</span> Instant payouts
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted);">
+              <span style="color: var(--success);">✓</span> Money held safely
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted);">
+              <span style="color: var(--success);">✓</span> Fraud protection
+            </div>
+          </div>
+        </div>
+        
+        <!-- Quick Info -->
+        <div class="card" style="background: var(--card-glass);">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+            <span style="font-size: 1.25rem;">📍</span>
+            <span style="font-weight: 600;">Currently serving Tennessee</span>
+          </div>
+          <ul style="list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">
+            <li>• Knoxville, Nashville, Memphis & surrounding areas</li>
+            <li>• Hustl takes only 15% — the rest goes to hustlers</li>
+            <li>• Chat with hustlers before you hire</li>
               <li>You must be 18+ to use Hustl. This prototype runs in your browser only.</li>
             </ul>
             <div class="section-title" style="margin-top:0.8rem;">Example categories</div>
@@ -4970,11 +5285,139 @@ try {
   }
 }
 
+  // ========== HAMBURGER MENU ==========
+  function initHamburgerMenu() {
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    
+    if (hamburgerBtn && mobileMenu) {
+      hamburgerBtn.addEventListener('click', () => {
+        hamburgerBtn.classList.toggle('open');
+        mobileMenu.classList.toggle('open');
+        document.body.style.overflow = mobileMenu.classList.contains('open') ? 'hidden' : '';
+      });
+      
+      // Handle mobile menu item clicks
+      mobileMenu.querySelectorAll('.mobile-menu-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const view = item.dataset.view;
+          if (view && typeof setView === 'function') {
+            setView(view);
+          }
+          // Close menu
+          hamburgerBtn.classList.remove('open');
+          mobileMenu.classList.remove('open');
+          document.body.style.overflow = '';
+          
+          // Update active state
+          mobileMenu.querySelectorAll('.mobile-menu-item').forEach(i => i.classList.remove('active'));
+          item.classList.add('active');
+        });
+      });
+      
+      // Mobile auth buttons
+      const mobileLoginBtn = document.getElementById('mobileLoginBtn');
+      const mobileSignupBtn = document.getElementById('mobileSignupBtn');
+      
+      if (mobileLoginBtn) {
+        mobileLoginBtn.addEventListener('click', () => {
+          hamburgerBtn.classList.remove('open');
+          mobileMenu.classList.remove('open');
+          document.body.style.overflow = '';
+          openAuthModal('login');
+        });
+      }
+      
+      if (mobileSignupBtn) {
+        mobileSignupBtn.addEventListener('click', () => {
+          hamburgerBtn.classList.remove('open');
+          mobileMenu.classList.remove('open');
+          document.body.style.overflow = '';
+          openAuthModal('create');
+        });
+      }
+    }
+    
+    // Desktop auth buttons
+    const headerLoginBtn = document.getElementById('headerLoginBtn');
+    const headerSignupBtn = document.getElementById('headerSignupBtn');
+    
+    if (headerLoginBtn) {
+      headerLoginBtn.addEventListener('click', () => openAuthModal('login'));
+    }
+    if (headerSignupBtn) {
+      headerSignupBtn.addEventListener('click', () => openAuthModal('create'));
+    }
+  }
+  
+  // ========== AUTH MODAL ==========
+  function openAuthModal(mode = 'create') {
+    // Check if user is already logged in
+    const user = getCurrentUser();
+    if (user) {
+      setView('profile');
+      return;
+    }
+    
+    // Show auth section and scroll to it, or show modal
+    const authSection = document.getElementById('authSection');
+    if (authSection) {
+      authSection.style.display = 'block';
+      authSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Toggle to correct mode
+      const authTitle = document.getElementById("authCardTitle");
+      const authToggle = document.getElementById("authModeToggle");
+      const authBodyCreate = document.getElementById("authBodyCreate");
+      const authBodyLogin = document.getElementById("authBodyLogin");
+      
+      if (mode === 'login') {
+        if (authTitle) authTitle.textContent = "👋 Welcome Back";
+        if (authBodyCreate) authBodyCreate.style.display = 'none';
+        if (authBodyLogin) authBodyLogin.style.display = 'block';
+      } else {
+        if (authTitle) authTitle.textContent = "🚀 Join Hustl";
+        if (authBodyCreate) authBodyCreate.style.display = 'block';
+        if (authBodyLogin) authBodyLogin.style.display = 'none';
+      }
+    }
+  }
+  
+  function closeAuthModal() {
+    const overlay = document.getElementById('authModalOverlay');
+    if (overlay) {
+      overlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+  }
+  
+  // Update header when logged in
+  function updateHeaderAuth() {
+    const user = getCurrentUser();
+    const desktopAuth = document.getElementById('headerAuthDesktop');
+    const mobileAuth = document.querySelector('.mobile-menu .header-auth');
+    
+    if (user) {
+      if (desktopAuth) {
+        desktopAuth.innerHTML = `
+          <span style="color: var(--text-muted); font-size: 0.85rem;">Hey, ${user.name?.split(' ')[0] || 'there'}!</span>
+          <button class="btn-login-header" onclick="setView('profile')">Profile</button>
+        `;
+      }
+      if (mobileAuth) {
+        mobileAuth.innerHTML = `
+          <button class="btn-signup-header" onclick="setView('profile')" style="width:100%;">👤 My Profile</button>
+        `;
+      }
+    }
+  }
+
   // Boot - initialize immediately
   loadState();
   initAgeGate();
   initNav();
   initAuthCard();
+  initHamburgerMenu();
   initJobsForm();
   initConversationInput();
   initFeedback();
@@ -4984,6 +5427,7 @@ try {
   checkAutoCompleteJobs();
   setInterval(checkAutoCompleteJobs, 60 * 1000);
   renderAll();
+  updateHeaderAuth();
   
   // Start token auto-refresh for persistent login
   if (window.appCore && window.appCore.tokenManager) {
