@@ -29,7 +29,8 @@ router.post('/signup', [
 
 const { email, password, name, username, city, zip, role, referralCode } = req.body;
     
-    console.log('[signup] Request body:', { email, name, username, role, hasCity: !!city, hasZip: !!zip, referralCode });
+    console.log('[signup] Request received:', { email, name, username, role, city, zip: zip?.substring(0, 3) + '**', referralCode });
+    console.log('[signup] JWT_SECRET exists:', !!process.env.JWT_SECRET);
 
     // Check if user exists
     const existing = await prisma.user.findFirst({
@@ -50,29 +51,60 @@ const { email, password, name, username, city, zip, role, referralCode } = req.b
     const verificationCodeExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
 
     // Create user with both roles (users can be both customer and hustler)
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        name,
-        username,
-        city,
-        zip,
-        roles: ['CUSTOMER', 'HUSTLER'], // All users can be both
-        emailVerified: false,
-        emailVerificationCode: verificationCode,
-        emailVerificationExpiry: verificationCodeExpiry,
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        username: true,
-        roles: true,
-        emailVerified: true,
-        createdAt: true,
-      },
-    });
+    let user;
+    try {
+      // First try with email verification fields
+      user = await prisma.user.create({
+        data: {
+          email,
+          passwordHash,
+          name,
+          username,
+          city,
+          zip,
+          roles: ['CUSTOMER', 'HUSTLER'],
+          emailVerified: false,
+          emailVerificationCode: verificationCode,
+          emailVerificationExpiry: verificationCodeExpiry,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          username: true,
+          roles: true,
+          emailVerified: true,
+          createdAt: true,
+        },
+      });
+    } catch (createError) {
+      console.error('[signup] User creation error:', createError.message);
+      // If it fails due to missing columns, try without email verification fields
+      if (createError.code === 'P2002' || createError.message?.includes('Unknown arg')) {
+        console.log('[signup] Retrying without email verification fields...');
+        user = await prisma.user.create({
+          data: {
+            email,
+            passwordHash,
+            name,
+            username,
+            city,
+            zip,
+            roles: ['CUSTOMER', 'HUSTLER'],
+          },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            username: true,
+            roles: true,
+            createdAt: true,
+          },
+        });
+      } else {
+        throw createError;
+      }
+    }
 
     // Track referral if code provided (non-blocking)
     if (referralCode) {
@@ -108,9 +140,13 @@ const { email, password, name, username, city, zip, role, referralCode } = req.b
     }
 
     // Generate token (but user won't be able to post jobs until verified)
+    const jwtSecret = process.env.JWT_SECRET || 'fallback-secret-change-me';
+    if (!process.env.JWT_SECRET) {
+      console.warn('[signup] WARNING: JWT_SECRET not set, using fallback!');
+    }
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      process.env.JWT_SECRET,
+      jwtSecret,
       { expiresIn: '7d' }
     );
 
@@ -124,8 +160,10 @@ const { email, password, name, username, city, zip, role, referralCode } = req.b
       message: 'Account created! Please check your email for a verification code.'
     });
   } catch (error) {
-    console.error('Signup error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[signup] CRITICAL ERROR:', error.message);
+    console.error('[signup] Error code:', error.code);
+    console.error('[signup] Full error:', JSON.stringify(error, null, 2));
+    res.status(500).json({ error: 'Internal server error', debug: error.message });
   }
 });
 
