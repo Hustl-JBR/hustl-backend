@@ -2412,7 +2412,7 @@ async function renderJobs(reset = false) {
   }
 }
 
-    function openJobDetails(jobId, options = {}) {
+    async function openJobDetails(jobId, options = {}) {
       const job = state.jobs.find((j) => j.id === jobId);
       const container = document.getElementById("jobDetailContainer");
       const user = getCurrentUser();
