@@ -1156,14 +1156,17 @@
           
           <div style="display: flex; gap: 0.75rem;">
             <div class="field" style="flex: 2;">
-              <label for="createCity">City</label>
+              <label for="createCity">Your City</label>
               <input id="createCity" type="text" placeholder="Knoxville" style="font-size: 1rem; padding: 0.75rem;" />
             </div>
             <div class="field" style="flex: 1;">
-              <label for="createZip">ZIP Code</label>
+              <label for="createZip">ZIP</label>
               <input id="createZip" type="text" placeholder="37901" maxlength="5" pattern="[0-9]{5}" style="font-size: 1rem; padding: 0.75rem;" />
             </div>
           </div>
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin: -0.5rem 0 0.75rem 0;">
+            📍 Your home base for "Near Me" - you can still see jobs anywhere in TN
+          </p>
           
           <div class="field" style="display: none;">
             <label for="createRole">I want to</label>
@@ -4436,6 +4439,48 @@ async function renderJobs(reset = false) {
     "<textarea id='profileBioInput' placeholder='Tell people a little about yourself. Jobs you like, if you have a truck, experience, etc.'></textarea>" +
     "<button class='btn btn-primary' id='saveBioButton' style='margin-top:0.35rem;'>Save profile</button>";
   container.appendChild(bioField);
+
+  // Location / ZIP code edit
+  const locationField = document.createElement("div");
+  locationField.className = "field";
+  locationField.style.marginTop = "0.8rem";
+  locationField.innerHTML = `
+    <label for="profileCityInput">📍 Your Location</label>
+    <p class="muted" style="margin: 0 0 0.5rem 0; font-size: 0.8rem;">Used for "Near Me" filter - you can still see all jobs in Tennessee</p>
+    <div style="display: flex; gap: 0.5rem;">
+      <input id="profileCityInput" type="text" placeholder="City" value="${user.city || ''}" style="flex: 2;" />
+      <input id="profileZipInput" type="text" placeholder="ZIP" value="${user.zip || ''}" maxlength="5" style="flex: 1;" />
+      <button class="btn btn-primary" id="saveLocationButton">Save</button>
+    </div>
+  `;
+  container.appendChild(locationField);
+
+  // Location save handler
+  setTimeout(() => {
+    const saveLocBtn = document.getElementById("saveLocationButton");
+    if (saveLocBtn) {
+      saveLocBtn.addEventListener("click", async () => {
+        const city = document.getElementById("profileCityInput").value.trim();
+        const zip = document.getElementById("profileZipInput").value.trim();
+        if (!city || !zip || !/^\d{5}$/.test(zip)) {
+          showToast("Please enter a valid city and 5-digit ZIP code.");
+          return;
+        }
+        try {
+          await window.hustlAPI.users.updateProfile({ city, zip });
+          // Update local user data
+          const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
+          storedUser.city = city;
+          storedUser.zip = zip;
+          localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+          showToast("✅ Location updated!");
+        } catch (error) {
+          showToast("Failed to update location.");
+        }
+      });
+    }
+  }, 100);
+
 // --- Stripe Connect Section (for automatic payouts) ---
 const stripeConnectWrap = document.createElement("div");
 stripeConnectWrap.className = "field";
