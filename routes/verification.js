@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
-const { requireAuth } = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 
 const prisma = new PrismaClient();
 
@@ -14,10 +14,10 @@ function generateCode() {
 // GET /verification/job/:jobId/codes
 // Get verification codes for a job (role-based)
 // ============================================
-router.get('/job/:jobId/codes', requireAuth, async (req, res) => {
+router.get('/job/:jobId/codes', authenticate, async (req, res) => {
   try {
     const { jobId } = req.params;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     const job = await prisma.job.findUnique({
       where: { id: jobId },
@@ -86,11 +86,11 @@ router.get('/job/:jobId/codes', requireAuth, async (req, res) => {
 // POST /verification/job/:jobId/verify-arrival
 // Hustler enters the arrival code (from customer)
 // ============================================
-router.post('/job/:jobId/verify-arrival', requireAuth, async (req, res) => {
+router.post('/job/:jobId/verify-arrival', authenticate, async (req, res) => {
   try {
     const { jobId } = req.params;
     const { code } = req.body;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     if (!code) {
       return res.status(400).json({ error: 'Code is required' });
@@ -145,11 +145,11 @@ router.post('/job/:jobId/verify-arrival', requireAuth, async (req, res) => {
 // POST /verification/job/:jobId/verify-completion
 // Customer enters the completion code (from hustler) to release payment
 // ============================================
-router.post('/job/:jobId/verify-completion', requireAuth, async (req, res) => {
+router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
   try {
     const { jobId } = req.params;
     const { code } = req.body;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     if (!code) {
       return res.status(400).json({ error: 'Code is required' });
@@ -208,10 +208,10 @@ router.post('/job/:jobId/verify-completion', requireAuth, async (req, res) => {
 // POST /verification/job/:jobId/generate-codes
 // Generate codes when job is assigned (internal use)
 // ============================================
-router.post('/job/:jobId/generate-codes', requireAuth, async (req, res) => {
+router.post('/job/:jobId/generate-codes', authenticate, async (req, res) => {
   try {
     const { jobId } = req.params;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     const job = await prisma.job.findUnique({
       where: { id: jobId }
