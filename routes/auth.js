@@ -515,6 +515,64 @@ router.post('/refresh', async (req, res) => {
   }
 });
 
+// DELETE /auth/delete-all-users - Delete ALL users (DANGER - for testing only)
+router.delete('/delete-all-users', [
+  body('secret').notEmpty(),
+  body('confirm').equals('DELETE_ALL'),
+], async (req, res) => {
+  try {
+    const { secret, confirm } = req.body;
+    
+    const deleteSecret = process.env.DELETE_SECRET || 'hustl-delete-2024';
+    if (secret !== deleteSecret || confirm !== 'DELETE_ALL') {
+      return res.status(403).json({ error: 'Invalid secret or confirmation' });
+    }
+
+    console.log('[auth] ⚠️ DELETING ALL USERS AND DATA...');
+    
+    // Delete in order of dependencies
+    await prisma.message.deleteMany({});
+    console.log('[auth] Deleted all messages');
+    
+    await prisma.thread.deleteMany({});
+    console.log('[auth] Deleted all threads');
+    
+    await prisma.offer.deleteMany({});
+    console.log('[auth] Deleted all offers');
+    
+    await prisma.review.deleteMany({});
+    console.log('[auth] Deleted all reviews');
+    
+    await prisma.payment.deleteMany({});
+    console.log('[auth] Deleted all payments');
+    
+    try {
+      await prisma.locationUpdate.deleteMany({});
+      console.log('[auth] Deleted all location updates');
+    } catch (e) { /* table might not exist */ }
+    
+    try {
+      await prisma.referral.deleteMany({});
+      console.log('[auth] Deleted all referrals');
+    } catch (e) { /* table might not exist */ }
+    
+    await prisma.job.deleteMany({});
+    console.log('[auth] Deleted all jobs');
+    
+    const userCount = await prisma.user.count();
+    await prisma.user.deleteMany({});
+    console.log(`[auth] ✅ Deleted ${userCount} users`);
+
+    res.json({ 
+      message: `Successfully deleted ALL data: ${userCount} users and all related records`,
+      deletedUsers: userCount
+    });
+  } catch (error) {
+    console.error('[auth] Delete all users error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
 // DELETE /auth/delete-account - Delete a user account (for testing)
 // Protected by a secret key to prevent misuse
 router.delete('/delete-account', [
