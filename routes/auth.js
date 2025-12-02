@@ -515,5 +515,81 @@ router.post('/refresh', async (req, res) => {
   }
 });
 
+// DELETE /auth/delete-account - Delete a user account (for testing)
+// Protected by a secret key to prevent misuse
+router.delete('/delete-account', [
+  body('email').isEmail().normalizeEmail(),
+  body('secret').notEmpty(),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email, secret } = req.body;
+    
+    // Simple secret check - in production, use a proper admin auth
+    const deleteSecret = process.env.DELETE_SECRET || 'hustl-delete-2024';
+    if (secret !== deleteSecret) {
+      return res.status(403).json({ error: 'Invalid secret' });
+    }
+
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, name: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Delete related data first (in order of dependencies)
+    const userId = user.id;
+    
+    // Delete messages in threads where user is involved
+    await prisma.message.deleteMany({
+      where: { senderId: userId },
+    });
+    
+    // Delete threads
+    await prisma.thread.deleteMany({
+      where: { OR: [{ userAId: userId }, { userBId: userId }] },
+    });
+    
+    // Delete offers
+    await prisma.offer.deleteMany({
+      where: { hustlerId: userId },
+    });
+    
+    // Delete reviews
+    await prisma.review.deleteMany({
+      where: { OR: [{ reviewerId: userId }, { revieweeId: userId }] },
+    });
+    
+    // Delete payments
+    await prisma.payment.deleteMany({
+      where: { OR: [{ customerId: userId }, { hustlerId: userId }] },
+    });
+    
+    // Delete jobs
+    await prisma.job.deleteMany({
+      where: { OR: [{ customerId: userId }, { hustlerId: userId }] },
+    });
+    
+    // Finally delete the user
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+
+    console.log(`[auth] Deleted user: ${email}`);
+    res.json({ message: `User ${email} and all related data deleted successfully` });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
 module.exports = router;
 
