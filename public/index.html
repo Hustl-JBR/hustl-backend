@@ -2190,11 +2190,11 @@ function showEmailVerification(email) {
 }
 
 // Show verification success screen with options
-function showVerificationSuccess() {
+window.showVerificationSuccess = function() {
   const authBodyCreate = document.getElementById("authBodyCreate");
   if (!authBodyCreate) {
     // If auth section is hidden, show a modal instead
-    showWelcomeModal();
+    window.showWelcomeModal();
     return;
   }
   
@@ -2234,10 +2234,10 @@ function showVerificationSuccess() {
       </p>
     </div>
   `;
-}
+};
 
 // Show welcome modal (for when auth section is hidden)
-function showWelcomeModal() {
+window.showWelcomeModal = function() {
   // Create modal overlay
   const modal = document.createElement('div');
   modal.id = 'welcomeModal';
@@ -2281,17 +2281,17 @@ function showWelcomeModal() {
   `;
   
   document.body.appendChild(modal);
-}
+};
 
-function closeWelcomeModal() {
+window.closeWelcomeModal = function() {
   const modal = document.getElementById('welcomeModal');
   if (modal) modal.remove();
-}
+};
 
-function goToStripeSetup() {
-  closeWelcomeModal();
-  setView('profile');
-  renderAll();
+window.goToStripeSetup = function() {
+  window.closeWelcomeModal();
+  if (typeof setView === 'function') setView('profile');
+  if (typeof renderAll === 'function') renderAll();
   // Scroll to Stripe section after a short delay
   setTimeout(() => {
     const stripeSection = document.getElementById('stripeConnectSection');
@@ -2299,20 +2299,13 @@ function goToStripeSetup() {
       stripeSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, 300);
-}
+};
 
-function startExploring() {
-  closeWelcomeModal();
-  setView('jobs');
-  renderAll();
-}
-
-// Expose these functions globally immediately so onclick handlers work
-window.goToStripeSetup = goToStripeSetup;
-window.startExploring = startExploring;
-window.closeWelcomeModal = closeWelcomeModal;
-window.showVerificationSuccess = showVerificationSuccess;
-window.showWelcomeModal = showWelcomeModal;
+window.startExploring = function() {
+  window.closeWelcomeModal();
+  if (typeof setView === 'function') setView('jobs');
+  if (typeof renderAll === 'function') renderAll();
+};
 
   document
     .getElementById("loginButton")
@@ -5753,10 +5746,7 @@ try {
   window.setView = setView;
   window.openAuthModal = openAuthModal;
   window.closeAuthModal = closeAuthModal;
-  window.goToStripeSetup = goToStripeSetup;
-  window.startExploring = startExploring;
-  window.closeWelcomeModal = closeWelcomeModal;
-  window.showVerificationSuccess = showVerificationSuccess;
+  // goToStripeSetup, startExploring, closeWelcomeModal are already defined globally above
 
   // Boot - initialize immediately
   loadState();
