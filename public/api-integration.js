@@ -118,6 +118,27 @@
       localStorage.removeItem('hustl_user');
     },
 
+    async verifyEmail(email, code) {
+      const result = await apiRequest('/auth/verify-email', {
+        method: 'POST',
+        body: JSON.stringify({ email, code }),
+      });
+
+      if (result.token) {
+        localStorage.setItem('hustl_token', result.token);
+        localStorage.setItem('hustl_user', JSON.stringify(result.user));
+      }
+
+      return result;
+    },
+
+    async resendVerification(email) {
+      return await apiRequest('/auth/resend-verification', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+    },
+
     async getCurrentUser() {
       const storedUser = localStorage.getItem('hustl_user');
       if (storedUser) {

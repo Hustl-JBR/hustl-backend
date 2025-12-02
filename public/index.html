@@ -1154,6 +1154,17 @@
             <input id="createPassword" type="password" placeholder="At least 8 characters" style="font-size: 1rem; padding: 0.75rem;" />
           </div>
           
+          <div style="display: flex; gap: 0.75rem;">
+            <div class="field" style="flex: 2;">
+              <label for="createCity">City</label>
+              <input id="createCity" type="text" placeholder="Knoxville" style="font-size: 1rem; padding: 0.75rem;" />
+            </div>
+            <div class="field" style="flex: 1;">
+              <label for="createZip">ZIP Code</label>
+              <input id="createZip" type="text" placeholder="37901" maxlength="5" pattern="[0-9]{5}" style="font-size: 1rem; padding: 0.75rem;" />
+            </div>
+          </div>
+          
           <div class="field" style="display: none;">
             <label for="createRole">I want to</label>
             <select id="createRole" style="font-size: 1rem; padding: 0.75rem;">
@@ -1893,12 +1904,9 @@ document.getElementById("createAccountButton").addEventListener("click", async (
   const name = document.getElementById("createName").value.trim();
   const email = document.getElementById("createEmail").value.trim();
   const password = document.getElementById("createPassword").value.trim();
+  const city = document.getElementById("createCity").value.trim();
+  const zip = document.getElementById("createZip").value.trim();
   const role = document.getElementById("createRole").value;
-
-  // Get hidden fields for backwards compatibility
-  const payoutMethod = document.getElementById("createPayoutMethod").value || "venmo";
-  const payoutHandle = document.getElementById("createPayoutHandle").value.trim() || "pending";
-  const payoutName = document.getElementById("createPayoutName").value.trim() || "";
 
   // Get checkbox values
   const ageCheckbox = document.getElementById("ageCheckbox");
@@ -1906,6 +1914,14 @@ document.getElementById("createAccountButton").addEventListener("click", async (
 
   if (!name || !email || !password) {
     showToast("Please fill name, email, and password.");
+    return;
+  }
+  if (!city) {
+    showToast("Please enter your city.");
+    return;
+  }
+  if (!zip || !/^\d{5}$/.test(zip)) {
+    showToast("Please enter a valid 5-digit ZIP code.");
     return;
   }
   if (password.length < 8) {
@@ -1921,7 +1937,7 @@ document.getElementById("createAccountButton").addEventListener("click", async (
     return;
   }
 
-// Generate username from email (take part before @, make alphanumeric)
+  // Generate username from email (take part before @, make alphanumeric)
   let username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
   // Ensure it's at least 3 characters and max 20
   if (username.length < 3) {
@@ -1935,29 +1951,97 @@ document.getElementById("createAccountButton").addEventListener("click", async (
   username = username + randomSuffix;
 
   try {
-    // Use backend API for signup (simple - no city/zip needed)
+    // Use backend API for signup with city and zip
     const result = await window.hustlAPI.auth.signUp(
       email,
       password,
       name,
       username,
+      city,
+      zip,
       role
     );
 
-    showToast("Account created.");
-    setView("jobs");
-    renderAll();
+    // Check if email verification is required
+    if (result.requiresVerification) {
+      showToast("✅ Check your email for a verification code!");
+      // Show verification input
+      showEmailVerification(email);
+    } else {
+      showToast("Account created successfully!");
+      setView("jobs");
+      renderAll();
+    }
   } catch (error) {
     console.error("Sign up error:", error);
-    // Filter out any city/zip related error messages
     let errorMsg = error.message || "Unknown error";
-    const lowerMsg = errorMsg.toLowerCase();
-    if (lowerMsg.includes('zip') || lowerMsg.includes('city') || lowerMsg.includes('location')) {
-      errorMsg = "Account creation failed. Please try again.";
-    }
     showToast("Sign up error: " + errorMsg);
   }
 });
+
+// Email verification function
+function showEmailVerification(email) {
+  const authBodyCreate = document.getElementById("authBodyCreate");
+  if (!authBodyCreate) return;
+  
+  authBodyCreate.innerHTML = `
+    <div style="text-align: center; padding: 1rem;">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">📧</div>
+      <h3 style="margin: 0 0 0.5rem 0; color: var(--text-main);">Check Your Email</h3>
+      <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+        We sent a 6-digit code to<br><strong>${email}</strong>
+      </p>
+      
+      <div class="field">
+        <label for="verificationCode">Enter Verification Code</label>
+        <input 
+          id="verificationCode" 
+          type="text" 
+          placeholder="000000" 
+          maxlength="6" 
+          pattern="[0-9]{6}"
+          style="font-size: 1.5rem; text-align: center; letter-spacing: 0.5em; padding: 1rem; font-family: monospace;"
+        />
+      </div>
+      
+      <button class="btn btn-primary" id="verifyEmailButton" style="width: 100%; padding: 0.9rem; font-size: 1rem; margin-top: 1rem;">
+        Verify Email
+      </button>
+      
+      <p style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted);">
+        Didn't receive the code? <span class="linkish" id="resendCodeBtn">Resend</span>
+      </p>
+    </div>
+  `;
+  
+  // Add verification button listener
+  document.getElementById("verifyEmailButton").addEventListener("click", async () => {
+    const code = document.getElementById("verificationCode").value.trim();
+    if (!code || code.length !== 6) {
+      showToast("Please enter the 6-digit code.");
+      return;
+    }
+    
+    try {
+      const result = await window.hustlAPI.auth.verifyEmail(email, code);
+      showToast("✅ Email verified! Welcome to Hustl!");
+      setView("jobs");
+      renderAll();
+    } catch (error) {
+      showToast("Invalid code. Please try again.");
+    }
+  });
+  
+  // Add resend button listener
+  document.getElementById("resendCodeBtn").addEventListener("click", async () => {
+    try {
+      await window.hustlAPI.auth.resendVerification(email);
+      showToast("New code sent! Check your email.");
+    } catch (error) {
+      showToast("Could not resend code. Please try again.");
+    }
+  });
+}
 
   document
     .getElementById("loginButton")
