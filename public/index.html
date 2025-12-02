@@ -2307,6 +2307,13 @@ function startExploring() {
   renderAll();
 }
 
+// Expose these functions globally immediately so onclick handlers work
+window.goToStripeSetup = goToStripeSetup;
+window.startExploring = startExploring;
+window.closeWelcomeModal = closeWelcomeModal;
+window.showVerificationSuccess = showVerificationSuccess;
+window.showWelcomeModal = showWelcomeModal;
+
   document
     .getElementById("loginButton")
     .addEventListener("click", async () => {
