@@ -196,8 +196,8 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       include: {
         job: {
           include: {
-            customer: true,
-            hustler: true,
+            customer: { select: { id: true, email: true, name: true } },
+            hustler: { select: { id: true, email: true, name: true } },
           },
         },
         hustler: {

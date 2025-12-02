@@ -70,7 +70,7 @@ async function handleCheckoutSessionCompleted(session) {
       where: { id: offerId },
       include: {
         job: true,
-        hustler: true,
+        hustler: { select: { id: true, email: true, name: true, stripeAccountId: true } },
       },
     });
 
@@ -196,8 +196,8 @@ async function handleChargeRefunded(charge) {
     where: { providerId: paymentIntentId },
     include: {
       job: true,
-      customer: true,
-      hustler: true,
+      customer: { select: { id: true, email: true, name: true } },
+      hustler: { select: { id: true, email: true, name: true, stripeAccountId: true } },
     },
   });
 
@@ -252,7 +252,7 @@ async function handleTransferCreated(transfer) {
 
   const payment = await prisma.payment.findFirst({
     where: { jobId },
-    include: { hustler: true, job: true },
+    include: { hustler: { select: { id: true, email: true, name: true, stripeAccountId: true } }, job: true },
   });
 
   if (!payment || !payment.hustlerId) return;

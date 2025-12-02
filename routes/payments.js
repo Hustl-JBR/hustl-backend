@@ -32,8 +32,12 @@ router.post('/jobs/:jobId/confirm', requireRole('CUSTOMER'), async (req, res) =>
       where: { id: jobId },
       include: {
         payment: true,
-        customer: true,
-        hustler: true,
+        customer: {
+          select: { id: true, email: true, name: true, username: true },
+        },
+        hustler: {
+          select: { id: true, email: true, name: true, username: true, stripeAccountId: true },
+        },
       },
     });
 
@@ -174,7 +178,9 @@ router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), a
       include: {
         job: {
           include: {
-            customer: true,
+            customer: {
+              select: { id: true, email: true, name: true },
+            },
           },
         },
         hustler: {
@@ -406,7 +412,9 @@ router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER
       include: {
         job: {
           include: {
-            customer: true,
+            customer: {
+              select: { id: true, email: true, name: true },
+            },
           },
         },
         hustler: {
@@ -514,7 +522,7 @@ router.post('/create-intent/job/:jobId', authenticate, requireRole('CUSTOMER'), 
       where: { id: jobId },
       include: {
         payment: true,
-        customer: true,
+        customer: { select: { id: true, email: true, name: true } },
         hustler: {
           select: {
             id: true,

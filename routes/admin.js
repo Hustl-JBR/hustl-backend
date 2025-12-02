@@ -350,8 +350,8 @@ router.post('/refunds/:paymentId', [
       where: { id: paymentId },
       include: {
         job: true,
-        customer: true,
-        hustler: true,
+        customer: { select: { id: true, email: true, name: true } },
+        hustler: { select: { id: true, email: true, name: true } },
       },
     });
 

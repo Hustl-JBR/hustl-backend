@@ -37,6 +37,7 @@ const { email, password, name, username, city, zip, role, referralCode } = req.b
       where: {
         OR: [{ email }, { username }],
       },
+      select: { id: true, email: true, username: true },
     });
 
     if (existing) {
@@ -189,6 +190,21 @@ router.post('/login', [
     // Find user by email (email is already normalized by validator)
     const user = await prisma.user.findUnique({
       where: { email },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        username: true,
+        passwordHash: true,
+        roles: true,
+        city: true,
+        zip: true,
+        photoUrl: true,
+        ratingAvg: true,
+        ratingCount: true,
+        idVerified: true,
+        createdAt: true,
+      },
     });
 
     if (!user) {
@@ -240,6 +256,7 @@ router.post('/reset', [
 
     const user = await prisma.user.findUnique({
       where: { email },
+      select: { id: true, email: true, name: true },
     });
 
     // Don't reveal if user exists (security best practice)
@@ -283,18 +300,39 @@ router.post('/verify-email', [
       return res.status(400).json({ error: 'Verification code must be 6 digits' });
     }
 
-    // Try to find user by email (if provided) or by code in database
-    // For simplicity, we'll search users with matching verification code
-    const user = await prisma.user.findFirst({
-      where: email 
-        ? { 
-            email,
-            emailVerified: false,
-          }
-        : {
-            emailVerified: false,
-          },
-    });
+    // Try to find user by email
+    // Note: This requires the emailVerified column to exist in the database
+    let user;
+    try {
+      user = await prisma.user.findFirst({
+        where: email 
+          ? { 
+              email,
+              emailVerified: false,
+            }
+          : {
+              emailVerified: false,
+            },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          username: true,
+          roles: true,
+          emailVerificationCode: true,
+          emailVerificationExpiry: true,
+        },
+      });
+    } catch (schemaError) {
+      // If emailVerified column doesn't exist, try without it
+      console.warn('[verify-email] emailVerified column may not exist:', schemaError.message);
+      if (email) {
+        user = await prisma.user.findUnique({
+          where: { email },
+          select: { id: true, email: true, name: true, username: true, roles: true },
+        });
+      }
+    }
 
     if (!user) {
       return res.status(404).json({ error: 'User not found or already verified' });
@@ -361,12 +399,22 @@ router.post('/resend-verification', [
 
     const { email } = req.body;
 
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true, email: true, name: true, emailVerified: true },
+      });
+    } catch (e) {
+      // If emailVerified doesn't exist, fetch without it
+      user = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true, email: true, name: true },
+      });
+    }
 
     // Don't reveal if user exists (security best practice)
-    if (user && !user.emailVerified) {
+    if (user && (user.emailVerified === false || user.emailVerified === undefined)) {
       // Generate new verification code
       const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
       const verificationCodeExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours

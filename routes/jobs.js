@@ -330,17 +330,30 @@ router.get('/', optionalAuth, [
       skip,
       take: parseInt(limit),
       include: {
-        payment: true,
+        payment: {
+          select: {
+            id: true,
+            amount: true,
+            status: true,
+            total: true,
+          },
+        },
         customer: {
           select: {
+            id: true,
             email: true,
             name: true,
+            username: true,
+            photoUrl: true,
           },
         },
         hustler: {
           select: {
+            id: true,
             email: true,
             name: true,
+            username: true,
+            photoUrl: true,
           },
         },
       },
@@ -647,7 +660,7 @@ router.post('/:id/cancel', authenticate, requireRole('CUSTOMER'), async (req, re
         try {
           const payment = await prisma.payment.findUnique({
             where: { id: job.payment.id },
-            include: { customer: true, hustler: true, job: true },
+            include: { customer: { select: { id: true, email: true, name: true } }, hustler: { select: { id: true, email: true, name: true } }, job: true },
           });
           await sendAdminRefundNotification(
             payment,
