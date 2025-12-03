@@ -1,0 +1,25 @@
+{
+  "name": "Hustl Jobs",
+  "short_name": "Hustl",
+  "description": "Tennessee's local help marketplace for moving, yard work, and more",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0f7ff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["business", "productivity", "lifestyle"],
+  "lang": "en-US"
+}
+

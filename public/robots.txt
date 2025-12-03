@@ -1,0 +1,12 @@
+# Hustl Jobs - robots.txt
+# https://hustljobs.com
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://hustljobs.com/sitemap.xml
+
+# Crawl-delay for respectful indexing
+Crawl-delay: 1
+
