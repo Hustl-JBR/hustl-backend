@@ -2720,7 +2720,8 @@ window.startExploring = function() {
 
       try {
         await window.hustlAPI.auth.signIn(email, password);
-        showToast("Logged in.");
+        showToast("Logged in!");
+        updateHeaderAuth(); // Update header buttons
         setView("jobs");
         renderAll();
       } catch (error) {
@@ -6944,26 +6945,65 @@ try {
     }
   }
   
-  // Update header when logged in
+  // Update header when logged in/out
   function updateHeaderAuth() {
     const user = getCurrentUser();
     const desktopAuth = document.getElementById('headerAuthDesktop');
     const mobileAuth = document.querySelector('.mobile-menu .header-auth');
+    const mobileLoginBtn = document.getElementById('mobileLoginBtn');
+    const mobileSignupBtn = document.getElementById('mobileSignupBtn');
     
     if (user) {
+      // Logged in state
       if (desktopAuth) {
         desktopAuth.innerHTML = `
-          <span style="color: var(--text-muted); font-size: 0.85rem;">Hey, ${user.name?.split(' ')[0] || 'there'}!</span>
+          <span style="color: var(--text-main); font-size: 0.85rem; font-weight: 500;">👋 ${user.name?.split(' ')[0] || 'Hey!'}</span>
           <button class="btn-login-header" onclick="setView('profile')">Profile</button>
+          <button class="btn-signup-header" onclick="handleSignOut()" style="background: #fee2e2; color: #dc2626; border-color: #fca5a5;">Sign Out</button>
         `;
       }
       if (mobileAuth) {
         mobileAuth.innerHTML = `
-          <button class="btn-signup-header" onclick="setView('profile')" style="width:100%;">👤 My Profile</button>
+          <button class="btn-login-header" onclick="setView('profile'); document.getElementById('mobileMenu').classList.remove('open');" style="width:100%;">👤 My Profile</button>
+          <button class="btn-signup-header" onclick="handleSignOut()" style="width:100%; background: #fee2e2; color: #dc2626; border-color: #fca5a5;">Sign Out</button>
+        `;
+      }
+    } else {
+      // Logged out state - restore default buttons
+      if (desktopAuth) {
+        desktopAuth.innerHTML = `
+          <button class="btn-login-header" id="headerLoginBtn" onclick="openAuthModal('login')">Log In</button>
+          <button class="btn-signup-header" id="headerSignupBtn" onclick="openAuthModal('create')">Sign Up Free</button>
+        `;
+      }
+      if (mobileAuth) {
+        mobileAuth.innerHTML = `
+          <button class="btn-login-header" id="mobileLoginBtn" onclick="document.getElementById('mobileMenu').classList.remove('open'); document.getElementById('hamburgerBtn').classList.remove('open'); openAuthModal('login')">Log In</button>
+          <button class="btn-signup-header" id="mobileSignupBtn" onclick="document.getElementById('mobileMenu').classList.remove('open'); document.getElementById('hamburgerBtn').classList.remove('open'); openAuthModal('create')">Sign Up Free</button>
         `;
       }
     }
   }
+  
+  // Handle sign out
+  async function handleSignOut() {
+    try {
+      await window.hustlAPI.auth.signOut();
+      showToast("Signed out successfully");
+      updateHeaderAuth();
+      setView('home');
+      renderAll();
+    } catch (error) {
+      console.error("Sign out error:", error);
+      // Force clear local storage anyway
+      localStorage.removeItem('hustl_token');
+      localStorage.removeItem('hustl_user');
+      updateHeaderAuth();
+      setView('home');
+      renderAll();
+    }
+  }
+  window.handleSignOut = handleSignOut;
 
   // Expose functions globally for inline onclick handlers
   window.setView = setView;
