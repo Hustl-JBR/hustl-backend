@@ -458,13 +458,20 @@
       width: 100%;
     }
     
-    /* Hide authSection properly */
+    /* Hide authSection properly when logged in or not on home */
+    body.logged-in #authSection,
     #authSection[style*="display: none"] {
       display: none !important;
       height: 0 !important;
       padding: 0 !important;
       margin: 0 !important;
       overflow: hidden !important;
+      visibility: hidden !important;
+    }
+    
+    /* Ensure main doesn't have extra padding when auth is hidden */
+    body.logged-in main > #authSection {
+      display: none !important;
     }
 
     .layout-grid {
@@ -2936,7 +2943,7 @@ if (job.acceptedHustlerId) {
 
     /* ---------- View navigation ---------- */
 
-    function setView(view) {
+    async function setView(view) {
       activeView = view;
       
       // Hide ALL sections first including auth section
@@ -2944,10 +2951,24 @@ if (job.acceptedHustlerId) {
         .querySelectorAll("[id^='view-']")
         .forEach((sec) => (sec.style.display = "none"));
       
-      // Hide auth section when not on home (synchronously)
+      // Check if user is logged in to determine if auth section should show
+      let user = null;
+      try {
+        user = await window.hustlAPI.auth.getCurrentUser();
+      } catch (e) {
+        // Ignore errors
+      }
+      
+      // Hide auth section when not on home OR when logged in
       const authSection = document.getElementById("authSection");
       if (authSection) {
-        authSection.style.display = view === 'home' ? 'block' : 'none';
+        const shouldShow = !user && view === 'home';
+        authSection.style.display = shouldShow ? 'block' : 'none';
+        if (!shouldShow) {
+          authSection.style.height = '0';
+          authSection.style.padding = '0';
+          authSection.style.margin = '0';
+        }
       }
       
       const target = document.getElementById("view-" + view);
@@ -2957,7 +2978,7 @@ if (job.acceptedHustlerId) {
         tab.classList.toggle("active", tab.dataset.view === view);
       });
 
-      renderAll();
+      await renderAll();
     }
 
     /* ---------- Auth visibility ---------- */
@@ -3113,9 +3134,12 @@ document.getElementById("createAccountButton").addEventListener("click", async (
       // Show verification input
       showEmailVerification(email);
     } else {
-      showToast("Account created successfully!");
-      setView("jobs");
-      renderAll();
+      showToast("✅ Account created successfully!");
+      await updateHeaderAuth();
+      const authSection = document.getElementById("authSection");
+      if (authSection) authSection.style.display = 'none';
+      setView("home");
+      await renderAll();
     }
   } catch (error) {
     console.error("Sign up error:", error);
@@ -3169,7 +3193,8 @@ function showEmailVerification(email) {
     
     try {
       const result = await window.hustlAPI.auth.verifyEmail(email, code);
-      // Show success screen
+      // Update header and show success screen
+      await updateHeaderAuth();
       showVerificationSuccess();
     } catch (error) {
       showToast("Invalid code. Please try again.");
@@ -3315,10 +3340,18 @@ window.startExploring = function() {
         return showToast("Enter email and password.");
 
       try {
-        await window.hustlAPI.auth.signIn(email, password);
-        showToast("Logged in!");
-        updateHeaderAuth(); // Update header buttons
-        setView("jobs");
+        const result = await window.hustlAPI.auth.signIn(email, password);
+        showToast("✅ Logged in successfully!");
+        
+        // Update header immediately
+        await updateHeaderAuth();
+        
+        // Hide auth section
+        const authSection = document.getElementById("authSection");
+        if (authSection) authSection.style.display = 'none';
+        
+        // Redirect to home or jobs
+        setView("home");
         renderAll();
       } catch (error) {
         showToast("Login error: " + (error.message || "Unknown error"));
@@ -7337,7 +7370,10 @@ meta.textContent =
 
     /* ---------- Main render ---------- */
 
-    function renderAll() {
+    async function renderAll() {
+      // Update header auth state first
+      await updateHeaderAuth();
+      
       renderAuthPill();
       renderAuthSectionVisibility();
       renderOwnerView();
@@ -7625,9 +7661,16 @@ try {
     }
   }
   
-  // Update header when logged in/out
-  function updateHeaderAuth() {
-    const user = getCurrentUser();
+  // Update header when logged in/out - uses API to get current user
+  async function updateHeaderAuth() {
+    let user = null;
+    try {
+      user = await window.hustlAPI.auth.getCurrentUser();
+    } catch (error) {
+      console.error("Error getting current user:", error);
+      user = null;
+    }
+    
     const desktopAuth = document.getElementById('headerAuthDesktop');
     const mobileAuth = document.querySelector('.mobile-menu .header-auth');
     
@@ -7640,16 +7683,18 @@ try {
     
     if (user) {
       // Logged in state
+      const firstName = user.name?.split(' ')[0] || user.email?.split('@')[0] || 'there';
       if (desktopAuth) {
         desktopAuth.innerHTML = `
-          <span style="color: var(--text-main); font-size: 0.85rem; font-weight: 500;">👋 ${user.name?.split(' ')[0] || 'Hey!'}</span>
+          <span style="color: var(--text-main); font-size: 0.85rem; font-weight: 500; margin-right: 0.5rem;">👋 Signed in as ${firstName}</span>
           <button class="btn-login-header" onclick="setView('profile')">Profile</button>
           <button class="btn-signup-header" onclick="handleSignOut()" style="background: #fee2e2; color: #dc2626; border-color: #fca5a5;">Sign Out</button>
         `;
       }
       if (mobileAuth) {
         mobileAuth.innerHTML = `
-          <button class="btn-login-header" onclick="setView('profile'); document.getElementById('mobileMenu').classList.remove('open');" style="width:100%;">👤 My Profile</button>
+          <div style="padding: 0.5rem; color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem;">👋 Signed in as ${firstName}</div>
+          <button class="btn-login-header" onclick="setView('profile'); document.getElementById('mobileMenu').classList.remove('open');" style="width:100%; margin-bottom: 0.5rem;">👤 My Profile</button>
           <button class="btn-signup-header" onclick="handleSignOut()" style="width:100%; background: #fee2e2; color: #dc2626; border-color: #fca5a5;">Sign Out</button>
         `;
       }
@@ -7674,18 +7719,29 @@ try {
   async function handleSignOut() {
     try {
       await window.hustlAPI.auth.signOut();
-      showToast("Signed out successfully");
-      updateHeaderAuth();
-      setView('home');
-      renderAll();
     } catch (error) {
       console.error("Sign out error:", error);
-      // Force clear local storage anyway
+    } finally {
+      // Always clear local storage
       localStorage.removeItem('hustl_token');
       localStorage.removeItem('hustl_user');
-      updateHeaderAuth();
+      
+      // Clear old state
+      state.currentUserId = null;
+      saveState();
+      
+      // Update UI
+      await updateHeaderAuth();
+      
+      // Hide auth section and show it on home
+      const authSection = document.getElementById("authSection");
+      if (authSection && activeView === 'home') {
+        authSection.style.display = 'block';
+      }
+      
+      showToast("✅ Signed out successfully");
       setView('home');
-      renderAll();
+      await renderAll();
     }
   }
   window.handleSignOut = handleSignOut;
@@ -7737,8 +7793,12 @@ try {
   handleStripeReturn();
   checkAutoCompleteJobs();
   setInterval(checkAutoCompleteJobs, 60 * 1000);
-  renderAll();
-  updateHeaderAuth();
+  
+  // Initialize auth state and render
+  (async () => {
+    await updateHeaderAuth();
+    await renderAll();
+  })();
   
   // Start token auto-refresh for persistent login
   if (window.appCore && window.appCore.tokenManager) {
