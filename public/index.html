@@ -3541,83 +3541,138 @@ async function renderJobs(reset = false) {
           const applyTitle = document.createElement("h3");
           applyTitle.style.margin = "0 0 1rem 0";
           applyTitle.style.fontSize = "1.1rem";
-          applyTitle.textContent = "Apply for this Job";
+          applyTitle.style.display = "flex";
+          applyTitle.style.alignItems = "center";
+          applyTitle.style.gap = "0.5rem";
+          applyTitle.innerHTML = "🎯 Apply for this Job";
           applySection.appendChild(applyTitle);
 
-          // Show job amount and allow negotiation
-          const jobAmountDisplay = document.createElement("div");
-          jobAmountDisplay.style.marginBottom = "0.75rem";
-          jobAmountDisplay.style.padding = "0.75rem";
-          jobAmountDisplay.style.background = "#fff";
-          jobAmountDisplay.style.borderRadius = "6px";
-          jobAmountDisplay.style.border = "1px solid var(--border)";
-          
           const teamSize = (job.requirements?.teamSize || job.teamSize || 1);
           const originalAmount = job.payType === "flat" 
             ? Number(job.amount || 0)
             : (Number(job.hourlyRate || 0) * Number(job.estHours || 0) * teamSize);
           
-          let amountDescription = "";
+          // Enhanced Price Section - Uber-style
+          const pricingSection = document.createElement("div");
+          pricingSection.style.cssText = `
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 2px solid #0ea5e9;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+          `;
+
+          // Customer's offered price
+          const customerOffer = document.createElement("div");
+          customerOffer.style.cssText = `
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #bae6fd;
+          `;
+          
+          let priceDisplay = "";
           if (job.payType === "hourly") {
             const hourlyRate = Number(job.hourlyRate || 0);
             const estHours = job.estHours || 0;
+            priceDisplay = `$${hourlyRate.toFixed(0)}/hr`;
             if (teamSize > 1) {
-              amountDescription = `$${hourlyRate.toFixed(2)}/hr per person (${teamSize} people) · max ${estHours}h`;
-            } else {
-              amountDescription = `$${hourlyRate.toFixed(2)}/hr · max ${estHours}h`;
+              priceDisplay += ` × ${teamSize} people`;
             }
+            priceDisplay += ` · ${estHours}h max`;
           } else {
-            amountDescription = `$${originalAmount.toFixed(2)}`;
+            priceDisplay = `$${originalAmount.toFixed(0)}`;
           }
           
-          jobAmountDisplay.innerHTML = `
-            <div style="font-weight: 600; margin-bottom: 0.25rem;">Job Amount: ${amountDescription}</div>
-            <div class="muted" style="font-size: 0.85rem;">${job.payType === "hourly" ? "You can propose a different hourly rate if needed" : "You can propose a different amount if needed"}</div>
+          customerOffer.innerHTML = `
+            <div>
+              <div style="font-size: 0.8rem; color: #0369a1; margin-bottom: 0.25rem;">💰 Customer's Offer</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: #0c4a6e;">${priceDisplay}</div>
+            </div>
+            <div style="text-align: right;">
+              <span style="background: #0ea5e9; color: white; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
+                ${job.payType === "hourly" ? "HOURLY" : "FLAT RATE"}
+              </span>
+            </div>
           `;
-          applySection.appendChild(jobAmountDisplay);
+          pricingSection.appendChild(customerOffer);
+
+          // Your Price section
+          const yourPrice = document.createElement("div");
           
-          // Price negotiation field (optional)
-          const negotiateContainer = document.createElement("div");
-          negotiateContainer.style.marginBottom = "0.75rem";
-          
+          // Price toggle tabs
+          yourPrice.innerHTML = `
+            <div style="font-size: 0.85rem; font-weight: 600; color: #0369a1; margin-bottom: 0.5rem;">
+              💵 Your Price
+            </div>
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+              <button type="button" id="acceptPriceBtn" class="price-toggle-btn" style="flex: 1; padding: 0.6rem; border: 2px solid #10b981; background: #ecfdf5; color: #059669; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                ✓ Accept $${job.payType === "hourly" ? Number(job.hourlyRate || 0).toFixed(0) : originalAmount.toFixed(0)}
+              </button>
+              <button type="button" id="counterPriceBtn" class="price-toggle-btn" style="flex: 1; padding: 0.6rem; border: 2px solid #e2e8f0; background: white; color: #64748b; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                💬 Counter Offer
+              </button>
+            </div>
+            <div id="counterOfferSection" style="display: none;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 1.25rem; color: #0f172a;">$</span>
+                <input type="number" id="proposedAmount" value="${job.payType === "hourly" ? Number(job.hourlyRate || 0).toFixed(2) : originalAmount.toFixed(2)}" 
+                  style="flex: 1; padding: 0.75rem; font-size: 1.25rem; font-weight: 600; border: 2px solid #3b82f6; border-radius: 8px; text-align: center;"
+                  min="0" step="0.01" />
+                <span style="font-size: 0.85rem; color: #64748b;">${job.payType === "hourly" ? "/hr" : "total"}</span>
+              </div>
+              <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: #64748b; text-align: center;">
+                Customer will see your suggested price
+              </p>
+            </div>
+          `;
+          pricingSection.appendChild(yourPrice);
+          applySection.appendChild(pricingSection);
+
+          // Hidden checkbox for compatibility with existing logic
           const negotiateCheckbox = document.createElement("input");
           negotiateCheckbox.type = "checkbox";
           negotiateCheckbox.id = "negotiatePrice";
-          negotiateCheckbox.style.marginRight = "0.5rem";
+          negotiateCheckbox.style.display = "none";
+          applySection.appendChild(negotiateCheckbox);
           
-          const negotiateLabel = document.createElement("label");
-          negotiateLabel.htmlFor = "negotiatePrice";
-          negotiateLabel.textContent = "Propose different amount";
-          negotiateLabel.style.cursor = "pointer";
-          
-          negotiateContainer.appendChild(negotiateCheckbox);
-          negotiateContainer.appendChild(negotiateLabel);
-          applySection.appendChild(negotiateContainer);
-          
-          const proposedAmountField = document.createElement("input");
-          proposedAmountField.type = "number";
-          proposedAmountField.id = "proposedAmount";
-          // For hourly jobs, show hourly rate placeholder; for flat, show total amount
-          if (job.payType === "hourly") {
-            proposedAmountField.placeholder = "Your proposed hourly rate ($/hr)";
-            proposedAmountField.value = Number(job.hourlyRate || 0).toFixed(2);
-          } else {
-            proposedAmountField.placeholder = "Your proposed amount ($)";
-            proposedAmountField.value = originalAmount.toFixed(2);
-          }
-          proposedAmountField.style.width = "100%";
-          proposedAmountField.style.padding = "0.75rem";
-          proposedAmountField.style.border = "1px solid var(--border)";
-          proposedAmountField.style.borderRadius = "6px";
-          proposedAmountField.style.display = "none";
-          proposedAmountField.style.marginTop = "0.5rem";
-          proposedAmountField.min = "0";
-          proposedAmountField.step = "0.01";
-          
-          negotiateCheckbox.addEventListener("change", () => {
-            proposedAmountField.style.display = negotiateCheckbox.checked ? "block" : "none";
-          });
-          applySection.appendChild(proposedAmountField);
+          const proposedAmountField = document.getElementById("proposedAmount") || document.querySelector('#proposedAmount');
+
+          // Add click handlers for price toggle buttons
+          setTimeout(() => {
+            const acceptBtn = document.getElementById("acceptPriceBtn");
+            const counterBtn = document.getElementById("counterPriceBtn");
+            const counterSection = document.getElementById("counterOfferSection");
+            const negotiateCheck = document.getElementById("negotiatePrice");
+            
+            if (acceptBtn && counterBtn) {
+              acceptBtn.addEventListener("click", () => {
+                acceptBtn.style.border = "2px solid #10b981";
+                acceptBtn.style.background = "#ecfdf5";
+                acceptBtn.style.color = "#059669";
+                counterBtn.style.border = "2px solid #e2e8f0";
+                counterBtn.style.background = "white";
+                counterBtn.style.color = "#64748b";
+                counterSection.style.display = "none";
+                if (negotiateCheck) negotiateCheck.checked = false;
+              });
+              
+              counterBtn.addEventListener("click", () => {
+                counterBtn.style.border = "2px solid #3b82f6";
+                counterBtn.style.background = "#eff6ff";
+                counterBtn.style.color = "#2563eb";
+                acceptBtn.style.border = "2px solid #e2e8f0";
+                acceptBtn.style.background = "white";
+                acceptBtn.style.color = "#64748b";
+                counterSection.style.display = "block";
+                if (negotiateCheck) negotiateCheck.checked = true;
+                const amtField = document.getElementById("proposedAmount");
+                if (amtField) amtField.focus();
+              });
+            }
+          }, 0);
 
           // Review Profile button (before note field)
           const reviewProfileBtn = document.createElement("button");
@@ -3667,13 +3722,15 @@ async function renderJobs(reset = false) {
               return;
             }
 
-            // Get proposed amount if negotiating
+            // Get proposed amount if negotiating (counter offer)
             let proposedAmount = null;
-            if (negotiateCheckbox.checked) {
-              proposedAmount = parseFloat(proposedAmountField.value);
+            const negotiateCheck = document.getElementById("negotiatePrice");
+            const amtField = document.getElementById("proposedAmount");
+            if (negotiateCheck && negotiateCheck.checked && amtField) {
+              proposedAmount = parseFloat(amtField.value);
               if (isNaN(proposedAmount) || proposedAmount <= 0) {
                 showToast("Please enter a valid proposed amount.");
-                proposedAmountField.focus();
+                amtField.focus();
                 return;
               }
             }
