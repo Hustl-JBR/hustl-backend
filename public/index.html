@@ -5037,24 +5037,65 @@ async function renderJobs(reset = false) {
       const whoRow = document.createElement("div");
       whoRow.className = "detail-row";
 
-      // Posted by (clickable profile)
+      // Posted by (clickable profile with rating)
       const left = document.createElement("div");
-      const poster = state.users.find((u) => u.id === job.postedByUserId);
+      let poster = state.users?.find((u) => u.id === job.postedByUserId);
+      
+      // Try to get poster from job data if not in state
+      if (!poster && job.postedBy) {
+        poster = job.postedBy;
+      } else if (!poster && job.customer) {
+        poster = job.customer;
+      }
+      
       const postedByWrap = document.createElement("div");
-      postedByWrap.innerHTML = "<div class='detail-label'>Posted by</div>";
-      const postedVal = document.createElement("div");
-      postedVal.className = "detail-value";
+      postedByWrap.style.cssText = "display: flex; align-items: center; gap: 1rem; padding: 1rem; background: #f9fafb; border-radius: 10px; cursor: pointer; transition: background 0.2s; margin-bottom: 1rem;";
+      postedByWrap.addEventListener("click", () => {
+        if (poster && poster.id) {
+          modalOverlay.style.display = "none";
+          setTimeout(() => {
+            if (typeof openUserProfile === 'function') {
+              openUserProfile(poster.id);
+            }
+          }, 200);
+        }
+      });
+      postedByWrap.addEventListener("mouseenter", () => {
+        postedByWrap.style.background = "#f3f4f6";
+      });
+      postedByWrap.addEventListener("mouseleave", () => {
+        postedByWrap.style.background = "#f9fafb";
+      });
+      
       if (poster) {
-        const link = document.createElement("span");
-        link.className = "linkish";
-        link.textContent = poster.name || "Unknown";
-        link.addEventListener("click", () => openUserProfile(poster.id));
-        postedVal.appendChild(link);
+        const avatar = document.createElement("div");
+        avatar.style.cssText = "width: 50px; height: 50px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.25rem; flex-shrink: 0;";
+        avatar.textContent = (poster.name || poster.email || "U")[0].toUpperCase();
+        if (poster.photoUrl) {
+          avatar.innerHTML = `<img src="${poster.photoUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" />`;
+        }
+        postedByWrap.appendChild(avatar);
+        
+        const posterInfo = document.createElement("div");
+        posterInfo.style.cssText = "flex: 1;";
+        const posterName = document.createElement("div");
+        posterName.style.cssText = "font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem;";
+        posterName.textContent = poster.name || poster.username || poster.email?.split('@')[0] || "Unknown User";
+        posterInfo.appendChild(posterName);
+        
+        const posterRating = document.createElement("div");
+        posterRating.style.cssText = "display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text-muted);";
+        const rating = poster.rating || poster.ratingAvg || 5.0;
+        posterRating.innerHTML = `⭐ ${Number(rating).toFixed(1)}`;
+        if (poster.ratingCount || poster.reviewCount) {
+          posterRating.innerHTML += ` <span style="color: var(--text-muted);">(${poster.ratingCount || poster.reviewCount || 0} reviews)</span>`;
+        }
+        posterInfo.appendChild(posterRating);
+        postedByWrap.appendChild(posterInfo);
       } else {
-        postedVal.textContent = "Unknown";
+        postedByWrap.innerHTML = "<div class='detail-label'>Posted by</div><div class='detail-value'>Unknown</div>";
       }
       left.appendChild(postedByWrap);
-      left.appendChild(postedVal);
       whoRow.appendChild(left);
 
            const right = document.createElement("div");
