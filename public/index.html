@@ -405,6 +405,8 @@
       flex-direction: column;
       gap: 0.25rem;
       overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
     }
 
     .mobile-menu.open {
@@ -1884,6 +1886,126 @@
       .jobs-list {
         max-height: none; /* let the page scroll instead of tiny inner scroll */
       }
+    }
+    
+    /* ========== COMPREHENSIVE MOBILE RESPONSIVE FIXES ========== */
+    
+    /* Phone (up to 480px) */
+    @media (max-width: 480px) {
+      main {
+        padding: 0.75rem !important;
+      }
+      
+      .card {
+        padding: 1rem !important;
+        margin-bottom: 1rem !important;
+      }
+      
+      .card-title {
+        font-size: 1.1rem !important;
+      }
+      
+      .btn {
+        padding: 0.75rem 1rem !important;
+        font-size: 0.9rem !important;
+      }
+      
+      .field {
+        margin-bottom: 1rem !important;
+      }
+      
+      input, textarea, select {
+        font-size: 16px !important; /* Prevents zoom on iOS */
+        padding: 0.75rem !important;
+      }
+      
+      .profile-hero-card {
+        padding: 1.25rem !important;
+        margin-bottom: 0.75rem !important;
+      }
+      
+      .profile-quick-stats {
+        gap: 0.5rem !important;
+        margin-bottom: 0.75rem !important;
+      }
+      
+      .quick-stat-card {
+        padding: 0.75rem !important;
+      }
+      
+      .profile-tabs {
+        gap: 0.25rem !important;
+        margin-bottom: 1rem !important;
+      }
+      
+      .profile-tab {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.85rem !important;
+      }
+      
+      /* Remove excessive white space */
+      #view-profile {
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+      }
+      
+      #view-profile > *:first-child {
+        margin-top: 0 !important;
+      }
+    }
+    
+    /* Tablet (481px to 768px) */
+    @media (min-width: 481px) and (max-width: 768px) {
+      main {
+        padding: 1rem !important;
+      }
+      
+      .card {
+        padding: 1.25rem !important;
+      }
+      
+      .profile-hero-card {
+        padding: 1.5rem !important;
+      }
+    }
+    
+    /* Desktop (769px and up) */
+    @media (min-width: 769px) {
+      main {
+        padding: 1.5rem !important;
+      }
+      
+      .card {
+        padding: 1.5rem !important;
+      }
+    }
+    
+    /* Fix white space on all devices */
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    
+    .app-shell {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    main {
+      flex: 1;
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    
+    /* Remove duplicate spacing */
+    #view-profile .profile-hero-card:empty,
+    #view-profile .profile-quick-stats:empty {
+      display: none !important;
+      height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
     }
   </style>
 </head>
@@ -6726,8 +6848,8 @@ async function renderJobs(reset = false) {
 
   // Render Profile Hero Card
   if (heroCard) {
-    const avatarContent = user.avatarDataUrl 
-      ? `<img src="${user.avatarDataUrl}" alt="Profile">` 
+    const avatarContent = user.photoUrl 
+      ? `<img src="${user.photoUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">` 
       : (user.name ? user.name[0].toUpperCase() : "?");
     
     const isHustler = user.role === "HUSTLER" || user.role === "hustler";
@@ -6880,10 +7002,59 @@ async function renderJobs(reset = false) {
         <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
           Connect with Stripe to receive payments directly to your bank. Instant payouts available!
         </p>
-        <button class="btn btn-primary" onclick="goToStripeSetup()" style="width: 100%; background: #22c55e; border: none;">
+        <button class="btn btn-primary" id="stripeConnectBtnInCard" style="width: 100%; background: #22c55e; border: none;">
           💳 Connect Stripe & Start Earning
         </button>
       `;
+      
+      // Add click handler for Stripe button in Payment Setup card
+      setTimeout(() => {
+        const stripeBtn = document.getElementById("stripeConnectBtnInCard");
+        if (stripeBtn) {
+          stripeBtn.addEventListener("click", async () => {
+            stripeBtn.disabled = true;
+            stripeBtn.textContent = "Connecting...";
+            
+            try {
+              const token = localStorage.getItem("hustl_token");
+              if (!token) {
+                showToast("Please log in to connect Stripe.");
+                stripeBtn.disabled = false;
+                stripeBtn.textContent = "💳 Connect Stripe & Start Earning";
+                return;
+              }
+              
+              // First create account if needed
+              await fetch("/stripe-connect/create-account", {
+                method: "POST",
+                headers: { 
+                  "Authorization": "Bearer " + token,
+                  "Content-Type": "application/json"
+                }
+              });
+              
+              // Then get onboarding link
+              const res = await fetch("/stripe-connect/onboarding-link", {
+                headers: { "Authorization": "Bearer " + token }
+              });
+              const data = await res.json();
+              
+              if (data.url) {
+                window.location.href = data.url;
+              } else {
+                showToast("Could not get Stripe link. Try again.");
+                stripeBtn.disabled = false;
+                stripeBtn.textContent = "💳 Connect Stripe & Start Earning";
+              }
+            } catch (e) {
+              console.error("Stripe connect error:", e);
+              showToast("Error connecting to Stripe. Please try again.");
+              stripeBtn.disabled = false;
+              stripeBtn.textContent = "💳 Connect Stripe & Start Earning";
+            }
+          });
+        }
+      }, 100);
     }
   }
 
@@ -6902,7 +7073,7 @@ async function renderJobs(reset = false) {
   bioField.className = "field";
   bioField.innerHTML =
     "<label for='profileBioInput'>About you (profile bio)</label>" +
-    "<textarea id='profileBioInput' placeholder='Tell people a little about yourself. Jobs you like, if you have a truck, experience, etc.'></textarea>" +
+    `<textarea id='profileBioInput' placeholder='Tell people a little about yourself. Jobs you like, if you have a truck, experience, etc.'>${user.bio || ''}</textarea>` +
     "<button class='btn btn-primary' id='saveBioButton' style='margin-top:0.35rem;'>Save profile</button>";
   container.appendChild(bioField);
 
@@ -6947,109 +7118,10 @@ async function renderJobs(reset = false) {
     }
   }, 100);
 
-// --- Stripe Connect Section (for automatic payouts) ---
-const stripeConnectWrap = document.createElement("div");
-stripeConnectWrap.className = "field";
-stripeConnectWrap.style.marginTop = "0.8rem";
-stripeConnectWrap.style.padding = "1rem";
-stripeConnectWrap.style.background = "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)";
-stripeConnectWrap.style.borderRadius = "var(--radius)";
-stripeConnectWrap.style.border = "1px solid #bae6fd";
-stripeConnectWrap.innerHTML = `
-  <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-    <span style="font-size: 1.5rem;">💳</span>
-    <strong style="color: #0369a1;">Get Paid Automatically</strong>
-  </div>
-  <p class="muted" style="margin: 0 0 0.75rem 0; font-size: 0.85rem;">
-    Connect your Stripe account to receive payments directly when customers pay for completed jobs. No more waiting for manual payouts!
-  </p>
-  <div id="stripeConnectStatus" style="margin-bottom: 0.75rem;"></div>
-  <button class="btn btn-primary" id="connectStripeBtn" style="background: #635bff; width: 100%;">
-    🔗 Connect Stripe Account
-  </button>
-`;
-container.appendChild(stripeConnectWrap);
+// Stripe Connect is handled in the Payment Setup card (stripeContent) above
+// No duplicate section needed
 
-// Check Stripe Connect status
-setTimeout(async () => {
-  const statusDiv = document.getElementById("stripeConnectStatus");
-  const connectBtn = document.getElementById("connectStripeBtn");
-  if (!statusDiv || !connectBtn) return;
-  
-  try {
-    const token = localStorage.getItem("hustl_token");
-    if (!token) {
-      statusDiv.innerHTML = '<span class="muted">Log in to connect Stripe</span>';
-      return;
-    }
-    
-    const res = await fetch("/stripe-connect/status", {
-      headers: { "Authorization": "Bearer " + token }
-    });
-    const data = await res.json();
-    
-    if (data.connected) {
-      statusDiv.innerHTML = '<span style="color: var(--success); font-weight: 600;">✅ Stripe Connected!</span><br><span class="muted" style="font-size: 0.8rem;">You\'ll receive payments automatically</span>';
-      connectBtn.textContent = "✓ Connected - Manage Account";
-      connectBtn.style.background = "var(--success)";
-    } else {
-      statusDiv.innerHTML = '<span style="color: #dc2626; font-size: 0.85rem;">⚠️ Not connected yet</span>';
-    }
-  } catch (e) {
-    console.error("Error checking Stripe status:", e);
-  }
-}, 100);
-
-// Handle Stripe Connect button click
-setTimeout(() => {
-  const connectBtn = document.getElementById("connectStripeBtn");
-  if (connectBtn) {
-    connectBtn.addEventListener("click", async () => {
-      connectBtn.disabled = true;
-      connectBtn.textContent = "Connecting...";
-      
-      try {
-        const token = localStorage.getItem("hustl_token");
-        
-        // First create account if needed
-        await fetch("/stripe-connect/create-account", {
-          method: "POST",
-          headers: { 
-            "Authorization": "Bearer " + token,
-            "Content-Type": "application/json"
-          }
-        });
-        
-        // Then get onboarding link
-        const res = await fetch("/stripe-connect/onboarding-link", {
-          headers: { "Authorization": "Bearer " + token }
-        });
-        const data = await res.json();
-        
-        if (data.url) {
-          window.location.href = data.url;
-        } else {
-          showToast("Could not get Stripe link. Try again.");
-          connectBtn.disabled = false;
-          connectBtn.textContent = "🔗 Connect Stripe Account";
-        }
-      } catch (e) {
-        console.error("Stripe connect error:", e);
-        showToast("Error connecting to Stripe. Please try again.");
-        connectBtn.disabled = false;
-        connectBtn.textContent = "🔗 Connect Stripe Account";
-      }
-    });
-  }
-}, 150);
-
-  // if user already has a bio, prefill
-  setTimeout(() => {
-    const bioInput = document.getElementById("profileBioInput");
-    if (bioInput) {
-      bioInput.value = user.bio || "";
-    }
-  }, 0);
+  // Bio is already prefilled in the HTML above
   // stats row
   const statsRow = document.createElement("div");
   statsRow.className = "stat-row";
@@ -7268,30 +7340,69 @@ setTimeout(() => {
     });
   }
 
-  // hook up avatar upload
+  // hook up avatar upload - save to DB
   const avatarInput = document.getElementById("avatarUploadInput");
   if (avatarInput) {
-    avatarInput.addEventListener("change", (e) => {
+    avatarInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
       if (!file) return;
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showToast("Image too large. Please use an image under 5MB.");
+        return;
+      }
+      
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        showToast("Please select an image file.");
+        return;
+      }
+      
       const reader = new FileReader();
-      reader.onload = function (ev) {
-        user.avatarDataUrl = ev.target.result;
-        saveState();
-        renderProfile();
+      reader.onload = async function (ev) {
+        const photoUrl = ev.target.result; // Base64 data URL
+        try {
+          // Save to database
+          await window.hustlAPI.users.updateProfile({ photoUrl });
+          
+          // Update local storage
+          const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
+          storedUser.photoUrl = photoUrl;
+          localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+          
+          // Refresh profile display
+          await renderProfile();
+          showToast("✅ Profile picture saved!");
+        } catch (error) {
+          console.error("Error saving profile picture:", error);
+          showToast("Failed to save profile picture. Please try again.");
+        }
       };
       reader.readAsDataURL(file);
     });
   }
 
-  // hook up bio save
+  // hook up bio save - save to DB
   const bioInput = document.getElementById("profileBioInput");
   const saveBioBtn = document.getElementById("saveBioButton");
   if (bioInput && saveBioBtn) {
-    saveBioBtn.addEventListener("click", () => {
-      user.bio = bioInput.value.trim();
-      saveState();
-      showToast("Profile updated.");
+    saveBioBtn.addEventListener("click", async () => {
+      const bio = bioInput.value.trim();
+      try {
+        // Save to database
+        await window.hustlAPI.users.updateProfile({ bio });
+        
+        // Update local storage
+        const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
+        storedUser.bio = bio;
+        localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+        
+        showToast("✅ Profile saved!");
+      } catch (error) {
+        console.error("Error saving profile:", error);
+        showToast("Failed to save profile. Please try again.");
+      }
     });
   }
 // Manual payout options removed - Stripe only
@@ -7790,7 +7901,8 @@ try {
       hamburgerBtn.addEventListener('click', () => {
         hamburgerBtn.classList.toggle('open');
         mobileMenu.classList.toggle('open');
-        document.body.style.overflow = mobileMenu.classList.contains('open') ? 'hidden' : '';
+        // Don't prevent body scroll - let the menu scroll instead
+        // document.body.style.overflow = mobileMenu.classList.contains('open') ? 'hidden' : '';
       });
       
       // Handle mobile menu item clicks
@@ -7916,16 +8028,20 @@ try {
       const firstName = user.name?.split(' ')[0] || user.email?.split('@')[0] || 'there';
       if (desktopAuth) {
         desktopAuth.innerHTML = `
-          <span style="color: var(--text-main); font-size: 0.85rem; font-weight: 500; margin-right: 0.5rem;">👋 Signed in as ${firstName}</span>
+          <span style="color: var(--text-main); font-size: 0.85rem; font-weight: 500; margin-right: 0.5rem;">👋 ${firstName}</span>
           <button class="btn-login-header" onclick="setView('profile')">Profile</button>
-          <button class="btn-signup-header" onclick="handleSignOut()" style="background: #fee2e2; color: #dc2626; border-color: #fca5a5;">Sign Out</button>
+          <button class="btn-login-header" onclick="setView('jobs')">My Jobs</button>
+          <button class="btn-login-header" onclick="setView('profile'); setTimeout(() => { const earningsTab = document.querySelector('.profile-tab[data-tab=\"earnings\"]'); if (earningsTab) earningsTab.click(); }, 100);">Earnings</button>
+          <button class="btn-signup-header" onclick="handleSignOut()" style="background: #fee2e2; color: #dc2626; border-color: #fca5a5;">Logout</button>
         `;
       }
       if (mobileAuth) {
         mobileAuth.innerHTML = `
-          <div style="padding: 0.5rem; color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem;">👋 Signed in as ${firstName}</div>
-          <button class="btn-login-header" onclick="setView('profile'); document.getElementById('mobileMenu').classList.remove('open');" style="width:100%; margin-bottom: 0.5rem;">👤 My Profile</button>
-          <button class="btn-signup-header" onclick="handleSignOut()" style="width:100%; background: #fee2e2; color: #dc2626; border-color: #fca5a5;">Sign Out</button>
+          <div style="padding: 0.5rem; color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border);">👋 Signed in as ${firstName}</div>
+          <button class="mobile-menu-item" onclick="setView('profile'); document.getElementById('mobileMenu').classList.remove('open'); document.getElementById('hamburgerBtn').classList.remove('open');" style="width:100%; margin-bottom: 0.25rem;">👤 Profile</button>
+          <button class="mobile-menu-item" onclick="setView('jobs'); document.getElementById('mobileMenu').classList.remove('open'); document.getElementById('hamburgerBtn').classList.remove('open');" style="width:100%; margin-bottom: 0.25rem;">💼 My Jobs</button>
+          <button class="mobile-menu-item" onclick="setView('profile'); setTimeout(() => { const earningsTab = document.querySelector('.profile-tab[data-tab=\"earnings\"]'); if (earningsTab) earningsTab.click(); }, 100); document.getElementById('mobileMenu').classList.remove('open'); document.getElementById('hamburgerBtn').classList.remove('open');" style="width:100%; margin-bottom: 0.25rem;">💰 Earnings</button>
+          <button class="btn-signup-header" onclick="handleSignOut()" style="width:100%; margin-top: 0.5rem; background: #fee2e2; color: #dc2626; border-color: #fca5a5;">🚪 Sign Out</button>
         `;
       }
     } else {
