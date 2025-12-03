@@ -1950,20 +1950,80 @@
 
       <!-- JOBS VIEW -->
       <section id="view-jobs" style="display:none;">
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title" id="jobsCardTitle">Jobs in Tennessee</div>
-            <span class="muted" id="jobsFilterSummary"></span>
+        <!-- Search & Filter Bar -->
+        <div class="card" style="margin-bottom: 1rem; padding: 1rem;">
+          <!-- Category Filter Chips -->
+          <div style="margin-bottom: 1rem;">
+            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">Filter by Category</div>
+            <div id="categoryFilterChips" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+              <button class="filter-chip active" data-category="all" style="padding: 0.5rem 0.75rem; border: 1.5px solid var(--primary); background: var(--primary-soft); color: var(--primary); border-radius: 999px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+                All Jobs
+              </button>
+              <button class="filter-chip" data-category="moving" style="padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); background: white; color: var(--text-main); border-radius: 999px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+                🚚 Moving
+              </button>
+              <button class="filter-chip" data-category="yard-work" style="padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); background: white; color: var(--text-main); border-radius: 999px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+                🌿 Yard Work
+              </button>
+              <button class="filter-chip" data-category="dump-run" style="padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); background: white; color: var(--text-main); border-radius: 999px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+                🗑️ Dump Run
+              </button>
+              <button class="filter-chip" data-category="cleaning" style="padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); background: white; color: var(--text-main); border-radius: 999px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+                🧹 Cleaning
+              </button>
+              <button class="filter-chip" data-category="power-washing" style="padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); background: white; color: var(--text-main); border-radius: 999px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+                💦 Power Wash
+              </button>
+              <button class="filter-chip" data-category="handyman" style="padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); background: white; color: var(--text-main); border-radius: 999px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+                🔧 Handyman
+              </button>
+            </div>
           </div>
-          <div class="job-status-group" id="jobsStatusFilter">
-            <span data-status="all" class="active">All</span>
-            <span data-status="open">Open</span>
-            <span data-status="assigned">Assigned</span>
-            <span data-status="completed">Completed</span>
+          
+          <!-- Sort & Status Row -->
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            <!-- Sort Dropdown -->
+            <div style="flex: 1; min-width: 140px;">
+              <select id="jobsSortBy" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: white;">
+                <option value="newest">🕐 Newest First</option>
+                <option value="highest">💰 Highest Pay</option>
+                <option value="lowest">💵 Lowest Pay</option>
+                <option value="closest">📍 Closest</option>
+              </select>
+            </div>
+            
+            <!-- Status Pills -->
+            <div class="job-status-group" id="jobsStatusFilter" style="flex: 2; display: flex; gap: 0.25rem;">
+              <span data-status="all" class="active" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">All</span>
+              <span data-status="open" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">🟢 Open</span>
+              <span data-status="assigned" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">🟡 In Progress</span>
+              <span data-status="completed" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">✅ Done</span>
+            </div>
           </div>
-          <div class="jobs-list" id="jobsList"></div>
-          <div id="jobDetailContainer"></div>
         </div>
+        
+        <!-- Jobs Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; padding: 0 0.25rem;">
+          <div>
+            <h2 style="margin: 0; font-size: 1.25rem; color: var(--text-main);" id="jobsCardTitle">Jobs in Tennessee</h2>
+            <span class="muted" id="jobsFilterSummary" style="font-size: 0.85rem;"></span>
+          </div>
+          <button id="refreshJobsBtn" style="padding: 0.5rem 0.75rem; background: transparent; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; color: var(--text-muted); cursor: pointer;">
+            🔄 Refresh
+          </button>
+        </div>
+        
+        <!-- Jobs List -->
+        <div class="jobs-list" id="jobsList" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+        
+        <!-- Load More Button -->
+        <div id="loadMoreSection" style="text-align: center; padding: 1rem; display: none;">
+          <button id="loadMoreJobsBtn" style="padding: 0.75rem 2rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+            Load More Jobs
+          </button>
+        </div>
+        
+        <div id="jobDetailContainer"></div>
       </section>
 
       <!-- MESSAGES VIEW -->
@@ -3052,8 +3112,12 @@ window.startExploring = function() {
     }
 
     
+// Global filter state
+let activeCategoryFilter = 'all';
+let activeSortBy = 'newest';
+
 async function renderJobs(reset = false) {
-  console.log('🔵 NEW RENDERJOBS VERSION LOADED - v2.0');
+  console.log('🔵 NEW RENDERJOBS VERSION LOADED - v3.0');
   const jobsList = document.getElementById("jobsList");
   const jobsCardTitle = document.getElementById("jobsCardTitle");
   const jobsFilterSummary = document.getElementById("jobsFilterSummary");
@@ -3073,10 +3137,16 @@ async function renderJobs(reset = false) {
     const filters = {
       page: currentJobsPage,
       limit: 20,
+      sortBy: activeSortBy
     };
     
     if (savedZip) {
       filters.zip = savedZip;
+    }
+    
+    // Add category filter if not "all"
+    if (activeCategoryFilter && activeCategoryFilter !== 'all') {
+      filters.category = activeCategoryFilter;
     }
 
     // Load jobs from API (use window.hustlAPI if available, otherwise fallback)
@@ -3202,49 +3272,74 @@ async function renderJobs(reset = false) {
       card.className = "job-card";
       card.dataset.jobId = job.id;
 
-      // Top row: title and pay
+      // Category icon mapping
+      const categoryIcons = {
+        'moving': '🚚', 'yard-work': '🌿', 'dump-run': '🗑️', 'cleaning': '🧹',
+        'power-washing': '💦', 'furniture-assembly': '🔧', 'painting': '🎨',
+        'handyman': '🔨', 'landscaping': '🌳', 'pet-care': '🐕', 'delivery': '📦',
+        'car-cleaning': '🚿', 'event-setup': '🎪', 'snow-removal': '❄️', 'other': '✨',
+        'yard': '🌿', 'furniture': '🔧'
+      };
+      const categoryNames = {
+        'moving': 'Moving', 'yard-work': 'Yard Work', 'dump-run': 'Dump Run',
+        'cleaning': 'Cleaning', 'power-washing': 'Power Wash', 'furniture-assembly': 'Assembly',
+        'painting': 'Painting', 'handyman': 'Handyman', 'landscaping': 'Landscaping',
+        'pet-care': 'Pet Care', 'delivery': 'Delivery', 'car-cleaning': 'Car Clean',
+        'event-setup': 'Event Setup', 'snow-removal': 'Snow Removal', 'other': 'Other',
+        'yard': 'Yard Work', 'furniture': 'Assembly'
+      };
+      
+      const jobCategory = (job.category || 'other').toLowerCase();
+      const catIcon = categoryIcons[jobCategory] || '⭐';
+      const catName = categoryNames[jobCategory] || job.category || 'Job';
+      
+      // Top row with category icon, title, and price
+      const headerRow = document.createElement("div");
+      headerRow.style.cssText = "display: flex; align-items: flex-start; gap: 0.75rem;";
+      
+      // Category icon badge
+      const iconBadge = document.createElement("div");
+      iconBadge.style.cssText = "width: 40px; height: 40px; border-radius: 10px; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0;";
+      iconBadge.textContent = catIcon;
+      headerRow.appendChild(iconBadge);
+      
+      // Title and meta container
+      const textContent = document.createElement("div");
+      textContent.style.cssText = "flex: 1; min-width: 0;";
+      
       const titleRow = document.createElement("div");
-      titleRow.className = "job-card-top";
+      titleRow.style.cssText = "display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;";
+      
       const titleEl = document.createElement("div");
       titleEl.className = "job-title";
+      titleEl.style.cssText = "font-size: 0.95rem; line-height: 1.3;";
       titleEl.textContent = job.title;
       titleRow.appendChild(titleEl);
 
       const pay = document.createElement("div");
-      pay.className = "job-title";
+      pay.style.cssText = "font-weight: 700; color: var(--success); font-size: 1rem; white-space: nowrap;";
 
       if (job.payType === "flat") {
         const total = job.amount || 0;
-        pay.textContent = `$${total.toFixed(2)}`;
+        pay.textContent = `$${total.toFixed(0)}`;
       } else {
         const hr = job.hourlyRate || 0;
-        const maxH = job.estHours || 0;
-        pay.textContent = `$${hr.toFixed(2)}/hr · max ${maxH}h`;
+        pay.textContent = `$${hr.toFixed(0)}/hr`;
       }
       titleRow.appendChild(pay);
-      card.appendChild(titleRow);
+      textContent.appendChild(titleRow);
 
-      // Category + time
+      // Category + time line
       const meta = document.createElement("div");
       meta.className = "job-meta";
-
-      const cat =
-        job.category === "moving"
-          ? "🚚 moving"
-          : job.category === "yard"
-          ? "🌿 yard"
-          : job.category === "cleaning"
-          ? "🧹 cleaning"
-          : job.category === "furniture"
-          ? "🛠 furniture"
-          : "⭐ other";
+      meta.style.cssText = "margin-top: 0.25rem;";
 
       const createdMs = job.createdAt
         ? new Date(job.createdAt).getTime()
         : Date.now();
 
-      meta.textContent = `${cat} • posted ${timeAgo(createdMs)}`;
-      card.appendChild(meta);
+      meta.textContent = `${catName} • ${timeAgo(createdMs)}`;
+      textContent.appendChild(meta);
 
       // Location line
       const loc = document.createElement("div");
@@ -3252,13 +3347,37 @@ async function renderJobs(reset = false) {
 
       const requirements = job.requirements || {};
       if (requirements.onSiteOnly || job.onSiteOnly) {
-        loc.textContent = `📍 ${requirements.pickupArea || requirements.pickupCity || job.address || "TBD"} • On-site only`;
+        loc.textContent = `📍 ${requirements.pickupArea || requirements.pickupCity || job.address || "TBD"}`;
       } else {
         const pick = requirements.pickupArea || requirements.pickupCity || "TBD";
-        const drop = requirements.dropoffArea || requirements.dropoffCity || "TBD";
-        loc.textContent = `📍 Pickup: ${pick} → Dropoff: ${drop}`;
+        const drop = requirements.dropoffArea || requirements.dropoffCity || "";
+        loc.textContent = `📍 ${pick}${drop ? " → " + drop : ""}`;
       }
-      card.appendChild(loc);
+      textContent.appendChild(loc);
+      
+      headerRow.appendChild(textContent);
+      card.appendChild(headerRow);
+      
+      // Equipment badges (if any)
+      const equipment = requirements.equipment || [];
+      if (equipment.length > 0) {
+        const equipmentRow = document.createElement("div");
+        equipmentRow.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.5rem;";
+        const equipIcons = { truck: '🚛', trailer: '🚛', straps: '🔗', dolly: '🛒', tools: '🔧', mower: '🌿' };
+        equipment.slice(0, 3).forEach(eq => {
+          const badge = document.createElement("span");
+          badge.style.cssText = "padding: 0.2rem 0.4rem; background: #f0f9ff; border-radius: 4px; font-size: 0.7rem; color: #0369a1;";
+          badge.textContent = `${equipIcons[eq] || '📦'} ${eq}`;
+          equipmentRow.appendChild(badge);
+        });
+        if (equipment.length > 3) {
+          const more = document.createElement("span");
+          more.style.cssText = "padding: 0.2rem 0.4rem; background: #f3f4f6; border-radius: 4px; font-size: 0.7rem; color: #6b7280;";
+          more.textContent = `+${equipment.length - 3}`;
+          equipmentRow.appendChild(more);
+        }
+        card.appendChild(equipmentRow);
+      }
 
       // Actions row
       const actions = document.createElement("div");
@@ -6617,6 +6736,48 @@ meta.textContent =
             renderJobs(true); // Reset pagination when filter changes
           });
         });
+      
+      // Category filter chips
+      const categoryChipsContainer = document.getElementById("categoryFilterChips");
+      if (categoryChipsContainer) {
+        categoryChipsContainer.querySelectorAll(".filter-chip").forEach(chip => {
+          chip.addEventListener("click", () => {
+            // Update active state
+            categoryChipsContainer.querySelectorAll(".filter-chip").forEach(c => {
+              c.classList.remove("active");
+              c.style.border = "1.5px solid var(--border)";
+              c.style.background = "white";
+              c.style.color = "var(--text-main)";
+            });
+            chip.classList.add("active");
+            chip.style.border = "1.5px solid var(--primary)";
+            chip.style.background = "var(--primary-soft)";
+            chip.style.color = "var(--primary)";
+            
+            // Update filter and reload
+            activeCategoryFilter = chip.dataset.category;
+            renderJobs(true);
+          });
+        });
+      }
+      
+      // Sort dropdown
+      const sortSelect = document.getElementById("jobsSortBy");
+      if (sortSelect) {
+        sortSelect.addEventListener("change", () => {
+          activeSortBy = sortSelect.value;
+          renderJobs(true);
+        });
+      }
+      
+      // Refresh button
+      const refreshBtn = document.getElementById("refreshJobsBtn");
+      if (refreshBtn) {
+        refreshBtn.addEventListener("click", () => {
+          renderJobs(true);
+          showToast("Jobs refreshed!");
+        });
+      }
     }
 async function startPayment(jobId) {
   const job = state.jobs.find((j) => j.id === jobId);
