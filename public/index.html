@@ -245,6 +245,16 @@
       position: sticky;
       top: 0;
       z-index: 100;
+      margin-bottom: 0 !important;
+    }
+    
+    /* Remove any spacing below header */
+    header + * {
+      margin-top: 0 !important;
+      padding-top: 0 !important;
+    }
+      top: 0;
+      z-index: 100;
       box-shadow: 0 4px 20px rgba(37, 99, 235, 0.08);
     }
 
@@ -2073,6 +2083,19 @@
       max-width: 1100px;
       margin: 0 auto;
       padding: 1rem;
+      margin-top: 0 !important;
+      padding-top: 1rem;
+    }
+    
+    /* Remove spacing between header and main */
+    header ~ main {
+      margin-top: 0 !important;
+    }
+    
+    /* Ensure first section in main has no top margin */
+    main > section:first-child {
+      margin-top: 0 !important;
+      padding-top: 0 !important;
     }
     
     footer {
@@ -4261,9 +4284,16 @@ function showChangePasswordModal() {
               jobData.estHours = estHoursValue;
             }
 
-            console.log("Posting job with data:", jobData);
-            const result = await window.hustlAPI.jobs.create(jobData);
-            console.log("Job posted successfully:", result);
+            console.log("Posting job with data:", JSON.stringify(jobData, null, 2));
+            try {
+              const result = await window.hustlAPI.jobs.create(jobData);
+              console.log("Job posted successfully:", result);
+            } catch (error) {
+              console.error("Full error object:", error);
+              console.error("Error message:", error.message);
+              console.error("Error stack:", error.stack);
+              throw error;
+            }
 
             showToast("✅ Job posted successfully!");
             setView("jobs");

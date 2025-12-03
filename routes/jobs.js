@@ -255,34 +255,46 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
       }
     }
 
-    const job = await prisma.job.create({
-      data: {
-        customerId: req.user.id,
-        title,
-        category,
-        description,
-        photos,
-        address,
-        lat,
-        lng,
-        date: new Date(date),
-        startTime: new Date(startTime),
-        endTime: new Date(endTime),
-        payType,
-        amount: parseFloat(amount),
-        hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
-        estHours: estHours ? parseInt(estHours) : null,
-        requirements: {
-          ...requirements,
-          teamSize: parseInt(teamSize) || 1,
-        },
-        status: 'OPEN',
-        // Recurring job fields
-        recurrenceType: recurrenceType || null,
-        recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : null,
-        recurrencePaused: false,
-        nextRecurrenceDate: nextRecurrenceDate,
+    // Build job data object
+    const jobData = {
+      customerId: req.user.id,
+      title,
+      category,
+      description,
+      photos: Array.isArray(photos) ? photos : [],
+      address,
+      lat,
+      lng,
+      date: new Date(date),
+      startTime: new Date(startTime),
+      endTime: new Date(endTime),
+      payType,
+      amount: parseFloat(amount),
+      hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
+      estHours: estHours ? parseInt(estHours) : null,
+      requirements: {
+        ...requirements,
+        teamSize: parseInt(teamSize) || 1,
       },
+      status: 'OPEN',
+      recurrencePaused: false,
+    };
+    
+    // Only add recurrence fields if they exist
+    if (recurrenceType) {
+      jobData.recurrenceType = recurrenceType;
+    }
+    if (recurrenceEndDate) {
+      jobData.recurrenceEndDate = new Date(recurrenceEndDate);
+    }
+    if (nextRecurrenceDate) {
+      jobData.nextRecurrenceDate = nextRecurrenceDate;
+    }
+    
+    console.log('[POST /jobs] Creating job with data:', JSON.stringify(jobData, null, 2));
+    
+    const job = await prisma.job.create({
+      data: jobData,
       include: {
         customer: {
           select: {
@@ -299,7 +311,15 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
     res.status(201).json(job);
   } catch (error) {
     console.error('Create job error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Request body:', JSON.stringify(req.body, null, 2));
+    console.error('User ID:', req.user?.id);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message || 'Unknown error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
