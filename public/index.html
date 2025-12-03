@@ -191,7 +191,8 @@
       font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: linear-gradient(180deg, #eff6ff 0%, #f0f9ff 50%, #f8fafc 100%);
       color: var(--text-main);
-      min-height: 100vh;
+      min-height: auto;
+      height: auto;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
@@ -223,7 +224,7 @@
     .app-shell {
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
+      min-height: auto;
       justify-content: flex-start;
     }
     
@@ -2369,7 +2370,7 @@
         <div style="text-align: center; padding: 2rem 1rem; max-width: 600px; margin: 0 auto;">
           
           <!-- Briefcase Icon -->
-          <div style="width: 80px; height: 80px; margin: 0 auto 1.25rem; background: var(--primary); border-radius: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
+          <div style="width: 80px; height: 80px; margin: 1.5rem auto 1.25rem; background: var(--primary); border-radius: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
               <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
@@ -2518,7 +2519,7 @@
 
       <!-- POST JOB VIEW (separate page) -->
       <section id="view-post" style="display:none;">
-        <div class="card" id="jobFormCard" style="padding: 2rem;">
+        <div class="card" id="jobFormCard" style="padding: 2.5rem;">
           <div class="card-header">
             <div class="card-title">Post a job</div>
           </div>
@@ -8631,7 +8632,7 @@ try {
           <button class="mobile-menu-item" data-view="profile">👤 Profile</button>
           <div class="header-auth" id="mobileMenuAuth">
             <div style="padding: 0.5rem; color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border);">👋 Signed in as ${firstName}</div>
-            <button class="btn-signup-header" onclick="if(typeof handleSignOut === 'function') handleSignOut()" style="width:100%; margin-top: 0.5rem; background: #fee2e2; color: #dc2626; border-color: #fca5a5; font-weight: 600;">🚪 Sign Out</button>
+            <button class="btn-signup-header" onclick="if(typeof handleSignOut === 'function') handleSignOut()" style="width:100%; margin-top: 0.5rem; padding: 1rem; background: #fee2e2 !important; color: #dc2626 !important; border: 2px solid #fca5a5 !important; font-weight: 600; font-size: 1rem; z-index: 1; position: relative; opacity: 1 !important; visibility: visible !important; display: block !important;">🚪 Sign Out</button>
           </div>
         `;
       }
