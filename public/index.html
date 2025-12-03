@@ -1222,6 +1222,86 @@
       align-items: center;
       margin-bottom: 0.75rem;
     }
+    
+    /* Profile Hero Card */
+    .profile-hero {
+      background: linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%);
+      border-radius: 16px;
+      padding: 1.5rem;
+      color: white;
+      box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+    }
+    
+    .profile-hero-top {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .profile-hero-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.75rem;
+      font-weight: 700;
+      border: 3px solid rgba(255,255,255,0.5);
+      overflow: hidden;
+    }
+    
+    .profile-hero-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .profile-hero-info {
+      flex: 1;
+    }
+    
+    .profile-hero-name {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    
+    .profile-hero-role {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+    
+    .profile-hero-location {
+      font-size: 0.85rem;
+      opacity: 0.8;
+      margin-top: 0.25rem;
+    }
+    
+    .profile-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+    }
+    
+    .profile-stat {
+      text-align: center;
+      padding: 0.75rem;
+      background: rgba(255,255,255,0.15);
+      border-radius: 10px;
+    }
+    
+    .profile-stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    
+    .profile-stat-label {
+      font-size: 0.75rem;
+      opacity: 0.9;
+    }
 
    .linkish {
   color: var(--primary);
@@ -2064,18 +2144,29 @@
 
       <!-- PROFILE VIEW -->
       <section id="view-profile" style="display:none;">
-        <div class="layout-grid">
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">Your profile</div>
+        <!-- Profile Hero Card -->
+        <div id="profileHeroCard" class="profile-hero"></div>
+        
+        <div class="layout-grid" style="gap: 1rem; margin-top: 1rem;">
+          <div>
+            <div class="card" style="margin-bottom: 1rem;">
+              <div class="card-header">
+                <div class="card-title">✏️ Edit Profile</div>
+              </div>
+              <div id="profileContent"></div>
             </div>
-            <div id="profileContent"></div>
+            <div class="card" id="stripeConnectSection" style="border: 2px solid #22c55e;">
+              <div class="card-header">
+                <div class="card-title" style="color: #16a34a;">💳 Payment Setup</div>
+              </div>
+              <div id="stripeConnectContent"></div>
+            </div>
           </div>
           <div class="card">
             <div class="card-header">
-              <div class="card-title">Your jobs</div>
+              <div class="card-title">📋 Your Jobs</div>
             </div>
-            <div class="jobs-list" id="profileJobsList"></div>
+            <div class="jobs-list" id="profileJobsList" style="max-height: 400px; overflow-y: auto;"></div>
           </div>
         </div>
       </section>
@@ -5818,11 +5909,14 @@ async function renderJobs(reset = false) {
   const user = getCurrentUser();
   const container = document.getElementById("profileContent");
   const jobsList = document.getElementById("profileJobsList");
+  const heroCard = document.getElementById("profileHeroCard");
+  const stripeContent = document.getElementById("stripeConnectContent");
+  
   if (!container || !jobsList) return;
 
   if (!user) {
-    container.innerHTML =
-      "<div class='muted'>Log in to see your profile.</div>";
+    if (heroCard) heroCard.innerHTML = "";
+    container.innerHTML = "<div class='muted'>Log in to see your profile.</div>";
     jobsList.innerHTML = "";
     return;
   }
@@ -5853,35 +5947,67 @@ async function renderJobs(reset = false) {
     return sum;
   }, 0);
 
-  container.innerHTML = "";
-
-  // top row: avatar + basic info
-  const profileRow = document.createElement("div");
-  profileRow.className = "profile-row";
-
-  const avatar = document.createElement("div");
-  avatar.className = "profile-avatar";
-  if (user.avatarDataUrl) {
-    const img = document.createElement("img");
-    img.src = user.avatarDataUrl;
-    avatar.appendChild(img);
-  } else {
-    avatar.textContent = user.name ? user.name[0].toUpperCase() : "?";
+  // Render Profile Hero Card
+  if (heroCard) {
+    const avatarContent = user.avatarDataUrl 
+      ? `<img src="${user.avatarDataUrl}" alt="Profile" style="width:100%;height:100%;object-fit:cover;">` 
+      : (user.name ? user.name[0].toUpperCase() : "?");
+    
+    const roleEmoji = user.role === "HUSTLER" || user.role === "hustler" ? "💪" : "🏠";
+    const roleLabel = user.role === "HUSTLER" || user.role === "hustler" ? "Hustler" : "Customer";
+    
+    heroCard.innerHTML = `
+      <div class="profile-hero-top">
+        <div class="profile-hero-avatar">${avatarContent}</div>
+        <div class="profile-hero-info">
+          <div class="profile-hero-name">${user.name || 'User'}</div>
+          <div class="profile-hero-role">${roleEmoji} ${roleLabel}</div>
+          <div class="profile-hero-location">📍 ${user.city || 'Tennessee'}${user.zip ? ', ' + user.zip : ''}</div>
+        </div>
+      </div>
+      <div class="profile-stats">
+        <div class="profile-stat">
+          <div class="profile-stat-value">${completedJobs.length}</div>
+          <div class="profile-stat-label">Jobs Done</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-value">$${totalEarned.toFixed(0)}</div>
+          <div class="profile-stat-label">Earned</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-value">⭐ ${user.rating || '--'}</div>
+          <div class="profile-stat-label">Rating</div>
+        </div>
+      </div>
+    `;
   }
-  profileRow.appendChild(avatar);
 
-  const info = document.createElement("div");
-  info.innerHTML =
-    "<strong>" +
-    user.name +
-    "</strong><br><span class='muted'>" +
-    user.email +
-    "</span><br><span class='muted'>" +
-    (user.role === "customer" ? "Customer" : "Hustler") +
-    "</span>";
-  profileRow.appendChild(info);
+  // Stripe Connect Content
+  if (stripeContent) {
+    const isConnected = user.stripeAccountId && user.stripePayoutsEnabled;
+    if (isConnected) {
+      stripeContent.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 1rem; background: #dcfce7; border-radius: 8px;">
+          <span style="font-size: 1.5rem;">✅</span>
+          <div>
+            <div style="font-weight: 600; color: #166534;">Stripe Connected</div>
+            <div style="font-size: 0.85rem; color: #15803d;">You can receive payments instantly!</div>
+          </div>
+        </div>
+      `;
+    } else {
+      stripeContent.innerHTML = `
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+          Connect with Stripe to receive payments directly to your bank. Instant payouts available!
+        </p>
+        <button class="btn btn-primary" onclick="goToStripeSetup()" style="width: 100%; background: #22c55e; border: none;">
+          💳 Connect Stripe & Start Earning
+        </button>
+      `;
+    }
+  }
 
-  container.appendChild(profileRow);
+  container.innerHTML = "";
 
   // avatar upload
   const avatarUploadField = document.createElement("div");
