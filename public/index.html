@@ -7052,8 +7052,9 @@ async function renderJobs(reset = false) {
     }
   }, 100);
 
-  // Stripe Connect Content
+  // Stripe Connect Content (clear first to prevent duplicates)
   if (stripeContent) {
+    stripeContent.innerHTML = ''; // Clear any existing content first
     const isConnected = user.stripeAccountId && user.stripePayoutsEnabled;
     if (isConnected) {
       stripeContent.innerHTML = `
