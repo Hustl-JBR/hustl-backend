@@ -221,7 +221,6 @@
     }
 
     .app-shell {
-      min-height: 100vh;
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
@@ -492,14 +491,23 @@
     #view-post {
       padding-top: 0 !important;
       margin-top: 0 !important;
+      padding-bottom: 0 !important;
+      margin-bottom: 0 !important;
     }
     
     #view-post > *:first-child {
       margin-top: 0 !important;
+      padding-top: 0 !important;
     }
     
     #view-post .card {
       margin-top: 0 !important;
+      margin-bottom: 0 !important;
+    }
+    
+    /* Reduce main padding when viewing post */
+    body.viewing-post main {
+      padding-top: 0.5rem !important;
     }
     
     /* Hide authSection properly when logged in or not on home */
@@ -929,6 +937,10 @@
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
+    }
+    
+    /* Only add scrollbar when there's content - use class instead of :has() for better compatibility */
+    .jobs-list.has-content {
       max-height: 400px;
       overflow-y: auto;
       padding-right: 0.2rem;
@@ -2017,22 +2029,29 @@
     }
     
     /* Fix white space on all devices */
-    body {
+    html, body {
       margin: 0 !important;
       padding: 0 !important;
+      height: auto !important;
+      overflow-x: hidden;
+    }
+    
+    /* Only show vertical scrollbar when needed */
+    body {
+      overflow-y: auto;
     }
     
     .app-shell {
-      min-height: 100vh;
       display: flex;
       flex-direction: column;
     }
     
     main {
-      flex: 1;
+      flex: 0 1 auto;
       width: 100%;
       max-width: 1100px;
       margin: 0 auto;
+      padding: 1rem;
     }
     
     /* Remove duplicate spacing */
@@ -3188,12 +3207,15 @@ if (job.acceptedHustlerId) {
         target.style.display = "block";
         // Scroll to top and remove padding for post view
         if (view === 'post') {
+          document.body.classList.add('viewing-post');
           window.scrollTo({ top: 0, behavior: 'smooth' });
           const jobFormCard = document.getElementById("jobFormCard");
           if (jobFormCard) {
             jobFormCard.style.marginTop = '0';
             jobFormCard.style.paddingTop = '0';
           }
+        } else {
+          document.body.classList.remove('viewing-post');
         }
       }
 
@@ -4360,7 +4382,10 @@ async function renderJobs(reset = false) {
     }
 
     if (filteredJobs.length === 0 && currentJobsPage === 1) {
-      if (jobsList) jobsList.innerHTML = "<div class='muted'>No jobs found.</div>";
+      if (jobsList) {
+        jobsList.innerHTML = "<div class='muted'>No jobs found.</div>";
+        jobsList.classList.remove('has-content'); // Remove scrollbar when empty
+      }
       return;
     }
 
@@ -4525,7 +4550,11 @@ async function renderJobs(reset = false) {
       // Clicking the whole card opens details
       card.addEventListener("click", () => openJobDetails(job.id));
 
-      if (jobsList) jobsList.appendChild(card);    });
+      if (jobsList) {
+        jobsList.appendChild(card);
+        jobsList.classList.add('has-content'); // Add scrollbar when there's content
+      }
+    });
 
     // Add "Load More" button if there are more pages
     const existingLoadMore = jobsList?.querySelector("#loadMoreJobsBtn");
