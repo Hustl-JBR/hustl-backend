@@ -2388,7 +2388,7 @@
         </div>
         
         <!-- SEO: Local Services Section -->
-        <div class="card" style="margin-bottom: 1.5rem; border: 1px solid rgba(59, 130, 246, 0.2); background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, transparent 100%);">
+        <div class="card" style="margin-bottom: 1.5rem; border: 1px solid rgba(59, 130, 246, 0.2); background: white;">
           <h2 style="font-size: 1.2rem; margin: 0 0 1rem; color: var(--text-main);">
             🏠 Local Help Across Tennessee
           </h2>
@@ -2402,13 +2402,27 @@
             <span style="padding: 0.4rem 0.75rem; background: var(--bg-light); border-radius: 999px; font-size: 0.8rem; color: var(--text-muted);">📍 Memphis, TN</span>
             <span style="padding: 0.4rem 0.75rem; background: var(--bg-light); border-radius: 999px; font-size: 0.8rem; color: var(--text-muted);">📍 All of Tennessee</span>
           </div>
-          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
             <span style="padding: 0.35rem 0.6rem; background: rgba(37, 99, 235, 0.1); border-radius: 6px; font-size: 0.75rem; color: var(--primary);">🚚 Moving</span>
             <span style="padding: 0.35rem 0.6rem; background: rgba(37, 99, 235, 0.1); border-radius: 6px; font-size: 0.75rem; color: var(--primary);">🌿 Yard Work</span>
             <span style="padding: 0.35rem 0.6rem; background: rgba(37, 99, 235, 0.1); border-radius: 6px; font-size: 0.75rem; color: var(--primary);">💦 Power Washing</span>
             <span style="padding: 0.35rem 0.6rem; background: rgba(37, 99, 235, 0.1); border-radius: 6px; font-size: 0.75rem; color: var(--primary);">🗑️ Junk Removal</span>
             <span style="padding: 0.35rem 0.6rem; background: rgba(37, 99, 235, 0.1); border-radius: 6px; font-size: 0.75rem; color: var(--primary);">🎨 Painting</span>
             <span style="padding: 0.35rem 0.6rem; background: rgba(37, 99, 235, 0.1); border-radius: 6px; font-size: 0.75rem; color: var(--primary);">🔧 Handyman</span>
+          </div>
+          <button type="button" id="seeMoreCategoriesBtn" style="padding: 0.5rem 1rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;" onclick="document.getElementById('allCategoriesExpanded').style.display = document.getElementById('allCategoriesExpanded').style.display === 'none' ? 'block' : 'none'; this.textContent = this.textContent === 'See More Categories' ? 'Show Less' : 'See More Categories';">
+            See More Categories
+          </button>
+          <div id="allCategoriesExpanded" style="display: none; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border);">
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+              <span style="padding: 0.35rem 0.6rem; background: rgba(37, 99, 235, 0.1); border-radius: 6px; font-size: 0.75rem; color: var(--primary);">🔧 Furniture Assembly</span>
+              <span style="padding: 0.35rem 0.6rem; background: rgba(37, 99, 235, 0.1); border-radius: 6px; font-size: 0.75rem; color: var(--primary);">🌳 Landscaping</span>
+              <span style="padding: 0.35rem 0.6rem; background: rgba(37, 99, 235, 0.1); border-radius: 6px; font-size: 0.75rem; color: var(--primary);">🐕 Pet Care</span>
+              <span style="padding: 0.35rem 0.6rem; background: rgba(37, 99, 235, 0.1); border-radius: 6px; font-size: 0.75rem; color: var(--primary);">🚚 Delivery</span>
+              <span style="padding: 0.35rem 0.6rem; background: rgba(37, 99, 235, 0.1); border-radius: 6px; font-size: 0.75rem; color: var(--primary);">🚿 Car Cleaning</span>
+              <span style="padding: 0.35rem 0.6rem; background: rgba(37, 99, 235, 0.1); border-radius: 6px; font-size: 0.75rem; color: var(--primary);">🎪 Event Setup</span>
+              <span style="padding: 0.35rem 0.6rem; background: rgba(37, 99, 235, 0.1); border-radius: 6px; font-size: 0.75rem; color: var(--primary);">❄️ Snow Removal</span>
+            </div>
           </div>
         </div>
         
@@ -2462,7 +2476,7 @@
 
       <!-- POST JOB VIEW (separate page) -->
       <section id="view-post" style="display:none;">
-        <div class="card" id="jobFormCard">
+        <div class="card" id="jobFormCard" style="padding: 2rem;">
           <div class="card-header">
             <div class="card-title">Post a job</div>
           </div>
@@ -2648,6 +2662,10 @@
                   <span>🚛 Truck</span>
                 </label>
                 <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                  <input type="checkbox" name="equipment" value="pickup-truck" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+                  <span>🚚 Pick up truck</span>
+                </label>
+                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
                   <input type="checkbox" name="equipment" value="trailer" style="width: 18px; height: 18px; accent-color: var(--primary);" />
                   <span>🚗 Trailer</span>
                 </label>
@@ -2697,7 +2715,7 @@
               <option value="5">5 people</option>
               <option value="6">6 people</option>
               <option value="custom">Custom</option>
-              <option value="my_team">My own team</option>
+              <option value="my_team">My own team (I'll provide the workers)</option>
             </select>
           </div>
           
@@ -2778,12 +2796,18 @@
 
             <div class="field-inline" id="hourlyFields" style="display:none;">
               <div class="field">
-                <label for="hourlyRate">Hourly rate ($/hr)</label>
+                <label for="hourlyRate">Hourly rate ($/hr per person)</label>
                 <input id="hourlyRate" type="number" min="0" step="1" value="20" />
               </div>
               <div class="field">
                 <label for="maxHours">Max hours</label>
                 <input id="maxHours" type="number" min="1" step="1" value="3" />
+              </div>
+            </div>
+            <div id="hourlyRateCalculation" style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: #eff6ff; border-radius: 8px; border-left: 3px solid var(--primary);">
+              <div style="font-size: 0.9rem; font-weight: 600; color: var(--primary); margin-bottom: 0.25rem;">💰 Total Hourly Rate</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">
+                <span id="hourlyRateDisplay">$20</span>/hr per person × <span id="workersCountDisplay">1</span> worker(s) = <strong style="color: var(--primary);"><span id="totalHourlyRateDisplay">$20</span>/hr total</strong>
               </div>
             </div>
           </div>
@@ -2816,11 +2840,11 @@
       <!-- JOBS VIEW -->
       <section id="view-jobs" style="display:none;">
         <!-- Search & Filter Bar -->
-        <div class="card" style="margin-bottom: 1rem; padding: 1rem;">
+        <div class="card" style="margin-bottom: 1rem; padding: 1.5rem;">
           <!-- Category Filter Chips -->
-          <div style="margin-bottom: 1rem;">
-            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">Filter by Category</div>
-            <div id="categoryFilterChips" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+          <div style="margin-bottom: 1.25rem;">
+            <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">Filter by Category</div>
+            <div id="categoryFilterChips" style="display: flex; flex-wrap: wrap; gap: 0.75rem; min-height: 60px; align-items: center;">
               <button class="filter-chip active" data-category="all" style="padding: 0.5rem 0.75rem; border: 1.5px solid var(--primary); background: var(--primary-soft); color: var(--primary); border-radius: 999px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
                 All Jobs
               </button>
@@ -3983,14 +4007,73 @@ function showChangePasswordModal() {
       const paymentTypeSelect = document.getElementById("paymentType");
       const flatField = document.getElementById("flatAmountField");
       const hourlyFields = document.getElementById("hourlyFields");
+      const hourlyRateCalculation = document.getElementById("hourlyRateCalculation");
       if (paymentTypeSelect && flatField && hourlyFields) {
         paymentTypeSelect.addEventListener("change", () => {
           if (paymentTypeSelect.value === "flat") {
             flatField.style.display = "block";
             hourlyFields.style.display = "none";
+            if (hourlyRateCalculation) hourlyRateCalculation.style.display = "none";
           } else {
             flatField.style.display = "none";
             hourlyFields.style.display = "grid";
+            if (hourlyRateCalculation) hourlyRateCalculation.style.display = "block";
+            updateHourlyRateCalculation();
+          }
+        });
+      }
+      
+      // Update hourly rate calculation when rate, hours, or workers change
+      function updateHourlyRateCalculation() {
+        if (!hourlyRateCalculation || paymentTypeSelect?.value !== "hourly") return;
+        const hourlyRate = parseFloat(document.getElementById("hourlyRate")?.value || 0);
+        const workersNeeded = document.getElementById("workersNeeded");
+        let workersCount = 1;
+        if (workersNeeded) {
+          const workersValue = workersNeeded.value;
+          if (workersValue === "my_team") {
+            workersCount = 0; // Special case
+            hourlyRateCalculation.style.display = "none";
+            return;
+          } else if (workersValue === "custom") {
+            workersCount = parseInt(document.getElementById("customWorkersCount")?.value || 1);
+          } else {
+            workersCount = parseInt(workersValue || 1);
+          }
+        }
+        if (workersCount > 0 && hourlyRate > 0) {
+          const totalRate = hourlyRate * workersCount;
+          document.getElementById("hourlyRateDisplay").textContent = `$${hourlyRate}`;
+          document.getElementById("workersCountDisplay").textContent = workersCount;
+          document.getElementById("totalHourlyRateDisplay").textContent = `$${totalRate}`;
+          hourlyRateCalculation.style.display = "block";
+        } else {
+          hourlyRateCalculation.style.display = "none";
+        }
+      }
+      
+      // Add event listeners for hourly rate calculation
+      const hourlyRateInput = document.getElementById("hourlyRate");
+      const workersNeededSelect = document.getElementById("workersNeeded");
+      const customWorkersInput = document.getElementById("customWorkersCount");
+      if (hourlyRateInput) hourlyRateInput.addEventListener("input", updateHourlyRateCalculation);
+      if (workersNeededSelect) workersNeededSelect.addEventListener("change", updateHourlyRateCalculation);
+      if (customWorkersInput) customWorkersInput.addEventListener("input", updateHourlyRateCalculation);
+      
+      // Custom date selection - show immediately when selected
+      const jobWhenSelect = document.getElementById("jobWhen");
+      const customDateFields = document.getElementById("customDateFields");
+      if (jobWhenSelect && customDateFields) {
+        jobWhenSelect.addEventListener("change", () => {
+          if (jobWhenSelect.value === "custom_date") {
+            customDateFields.style.display = "block";
+            // Focus on date input immediately
+            setTimeout(() => {
+              const customDateInput = document.getElementById("customDate");
+              if (customDateInput) customDateInput.focus();
+            }, 100);
+          } else {
+            customDateFields.style.display = "none";
           }
         });
       }
@@ -7364,6 +7447,35 @@ async function renderJobs(reset = false) {
     `<textarea id='profileBioInput' placeholder='Tell people a little about yourself. Jobs you like, if you have a truck, experience, etc.'>${user.bio || ''}</textarea>` +
     "<button class='btn btn-primary' id='saveBioButton' style='margin-top:0.35rem;'>Save profile</button>";
   container.appendChild(bioField);
+  
+  // Gender dropdown
+  const genderField = document.createElement("div");
+  genderField.className = "field";
+  genderField.style.marginTop = "0.8rem";
+  genderField.innerHTML = `
+    <label for="profileGenderInput">Gender</label>
+    <select id="profileGenderInput" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: white;">
+      <option value="">Select...</option>
+      <option value="male" ${user.gender === 'male' ? 'selected' : ''}>Male</option>
+      <option value="female" ${user.gender === 'female' ? 'selected' : ''}>Female</option>
+      <option value="other" ${user.gender === 'other' ? 'selected' : ''}>Other</option>
+      <option value="prefer_not_to_say" ${user.gender === 'prefer_not_to_say' ? 'selected' : ''}>Prefer not to say</option>
+    </select>
+    <button class="btn btn-primary" id="saveGenderButton" style="margin-top:0.35rem;">Save</button>
+  `;
+  container.appendChild(genderField);
+  
+  // Tools/Equipment section
+  const toolsField = document.createElement("div");
+  toolsField.className = "field";
+  toolsField.style.marginTop = "0.8rem";
+  toolsField.innerHTML = `
+    <label for="profileToolsInput">🔧 Tools & Equipment</label>
+    <p class="muted" style="margin: 0 0 0.5rem 0; font-size: 0.8rem;">List the tools or equipment you have available (e.g., "Pickup truck, pressure washer, lawn mower")</p>
+    <textarea id="profileToolsInput" placeholder="Example: Pickup truck, pressure washer, lawn mower, moving straps" rows="3">${user.tools || ''}</textarea>
+    <button class="btn btn-primary" id="saveToolsButton" style="margin-top:0.35rem;">Save</button>
+  `;
+  container.appendChild(toolsField);
 
   // Location / ZIP code edit
   const locationField = document.createElement("div");
@@ -7380,7 +7492,7 @@ async function renderJobs(reset = false) {
   `;
   container.appendChild(locationField);
 
-  // Location save handler
+  // Location save handler with confirmation
   setTimeout(() => {
     const saveLocBtn = document.getElementById("saveLocationButton");
     if (saveLocBtn) {
@@ -7391,6 +7503,9 @@ async function renderJobs(reset = false) {
           showToast("Please enter a valid city and 5-digit ZIP code.");
           return;
         }
+        const originalText = saveLocBtn.textContent;
+        saveLocBtn.disabled = true;
+        saveLocBtn.textContent = "Saving...";
         try {
           await window.hustlAPI.users.updateProfile({ city, zip });
           // Update local user data
@@ -7398,8 +7513,17 @@ async function renderJobs(reset = false) {
           storedUser.city = city;
           storedUser.zip = zip;
           localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+          saveLocBtn.textContent = "Saved";
+          saveLocBtn.style.background = "#16a34a";
+          setTimeout(() => {
+            saveLocBtn.textContent = "Edit";
+            saveLocBtn.style.background = "";
+            saveLocBtn.disabled = false;
+          }, 2000);
           showToast("✅ Location updated!");
         } catch (error) {
+          saveLocBtn.textContent = originalText;
+          saveLocBtn.disabled = false;
           showToast("Failed to update location.");
         }
       });
@@ -7673,12 +7797,15 @@ async function renderJobs(reset = false) {
     });
   }
 
-  // hook up bio save - save to DB
+  // hook up bio save - save to DB with confirmation
   const bioInput = document.getElementById("profileBioInput");
   const saveBioBtn = document.getElementById("saveBioButton");
   if (bioInput && saveBioBtn) {
     saveBioBtn.addEventListener("click", async () => {
       const bio = bioInput.value.trim();
+      const originalText = saveBioBtn.textContent;
+      saveBioBtn.disabled = true;
+      saveBioBtn.textContent = "Saving...";
       try {
         // Save to database
         await window.hustlAPI.users.updateProfile({ bio });
@@ -7688,13 +7815,85 @@ async function renderJobs(reset = false) {
         storedUser.bio = bio;
         localStorage.setItem('hustl_user', JSON.stringify(storedUser));
         
+        // Show confirmation
+        saveBioBtn.textContent = "Saved";
+        saveBioBtn.style.background = "#16a34a";
+        setTimeout(() => {
+          saveBioBtn.textContent = "Edit";
+          saveBioBtn.style.background = "";
+          saveBioBtn.disabled = false;
+        }, 2000);
         showToast("✅ Profile saved!");
       } catch (error) {
         console.error("Error saving profile:", error);
+        saveBioBtn.textContent = originalText;
+        saveBioBtn.disabled = false;
         showToast("Failed to save profile. Please try again.");
       }
     });
   }
+  
+  // Gender save handler
+  setTimeout(() => {
+    const saveGenderBtn = document.getElementById("saveGenderButton");
+    if (saveGenderBtn) {
+      saveGenderBtn.addEventListener("click", async () => {
+        const gender = document.getElementById("profileGenderInput").value;
+        const originalText = saveGenderBtn.textContent;
+        saveGenderBtn.disabled = true;
+        saveGenderBtn.textContent = "Saving...";
+        try {
+          await window.hustlAPI.users.updateProfile({ gender });
+          const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
+          storedUser.gender = gender;
+          localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+          saveGenderBtn.textContent = "Saved";
+          saveGenderBtn.style.background = "#16a34a";
+          setTimeout(() => {
+            saveGenderBtn.textContent = "Edit";
+            saveGenderBtn.style.background = "";
+            saveGenderBtn.disabled = false;
+          }, 2000);
+          showToast("✅ Gender updated!");
+        } catch (error) {
+          saveGenderBtn.textContent = originalText;
+          saveGenderBtn.disabled = false;
+          showToast("Failed to save gender.");
+        }
+      });
+    }
+  }, 100);
+  
+  // Tools save handler
+  setTimeout(() => {
+    const saveToolsBtn = document.getElementById("saveToolsButton");
+    if (saveToolsBtn) {
+      saveToolsBtn.addEventListener("click", async () => {
+        const tools = document.getElementById("profileToolsInput").value.trim();
+        const originalText = saveToolsBtn.textContent;
+        saveToolsBtn.disabled = true;
+        saveToolsBtn.textContent = "Saving...";
+        try {
+          await window.hustlAPI.users.updateProfile({ tools });
+          const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
+          storedUser.tools = tools;
+          localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+          saveToolsBtn.textContent = "Saved";
+          saveToolsBtn.style.background = "#16a34a";
+          setTimeout(() => {
+            saveToolsBtn.textContent = "Edit";
+            saveToolsBtn.style.background = "";
+            saveToolsBtn.disabled = false;
+          }, 2000);
+          showToast("✅ Tools updated!");
+        } catch (error) {
+          saveToolsBtn.textContent = originalText;
+          saveToolsBtn.disabled = false;
+          showToast("Failed to save tools.");
+        }
+      });
+    }
+  }, 100);
 // Manual payout options removed - Stripe only
 
   // hook up "View active jobs"
