@@ -277,6 +277,14 @@
       font-weight: 800;
       font-size: 1.2rem;
       box-shadow: 0 4px 14px rgba(37, 99, 235, 0.5), 0 0 30px rgba(14, 165, 233, 0.3);
+      flex-shrink: 0;
+    }
+
+    .logo-text-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
     }
 
     .logo-text-main {
@@ -284,11 +292,13 @@
       font-size: 1.2rem;
       letter-spacing: 0.02em;
       color: var(--text-main);
+      white-space: nowrap;
     }
 
     .logo-sub {
       font-size: 0.7rem;
       color: var(--text-muted);
+      white-space: nowrap;
     }
 
     /* Desktop nav tabs */
@@ -2162,7 +2172,7 @@
     <header>
       <div class="logo-row">
         <div class="logo-mark">H</div>
-        <div>
+        <div class="logo-text-container">
           <div class="logo-text-main">Hustl</div>
           <div class="logo-sub">Real Hustle. All of Tennessee.</div>
         </div>
@@ -4063,7 +4073,11 @@ function showChangePasswordModal() {
       const workersNeededSelect = document.getElementById("workersNeeded");
       const customWorkersInput = document.getElementById("customWorkersCount");
       if (hourlyRateInput) hourlyRateInput.addEventListener("input", updateHourlyRateCalculation);
-      if (workersNeededSelect) workersNeededSelect.addEventListener("change", updateHourlyRateCalculation);
+      if (workersNeededSelect) {
+        workersNeededSelect.addEventListener("change", () => {
+          updateHourlyRateCalculation();
+        });
+      }
       if (customWorkersInput) customWorkersInput.addEventListener("input", updateHourlyRateCalculation);
       
       // Custom date selection - show immediately when selected
@@ -4239,14 +4253,18 @@ function showChangePasswordModal() {
       }
       
       // Workers needed - handle custom and my_team options
-      const workersNeededSelect = document.getElementById("workersNeeded");
+      const workersNeededSelect2 = document.getElementById("workersNeeded");
       const customWorkersField = document.getElementById("customWorkersField");
-      if (workersNeededSelect && customWorkersField) {
-        workersNeededSelect.addEventListener("change", () => {
-          if (workersNeededSelect.value === "custom") {
+      if (workersNeededSelect2 && customWorkersField) {
+        workersNeededSelect2.addEventListener("change", () => {
+          if (workersNeededSelect2.value === "custom") {
             customWorkersField.style.display = "block";
           } else {
             customWorkersField.style.display = "none";
+          }
+          // Also update hourly rate calculation when workers change
+          if (typeof updateHourlyRateCalculation === 'function') {
+            updateHourlyRateCalculation();
           }
         });
       }
