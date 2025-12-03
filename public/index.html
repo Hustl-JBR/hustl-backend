@@ -6804,8 +6804,53 @@ async function renderJobs(reset = false) {
     `;
   }
   
-  // Initialize Profile Tabs
-  initProfileTabs();
+  // Initialize Profile Tabs (call after a short delay to ensure DOM is ready)
+  setTimeout(() => {
+    initProfileTabs();
+    
+    // Populate Jobs tab when clicked
+    const jobsTab = document.querySelector('.profile-tab[data-tab="jobs"]');
+    if (jobsTab) {
+      jobsTab.addEventListener('click', async () => {
+        const jobsList = document.getElementById("profileJobsList");
+        if (jobsList && jobsList.innerHTML.trim() === "") {
+          // Fetch jobs from API
+          try {
+            const jobs = await window.hustlAPI.jobs.list({ limit: 50 });
+            const userJobs = jobs.filter(j => 
+              j.postedByUserId === user.id || j.acceptedHustlerId === user.id
+            );
+            
+            if (userJobs.length === 0) {
+              jobsList.innerHTML = "<div class='muted' style='padding: 2rem; text-align: center;'>No jobs yet.</div>";
+            } else {
+              jobsList.innerHTML = "";
+              userJobs.forEach(job => {
+                const card = document.createElement("div");
+                card.className = "job-card";
+                card.dataset.jobId = job.id;
+                card.innerHTML = `
+                  <div class="job-card-top">
+                    <div class="job-title">${job.title || 'Untitled'}</div>
+                    <span class="badge">${job.status || 'open'}</span>
+                  </div>
+                  <div class="job-meta">${timeAgo(new Date(job.createdAt).getTime())}</div>
+                `;
+                card.addEventListener("click", () => {
+                  setView("jobs");
+                  renderJobDetail(job.id);
+                });
+                jobsList.appendChild(card);
+              });
+            }
+          } catch (error) {
+            console.error("Error loading jobs:", error);
+            jobsList.innerHTML = "<div class='muted' style='padding: 2rem; text-align: center;'>Error loading jobs.</div>";
+          }
+        }
+      });
+    }
+  }, 200);
   
   // Initialize Change Password button
   setTimeout(() => {
