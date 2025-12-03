@@ -8422,45 +8422,61 @@ try {
         // document.body.style.overflow = mobileMenu.classList.contains('open') ? 'hidden' : '';
       });
       
-      // Handle mobile menu item clicks
-      mobileMenu.querySelectorAll('.mobile-menu-item').forEach(item => {
-        item.addEventListener('click', () => {
-          const view = item.dataset.view;
-          if (view && typeof setView === 'function') {
-            setView(view);
-          }
-          // Close menu
-          hamburgerBtn.classList.remove('open');
-          mobileMenu.classList.remove('open');
-          document.body.style.overflow = '';
+      // Handle mobile menu item clicks using event delegation (works with dynamically added items)
+      mobileMenu.addEventListener('click', (e) => {
+        const item = e.target.closest('.mobile-menu-item');
+        if (!item) return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const view = item.dataset.view;
+        const action = item.dataset.action;
+        
+        if (view && typeof setView === 'function') {
+          setView(view);
           
-          // Update active state
-          mobileMenu.querySelectorAll('.mobile-menu-item').forEach(i => i.classList.remove('active'));
-          item.classList.add('active');
-        });
+          // Handle special actions
+          if (action === 'earnings') {
+            setTimeout(() => {
+              const earningsTab = document.querySelector('.profile-tab[data-tab="earnings"]');
+              if (earningsTab) earningsTab.click();
+            }, 100);
+          }
+        }
+        
+        // Close menu
+        hamburgerBtn.classList.remove('open');
+        mobileMenu.classList.remove('open');
+        document.body.style.overflow = '';
+        
+        // Update active state
+        mobileMenu.querySelectorAll('.mobile-menu-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
       });
       
-      // Mobile auth buttons
-      const mobileLoginBtn = document.getElementById('mobileLoginBtn');
-      const mobileSignupBtn = document.getElementById('mobileSignupBtn');
-      
-      if (mobileLoginBtn) {
-        mobileLoginBtn.addEventListener('click', () => {
+      // Mobile auth buttons - use event delegation for dynamically added buttons
+      mobileMenu.addEventListener('click', (e) => {
+        if (e.target.id === 'mobileLoginBtn' || e.target.closest('#mobileLoginBtn')) {
+          e.preventDefault();
+          e.stopPropagation();
           hamburgerBtn.classList.remove('open');
           mobileMenu.classList.remove('open');
           document.body.style.overflow = '';
-          openAuthModal('login');
-        });
-      }
-      
-      if (mobileSignupBtn) {
-        mobileSignupBtn.addEventListener('click', () => {
+          if (typeof openAuthModal === 'function') {
+            openAuthModal('login');
+          }
+        } else if (e.target.id === 'mobileSignupBtn' || e.target.closest('#mobileSignupBtn')) {
+          e.preventDefault();
+          e.stopPropagation();
           hamburgerBtn.classList.remove('open');
           mobileMenu.classList.remove('open');
           document.body.style.overflow = '';
-          openAuthModal('create');
-        });
-      }
+          if (typeof openAuthModal === 'function') {
+            openAuthModal('create');
+          }
+        }
+      });
     }
     
     // Desktop auth buttons
