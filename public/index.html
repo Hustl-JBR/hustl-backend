@@ -4770,10 +4770,10 @@ async function renderJobs(reset = false) {
       pay.style.cssText = "font-weight: 700; color: var(--success); font-size: 1rem; white-space: nowrap;";
 
       if (job.payType === "flat") {
-        const total = job.amount || 0;
+        const total = Number(job.amount) || 0;
         pay.textContent = `$${total.toFixed(0)}`;
       } else {
-        const hr = job.hourlyRate || 0;
+        const hr = Number(job.hourlyRate) || 0;
         pay.textContent = `$${hr.toFixed(0)}/hr`;
       }
       titleRow.appendChild(pay);
