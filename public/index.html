@@ -4008,24 +4008,13 @@ function showChangePasswordModal() {
       const flatField = document.getElementById("flatAmountField");
       const hourlyFields = document.getElementById("hourlyFields");
       const hourlyRateCalculation = document.getElementById("hourlyRateCalculation");
-      if (paymentTypeSelect && flatField && hourlyFields) {
-        paymentTypeSelect.addEventListener("change", () => {
-          if (paymentTypeSelect.value === "flat") {
-            flatField.style.display = "block";
-            hourlyFields.style.display = "none";
-            if (hourlyRateCalculation) hourlyRateCalculation.style.display = "none";
-          } else {
-            flatField.style.display = "none";
-            hourlyFields.style.display = "grid";
-            if (hourlyRateCalculation) hourlyRateCalculation.style.display = "block";
-            updateHourlyRateCalculation();
-          }
-        });
-      }
       
       // Update hourly rate calculation when rate, hours, or workers change
       function updateHourlyRateCalculation() {
-        if (!hourlyRateCalculation || paymentTypeSelect?.value !== "hourly") return;
+        if (!hourlyRateCalculation || !paymentTypeSelect || paymentTypeSelect.value !== "hourly") {
+          if (hourlyRateCalculation) hourlyRateCalculation.style.display = "none";
+          return;
+        }
         const hourlyRate = parseFloat(document.getElementById("hourlyRate")?.value || 0);
         const workersNeeded = document.getElementById("workersNeeded");
         let workersCount = 1;
@@ -4043,13 +4032,31 @@ function showChangePasswordModal() {
         }
         if (workersCount > 0 && hourlyRate > 0) {
           const totalRate = hourlyRate * workersCount;
-          document.getElementById("hourlyRateDisplay").textContent = `$${hourlyRate}`;
-          document.getElementById("workersCountDisplay").textContent = workersCount;
-          document.getElementById("totalHourlyRateDisplay").textContent = `$${totalRate}`;
+          const hourlyRateDisplay = document.getElementById("hourlyRateDisplay");
+          const workersCountDisplay = document.getElementById("workersCountDisplay");
+          const totalHourlyRateDisplay = document.getElementById("totalHourlyRateDisplay");
+          if (hourlyRateDisplay) hourlyRateDisplay.textContent = `$${hourlyRate}`;
+          if (workersCountDisplay) workersCountDisplay.textContent = workersCount;
+          if (totalHourlyRateDisplay) totalHourlyRateDisplay.textContent = `$${totalRate}`;
           hourlyRateCalculation.style.display = "block";
         } else {
           hourlyRateCalculation.style.display = "none";
         }
+      }
+      
+      if (paymentTypeSelect && flatField && hourlyFields) {
+        paymentTypeSelect.addEventListener("change", () => {
+          if (paymentTypeSelect.value === "flat") {
+            flatField.style.display = "block";
+            hourlyFields.style.display = "none";
+            if (hourlyRateCalculation) hourlyRateCalculation.style.display = "none";
+          } else {
+            flatField.style.display = "none";
+            hourlyFields.style.display = "grid";
+            if (hourlyRateCalculation) hourlyRateCalculation.style.display = "block";
+            updateHourlyRateCalculation();
+          }
+        });
       }
       
       // Add event listeners for hourly rate calculation
