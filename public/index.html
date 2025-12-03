@@ -3889,28 +3889,133 @@ async function renderJobs(reset = false) {
             }
           }, 0);
 
-          // Review Profile button (before note field)
+          // "Why I'm a Good Fit" Section - Mini Application
+          const applicationSection = document.createElement("div");
+          applicationSection.style.cssText = `
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+          `;
+          
+          applicationSection.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+              <span style="font-size: 1.25rem;">📝</span>
+              <h4 style="margin: 0; font-size: 1rem; color: var(--text-main);">Your Application</h4>
+            </div>
+            
+            <!-- Why I'm a Good Fit -->
+            <div style="margin-bottom: 1rem;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                Why are you a good fit for this job? <span style="color: #ef4444;">*</span>
+              </label>
+              <textarea id="applyNoteField" rows="4" placeholder="Tell the customer about your experience, skills, and why you're perfect for this job..."
+                style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-family: inherit; font-size: 0.9rem; resize: vertical; min-height: 100px;"></textarea>
+              <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+                <span style="font-size: 0.75rem; color: #6b7280; background: #f3f4f6; padding: 0.25rem 0.5rem; border-radius: 4px;">💡 Mention your experience</span>
+                <span style="font-size: 0.75rem; color: #6b7280; background: #f3f4f6; padding: 0.25rem 0.5rem; border-radius: 4px;">🚚 List equipment you have</span>
+                <span style="font-size: 0.75rem; color: #6b7280; background: #f3f4f6; padding: 0.25rem 0.5rem; border-radius: 4px;">📅 When you're available</span>
+              </div>
+            </div>
+            
+            <!-- Equipment You Have -->
+            <div style="margin-bottom: 1rem;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                What equipment do you have? <span style="color: #6b7280; font-weight: 400;">(optional)</span>
+              </label>
+              <div id="hustlerEquipmentChecks" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #f9fafb; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                  <input type="checkbox" name="hustlerEquipment" value="truck" style="accent-color: var(--primary);" />
+                  🚛 Truck
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #f9fafb; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                  <input type="checkbox" name="hustlerEquipment" value="trailer" style="accent-color: var(--primary);" />
+                  🚛 Trailer
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #f9fafb; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                  <input type="checkbox" name="hustlerEquipment" value="straps" style="accent-color: var(--primary);" />
+                  🔗 Moving Straps
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #f9fafb; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                  <input type="checkbox" name="hustlerEquipment" value="dolly" style="accent-color: var(--primary);" />
+                  🛒 Dolly
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #f9fafb; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                  <input type="checkbox" name="hustlerEquipment" value="tools" style="accent-color: var(--primary);" />
+                  🔧 Tools
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #f9fafb; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                  <input type="checkbox" name="hustlerEquipment" value="mower" style="accent-color: var(--primary);" />
+                  🌿 Lawn Mower
+                </label>
+              </div>
+            </div>
+            
+            <!-- Estimated Time -->
+            <div style="margin-bottom: 1rem;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                Estimated time to complete <span style="color: #6b7280; font-weight: 400;">(optional)</span>
+              </label>
+              <select id="estimatedTime" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.9rem; background: white;">
+                <option value="">Select estimated time...</option>
+                <option value="30min">30 minutes</option>
+                <option value="1hr">1 hour</option>
+                <option value="2hr">2 hours</option>
+                <option value="3hr">3 hours</option>
+                <option value="4hr">4 hours</option>
+                <option value="half-day">Half day (4-6 hours)</option>
+                <option value="full-day">Full day (6-8 hours)</option>
+                <option value="multi-day">Multiple days</option>
+              </select>
+            </div>
+            
+            <!-- Price Reason (only shown when counter offer) -->
+            <div id="priceReasonSection" style="display: none; margin-bottom: 1rem;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                Why are you suggesting a different price? <span style="color: #ef4444;">*</span>
+              </label>
+              <textarea id="priceReasonField" rows="2" placeholder="Explain why your price is different (e.g., more equipment needed, extra distance, etc.)"
+                style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-family: inherit; font-size: 0.9rem; resize: vertical;"></textarea>
+            </div>
+          `;
+          applySection.appendChild(applicationSection);
+          
+          // Show/hide price reason based on counter offer selection
+          setTimeout(() => {
+            const counterBtn = document.getElementById("counterPriceBtn");
+            const acceptBtn = document.getElementById("acceptPriceBtn");
+            const priceReasonSection = document.getElementById("priceReasonSection");
+            
+            if (counterBtn && priceReasonSection) {
+              counterBtn.addEventListener("click", () => {
+                priceReasonSection.style.display = "block";
+              });
+            }
+            if (acceptBtn && priceReasonSection) {
+              acceptBtn.addEventListener("click", () => {
+                priceReasonSection.style.display = "none";
+              });
+            }
+          }, 10);
+
+          // Review Profile button
           const reviewProfileBtn = document.createElement("button");
           reviewProfileBtn.className = "small-btn outline";
           reviewProfileBtn.textContent = "👤 Review Customer Profile";
           reviewProfileBtn.style.width = "100%";
           reviewProfileBtn.style.marginBottom = "0.75rem";
+          reviewProfileBtn.style.padding = "0.6rem";
+          reviewProfileBtn.style.fontSize = "0.9rem";
           reviewProfileBtn.addEventListener("click", () => {
             openUserProfile(job.customerId);
           });
           applySection.appendChild(reviewProfileBtn);
 
+          // Hidden noteField for compatibility - we'll populate it with structured data
           const noteField = document.createElement("textarea");
-          noteField.id = "applyNoteField";
-          noteField.placeholder = "Tell the customer why you're a good fit, when you can do it, if you have a truck, etc.";
-          noteField.style.width = "100%";
-          noteField.style.minHeight = "100px";
-          noteField.style.padding = "0.75rem";
-          noteField.style.border = "1px solid var(--border)";
-          noteField.style.borderRadius = "6px";
-          noteField.style.fontFamily = "inherit";
-          noteField.style.fontSize = "0.9rem";
-          noteField.style.marginBottom = "0.75rem";
+          noteField.id = "applyNoteFieldHidden";
+          noteField.style.display = "none";
           applySection.appendChild(noteField);
 
           const applyBtn = document.createElement("button");
@@ -3930,17 +4035,30 @@ async function renderJobs(reset = false) {
             // Hustlers can apply to any job in Tennessee, regardless of their profile location
             // The backend validates that the JOB is in Tennessee (via pickupZip)
             
-            const note = noteField.value.trim();
-            if (!note) {
-              showToast("Please add a note explaining why you're a good fit.");
-              noteField.focus();
+            // Get "Why I'm a Good Fit" text
+            const whyFitField = document.getElementById("applyNoteField");
+            const whyFit = whyFitField ? whyFitField.value.trim() : "";
+            if (!whyFit) {
+              showToast("Please explain why you're a good fit for this job.");
+              if (whyFitField) whyFitField.focus();
               return;
             }
-
+            
+            // Get equipment the hustler has
+            const equipmentChecks = document.querySelectorAll('input[name="hustlerEquipment"]:checked');
+            const equipment = Array.from(equipmentChecks).map(cb => cb.value);
+            
+            // Get estimated time
+            const estTimeSelect = document.getElementById("estimatedTime");
+            const estimatedTime = estTimeSelect ? estTimeSelect.value : "";
+            
             // Get proposed amount if negotiating (counter offer)
             let proposedAmount = null;
+            let priceReason = "";
             const negotiateCheck = document.getElementById("negotiatePrice");
             const amtField = document.getElementById("proposedAmount");
+            const priceReasonField = document.getElementById("priceReasonField");
+            
             if (negotiateCheck && negotiateCheck.checked && amtField) {
               proposedAmount = parseFloat(amtField.value);
               if (isNaN(proposedAmount) || proposedAmount <= 0) {
@@ -3948,7 +4066,38 @@ async function renderJobs(reset = false) {
                 amtField.focus();
                 return;
               }
+              // Require price reason when counter offering
+              priceReason = priceReasonField ? priceReasonField.value.trim() : "";
+              if (!priceReason) {
+                showToast("Please explain why you're suggesting a different price.");
+                if (priceReasonField) priceReasonField.focus();
+                return;
+              }
             }
+            
+            // Build structured note with all application info
+            let structuredNote = whyFit;
+            if (equipment.length > 0) {
+              structuredNote += `\n\n📦 Equipment I have: ${equipment.join(", ")}`;
+            }
+            if (estimatedTime) {
+              const timeLabels = {
+                "30min": "30 minutes",
+                "1hr": "1 hour",
+                "2hr": "2 hours",
+                "3hr": "3 hours",
+                "4hr": "4 hours",
+                "half-day": "Half day (4-6 hours)",
+                "full-day": "Full day (6-8 hours)",
+                "multi-day": "Multiple days"
+              };
+              structuredNote += `\n\n⏱️ Estimated time: ${timeLabels[estimatedTime] || estimatedTime}`;
+            }
+            if (priceReason) {
+              structuredNote += `\n\n💰 Price reason: ${priceReason}`;
+            }
+            
+            const note = structuredNote;
             
             // Disable button and show loading state
             applyBtn.disabled = true;
@@ -4130,6 +4279,288 @@ async function renderJobs(reset = false) {
 
       // Customer Actions: Payment, Delete/Cancel job
       if (user && user.id === job.customerId && userMode === "customer") {
+        
+        // Show Applications Section (when job is OPEN and no hustler assigned yet)
+        if (!job.hustlerId && (job.status || "").toUpperCase() === "OPEN") {
+          const applicationsSection = document.createElement("div");
+          applicationsSection.style.cssText = `
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-radius: 12px;
+            border: 1px solid #bae6fd;
+          `;
+          
+          // Fetch offers for this job
+          let offers = [];
+          try {
+            const token = localStorage.getItem("hustl_token");
+            const response = await fetch(`/offers/${jobId}`, {
+              headers: token ? { "Authorization": `Bearer ${token}` } : {}
+            });
+            if (response.ok) {
+              offers = await response.json();
+            }
+          } catch (error) {
+            console.error("Error fetching offers:", error);
+          }
+          
+          const pendingOffers = offers.filter(o => o.status === "PENDING");
+          
+          const sectionHeader = document.createElement("div");
+          sectionHeader.style.cssText = `
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+          `;
+          sectionHeader.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 1.5rem;">📬</span>
+              <div>
+                <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a;">Applications</h3>
+                <div style="font-size: 0.8rem; color: #64748b;">${pendingOffers.length} ${pendingOffers.length === 1 ? 'hustler' : 'hustlers'} applied</div>
+              </div>
+            </div>
+          `;
+          applicationsSection.appendChild(sectionHeader);
+          
+          if (pendingOffers.length === 0) {
+            const emptyState = document.createElement("div");
+            emptyState.style.cssText = `
+              text-align: center;
+              padding: 2rem 1rem;
+              color: #64748b;
+            `;
+            emptyState.innerHTML = `
+              <div style="font-size: 2rem; margin-bottom: 0.5rem;">⏳</div>
+              <div style="font-weight: 500;">No applications yet</div>
+              <div style="font-size: 0.85rem; margin-top: 0.25rem;">Hustlers will start applying soon!</div>
+            `;
+            applicationsSection.appendChild(emptyState);
+          } else {
+            // Display each application as a card
+            const applicationsGrid = document.createElement("div");
+            applicationsGrid.style.cssText = `
+              display: flex;
+              flex-direction: column;
+              gap: 1rem;
+            `;
+            
+            for (const offer of pendingOffers) {
+              const hustler = offer.hustler || {};
+              const offerCard = document.createElement("div");
+              offerCard.style.cssText = `
+                background: white;
+                border-radius: 12px;
+                padding: 1rem;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+                border: 2px solid transparent;
+                transition: all 0.2s;
+              `;
+              
+              // Parse the note for structured data
+              const noteText = offer.note || "";
+              const hasEquipment = noteText.includes("📦 Equipment I have:");
+              const hasEstTime = noteText.includes("⏱️ Estimated time:");
+              const hasPriceReason = noteText.includes("💰 Price reason:");
+              
+              // Extract main message (before structured data)
+              let mainMessage = noteText.split("\n\n📦")[0].split("\n\n⏱️")[0].split("\n\n💰")[0];
+              
+              // Extract equipment
+              let equipment = "";
+              if (hasEquipment) {
+                const eqMatch = noteText.match(/📦 Equipment I have: ([^\n]+)/);
+                if (eqMatch) equipment = eqMatch[1];
+              }
+              
+              // Extract estimated time
+              let estTime = "";
+              if (hasEstTime) {
+                const timeMatch = noteText.match(/⏱️ Estimated time: ([^\n]+)/);
+                if (timeMatch) estTime = timeMatch[1];
+              }
+              
+              // Extract price reason
+              let priceReason = "";
+              if (hasPriceReason) {
+                const priceMatch = noteText.match(/💰 Price reason: ([^\n]+)/);
+                if (priceMatch) priceReason = priceMatch[1];
+              }
+              
+              // Price comparison
+              const originalAmount = job.payType === "flat" 
+                ? Number(job.amount || 0)
+                : (Number(job.hourlyRate || 0) * Number(job.estHours || 0));
+              const proposedAmount = offer.proposedAmount ? Number(offer.proposedAmount) : null;
+              const isCounterOffer = proposedAmount && Math.abs(proposedAmount - originalAmount) > 0.01;
+              
+              offerCard.innerHTML = `
+                <!-- Hustler Header -->
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                  <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.2rem;">
+                    ${(hustler.name || "H")[0].toUpperCase()}
+                  </div>
+                  <div style="flex: 1;">
+                    <div style="font-weight: 600; font-size: 1rem;">${hustler.name || hustler.username || "Hustler"}</div>
+                    <div style="font-size: 0.8rem; color: #64748b;">
+                      ${hustler.ratingAvg > 0 ? `⭐ ${Number(hustler.ratingAvg).toFixed(1)} (${hustler.ratingCount || 0} reviews)` : "New hustler"}
+                      ${hustler.jobsCompleted > 0 ? ` · ${hustler.jobsCompleted} jobs done` : ""}
+                    </div>
+                  </div>
+                  <button class="view-profile-btn" data-hustler-id="${offer.hustlerId}" style="padding: 0.4rem 0.75rem; background: transparent; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.8rem; color: #374151; cursor: pointer;">
+                    View Profile
+                  </button>
+                </div>
+                
+                <!-- Price Section -->
+                <div style="padding: 0.75rem; background: ${isCounterOffer ? '#fef3c7' : '#dcfce7'}; border-radius: 8px; margin-bottom: 0.75rem;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                      <div style="font-size: 0.75rem; color: ${isCounterOffer ? '#92400e' : '#059669'}; margin-bottom: 0.25rem;">
+                        ${isCounterOffer ? '💬 Counter Offer' : '✓ Accepts Your Price'}
+                      </div>
+                      <div style="font-size: 1.5rem; font-weight: 700; color: ${isCounterOffer ? '#92400e' : '#059669'};">
+                        $${proposedAmount ? proposedAmount.toFixed(0) : originalAmount.toFixed(0)}
+                        ${job.payType === "hourly" ? '/hr' : ''}
+                      </div>
+                    </div>
+                    ${isCounterOffer ? `
+                      <div style="text-align: right;">
+                        <div style="font-size: 0.7rem; color: #92400e;">Your offer: $${originalAmount.toFixed(0)}</div>
+                        <div style="font-size: 0.75rem; color: ${proposedAmount > originalAmount ? '#dc2626' : '#059669'}; font-weight: 600;">
+                          ${proposedAmount > originalAmount ? '+' : ''}$${(proposedAmount - originalAmount).toFixed(0)}
+                        </div>
+                      </div>
+                    ` : ''}
+                  </div>
+                  ${priceReason ? `
+                    <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid ${isCounterOffer ? '#fcd34d' : '#86efac'}; font-size: 0.85rem; color: ${isCounterOffer ? '#92400e' : '#166534'};">
+                      <strong>Reason:</strong> ${priceReason}
+                    </div>
+                  ` : ''}
+                </div>
+                
+                <!-- Why I'm a Good Fit -->
+                <div style="margin-bottom: 0.75rem;">
+                  <div style="font-size: 0.75rem; font-weight: 600; color: #374151; margin-bottom: 0.25rem;">📝 Why I'm a Good Fit</div>
+                  <div style="font-size: 0.9rem; color: #1f2937; line-height: 1.5; padding: 0.5rem; background: #f9fafb; border-radius: 6px;">
+                    ${mainMessage || "No message provided"}
+                  </div>
+                </div>
+                
+                <!-- Equipment & Time -->
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
+                  ${equipment ? `
+                    <div style="padding: 0.4rem 0.75rem; background: #e0f2fe; border-radius: 6px; font-size: 0.8rem; color: #0369a1;">
+                      📦 ${equipment}
+                    </div>
+                  ` : ''}
+                  ${estTime ? `
+                    <div style="padding: 0.4rem 0.75rem; background: #f3e8ff; border-radius: 6px; font-size: 0.8rem; color: #7c3aed;">
+                      ⏱️ ${estTime}
+                    </div>
+                  ` : ''}
+                </div>
+                
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 0.5rem;">
+                  <button class="accept-offer-btn" data-offer-id="${offer.id}" style="flex: 1; padding: 0.75rem; background: #059669; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer;">
+                    ✓ Accept ${hustler.name ? hustler.name.split(' ')[0] : 'Hustler'}
+                  </button>
+                  <button class="decline-offer-btn" data-offer-id="${offer.id}" style="padding: 0.75rem 1rem; background: transparent; color: #dc2626; border: 1px solid #fca5a5; border-radius: 8px; font-weight: 500; cursor: pointer;">
+                    ✗
+                  </button>
+                </div>
+              `;
+              
+              applicationsGrid.appendChild(offerCard);
+            }
+            
+            applicationsSection.appendChild(applicationsGrid);
+          }
+          
+          actionsSection.appendChild(applicationsSection);
+          
+          // Add event handlers for application actions
+          setTimeout(() => {
+            // View Profile buttons
+            applicationsSection.querySelectorAll('.view-profile-btn').forEach(btn => {
+              btn.addEventListener('click', () => {
+                const hustlerId = btn.dataset.hustlerId;
+                if (hustlerId) openUserProfile(hustlerId);
+              });
+            });
+            
+            // Accept buttons
+            applicationsSection.querySelectorAll('.accept-offer-btn').forEach(btn => {
+              btn.addEventListener('click', async () => {
+                const offerId = btn.dataset.offerId;
+                if (!offerId) return;
+                
+                btn.disabled = true;
+                btn.textContent = "Accepting...";
+                
+                try {
+                  const token = localStorage.getItem("hustl_token");
+                  const response = await fetch(`/offers/${offerId}/accept`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "Authorization": `Bearer ${token}`
+                    }
+                  });
+                  
+                  if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || "Failed to accept");
+                  }
+                  
+                  showToast("✓ Hustler accepted! You can now message them.");
+                  overlay.remove();
+                  document.body.style.overflow = "";
+                  openJobDetails(jobId); // Refresh
+                } catch (error) {
+                  showToast("Error: " + (error.message || "Failed to accept"));
+                  btn.disabled = false;
+                  btn.textContent = "✓ Accept";
+                }
+              });
+            });
+            
+            // Decline buttons
+            applicationsSection.querySelectorAll('.decline-offer-btn').forEach(btn => {
+              btn.addEventListener('click', async () => {
+                const offerId = btn.dataset.offerId;
+                if (!offerId) return;
+                
+                const card = btn.closest('div[style*="background: white"]');
+                
+                try {
+                  const token = localStorage.getItem("hustl_token");
+                  await fetch(`/offers/${offerId}/reject`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "Authorization": `Bearer ${token}`
+                    }
+                  });
+                  
+                  if (card) {
+                    card.style.opacity = "0.5";
+                    card.style.transform = "scale(0.95)";
+                    setTimeout(() => card.remove(), 300);
+                  }
+                  showToast("Application declined");
+                } catch (error) {
+                  showToast("Error: " + (error.message || "Failed to decline"));
+                }
+              });
+            });
+          }, 0);
+        }
+        
         // Show accepted hustler info if one is assigned
         if (job.hustlerId && job.hustler) {
           const hustlerInfo = document.createElement("div");
