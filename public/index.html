@@ -4580,17 +4580,35 @@ async function renderJobs(reset = false) {
 
     // Load jobs from API (use window.hustlAPI if available, otherwise fallback)
     let response;
-    if (window.hustlAPI && window.hustlAPI.jobs) {
-      response = await window.hustlAPI.jobs.list(filters);
-    } else {
-      // Fallback: Try direct API call
-      const params = new URLSearchParams();
-      if (filters.page) params.append('page', filters.page);
-      if (filters.limit) params.append('limit', filters.limit);
-      if (filters.zip) params.append('zip', filters.zip);
-      
-      const apiResponse = await fetch(`${BACKEND_URL}/api/jobs?${params.toString()}`);
-      response = await apiResponse.json();
+    try {
+      if (window.hustlAPI && window.hustlAPI.jobs && typeof window.hustlAPI.jobs.list === 'function') {
+        response = await window.hustlAPI.jobs.list(filters);
+      } else {
+        // Fallback: Try direct API call
+        const params = new URLSearchParams();
+        if (filters.page) params.append('page', filters.page);
+        if (filters.limit) params.append('limit', filters.limit);
+        if (filters.zip) params.append('zip', filters.zip);
+        if (filters.category) params.append('category', filters.category);
+        
+        const apiResponse = await fetch(`${BACKEND_URL}/api/jobs?${params.toString()}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!apiResponse.ok) {
+          throw new Error(`API returned ${apiResponse.status}: ${apiResponse.statusText}`);
+        }
+        
+        response = await apiResponse.json();
+      }
+    } catch (apiError) {
+      console.error("API call failed:", apiError);
+      // If API fails, use empty response instead of crashing
+      response = { jobs: [], pagination: { hasMore: false, total: 0 } };
+      throw new Error(`Failed to load jobs: ${apiError.message || 'Network error'}`);
     }
     
     // Handle paginated response - ensure we always have an array
