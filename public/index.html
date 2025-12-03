@@ -462,12 +462,25 @@
     
     /* Profile view specific - no extra top spacing */
     #view-profile {
-      padding-top: 0;
-      margin-top: 0;
+      padding-top: 0 !important;
+      margin-top: 0 !important;
     }
     
     #view-profile > *:first-child {
-      margin-top: 0;
+      margin-top: 0 !important;
+    }
+    
+    /* Remove all top margins from profile elements */
+    #view-profile .profile-hero-card {
+      margin-top: 0 !important;
+    }
+    
+    #view-profile .profile-quick-stats {
+      margin-top: 0 !important;
+    }
+    
+    #view-profile .profile-tabs {
+      margin-top: 0 !important;
     }
     
     /* Hide authSection properly when logged in or not on home */
@@ -1792,11 +1805,15 @@
     }
 
     footer {
-      border-top: 1px solid var(--border);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
       padding: 0.75rem 1rem;
       font-size: 0.75rem;
-      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-      color: var(--text-muted);
+      background: #000000;
+      color: #ffffff;
+    }
+    
+    footer .footer-links span {
+      color: #ffffff;
     }
 
     .footer-row {
@@ -4074,27 +4091,50 @@ function showChangePasswordModal() {
           // If hustlers_quote, both stay null (hustlers will propose prices)
 
           try {
+            // Build address string from pickup location
+            const address = `${pickupAddress}, ${pickupCity}, TN ${pickupArea}`.trim();
+            
+            // Build date/time - use today + 1 day as default, 9am-5pm
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const date = tomorrow.toISOString().split('T')[0];
+            const startTime = new Date(tomorrow);
+            startTime.setHours(9, 0, 0, 0);
+            const endTime = new Date(tomorrow);
+            endTime.setHours(17, 0, 0, 0);
+            
+            // Transform payment data to backend format
+            const payType = paymentType || 'flat';
+            const amount = payType === 'flat' ? (flat_amount_cents / 100) : (hourly_rate_cents / 100 * maxHours);
+            const hourlyRate = payType === 'hourly' ? (hourly_rate_cents / 100) : null;
+            const estHours = payType === 'hourly' ? maxHours : null;
+            
             const jobData = {
               title,
               category: finalCategory,
               description: desc,
-              pickup_area: pickupArea,
-              pickup_city: pickupCity,
-              pickup_address: pickupAddress,
-              on_site_only: onSiteOnly,
-              dropoff_area: onSiteOnly ? null : dropoffArea,
-              dropoff_city: onSiteOnly ? null : dropoffCity,
-              dropoff_address: onSiteOnly ? null : dropoffAddress,
-              pricing_option: pricingOption, // "set_price" or "hustlers_quote"
-              payment_type: paymentType,
-              flat_amount_cents,
-              hourly_rate_cents,
-              max_hours: paymentType === "hourly" ? maxHours : null,
-              notes,
-              // New fields
-              equipment_needed: equipmentNeeded.length > 0 ? equipmentNeeded : null,
-              workers_needed: workersNeeded,
-              sub_tags: subTags.length > 0 ? subTags : null,
+              address, // Backend expects single address
+              date, // Backend expects ISO date string
+              startTime: startTime.toISOString(), // Backend expects ISO datetime
+              endTime: endTime.toISOString(), // Backend expects ISO datetime
+              payType, // Backend expects 'flat' or 'hourly'
+              amount, // Backend expects dollar amount (not cents)
+              hourlyRate, // Optional, for hourly jobs
+              estHours, // Optional, for hourly jobs
+              teamSize: workersNeeded || 1,
+              requirements: {
+                pickup_area: pickupArea,
+                pickup_city: pickupCity,
+                pickup_address: pickupAddress,
+                on_site_only: onSiteOnly,
+                dropoff_area: onSiteOnly ? null : dropoffArea,
+                dropoff_city: onSiteOnly ? null : dropoffCity,
+                dropoff_address: onSiteOnly ? null : dropoffAddress,
+                equipment_needed: equipmentNeeded.length > 0 ? equipmentNeeded : null,
+                sub_tags: subTags.length > 0 ? subTags : null,
+                notes: notes || null,
+                pricing_option: pricingOption, // Store for future use
+              },
             };
 
             await window.hustlAPI.jobs.create(jobData);
