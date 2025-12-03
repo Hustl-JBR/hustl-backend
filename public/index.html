@@ -4886,7 +4886,17 @@ async function renderJobs(reset = false) {
   } catch (error) {
     console.error("Error loading jobs:", error);
     if (jobsList) {
-      jobsList.innerHTML = "<div class='muted'>Error loading jobs. Please try again.</div>";
+      // Show a more helpful error message
+      const errorMsg = error.message || "Unknown error";
+      jobsList.innerHTML = `
+        <div class='muted' style='padding: 2rem; text-align: center;'>
+          <div style='margin-bottom: 1rem; font-size: 1.1rem;'>⚠️ Unable to load jobs</div>
+          <div style='margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem;'>${errorMsg}</div>
+          <button id="retryJobsBtn" style='padding: 0.75rem 1.5rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 0.9rem; cursor: pointer; font-weight: 600;' onclick="if(typeof renderJobs === 'function') renderJobs(true);">
+            🔄 Try Again
+          </button>
+        </div>
+      `;
     }
   }
 }
@@ -7321,7 +7331,7 @@ async function renderJobs(reset = false) {
       <div class="quick-stat-card">
         <div class="quick-stat-icon">${isHustler ? '💰' : '💸'}</div>
         <div class="quick-stat-value">$${isHustler ? totalEarned.toFixed(0) : totalSpent.toFixed(0)}</div>
-        <div class="quick-stat-label">${isHustler ? 'Earned' : 'Spent'}</div>
+        <div class="quick-stat-label">Earned</div>
       </div>
       <div class="quick-stat-card">
         <div class="quick-stat-icon">⭐</div>
@@ -7347,7 +7357,7 @@ async function renderJobs(reset = false) {
           $${isHustler ? totalEarned.toFixed(2) : totalSpent.toFixed(2)}
         </div>
         <div style="color: var(--text-muted); margin-bottom: 1.5rem;">
-          ${isHustler ? 'Total Earnings' : 'Total Spent'}
+          Total Earned
         </div>
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; text-align: left;">
           <div style="padding: 1rem; background: #f0fdf4; border-radius: 10px;">
