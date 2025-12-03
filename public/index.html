@@ -226,6 +226,11 @@
       flex-direction: column;
       justify-content: flex-start;
     }
+    
+    /* When logged in, hide auth section completely */
+    body.logged-in #authSection {
+      display: none !important;
+    }
 
     /* CLEAN MODERN HEADER */
     header {
@@ -446,17 +451,20 @@
     }
 
     main {
-      flex: 1 0 auto;
+      flex: 0 1 auto;
       padding: 1rem;
       max-width: 1100px;
       margin: 0 auto;
       width: 100%;
-      display: flex;
-      flex-direction: column;
     }
     
-    main > section {
-      flex: 0 0 auto;
+    /* Hide authSection properly */
+    #authSection[style*="display: none"] {
+      display: none !important;
+      height: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      overflow: hidden !important;
     }
 
     .layout-grid {
@@ -6959,8 +6967,13 @@ try {
     const user = getCurrentUser();
     const desktopAuth = document.getElementById('headerAuthDesktop');
     const mobileAuth = document.querySelector('.mobile-menu .header-auth');
-    const mobileLoginBtn = document.getElementById('mobileLoginBtn');
-    const mobileSignupBtn = document.getElementById('mobileSignupBtn');
+    
+    // Add/remove logged-in class on body
+    if (user) {
+      document.body.classList.add('logged-in');
+    } else {
+      document.body.classList.remove('logged-in');
+    }
     
     if (user) {
       // Logged in state
