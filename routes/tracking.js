@@ -23,23 +23,17 @@ router.post('/start/:jobId', authenticate, requireRole('HUSTLER'), async (req, r
       return res.status(403).json({ error: 'You are not assigned to this job' });
     }
 
-    if (job.status !== 'ASSIGNED' && job.status !== 'IN_PROGRESS') {
-      return res.status(400).json({ error: 'Job must be ASSIGNED or IN_PROGRESS to start tracking' });
+    if (job.status !== 'ASSIGNED') {
+      return res.status(400).json({ error: 'Job must be ASSIGNED to start tracking' });
     }
 
-    // Update job status to IN_PROGRESS if not already
-    if (job.status === 'ASSIGNED') {
-      await prisma.job.update({
-        where: { id: jobId },
-        data: { status: 'IN_PROGRESS' },
-      });
-    }
+    // Job remains ASSIGNED when tracking starts (no status change needed)
 
     res.json({ 
       message: 'Tracking started',
       job: {
         ...job,
-        status: 'IN_PROGRESS',
+        status: 'ASSIGNED',
       },
     });
   } catch (error) {

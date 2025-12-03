@@ -450,7 +450,7 @@ router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER
       where: {
         customerId: req.user.id,
         status: {
-          in: ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM'],
+          in: ['ASSIGNED', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM'],
         },
       },
     });

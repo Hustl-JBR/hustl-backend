@@ -199,7 +199,7 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
         where: {
           hustlerId: req.user.id,
           status: {
-            in: ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM'],
+            in: ['ASSIGNED', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM'],
           },
         },
       });
@@ -569,8 +569,8 @@ router.post('/:id/cancel', authenticate, requireRole('CUSTOMER'), async (req, re
       });
     }
 
-    // BUSINESS RULE: Customer cannot delete after Hustler is OTW (IN_PROGRESS)
-    if (job.status === 'IN_PROGRESS') {
+    // BUSINESS RULE: Customer cannot delete after Hustler is assigned (ASSIGNED)
+    if (job.status === 'ASSIGNED') {
       return res.status(400).json({ 
         error: 'Cannot cancel job that is in progress. The hustler is already on the way or working. Please contact support if there is an emergency.' 
       });
