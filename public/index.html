@@ -1546,17 +1546,83 @@
             <select id="jobCategory">
               <option value="">Choose a category</option>
               <option value="moving">🚚 Moving / Hauling</option>
-              <option value="yard">🌿 Yard work / Outdoor</option>
+              <option value="yard">🌿 Yard Work / Outdoor</option>
+              <option value="dump">🗑️ Dump Run / Junk Removal</option>
               <option value="cleaning">🧹 Cleaning / Organizing</option>
-              <option value="furniture">🛠 Furniture / Assembly</option>
-              <option value="other">⭐ Other</option>
+              <option value="furniture">🛠️ Furniture Build / Assembly</option>
+              <option value="pets">🐕 Pet Care / Walking</option>
+              <option value="errands">🏃 Errands / Delivery</option>
+              <option value="other">✨ Other (Custom)</option>
             </select>
           </div>
 
-          <div class="field">
-            <label for="jobDescription">Description</label>
-            <textarea id="jobDescription" placeholder="What needs to be done? Stairs, heavy items, timing, access, etc."></textarea>
+          <!-- Custom category input (shown when "Other" is selected) -->
+          <div class="field" id="customCategoryField" style="display: none;">
+            <label for="customCategory">What type of job is this?</label>
+            <input id="customCategory" type="text" placeholder="Describe your custom category..." />
           </div>
+
+          <div class="field">
+            <label for="jobDescription">Job Description</label>
+            <textarea id="jobDescription" rows="5" style="min-height: 120px;" placeholder="What needs to be done? Be specific about:
+• What items need moving/work
+• Any stairs, heavy items, or tight spaces
+• When you need this done
+• Any access instructions"></textarea>
+            <div class="field-tip" style="margin-top: 0.5rem; padding: 0.75rem; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 8px; border-left: 3px solid var(--primary);">
+              <span style="font-size: 0.85rem; color: #1e40af;">💡 <strong>Pro tip:</strong> Clearer details help hustlers choose your job faster and give better quotes!</span>
+            </div>
+          </div>
+
+          <!-- Equipment Needed Section -->
+          <div class="field">
+            <label style="margin-bottom: 0.75rem; display: block;">🔧 Equipment Needed <span class="muted">(check all that apply)</span></label>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-bottom: 0.75rem;">
+              <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: var(--glass); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                <input type="checkbox" name="equipment" value="truck" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+                <span>🚛 Truck</span>
+              </label>
+              <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: var(--glass); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                <input type="checkbox" name="equipment" value="trailer" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+                <span>🚗 Trailer</span>
+              </label>
+              <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: var(--glass); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                <input type="checkbox" name="equipment" value="straps" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+                <span>🪢 Moving Straps</span>
+              </label>
+              <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: var(--glass); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                <input type="checkbox" name="equipment" value="dolly" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+                <span>🛒 Dolly</span>
+              </label>
+              <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: var(--glass); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                <input type="checkbox" name="equipment" value="tools" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+                <span>🧰 Tools</span>
+              </label>
+              <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: var(--glass); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                <input type="checkbox" name="equipment" value="lawnmower" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+                <span>🌿 Lawn Mower</span>
+              </label>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <input type="checkbox" id="customEquipmentToggle" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+              <label for="customEquipmentToggle" style="cursor: pointer; color: var(--primary); font-weight: 500;">+ Add custom equipment</label>
+            </div>
+            <div id="customEquipmentField" style="display: none; margin-top: 0.5rem;">
+              <input id="customEquipment" type="text" placeholder="Other equipment needed..." />
+            </div>
+          </div>
+
+          <!-- Workers Needed -->
+          <div class="field">
+            <label for="workersNeeded">👥 How many workers needed?</label>
+            <select id="workersNeeded">
+              <option value="1">1 person</option>
+              <option value="2">2 people</option>
+              <option value="3">3+ people (team job)</option>
+            </select>
+          </div>
+
+          <div class="section-title" style="margin-top: 1rem; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">📍 Location Details</div>
 
           <div class="field-inline">
             <div class="field">
@@ -1598,7 +1664,7 @@
             </div>
           </div>
 
-          <div class="section-title" style="margin-top:0.5rem;">Payment</div>
+          <div class="section-title" style="margin-top: 1rem; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">💰 Payment</div>
           <div class="field-inline">
             <div class="field">
               <label for="paymentType">Payment type</label>
@@ -2385,6 +2451,29 @@ window.startExploring = function() {
       document.getElementById("flatAmountField").style.display = "block";
       document.getElementById("hourlyFields").style.display = "none";
       document.getElementById("dropoffFields").style.display = "block";
+      
+      // Reset new fields
+      if (document.getElementById("customCategory")) {
+        document.getElementById("customCategory").value = "";
+        document.getElementById("customCategoryField").style.display = "none";
+      }
+      if (document.getElementById("workersNeeded")) {
+        document.getElementById("workersNeeded").value = "1";
+      }
+      if (document.getElementById("customEquipment")) {
+        document.getElementById("customEquipment").value = "";
+        document.getElementById("customEquipmentField").style.display = "none";
+        document.getElementById("customEquipmentToggle").checked = false;
+      }
+      // Reset equipment checkboxes
+      document.querySelectorAll('input[name="equipment"]').forEach(cb => {
+        cb.checked = false;
+        const label = cb.closest('.equipment-checkbox');
+        if (label) {
+          label.style.background = 'var(--glass)';
+          label.style.borderColor = 'var(--border)';
+        }
+      });
     }
     function initJobsForm() {
       const jobOnSiteOnly = document.getElementById("jobOnSiteOnly");
@@ -2403,6 +2492,40 @@ window.startExploring = function() {
         } else {
           flatField.style.display = "none";
           hourlyFields.style.display = "grid";
+        }
+      });
+
+      // Custom category toggle
+      const jobCategory = document.getElementById("jobCategory");
+      const customCategoryField = document.getElementById("customCategoryField");
+      if (jobCategory && customCategoryField) {
+        jobCategory.addEventListener("change", () => {
+          customCategoryField.style.display = jobCategory.value === "other" ? "block" : "none";
+        });
+      }
+
+      // Custom equipment toggle
+      const customEquipmentToggle = document.getElementById("customEquipmentToggle");
+      const customEquipmentField = document.getElementById("customEquipmentField");
+      if (customEquipmentToggle && customEquipmentField) {
+        customEquipmentToggle.addEventListener("change", () => {
+          customEquipmentField.style.display = customEquipmentToggle.checked ? "block" : "none";
+        });
+      }
+
+      // Equipment checkbox hover effects
+      document.querySelectorAll('.equipment-checkbox').forEach(label => {
+        const checkbox = label.querySelector('input[type="checkbox"]');
+        if (checkbox) {
+          checkbox.addEventListener('change', () => {
+            if (checkbox.checked) {
+              label.style.background = 'var(--primary-soft)';
+              label.style.borderColor = 'var(--primary)';
+            } else {
+              label.style.background = 'var(--glass)';
+              label.style.borderColor = 'var(--border)';
+            }
+          });
         }
       });
 
@@ -2457,6 +2580,23 @@ window.startExploring = function() {
             .getElementById("jobNotes")
             .value.trim();
 
+          // Collect new fields
+          const customCategory = document.getElementById("customCategory")?.value.trim() || "";
+          const workersNeeded = Number(document.getElementById("workersNeeded")?.value || 1);
+          const customEquipment = document.getElementById("customEquipment")?.value.trim() || "";
+          
+          // Collect equipment checkboxes
+          const equipmentNeeded = [];
+          document.querySelectorAll('input[name="equipment"]:checked').forEach(cb => {
+            equipmentNeeded.push(cb.value);
+          });
+          if (customEquipment) {
+            equipmentNeeded.push(customEquipment);
+          }
+
+          // Determine final category
+          const finalCategory = category === "other" && customCategory ? customCategory : category;
+
           if (!title || !category || !desc)
             return showToast(
               "Please fill title, category, and description."
@@ -2484,7 +2624,7 @@ window.startExploring = function() {
           try {
             const jobData = {
               title,
-              category,
+              category: finalCategory,
               description: desc,
               pickup_area: pickupArea,
               pickup_city: pickupCity,
@@ -2498,6 +2638,9 @@ window.startExploring = function() {
               hourly_rate_cents,
               max_hours: paymentType === "hourly" ? maxHours : null,
               notes,
+              // New fields
+              equipment_needed: equipmentNeeded,
+              workers_needed: workersNeeded,
             };
 
             await window.hustlAPI.jobs.create(jobData);
