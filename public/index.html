@@ -476,13 +476,23 @@
       margin-bottom: 0.5rem;
       z-index: 1;
       position: relative;
-      opacity: 1;
-      visibility: visible;
+      opacity: 1 !important;
+      visibility: visible !important;
+      display: block !important;
     }
     
     .mobile-menu .btn-signup-header {
       background: var(--primary) !important;
       color: white !important;
+      font-weight: 600;
+    }
+    
+    /* Sign Out button specific styling */
+    .mobile-menu .btn-signup-header[onclick*="handleSignOut"],
+    .mobile-menu .btn-signup-header[onclick*="SignOut"] {
+      background: #fee2e2 !important;
+      color: #dc2626 !important;
+      border: 2px solid #fca5a5 !important;
       font-weight: 600;
     }
     
