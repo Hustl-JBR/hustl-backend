@@ -1541,25 +1541,97 @@
             <input id="jobTitle" type="text" placeholder="Example: Dump run from West Knoxville" />
           </div>
 
+          <!-- Category Selection - Uber-style -->
           <div class="field">
-            <label for="jobCategory">Category</label>
-            <select id="jobCategory">
-              <option value="">Choose a category</option>
-              <option value="moving">🚚 Moving / Hauling</option>
-              <option value="yard">🌿 Yard Work / Outdoor</option>
-              <option value="dump">🗑️ Dump Run / Junk Removal</option>
-              <option value="cleaning">🧹 Cleaning / Organizing</option>
-              <option value="furniture">🛠️ Furniture Build / Assembly</option>
-              <option value="pets">🐕 Pet Care / Walking</option>
-              <option value="errands">🏃 Errands / Delivery</option>
-              <option value="other">✨ Other (Custom)</option>
+            <label for="jobCategory" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+              <span>📂 Job Category</span>
+              <span class="muted" style="font-weight: 400;">(required)</span>
+            </label>
+            <select id="jobCategory" style="font-size: 1rem;">
+              <option value="">Select a category...</option>
+              
+              <!-- Outdoor & Property -->
+              <optgroup label="🏡 Outdoor & Property">
+                <option value="power-washing">💦 Power Washing</option>
+                <option value="yard-work">🌿 Yard Work / Lawn Care</option>
+                <option value="landscaping">🌳 Landscaping</option>
+                <option value="mulching">🍂 Mulching</option>
+                <option value="snow-removal">❄️ Snow Removal</option>
+                <option value="driveway-sealing">🛣️ Driveway Sealing</option>
+                <option value="gutter-cleaning">🏠 Gutter Cleaning</option>
+                <option value="tree-trimming">🌲 Tree Trimming</option>
+              </optgroup>
+              
+              <!-- Moving & Hauling -->
+              <optgroup label="🚚 Moving & Hauling">
+                <option value="moving">📦 Moving / Hauling</option>
+                <option value="dump-run">🗑️ Dump Run / Junk Removal</option>
+                <option value="furniture-moving">🛋️ Furniture Moving</option>
+                <option value="appliance-moving">🧊 Appliance Moving</option>
+                <option value="storage-help">📦 Storage Unit Help</option>
+              </optgroup>
+              
+              <!-- Home Services -->
+              <optgroup label="🏠 Home Services">
+                <option value="cleaning">🧹 Cleaning / Organizing</option>
+                <option value="furniture-assembly">🔧 Furniture Assembly</option>
+                <option value="painting">🎨 Painting (Indoor/Outdoor)</option>
+                <option value="handyman">🔨 Handyman Help</option>
+                <option value="pressure-washing">💧 Pressure Washing</option>
+                <option value="window-cleaning">🪟 Window Cleaning</option>
+                <option value="carpet-cleaning">🧽 Carpet Cleaning</option>
+              </optgroup>
+              
+              <!-- Vehicles -->
+              <optgroup label="🚗 Vehicles">
+                <option value="car-cleaning">🚿 Car Washing / Detailing</option>
+                <option value="car-help">🔧 Car Help / Light Mechanical</option>
+              </optgroup>
+              
+              <!-- Errands & Delivery -->
+              <optgroup label="📦 Errands & Delivery">
+                <option value="delivery">🚚 Delivery / Pickup</option>
+                <option value="errands">🏃 Errands</option>
+                <option value="grocery">🛒 Grocery Shopping</option>
+                <option value="waiting-in-line">⏰ Waiting in Line</option>
+              </optgroup>
+              
+              <!-- Events & Special -->
+              <optgroup label="🎉 Events & Special">
+                <option value="event-setup">🎪 Event Setup / Takedown</option>
+                <option value="party-help">🥳 Party Help</option>
+                <option value="moving-day-help">📅 Moving Day Assistance</option>
+              </optgroup>
+              
+              <!-- Pets -->
+              <optgroup label="🐕 Pet Care">
+                <option value="pet-walking">🐕 Dog Walking</option>
+                <option value="pet-sitting">🏠 Pet Sitting</option>
+                <option value="pet-transport">🚗 Pet Transport</option>
+              </optgroup>
+              
+              <!-- Other -->
+              <optgroup label="✨ Other">
+                <option value="other">📝 Other / Custom Job</option>
+              </optgroup>
             </select>
+          </div>
+
+          <!-- Sub-tags (shown based on category) -->
+          <div id="subTagsContainer" class="field" style="display: none;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+              <span>🏷️ What specifically?</span>
+              <span class="muted" style="font-weight: 400;">(select all that apply)</span>
+            </label>
+            <div id="subTagsGrid" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+              <!-- Dynamically populated -->
+            </div>
           </div>
 
           <!-- Custom category input (shown when "Other" is selected) -->
           <div class="field" id="customCategoryField" style="display: none;">
-            <label for="customCategory">What type of job is this?</label>
-            <input id="customCategory" type="text" placeholder="Describe your custom category..." />
+            <label for="customCategory">Describe your job type</label>
+            <input id="customCategory" type="text" placeholder="What kind of help do you need?" />
           </div>
 
           <div class="field">
@@ -1574,41 +1646,58 @@
             </div>
           </div>
 
-          <!-- Equipment Needed Section -->
-          <div class="field">
-            <label style="margin-bottom: 0.75rem; display: block;">🔧 Equipment Needed <span class="muted">(check all that apply)</span></label>
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-bottom: 0.75rem;">
-              <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: var(--glass); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                <input type="checkbox" name="equipment" value="truck" style="width: 18px; height: 18px; accent-color: var(--primary);" />
-                <span>🚛 Truck</span>
-              </label>
-              <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: var(--glass); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                <input type="checkbox" name="equipment" value="trailer" style="width: 18px; height: 18px; accent-color: var(--primary);" />
-                <span>🚗 Trailer</span>
-              </label>
-              <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: var(--glass); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                <input type="checkbox" name="equipment" value="straps" style="width: 18px; height: 18px; accent-color: var(--primary);" />
-                <span>🪢 Moving Straps</span>
-              </label>
-              <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: var(--glass); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                <input type="checkbox" name="equipment" value="dolly" style="width: 18px; height: 18px; accent-color: var(--primary);" />
-                <span>🛒 Dolly</span>
-              </label>
-              <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: var(--glass); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                <input type="checkbox" name="equipment" value="tools" style="width: 18px; height: 18px; accent-color: var(--primary);" />
-                <span>🧰 Tools</span>
-              </label>
-              <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: var(--glass); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                <input type="checkbox" name="equipment" value="lawnmower" style="width: 18px; height: 18px; accent-color: var(--primary);" />
-                <span>🌿 Lawn Mower</span>
-              </label>
-            </div>
-            <div style="display: flex; gap: 0.5rem; align-items: center;">
-              <input type="checkbox" id="customEquipmentToggle" style="width: 18px; height: 18px; accent-color: var(--primary);" />
-              <label for="customEquipmentToggle" style="cursor: pointer; color: var(--primary); font-weight: 500;">+ Add custom equipment</label>
-            </div>
-            <div id="customEquipmentField" style="display: none; margin-top: 0.5rem;">
-              <input id="customEquipment" type="text" placeholder="Other equipment needed..." />
+          <!-- Equipment Needed Section - Optional & Collapsible -->
+          <div class="field" style="border: 1px solid var(--border); border-radius: 12px; overflow: hidden;">
+            <button type="button" id="equipmentToggle" style="width: 100%; padding: 0.875rem 1rem; background: var(--glass); border: none; display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 0.95rem;">
+              <span style="display: flex; align-items: center; gap: 0.5rem;">
+                <span>🔧 Equipment Needed</span>
+                <span class="muted" style="font-weight: 400; font-size: 0.85rem;">(optional)</span>
+              </span>
+              <span id="equipmentToggleIcon" style="transition: transform 0.2s;">▼</span>
+            </button>
+            <div id="equipmentContent" style="display: none; padding: 1rem; background: var(--bg-light); border-top: 1px solid var(--border);">
+              <p style="margin: 0 0 0.75rem 0; font-size: 0.85rem; color: var(--text-muted);">Does the hustler need to bring any equipment?</p>
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-bottom: 0.75rem;">
+                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                  <input type="checkbox" name="equipment" value="truck" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+                  <span>🚛 Truck</span>
+                </label>
+                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                  <input type="checkbox" name="equipment" value="trailer" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+                  <span>🚗 Trailer</span>
+                </label>
+                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                  <input type="checkbox" name="equipment" value="straps" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+                  <span>🪢 Moving Straps</span>
+                </label>
+                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                  <input type="checkbox" name="equipment" value="dolly" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+                  <span>🛒 Dolly</span>
+                </label>
+                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                  <input type="checkbox" name="equipment" value="tools" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+                  <span>🧰 Tools</span>
+                </label>
+                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                  <input type="checkbox" name="equipment" value="lawnmower" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+                  <span>🌿 Lawn Mower</span>
+                </label>
+                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                  <input type="checkbox" name="equipment" value="pressure-washer" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+                  <span>💦 Pressure Washer</span>
+                </label>
+                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                  <input type="checkbox" name="equipment" value="ladder" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+                  <span>🪜 Ladder</span>
+                </label>
+              </div>
+              <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem;">
+                <input type="checkbox" id="customEquipmentToggle" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+                <label for="customEquipmentToggle" style="cursor: pointer; color: var(--primary); font-weight: 500; font-size: 0.9rem;">+ Other equipment</label>
+              </div>
+              <div id="customEquipmentField" style="display: none; margin-top: 0.5rem;">
+                <input id="customEquipment" type="text" placeholder="Describe other equipment needed..." />
+              </div>
             </div>
           </div>
 
@@ -2465,15 +2554,27 @@ window.startExploring = function() {
         document.getElementById("customEquipmentField").style.display = "none";
         document.getElementById("customEquipmentToggle").checked = false;
       }
+      // Reset equipment section
+      const equipmentContent = document.getElementById("equipmentContent");
+      const equipmentToggleIcon = document.getElementById("equipmentToggleIcon");
+      if (equipmentContent) equipmentContent.style.display = "none";
+      if (equipmentToggleIcon) equipmentToggleIcon.style.transform = "rotate(0deg)";
+      
       // Reset equipment checkboxes
       document.querySelectorAll('input[name="equipment"]').forEach(cb => {
         cb.checked = false;
         const label = cb.closest('.equipment-checkbox');
         if (label) {
-          label.style.background = 'var(--glass)';
+          label.style.background = '#fff';
           label.style.borderColor = 'var(--border)';
         }
       });
+      
+      // Reset sub-tags
+      const subTagsContainer = document.getElementById("subTagsContainer");
+      const subTagsGrid = document.getElementById("subTagsGrid");
+      if (subTagsContainer) subTagsContainer.style.display = "none";
+      if (subTagsGrid) subTagsGrid.innerHTML = "";
     }
     function initJobsForm() {
       const jobOnSiteOnly = document.getElementById("jobOnSiteOnly");
@@ -2495,12 +2596,84 @@ window.startExploring = function() {
         }
       });
 
-      // Custom category toggle
+      // Sub-tags data based on category
+      const subTagsData = {
+        'power-washing': ['Siding', 'Driveway', 'Roof', 'Deck', 'Patio', 'Fence', 'Sidewalk'],
+        'yard-work': ['Mowing', 'Edging', 'Leaf Removal', 'Weeding', 'Trimming', 'Fertilizing'],
+        'landscaping': ['Planting', 'Garden Bed', 'Rock/Stone', 'Irrigation', 'Design', 'Sod'],
+        'mulching': ['Spread Mulch', 'Mulch Delivery', 'Bed Prep', 'Weed Barrier'],
+        'snow-removal': ['Driveway', 'Sidewalk', 'Parking Lot', 'Salting', 'Roof'],
+        'moving': ['Full Move', 'Load Only', 'Unload Only', 'Packing Help', 'Furniture Only'],
+        'dump-run': ['Construction Debris', 'Furniture', 'Yard Waste', 'Electronics', 'Appliances'],
+        'cleaning': ['Deep Clean', 'Regular Clean', 'Move-out Clean', 'Organizing', 'Declutter'],
+        'furniture-assembly': ['IKEA', 'Office Furniture', 'Bed Frame', 'Shelving', 'Outdoor Furniture'],
+        'painting': ['Interior', 'Exterior', 'Trim', 'Fence', 'Deck Staining', 'Touch-ups'],
+        'handyman': ['Minor Repairs', 'Mounting', 'Drywall', 'Plumbing', 'Electrical', 'Door/Window'],
+        'car-cleaning': ['Exterior Wash', 'Interior Detail', 'Full Detail', 'Wax', 'Engine Clean'],
+        'pet-walking': ['Single Walk', 'Regular Schedule', 'Group Walk', 'Running'],
+        'pet-sitting': ['Day Visit', 'Overnight', 'Extended Stay', 'Multiple Pets'],
+        'event-setup': ['Tent/Canopy', 'Tables/Chairs', 'Decorations', 'Cleanup', 'AV Equipment'],
+      };
+
+      // Category change handler with sub-tags
       const jobCategory = document.getElementById("jobCategory");
       const customCategoryField = document.getElementById("customCategoryField");
-      if (jobCategory && customCategoryField) {
+      const subTagsContainer = document.getElementById("subTagsContainer");
+      const subTagsGrid = document.getElementById("subTagsGrid");
+      
+      if (jobCategory) {
         jobCategory.addEventListener("change", () => {
-          customCategoryField.style.display = jobCategory.value === "other" ? "block" : "none";
+          const category = jobCategory.value;
+          
+          // Show/hide custom category field
+          if (customCategoryField) {
+            customCategoryField.style.display = category === "other" ? "block" : "none";
+          }
+          
+          // Show/hide sub-tags
+          if (subTagsContainer && subTagsGrid) {
+            const tags = subTagsData[category];
+            if (tags && tags.length > 0) {
+              subTagsGrid.innerHTML = tags.map(tag => `
+                <label class="sub-tag-chip" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.875rem; background: #fff; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; transition: all 0.2s; font-size: 0.875rem;">
+                  <input type="checkbox" name="subTags" value="${tag.toLowerCase().replace(/\s+/g, '-')}" style="width: 16px; height: 16px; accent-color: var(--primary);" />
+                  <span>${tag}</span>
+                </label>
+              `).join('');
+              subTagsContainer.style.display = "block";
+              
+              // Add toggle effect for sub-tag chips
+              subTagsGrid.querySelectorAll('.sub-tag-chip').forEach(chip => {
+                const cb = chip.querySelector('input');
+                cb.addEventListener('change', () => {
+                  if (cb.checked) {
+                    chip.style.background = 'var(--primary-soft)';
+                    chip.style.borderColor = 'var(--primary)';
+                    chip.style.color = 'var(--primary)';
+                  } else {
+                    chip.style.background = '#fff';
+                    chip.style.borderColor = 'var(--border)';
+                    chip.style.color = 'inherit';
+                  }
+                });
+              });
+            } else {
+              subTagsContainer.style.display = "none";
+              subTagsGrid.innerHTML = "";
+            }
+          }
+        });
+      }
+
+      // Equipment section toggle
+      const equipmentToggle = document.getElementById("equipmentToggle");
+      const equipmentContent = document.getElementById("equipmentContent");
+      const equipmentToggleIcon = document.getElementById("equipmentToggleIcon");
+      if (equipmentToggle && equipmentContent) {
+        equipmentToggle.addEventListener("click", () => {
+          const isOpen = equipmentContent.style.display !== "none";
+          equipmentContent.style.display = isOpen ? "none" : "block";
+          equipmentToggleIcon.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
         });
       }
 
@@ -2522,7 +2695,7 @@ window.startExploring = function() {
               label.style.background = 'var(--primary-soft)';
               label.style.borderColor = 'var(--primary)';
             } else {
-              label.style.background = 'var(--glass)';
+              label.style.background = '#fff';
               label.style.borderColor = 'var(--border)';
             }
           });
@@ -2594,6 +2767,12 @@ window.startExploring = function() {
             equipmentNeeded.push(customEquipment);
           }
 
+          // Collect sub-tags
+          const subTags = [];
+          document.querySelectorAll('input[name="subTags"]:checked').forEach(cb => {
+            subTags.push(cb.value);
+          });
+
           // Determine final category
           const finalCategory = category === "other" && customCategory ? customCategory : category;
 
@@ -2639,8 +2818,9 @@ window.startExploring = function() {
               max_hours: paymentType === "hourly" ? maxHours : null,
               notes,
               // New fields
-              equipment_needed: equipmentNeeded,
+              equipment_needed: equipmentNeeded.length > 0 ? equipmentNeeded : null,
               workers_needed: workersNeeded,
+              sub_tags: subTags.length > 0 ? subTags : null,
             };
 
             await window.hustlAPI.jobs.create(jobData);
