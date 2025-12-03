@@ -223,6 +223,7 @@
     .app-shell {
       display: flex;
       flex-direction: column;
+      min-height: 100vh;
       justify-content: flex-start;
     }
     
@@ -463,10 +464,13 @@
 
     main {
       flex: 0 1 auto;
-      padding: 1rem;
+      padding: 0;
+      padding-bottom: 1rem;
       max-width: 1100px;
       margin: 0 auto;
       width: 100%;
+      margin-top: 0 !important;
+      padding-top: 0 !important;
     }
     
     /* Post job view - ensure form is visible */
@@ -502,18 +506,15 @@
       margin-top: 0 !important;
     }
     
-    /* Post job view - add proper spacing */
+    /* Post job view - start at top */
     #view-post {
-      padding-top: 1rem !important;
+      padding-top: 0 !important;
       margin-top: 0 !important;
+      padding: 1rem;
+      padding-top: 0 !important;
       padding-bottom: 2rem !important;
       margin-bottom: 0 !important;
       display: none; /* Default hidden */
-    }
-    
-    #view-post .card {
-      margin-top: 1rem !important;
-      margin-bottom: 1rem !important;
     }
     
     /* When post view is active, make it visible */
@@ -535,9 +536,34 @@
       margin-bottom: 0 !important;
     }
     
-    /* Reduce main padding when viewing post */
+    /* Main content starts at top - no padding */
     body.viewing-post main {
-      padding-top: 0.5rem !important;
+      padding-top: 0 !important;
+    }
+    
+    /* Add padding inside the view sections instead */
+    #view-home,
+    #view-jobs,
+    #view-profile,
+    #view-messages,
+    #view-post,
+    #view-owner {
+      padding: 1rem;
+      padding-top: 0 !important;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+    }
+    
+    /* Ensure all views start at the very top with no spacing */
+    [id^="view-"] {
+      padding-top: 0 !important;
+      margin-top: 0 !important;
+    }
+    
+    /* Remove any spacing from first child of views */
+    [id^="view-"] > *:first-child {
+      margin-top: 0 !important;
+      padding-top: 0 !important;
     }
     
     /* Hide authSection properly when logged in or not on home */
@@ -1971,7 +1997,8 @@
     /* Phone (up to 480px) */
     @media (max-width: 480px) {
       main {
-        padding: 0.75rem !important;
+        padding: 0 0.75rem 0.75rem 0.75rem !important;
+        padding-top: 0 !important;
       }
       
       .card {
@@ -2035,7 +2062,8 @@
     /* Tablet (481px to 768px) */
     @media (min-width: 481px) and (max-width: 768px) {
       main {
-        padding: 1rem !important;
+        padding: 0 1rem 1rem 1rem !important;
+        padding-top: 0 !important;
       }
       
       .card {
@@ -2050,7 +2078,8 @@
     /* Desktop (769px and up) */
     @media (min-width: 769px) {
       main {
-        padding: 1.5rem !important;
+        padding: 0 1.5rem 1.5rem 1.5rem !important;
+        padding-top: 0 !important;
       }
       
       .card {
@@ -2069,45 +2098,6 @@
     /* Only show vertical scrollbar when needed */
     body {
       overflow-y: auto;
-    }
-    
-    .app-shell {
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-    
-    main {
-      flex: 1 0 auto;
-      width: 100%;
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 1rem;
-      margin-top: 0 !important;
-      padding-top: 1rem;
-    }
-    
-    /* Remove spacing between header and main */
-    header ~ main {
-      margin-top: 0 !important;
-    }
-    
-    /* Ensure first section in main has no top margin */
-    main > section:first-child {
-      margin-top: 0 !important;
-      padding-top: 0 !important;
-    }
-    
-    footer {
-      flex-shrink: 0;
-      margin-top: auto;
-      width: 100%;
-    }
-    
-    /* Ensure sections don't have forced heights */
-    section[id^="view-"] {
-      min-height: auto !important;
-      height: auto !important;
     }
     
     /* Make sure post view is visible when displayed */
@@ -2432,8 +2422,8 @@
       </section>
 
       <!-- POST JOB VIEW (separate page) -->
-      <section id="view-post" style="display:none; padding-top: 0; margin-top: 0;">
-        <div class="card" id="jobFormCard" style="margin-top: 0;">
+      <section id="view-post" style="display:none;">
+        <div class="card" id="jobFormCard">
           <div class="card-header">
             <div class="card-title">Post a job</div>
           </div>
@@ -2551,6 +2541,55 @@
             <div class="field-tip" style="margin-top: 0.5rem; padding: 0.75rem; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 8px; border-left: 3px solid var(--primary);">
               <span style="font-size: 0.85rem; color: #1e40af;">💡 <strong>Pro tip:</strong> Clearer details help hustlers understand your job better.</span>
             </div>
+          </div>
+
+          <!-- When Section -->
+          <div class="section-title" style="margin-top: 1rem; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">📅 When do you need this done?</div>
+          
+          <div class="field">
+            <label for="jobWhen">Preferred time</label>
+            <select id="jobWhen">
+              <option value="this_morning">🌅 This morning</option>
+              <option value="this_afternoon">☀️ This afternoon</option>
+              <option value="this_evening">🌙 This evening/night</option>
+              <option value="tomorrow">📆 Tomorrow</option>
+              <option value="custom_date">📅 Custom date</option>
+              <option value="whenever">⏰ Whenever (flexible)</option>
+            </select>
+          </div>
+          
+          <!-- Custom date fields (shown when "Custom date" is selected) -->
+          <div id="customDateFields" style="display: none;">
+            <div class="field-inline">
+              <div class="field">
+                <label for="customDate">Date</label>
+                <input id="customDate" type="date" />
+              </div>
+              <div class="field">
+                <label for="customTime">Time</label>
+                <select id="customTime">
+                  <option value="morning">Morning (8am - 12pm)</option>
+                  <option value="afternoon">Afternoon (12pm - 5pm)</option>
+                  <option value="evening">Evening (5pm - 9pm)</option>
+                  <option value="night">Night (9pm - 11pm)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Keep job active for -->
+          <div class="field">
+            <label for="jobDuration">⏳ Keep this job active for</label>
+            <select id="jobDuration">
+              <option value="1">1 day</option>
+              <option value="3" selected>3 days</option>
+              <option value="7">1 week</option>
+              <option value="14">2 weeks</option>
+              <option value="30">1 month</option>
+            </select>
+            <p class="muted" style="font-size: 0.8rem; margin-top: 0.5rem;">
+              How long should this job stay visible to hustlers? You can always extend or remove it manually.
+            </p>
           </div>
 
           <!-- Equipment Needed Section - Optional & Collapsible -->
@@ -3269,10 +3308,14 @@ if (job.acceptedHustlerId) {
       const target = document.getElementById("view-" + view);
       if (target) {
         target.style.display = "block";
+        // Scroll to top immediately for all views to remove white space
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        // Remove any padding/margin from the view
+        target.style.marginTop = '0';
+        target.style.paddingTop = '0';
         // Scroll to top and remove padding for post view
         if (view === 'post') {
           document.body.classList.add('viewing-post');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
           const jobFormCard = document.getElementById("jobFormCard");
           if (jobFormCard) {
             jobFormCard.style.marginTop = '0';
