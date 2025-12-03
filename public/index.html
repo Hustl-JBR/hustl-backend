@@ -458,6 +458,16 @@
       width: 100%;
     }
     
+    /* Profile view specific - no extra top spacing */
+    #view-profile {
+      padding-top: 0;
+      margin-top: 0;
+    }
+    
+    #view-profile > *:first-child {
+      margin-top: 0;
+    }
+    
     /* Hide authSection properly when logged in or not on home */
     body.logged-in #authSection,
     #authSection[style*="display: none"] {
@@ -1410,6 +1420,16 @@
       box-shadow: 0 8px 32px rgba(37, 99, 235, 0.35);
       position: relative;
       overflow: hidden;
+      margin-bottom: 1rem;
+      min-height: 140px;
+    }
+    
+    /* Hide empty profile hero card */
+    .profile-hero-card:empty {
+      display: none !important;
+      height: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
     }
     
     .profile-hero-card::before {
@@ -1516,7 +1536,14 @@
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 1rem;
-      margin: 1rem 0;
+      margin: 0 0 1rem 0;
+    }
+    
+    /* Hide empty quick stats */
+    .profile-quick-stats:empty {
+      display: none !important;
+      height: 0 !important;
+      margin: 0 !important;
     }
     
     .quick-stat-card {
@@ -2633,7 +2660,7 @@
                   <div class="card-title">🔐 Account</div>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                  <button class="btn btn-ghost" style="width: 100%; justify-content: flex-start; gap: 0.5rem;">
+                  <button class="btn btn-ghost" id="changePasswordBtn" style="width: 100%; justify-content: flex-start; gap: 0.5rem;">
                     🔑 Change Password
                   </button>
                   <button class="btn btn-ghost" onclick="handleSignOut()" style="width: 100%; justify-content: flex-start; gap: 0.5rem; color: #dc2626; border-color: #fecaca;">
@@ -3329,6 +3356,146 @@ window.startExploring = function() {
   if (typeof setView === 'function') setView('jobs');
   if (typeof renderAll === 'function') renderAll();
 };
+
+// Change Password Modal
+function showChangePasswordModal() {
+  const modal = document.createElement('div');
+  modal.id = 'changePasswordModal';
+  modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem;';
+  
+  modal.innerHTML = `
+    <div style="background: white; border-radius: 16px; padding: 2rem; max-width: 400px; width: 100%; box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="margin: 0; font-size: 1.5rem;">🔑 Change Password</h2>
+        <button id="closeChangePasswordModal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+      
+      <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">
+        Enter your current password and choose a new one. Your new password must be at least 8 characters.
+      </p>
+      
+      <div class="field" style="margin-bottom: 1rem;">
+        <label for="currentPassword">Current Password</label>
+        <input id="currentPassword" type="password" placeholder="Enter current password" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px;" />
+      </div>
+      
+      <div class="field" style="margin-bottom: 1rem;">
+        <label for="newPassword">New Password</label>
+        <input id="newPassword" type="password" placeholder="At least 8 characters" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px;" />
+      </div>
+      
+      <div class="field" style="margin-bottom: 1.5rem;">
+        <label for="confirmPassword">Confirm New Password</label>
+        <input id="confirmPassword" type="password" placeholder="Re-enter new password" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px;" />
+      </div>
+      
+      <div style="display: flex; gap: 0.75rem;">
+        <button class="btn btn-ghost" id="cancelChangePassword" style="flex: 1;">Cancel</button>
+        <button class="btn btn-primary" id="submitChangePassword" style="flex: 1;">Change Password</button>
+      </div>
+      
+      <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+        <button class="btn btn-ghost" id="forgotPasswordBtn" style="width: 100%; font-size: 0.9rem; color: var(--primary);">
+          📧 Forgot password? Send reset email
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  document.body.style.overflow = 'hidden';
+  
+  // Close handlers
+  const closeModal = () => {
+    modal.remove();
+    document.body.style.overflow = '';
+  };
+  
+  modal.querySelector('#closeChangePasswordModal').addEventListener('click', closeModal);
+  modal.querySelector('#cancelChangePassword').addEventListener('click', closeModal);
+  modal.querySelector('#forgotPasswordBtn').addEventListener('click', async () => {
+    try {
+      const user = await window.hustlAPI.auth.getCurrentUser();
+      if (!user || !user.email) {
+        showToast("Unable to find your email. Please contact support.");
+        return;
+      }
+      
+      // Call password reset endpoint (if it exists)
+      const token = localStorage.getItem('hustl_token');
+      const response = await fetch('/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ email: user.email })
+      });
+      
+      if (response.ok) {
+        showToast("✅ Password reset email sent! Check your inbox.");
+        closeModal();
+      } else {
+        showToast("Could not send reset email. Please try again later.");
+      }
+    } catch (error) {
+      showToast("Error sending reset email. Please contact support.");
+    }
+  });
+  
+  // Submit handler
+  modal.querySelector('#submitChangePassword').addEventListener('click', async () => {
+    const currentPassword = modal.querySelector('#currentPassword').value;
+    const newPassword = modal.querySelector('#newPassword').value;
+    const confirmPassword = modal.querySelector('#confirmPassword').value;
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      showToast("Please fill in all fields.");
+      return;
+    }
+    
+    if (newPassword.length < 8) {
+      showToast("New password must be at least 8 characters.");
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      showToast("New passwords don't match.");
+      return;
+    }
+    
+    if (currentPassword === newPassword) {
+      showToast("New password must be different from current password.");
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('hustl_token');
+      const response = await fetch('/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || data.message || 'Failed to change password');
+      }
+      
+      showToast("✅ Password changed successfully!");
+      closeModal();
+    } catch (error) {
+      showToast("Error: " + (error.message || "Could not change password. Please try again."));
+    }
+  });
+}
 
   document
     .getElementById("loginButton")
@@ -6426,18 +6593,27 @@ async function renderJobs(reset = false) {
 
     /* ---------- Profile ---------- */
 
-    function renderProfile() {
-  const user = getCurrentUser();
+    async function renderProfile() {
+  // Use API to get current user
+  let user = null;
+  try {
+    user = await window.hustlAPI.auth.getCurrentUser();
+  } catch (error) {
+    console.error("Error getting user for profile:", error);
+  }
+  
   const container = document.getElementById("profileContent");
   const jobsList = document.getElementById("profileJobsList");
   const heroCard = document.getElementById("profileHeroCard");
   const stripeContent = document.getElementById("stripeConnectContent");
+  const quickStats = document.getElementById("profileQuickStats");
   
   if (!container || !jobsList) return;
 
   if (!user) {
     if (heroCard) heroCard.innerHTML = "";
-    container.innerHTML = "<div class='muted'>Log in to see your profile.</div>";
+    if (quickStats) quickStats.innerHTML = "";
+    container.innerHTML = "<div class='muted' style='padding: 2rem; text-align: center;'>Please log in to see your profile.</div>";
     jobsList.innerHTML = "";
     return;
   }
@@ -6494,8 +6670,7 @@ async function renderJobs(reset = false) {
     `;
   }
   
-  // Render Quick Stats
-  const quickStats = document.getElementById("profileQuickStats");
+  // Render Quick Stats (already got quickStats above, but check again)
   if (quickStats) {
     const isHustler = user.role === "HUSTLER" || user.role === "hustler";
     quickStats.innerHTML = `
@@ -6551,6 +6726,16 @@ async function renderJobs(reset = false) {
   
   // Initialize Profile Tabs
   initProfileTabs();
+  
+  // Initialize Change Password button
+  setTimeout(() => {
+    const changePasswordBtn = document.getElementById("changePasswordBtn");
+    if (changePasswordBtn) {
+      changePasswordBtn.addEventListener("click", () => {
+        showChangePasswordModal();
+      });
+    }
+  }, 100);
 
   // Stripe Connect Content
   if (stripeContent) {
