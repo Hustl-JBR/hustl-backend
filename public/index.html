@@ -1149,6 +1149,177 @@
       background: var(--primary);
       color: #fff;
     }
+    
+    /* Modern Messages Layout */
+    .messages-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 1rem;
+      height: calc(100vh - 150px);
+      max-height: 700px;
+    }
+    
+    .conversations-sidebar {
+      background: white;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .conversations-header {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(135deg, #eff6ff 0%, white 100%);
+    }
+    
+    .unread-badge {
+      background: #ef4444;
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.25rem 0.5rem;
+      border-radius: 999px;
+      min-width: 20px;
+      text-align: center;
+    }
+    
+    .conversations-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem;
+    }
+    
+    .conversation-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+    
+    .conversation-item:hover {
+      background: #f1f5f9;
+    }
+    
+    .conversation-item.active {
+      background: var(--primary-soft);
+      border-color: var(--primary);
+    }
+    
+    .conversation-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    
+    .conversation-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .conversation-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .conversation-preview {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .chat-area {
+      background: white;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .chat-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, #eff6ff 0%, white 100%);
+    }
+    
+    .chat-messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    
+    .chat-input-area {
+      padding: 1rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 0.75rem;
+      background: #f8fafc;
+    }
+    
+    .chat-input {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      border: 1.5px solid var(--border);
+      border-radius: 999px;
+      font-size: 0.95rem;
+      background: white;
+      transition: all 0.2s;
+    }
+    
+    .chat-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    .chat-send-btn {
+      padding: 0.75rem 1.25rem;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    
+    @media (max-width: 768px) {
+      .messages-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+        max-height: none;
+      }
+      
+      .conversations-sidebar {
+        max-height: 250px;
+      }
+      
+      .chat-area {
+        min-height: 400px;
+      }
+    }
 
     .chat-msg.them {
       align-self: flex-start;
@@ -2116,27 +2287,40 @@
 
       <!-- MESSAGES VIEW -->
       <section id="view-messages" style="display:none;">
-        <div class="layout-grid">
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">Messages</div>
+        <div class="messages-layout">
+          <!-- Conversations List -->
+          <div class="conversations-sidebar">
+            <div class="conversations-header">
+              <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                💬 Messages
+              </h3>
+              <span id="unreadBadge" class="unread-badge" style="display: none;">0</span>
             </div>
-            <div class="muted" style="margin-bottom:0.4rem;">
-              Each conversation is tied to a specific job. Think of it like texting, but only about that job.
-            </div>
-            <div class="jobs-list" id="conversationList"></div>
+            <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0.5rem 0 1rem; padding: 0 1rem;">
+              Each conversation is tied to a specific job.
+            </p>
+            <div class="conversations-list" id="conversationList"></div>
           </div>
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title" id="conversationTitle">Select a conversation</div>
+          
+          <!-- Chat Area -->
+          <div class="chat-area">
+            <div class="chat-header">
+              <div id="conversationTitle" style="font-weight: 600; font-size: 1rem;">Select a conversation</div>
+              <div id="conversationJobSummary" style="font-size: 0.85rem; color: var(--text-muted);"></div>
             </div>
-            <div id="conversationJobSummary" class="muted" style="margin-bottom:0.5rem;"></div>
-            <div class="chat-box">
-              <div class="chat-messages" id="conversationMessages"></div>
-              <div class="chat-input-row">
-                <input id="conversationInput" type="text" placeholder="Type a message..." />
-                <button class="btn btn-primary" id="conversationSendButton">Send</button>
+            <div class="chat-messages-container" id="conversationMessages">
+              <div class="empty-chat" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">💬</div>
+                <div style="font-weight: 600; margin-bottom: 0.5rem;">No conversation selected</div>
+                <div style="font-size: 0.9rem;">Pick a job from the list to start chatting</div>
               </div>
+            </div>
+            <div class="chat-input-area">
+              <input id="conversationInput" type="text" placeholder="Type a message..." class="chat-input" />
+              <button class="btn btn-primary chat-send-btn" id="conversationSendButton">
+                <span>Send</span>
+                <span style="margin-left: 0.25rem;">→</span>
+              </button>
             </div>
           </div>
         </div>
