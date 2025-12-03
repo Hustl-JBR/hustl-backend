@@ -8255,41 +8255,54 @@ meta.textContent =
     /* ---------- Init ---------- */
 
     function initNav() {
+      // Nav tabs
       document.querySelectorAll(".nav-tab").forEach((tab) => {
         tab.addEventListener("click", () => {
           const v = tab.dataset.view;
-          setView(v);
+          if (v && typeof setView === 'function') {
+            setView(v);
+          }
         });
       });
 
-      document
-        .getElementById("homeCtaPost")
-        .addEventListener("click", () => {
-          setView("post");
-          const formCard = document.getElementById("jobFormCard");
-          if (formCard) {
-            formCard.scrollIntoView({ behavior: "smooth" });
+      // Home CTA buttons
+      const homeCtaPost = document.getElementById("homeCtaPost");
+      if (homeCtaPost) {
+        homeCtaPost.addEventListener("click", () => {
+          if (typeof setView === 'function') {
+            setView("post");
+            const formCard = document.getElementById("jobFormCard");
+            if (formCard) {
+              formCard.scrollIntoView({ behavior: "smooth" });
+            }
           }
         });
-      document
-        .getElementById("homeCtaBrowse")
-        .addEventListener("click", () => setView("jobs"));
+      }
+      
+      const homeCtaBrowse = document.getElementById("homeCtaBrowse");
+      if (homeCtaBrowse) {
+        homeCtaBrowse.addEventListener("click", () => {
+          if (typeof setView === 'function') {
+            setView("jobs");
+          }
+        });
+      }
 
-      document
-        .getElementById("jobsStatusFilter")
-        .querySelectorAll("span")
-        .forEach((el) => {
+      // Jobs status filter
+      const jobsStatusFilter = document.getElementById("jobsStatusFilter");
+      if (jobsStatusFilter) {
+        jobsStatusFilter.querySelectorAll("span").forEach((el) => {
           el.addEventListener("click", () => {
             activeJobsStatusFilter = el.dataset.status;
-            document
-              .getElementById("jobsStatusFilter")
-              .querySelectorAll("span")
-              .forEach((s) =>
-                s.classList.toggle("active", s.dataset.status === activeJobsStatusFilter)
-              );
-            renderJobs(true); // Reset pagination when filter changes
+            jobsStatusFilter.querySelectorAll("span").forEach((s) =>
+              s.classList.toggle("active", s.dataset.status === activeJobsStatusFilter)
+            );
+            if (typeof renderJobs === 'function') {
+              renderJobs(true); // Reset pagination when filter changes
+            }
           });
         });
+      }
       
       // Category filter chips
       const categoryChipsContainer = document.getElementById("categoryFilterChips");
@@ -8310,7 +8323,9 @@ meta.textContent =
             
             // Update filter and reload
             activeCategoryFilter = chip.dataset.category;
-            renderJobs(true);
+            if (typeof renderJobs === 'function') {
+              renderJobs(true);
+            }
           });
         });
       }
@@ -8320,7 +8335,9 @@ meta.textContent =
       if (sortSelect) {
         sortSelect.addEventListener("change", () => {
           activeSortBy = sortSelect.value;
-          renderJobs(true);
+          if (typeof renderJobs === 'function') {
+            renderJobs(true);
+          }
         });
       }
       
@@ -8328,8 +8345,12 @@ meta.textContent =
       const refreshBtn = document.getElementById("refreshJobsBtn");
       if (refreshBtn) {
         refreshBtn.addEventListener("click", () => {
-          renderJobs(true);
-          showToast("Jobs refreshed!");
+          if (typeof renderJobs === 'function') {
+            renderJobs(true);
+          }
+          if (typeof showToast === 'function') {
+            showToast("Jobs refreshed!");
+          }
         });
       }
     }
@@ -8459,12 +8480,16 @@ try {
     // Check if user is already logged in
     const user = getCurrentUser();
     if (user) {
-      setView('profile');
+      if (typeof setView === 'function') {
+        setView('profile');
+      }
       return;
     }
     
     // Switch to home view first, then show auth section
-    setView('home');
+    if (typeof setView === 'function') {
+      setView('home');
+    }
     
     // Small delay to ensure home view is rendered
     setTimeout(() => {
@@ -8525,34 +8550,41 @@ try {
       if (desktopAuth) {
         desktopAuth.innerHTML = `
           <span style="color: var(--text-main); font-size: 0.85rem; font-weight: 500; margin-right: 0.75rem;">👋 ${firstName}</span>
-          <button class="btn-login-header" onclick="setView('profile')">Profile</button>
-          <button class="btn-signup-header" onclick="handleSignOut()" style="background: #fee2e2; color: #dc2626; border-color: #fca5a5;">Logout</button>
+          <button class="btn-login-header" onclick="if(typeof setView === 'function') setView('profile')">Profile</button>
+          <button class="btn-signup-header" onclick="if(typeof handleSignOut === 'function') handleSignOut()" style="background: #fee2e2; color: #dc2626; border-color: #fca5a5;">Logout</button>
         `;
       }
       if (mobileAuth) {
         mobileAuth.innerHTML = `
           <div style="padding: 0.5rem; color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border);">👋 Signed in as ${firstName}</div>
-          <button class="mobile-menu-item" onclick="setView('profile'); document.getElementById('mobileMenu').classList.remove('open'); document.getElementById('hamburgerBtn').classList.remove('open');" style="width:100%; margin-bottom: 0.25rem;">👤 Profile</button>
-          <button class="mobile-menu-item" onclick="setView('jobs'); document.getElementById('mobileMenu').classList.remove('open'); document.getElementById('hamburgerBtn').classList.remove('open');" style="width:100%; margin-bottom: 0.25rem;">💼 My Jobs</button>
-          <button class="mobile-menu-item" onclick="setView('profile'); setTimeout(() => { const earningsTab = document.querySelector('.profile-tab[data-tab=\"earnings\"]'); if (earningsTab) earningsTab.click(); }, 100); document.getElementById('mobileMenu').classList.remove('open'); document.getElementById('hamburgerBtn').classList.remove('open');" style="width:100%; margin-bottom: 0.25rem;">💰 Earnings</button>
-          <button class="btn-signup-header" onclick="handleSignOut()" style="width:100%; margin-top: 0.5rem; background: #fee2e2; color: #dc2626; border-color: #fca5a5;">🚪 Sign Out</button>
+          <button class="mobile-menu-item" data-view="profile" onclick="if(typeof setView === 'function') { setView('profile'); const menu = document.getElementById('mobileMenu'); const btn = document.getElementById('hamburgerBtn'); if(menu) menu.classList.remove('open'); if(btn) btn.classList.remove('open'); }" style="width:100%; margin-bottom: 0.25rem;">👤 Profile</button>
+          <button class="mobile-menu-item" data-view="jobs" onclick="if(typeof setView === 'function') { setView('jobs'); const menu = document.getElementById('mobileMenu'); const btn = document.getElementById('hamburgerBtn'); if(menu) menu.classList.remove('open'); if(btn) btn.classList.remove('open'); }" style="width:100%; margin-bottom: 0.25rem;">💼 My Jobs</button>
+          <button class="mobile-menu-item" data-view="profile" onclick="if(typeof setView === 'function') { setView('profile'); setTimeout(() => { const earningsTab = document.querySelector('.profile-tab[data-tab=\"earnings\"]'); if (earningsTab) earningsTab.click(); }, 100); const menu = document.getElementById('mobileMenu'); const btn = document.getElementById('hamburgerBtn'); if(menu) menu.classList.remove('open'); if(btn) btn.classList.remove('open'); }" style="width:100%; margin-bottom: 0.25rem;">💰 Earnings</button>
+          <button class="btn-signup-header" onclick="if(typeof handleSignOut === 'function') handleSignOut()" style="width:100%; margin-top: 0.5rem; background: #fee2e2; color: #dc2626; border-color: #fca5a5;">🚪 Sign Out</button>
         `;
       }
     } else {
       // Logged out state - restore default buttons
       if (desktopAuth) {
         desktopAuth.innerHTML = `
-          <button class="btn-login-header" id="headerLoginBtn" onclick="openAuthModal('login')">Log In</button>
-          <button class="btn-signup-header" id="headerSignupBtn" onclick="openAuthModal('create')">Sign Up Free</button>
+          <button class="btn-login-header" id="headerLoginBtn" onclick="if(typeof openAuthModal === 'function') openAuthModal('login')">Log In</button>
+          <button class="btn-signup-header" id="headerSignupBtn" onclick="if(typeof openAuthModal === 'function') openAuthModal('create')">Sign Up Free</button>
         `;
       }
       if (mobileAuth) {
         mobileAuth.innerHTML = `
-          <button class="btn-login-header" id="mobileLoginBtn" onclick="document.getElementById('mobileMenu').classList.remove('open'); document.getElementById('hamburgerBtn').classList.remove('open'); openAuthModal('login')">Log In</button>
-          <button class="btn-signup-header" id="mobileSignupBtn" onclick="document.getElementById('mobileMenu').classList.remove('open'); document.getElementById('hamburgerBtn').classList.remove('open'); openAuthModal('create')">Sign Up Free</button>
+          <button class="btn-login-header" id="mobileLoginBtn" onclick="const menu = document.getElementById('mobileMenu'); const btn = document.getElementById('hamburgerBtn'); if(menu) menu.classList.remove('open'); if(btn) btn.classList.remove('open'); if(typeof openAuthModal === 'function') openAuthModal('login')">Log In</button>
+          <button class="btn-signup-header" id="mobileSignupBtn" onclick="const menu = document.getElementById('mobileMenu'); const btn = document.getElementById('hamburgerBtn'); if(menu) menu.classList.remove('open'); if(btn) btn.classList.remove('open'); if(typeof openAuthModal === 'function') openAuthModal('create')">Sign Up Free</button>
         `;
       }
     }
+    
+    // Re-initialize hamburger menu after updating HTML to restore event listeners
+    setTimeout(() => {
+      if (typeof initHamburgerMenu === 'function') {
+        initHamburgerMenu();
+      }
+    }, 100);
   }
   
   // Handle sign out
@@ -8617,32 +8649,51 @@ try {
   window.setView = setView;
   window.openAuthModal = openAuthModal;
   window.closeAuthModal = closeAuthModal;
+  window.handleSignOut = handleSignOut;
   // goToStripeSetup, startExploring, closeWelcomeModal are already defined globally above
 
-  // Boot - initialize immediately
-  loadState();
-  initAgeGate();
-  initNav();
-  initAuthCard();
-  initHamburgerMenu();
-  initJobsForm();
-  initConversationInput();
-  initFeedback();
-  initFooterLinks();
-  checkAgeGate();
-  handleStripeReturn();
-  checkAutoCompleteJobs();
-  setInterval(checkAutoCompleteJobs, 60 * 1000);
+  // Boot - initialize when DOM is ready
+  function initializeApp() {
+    try {
+      loadState();
+      initAgeGate();
+      initNav();
+      initAuthCard();
+      initHamburgerMenu();
+      initJobsForm();
+      initConversationInput();
+      initFeedback();
+      initFooterLinks();
+      checkAgeGate();
+      handleStripeReturn();
+      checkAutoCompleteJobs();
+      setInterval(checkAutoCompleteJobs, 60 * 1000);
+      
+      // Initialize auth state and render
+      (async () => {
+        try {
+          await updateHeaderAuth();
+          await renderAll();
+        } catch (error) {
+          console.error('Error initializing auth state:', error);
+        }
+      })();
+      
+      // Start token auto-refresh for persistent login
+      if (window.appCore && window.appCore.tokenManager) {
+        window.appCore.tokenManager.startAutoRefresh();
+      }
+    } catch (error) {
+      console.error('Error initializing app:', error);
+    }
+  }
   
-  // Initialize auth state and render
-  (async () => {
-    await updateHeaderAuth();
-    await renderAll();
-  })();
-  
-  // Start token auto-refresh for persistent login
-  if (window.appCore && window.appCore.tokenManager) {
-    window.appCore.tokenManager.startAutoRefresh();
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+  } else {
+    // DOM is already ready
+    initializeApp();
   }
   </script>
   
