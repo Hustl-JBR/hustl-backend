@@ -462,6 +462,24 @@
       width: 100%;
       padding: 1rem;
       font-size: 1rem;
+      margin-bottom: 0.5rem;
+      z-index: 1;
+      position: relative;
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .mobile-menu .btn-signup-header {
+      background: var(--primary) !important;
+      color: white !important;
+      font-weight: 600;
+    }
+    
+    .mobile-menu .btn-login-header {
+      background: white !important;
+      color: var(--primary) !important;
+      border: 2px solid var(--primary) !important;
+      font-weight: 600;
     }
 
     /* Hide old auth pill */
@@ -2217,14 +2235,9 @@
     
     <!-- Mobile Menu Overlay -->
     <div class="mobile-menu" id="mobileMenu">
-      <button class="mobile-menu-item active" data-view="home">🏠 Home</button>
-      <button class="mobile-menu-item" data-view="jobs">💼 Browse Jobs</button>
-      <button class="mobile-menu-item" data-view="post">➕ Post a Job</button>
-      <button class="mobile-menu-item" data-view="messages">💬 Messages</button>
-      <button class="mobile-menu-item" data-view="profile">👤 Profile</button>
-      <div class="header-auth">
-        <button class="btn-login-header" id="mobileLoginBtn" onclick="document.getElementById('mobileMenu').classList.remove('open'); document.getElementById('hamburgerBtn').classList.remove('open'); openAuthModal('login')">Log In</button>
-        <button class="btn-signup-header" id="mobileSignupBtn" onclick="document.getElementById('mobileMenu').classList.remove('open'); document.getElementById('hamburgerBtn').classList.remove('open'); openAuthModal('create')">Sign Up Free</button>
+      <!-- Menu items will be populated dynamically by updateHeaderAuth() -->
+      <div class="header-auth" id="mobileMenuAuth">
+        <!-- Auth buttons will be populated dynamically -->
       </div>
     </div>
 
@@ -8586,6 +8599,8 @@ try {
       document.body.classList.remove('logged-in');
     }
     
+    const mobileMenu = document.getElementById('mobileMenu');
+    
     if (user) {
       // Logged in state - simplified header
       const firstName = user.name?.split(' ')[0] || user.email?.split('@')[0] || 'User';
@@ -8596,13 +8611,18 @@ try {
           <button class="btn-signup-header" onclick="if(typeof handleSignOut === 'function') handleSignOut()" style="background: #fee2e2; color: #dc2626; border-color: #fca5a5;">Logout</button>
         `;
       }
-      if (mobileAuth) {
-        mobileAuth.innerHTML = `
-          <div style="padding: 0.5rem; color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border);">👋 Signed in as ${firstName}</div>
-          <button class="mobile-menu-item" data-view="profile" onclick="if(typeof setView === 'function') { setView('profile'); const menu = document.getElementById('mobileMenu'); const btn = document.getElementById('hamburgerBtn'); if(menu) menu.classList.remove('open'); if(btn) btn.classList.remove('open'); }" style="width:100%; margin-bottom: 0.25rem;">👤 Profile</button>
-          <button class="mobile-menu-item" data-view="jobs" onclick="if(typeof setView === 'function') { setView('jobs'); const menu = document.getElementById('mobileMenu'); const btn = document.getElementById('hamburgerBtn'); if(menu) menu.classList.remove('open'); if(btn) btn.classList.remove('open'); }" style="width:100%; margin-bottom: 0.25rem;">💼 My Jobs</button>
-          <button class="mobile-menu-item" data-view="profile" onclick="if(typeof setView === 'function') { setView('profile'); setTimeout(() => { const earningsTab = document.querySelector('.profile-tab[data-tab=\"earnings\"]'); if (earningsTab) earningsTab.click(); }, 100); const menu = document.getElementById('mobileMenu'); const btn = document.getElementById('hamburgerBtn'); if(menu) menu.classList.remove('open'); if(btn) btn.classList.remove('open'); }" style="width:100%; margin-bottom: 0.25rem;">💰 Earnings</button>
-          <button class="btn-signup-header" onclick="if(typeof handleSignOut === 'function') handleSignOut()" style="width:100%; margin-top: 0.5rem; background: #fee2e2; color: #dc2626; border-color: #fca5a5;">🚪 Sign Out</button>
+      // Update entire mobile menu for logged-in users
+      if (mobileMenu) {
+        mobileMenu.innerHTML = `
+          <button class="mobile-menu-item active" data-view="home">🏠 Home</button>
+          <button class="mobile-menu-item" data-view="jobs">💼 Browse Jobs</button>
+          <button class="mobile-menu-item" data-view="post">➕ Post a Job</button>
+          <button class="mobile-menu-item" data-view="messages">💬 Messages</button>
+          <button class="mobile-menu-item" data-view="profile">👤 Profile</button>
+          <div class="header-auth" id="mobileMenuAuth">
+            <div style="padding: 0.5rem; color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border);">👋 Signed in as ${firstName}</div>
+            <button class="btn-signup-header" onclick="if(typeof handleSignOut === 'function') handleSignOut()" style="width:100%; margin-top: 0.5rem; background: #fee2e2; color: #dc2626; border-color: #fca5a5; font-weight: 600;">🚪 Sign Out</button>
+          </div>
         `;
       }
     } else {
@@ -8613,10 +8633,18 @@ try {
           <button class="btn-signup-header" id="headerSignupBtn" onclick="if(typeof openAuthModal === 'function') openAuthModal('create')">Sign Up Free</button>
         `;
       }
-      if (mobileAuth) {
-        mobileAuth.innerHTML = `
-          <button class="btn-login-header" id="mobileLoginBtn" onclick="const menu = document.getElementById('mobileMenu'); const btn = document.getElementById('hamburgerBtn'); if(menu) menu.classList.remove('open'); if(btn) btn.classList.remove('open'); if(typeof openAuthModal === 'function') openAuthModal('login')">Log In</button>
-          <button class="btn-signup-header" id="mobileSignupBtn" onclick="const menu = document.getElementById('mobileMenu'); const btn = document.getElementById('hamburgerBtn'); if(menu) menu.classList.remove('open'); if(btn) btn.classList.remove('open'); if(typeof openAuthModal === 'function') openAuthModal('create')">Sign Up Free</button>
+      // Update entire mobile menu for logged-out users
+      if (mobileMenu) {
+        mobileMenu.innerHTML = `
+          <button class="mobile-menu-item active" data-view="home">🏠 Home</button>
+          <button class="mobile-menu-item" data-view="jobs">💼 Browse Jobs</button>
+          <button class="mobile-menu-item" data-view="post">➕ Post a Job</button>
+          <button class="mobile-menu-item" data-view="messages">💬 Messages</button>
+          <button class="mobile-menu-item" data-view="profile">👤 Profile</button>
+          <div class="header-auth" id="mobileMenuAuth">
+            <button class="btn-login-header" id="mobileLoginBtn" onclick="const menu = document.getElementById('mobileMenu'); const btn = document.getElementById('hamburgerBtn'); if(menu) menu.classList.remove('open'); if(btn) btn.classList.remove('open'); if(typeof openAuthModal === 'function') openAuthModal('login')">Log In</button>
+            <button class="btn-signup-header" id="mobileSignupBtn" onclick="const menu = document.getElementById('mobileMenu'); const btn = document.getElementById('hamburgerBtn'); if(menu) menu.classList.remove('open'); if(btn) btn.classList.remove('open'); if(typeof openAuthModal === 'function') openAuthModal('create')">Sign Up Free</button>
+          </div>
         `;
       }
     }
