@@ -460,6 +460,11 @@
       width: 100%;
     }
     
+    /* Post job view - ensure form is visible */
+    #view-post #jobFormCard {
+      margin-top: 0 !important;
+    }
+    
     /* Profile view specific - no extra top spacing */
     #view-profile {
       padding-top: 0 !important;
@@ -480,6 +485,20 @@
     }
     
     #view-profile .profile-tabs {
+      margin-top: 0 !important;
+    }
+    
+    /* Post job view - no extra top spacing */
+    #view-post {
+      padding-top: 0 !important;
+      margin-top: 0 !important;
+    }
+    
+    #view-post > *:first-child {
+      margin-top: 0 !important;
+    }
+    
+    #view-post .card {
       margin-top: 0 !important;
     }
     
@@ -2330,8 +2349,8 @@
       </section>
 
       <!-- POST JOB VIEW (separate page) -->
-      <section id="view-post" style="display:none;">
-        <div class="card" id="jobFormCard">
+      <section id="view-post" style="display:none; padding-top: 0; margin-top: 0;">
+        <div class="card" id="jobFormCard" style="margin-top: 0;">
           <div class="card-header">
             <div class="card-title">Post a job</div>
           </div>
@@ -3165,7 +3184,18 @@ if (job.acceptedHustlerId) {
       }
       
       const target = document.getElementById("view-" + view);
-      if (target) target.style.display = "block";
+      if (target) {
+        target.style.display = "block";
+        // Scroll to top and remove padding for post view
+        if (view === 'post') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          const jobFormCard = document.getElementById("jobFormCard");
+          if (jobFormCard) {
+            jobFormCard.style.marginTop = '0';
+            jobFormCard.style.paddingTop = '0';
+          }
+        }
+      }
 
       document.querySelectorAll(".nav-tab").forEach((tab) => {
         tab.classList.toggle("active", tab.dataset.view === view);
@@ -4133,6 +4163,7 @@ function showChangePasswordModal() {
               return showToast("Please set a valid price amount.");
             }
             
+            // Build job data - only include hourlyRate/estHours if they have values
             const jobData = {
               title,
               category: finalCategory,
@@ -4143,8 +4174,6 @@ function showChangePasswordModal() {
               endTime: endTime.toISOString(), // Backend expects ISO datetime
               payType: payType, // Backend expects 'flat' or 'hourly'
               amount: amount, // Backend expects dollar amount (not cents)
-              hourlyRate: hourlyRateValue, // Optional, for hourly jobs
-              estHours: estHoursValue, // Optional, for hourly jobs
               teamSize: workersNeeded || 1,
               requirements: {
                 pickup_area: pickupArea,
@@ -4160,6 +4189,14 @@ function showChangePasswordModal() {
                 pricing_option: pricingOption, // Store for future use
               },
             };
+            
+            // Only add hourlyRate and estHours if they have valid values
+            if (hourlyRateValue && hourlyRateValue > 0) {
+              jobData.hourlyRate = hourlyRateValue;
+            }
+            if (estHoursValue && estHoursValue > 0) {
+              jobData.estHours = estHoursValue;
+            }
 
             console.log("Posting job with data:", jobData);
             const result = await window.hustlAPI.jobs.create(jobData);
@@ -8095,14 +8132,12 @@ try {
     }
     
     if (user) {
-      // Logged in state
-      const firstName = user.name?.split(' ')[0] || user.email?.split('@')[0] || 'there';
+      // Logged in state - simplified header
+      const firstName = user.name?.split(' ')[0] || user.email?.split('@')[0] || 'User';
       if (desktopAuth) {
         desktopAuth.innerHTML = `
-          <span style="color: var(--text-main); font-size: 0.85rem; font-weight: 500; margin-right: 0.5rem;">👋 ${firstName}</span>
+          <span style="color: var(--text-main); font-size: 0.85rem; font-weight: 500; margin-right: 0.75rem;">👋 ${firstName}</span>
           <button class="btn-login-header" onclick="setView('profile')">Profile</button>
-          <button class="btn-login-header" onclick="setView('jobs')">My Jobs</button>
-          <button class="btn-login-header" onclick="setView('profile'); setTimeout(() => { const earningsTab = document.querySelector('.profile-tab[data-tab=\"earnings\"]'); if (earningsTab) earningsTab.click(); }, 100);">Earnings</button>
           <button class="btn-signup-header" onclick="handleSignOut()" style="background: #fee2e2; color: #dc2626; border-color: #fca5a5;">Logout</button>
         `;
       }
