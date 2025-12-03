@@ -2351,9 +2351,18 @@ if (job.acceptedHustlerId) {
 
     function setView(view) {
       activeView = view;
+      
+      // Hide ALL sections first including auth section
       document
         .querySelectorAll("[id^='view-']")
         .forEach((sec) => (sec.style.display = "none"));
+      
+      // Hide auth section when not on home (synchronously)
+      const authSection = document.getElementById("authSection");
+      if (authSection) {
+        authSection.style.display = view === 'home' ? 'block' : 'none';
+      }
+      
       const target = document.getElementById("view-" + view);
       if (target) target.style.display = "block";
 
