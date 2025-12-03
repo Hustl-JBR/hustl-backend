@@ -2937,7 +2937,7 @@
             <!-- Status Pills -->
             <div class="job-status-group" id="jobsStatusFilter" style="flex: 2; display: flex; gap: 0.25rem;">
               <span data-status="all" class="active" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">All</span>
-              <span data-status="open" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">🟢 Open</span>
+              <span data-status="applied" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">✓ Applied</span>
               <span data-status="assigned" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">🟡 In Progress</span>
               <span data-status="completed" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">✅ Done</span>
             </div>
@@ -4666,8 +4666,19 @@ async function renderJobs(reset = false) {
     }
     
     let filteredJobs = allLoadedJobs;
+    const currentUser = getCurrentUser();
+    
     if (activeJobsStatusFilter === "all") {
       filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => j.status !== "COMPLETED") : [];
+    } else if (activeJobsStatusFilter === "applied") {
+      // Filter for jobs the user has applied to
+      filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => {
+        if (j.status === "COMPLETED") return false;
+        if (currentUser && j.offers) {
+          return Array.isArray(j.offers) && j.offers.some(offer => offer.hustlerId === currentUser.id);
+        }
+        return false;
+      }) : [];
     } else if (activeJobsStatusFilter) {
       filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => j.status === activeJobsStatusFilter) : [];
     }
@@ -4791,15 +4802,35 @@ async function renderJobs(reset = false) {
       meta.textContent = `${catName} • ${timeAgo(createdMs)}`;
       textContent.appendChild(meta);
 
+      // Description line (short preview)
+      if (job.description) {
+        const desc = document.createElement("div");
+        desc.className = "job-meta";
+        desc.style.cssText = "margin-top: 0.25rem; color: var(--text-muted); font-size: 0.85rem; line-height: 1.4;";
+        const shortDesc = job.description.length > 80 ? job.description.substring(0, 80) + "..." : job.description;
+        desc.textContent = shortDesc;
+        textContent.appendChild(desc);
+      }
+
+      // Posted by line
+      const postedBy = document.createElement("div");
+      postedBy.className = "job-meta";
+      postedBy.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted);";
+      const poster = state.users?.find((u) => u.id === job.postedByUserId) || job.customer || job.postedBy;
+      const posterName = poster?.name || poster?.username || poster?.email?.split('@')[0] || "User";
+      postedBy.textContent = `👤 Posted by ${posterName}`;
+      textContent.appendChild(postedBy);
+
       // Location line
       const loc = document.createElement("div");
       loc.className = "job-meta";
+      loc.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem;";
 
       const requirements = job.requirements || {};
       if (requirements.onSiteOnly || job.onSiteOnly) {
         loc.textContent = `📍 ${requirements.pickupArea || requirements.pickupCity || job.address || "TBD"}`;
       } else {
-        const pick = requirements.pickupArea || requirements.pickupCity || "TBD";
+        const pick = requirements.pickupArea || requirements.pickupCity || job.address || "TBD";
         const drop = requirements.dropoffArea || requirements.dropoffCity || "";
         loc.textContent = `📍 ${pick}${drop ? " → " + drop : ""}`;
       }
@@ -4837,7 +4868,21 @@ async function renderJobs(reset = false) {
       const statusBadge = document.createElement("span");
       statusBadge.className = "badge";
 
-      if (job.status === "OPEN" || job.status === "open") {
+      // Check if current user has applied to this job
+      const currentUser = getCurrentUser();
+      let hasApplied = false;
+      if (currentUser && job.offers) {
+        hasApplied = Array.isArray(job.offers) 
+          ? job.offers.some(offer => offer.hustlerId === currentUser.id)
+          : false;
+      }
+
+      if (hasApplied && (job.status === "OPEN" || job.status === "open")) {
+        statusBadge.classList.add("status-assigned");
+        statusBadge.style.backgroundColor = "#3b82f6";
+        statusBadge.style.color = "#ffffff";
+        statusBadge.textContent = "✓ Applied";
+      } else if (job.status === "OPEN" || job.status === "open") {
         statusBadge.classList.add("status-open");
         statusBadge.textContent = "Open";
       } else if (job.status === "ASSIGNED" || job.status === "assigned") {
