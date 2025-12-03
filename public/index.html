@@ -4966,11 +4966,25 @@ async function renderJobs(reset = false) {
 
     async function openJobDetails(jobId, options = {}) {
       const job = state.jobs.find((j) => j.id === jobId);
-      const container = document.getElementById("jobDetailContainer");
       const user = getCurrentUser();
-      if (!job || !container) return;
+      if (!job) return;
 
-      container.innerHTML = "";
+      // Create modal overlay
+      let modalOverlay = document.getElementById("jobDetailModal");
+      if (!modalOverlay) {
+        modalOverlay = document.createElement("div");
+        modalOverlay.id = "jobDetailModal";
+        modalOverlay.className = "modal-overlay";
+        document.body.appendChild(modalOverlay);
+      }
+      
+      modalOverlay.style.display = "flex";
+      modalOverlay.innerHTML = "";
+      
+      const modalContent = document.createElement("div");
+      modalContent.className = "modal-content";
+      modalContent.style.padding = "2rem";
+      
       const detail = document.createElement("div");
       detail.className = "job-detail job-detail-contrast";
 
@@ -5004,13 +5018,21 @@ async function renderJobs(reset = false) {
       headerRow.appendChild(title);
 
       const closeBtn = document.createElement("button");
-      closeBtn.className = "small-btn outline";
-      closeBtn.textContent = "Close";
+      closeBtn.className = "modal-close";
+      closeBtn.innerHTML = "×";
+      closeBtn.style.cssText = "position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px; border-radius: 50%; background: #f3f4f6; border: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-main);";
       closeBtn.addEventListener("click", () => {
-        container.innerHTML = "";
+        modalOverlay.style.display = "none";
       });
-      headerRow.appendChild(closeBtn);
+      modalContent.appendChild(closeBtn);
       detail.appendChild(headerRow);
+      
+      // Close on overlay click
+      modalOverlay.addEventListener("click", (e) => {
+        if (e.target === modalOverlay) {
+          modalOverlay.style.display = "none";
+        }
+      });
 
       const whoRow = document.createElement("div");
       whoRow.className = "detail-row";
@@ -7030,7 +7052,8 @@ async function renderJobs(reset = false) {
         }
       }
 
-      container.appendChild(detail);
+      modalContent.appendChild(detail);
+      modalOverlay.appendChild(modalContent);
     }
     // Demo-only: no real Stripe redirect handling in this prototype
     function handleStripeReturn() {
@@ -7449,7 +7472,8 @@ async function renderJobs(reset = false) {
           // Fetch jobs from API
           try {
             const jobs = await window.hustlAPI.jobs.list({ limit: 50 });
-            const userJobs = jobs.filter(j => 
+            // Get jobs posted by user OR jobs user is working on
+            const userJobs = (jobs.jobs || jobs).filter(j => 
               j.postedByUserId === user.id || j.acceptedHustlerId === user.id
             );
             
