@@ -227,6 +227,8 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
       estHours,
       teamSize = 1,
       requirements = {},
+      recurrenceType,
+      recurrenceEndDate,
     } = req.body;
 
     // Geocode address (with error handling)

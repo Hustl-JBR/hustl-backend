@@ -492,13 +492,18 @@
       margin-top: 0 !important;
     }
     
-    /* Post job view - no extra top spacing */
+    /* Post job view - add proper spacing */
     #view-post {
-      padding-top: 0 !important;
+      padding-top: 1rem !important;
       margin-top: 0 !important;
-      padding-bottom: 0 !important;
+      padding-bottom: 2rem !important;
       margin-bottom: 0 !important;
       display: none; /* Default hidden */
+    }
+    
+    #view-post .card {
+      margin-top: 1rem !important;
+      margin-bottom: 1rem !important;
     }
     
     /* When post view is active, make it visible */
@@ -2059,16 +2064,20 @@
     .app-shell {
       display: flex;
       flex-direction: column;
+      min-height: 100vh;
     }
     
     main {
-      flex: 0 1 auto;
+      flex: 1 0 auto;
       width: 100%;
       max-width: 1100px;
       margin: 0 auto;
       padding: 1rem;
-      min-height: auto !important;
-      height: auto !important;
+    }
+    
+    footer {
+      flex-shrink: 0;
+      margin-top: auto;
     }
     
     /* Ensure sections don't have forced heights */
