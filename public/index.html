@@ -1394,33 +1394,55 @@
       margin-bottom: 0.75rem;
     }
     
-    /* Profile Hero Card */
-    .profile-hero {
-      background: linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%);
-      border-radius: 16px;
-      padding: 1.5rem;
+    /* Enhanced Profile Page */
+    .profile-hero-card {
+      background: linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #db2777 100%);
+      border-radius: 20px;
+      padding: 2rem;
       color: white;
-      box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+      box-shadow: 0 8px 32px rgba(37, 99, 235, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .profile-hero-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+      pointer-events: none;
     }
     
     .profile-hero-top {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 1.25rem;
+      position: relative;
+      z-index: 1;
     }
     
     .profile-hero-avatar {
-      width: 72px;
-      height: 72px;
+      width: 90px;
+      height: 90px;
       border-radius: 50%;
       background: rgba(255,255,255,0.2);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.75rem;
+      font-size: 2.25rem;
       font-weight: 700;
-      border: 3px solid rgba(255,255,255,0.5);
+      border: 4px solid rgba(255,255,255,0.4);
       overflow: hidden;
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .profile-hero-avatar:hover {
+      transform: scale(1.05);
     }
     
     .profile-hero-avatar img {
@@ -1429,49 +1451,253 @@
       object-fit: cover;
     }
     
+    .avatar-camera-icon {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 32px;
+      height: 32px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
     .profile-hero-info {
       flex: 1;
     }
     
     .profile-hero-name {
-      font-size: 1.4rem;
-      font-weight: 700;
+      font-size: 1.75rem;
+      font-weight: 800;
       margin-bottom: 0.25rem;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
-    .profile-hero-role {
+    .profile-hero-email {
       font-size: 0.9rem;
-      opacity: 0.9;
+      opacity: 0.85;
+      margin-bottom: 0.5rem;
+    }
+    
+    .profile-hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.4rem 0.75rem;
+      background: rgba(255,255,255,0.2);
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      backdrop-filter: blur(10px);
     }
     
     .profile-hero-location {
       font-size: 0.85rem;
       opacity: 0.8;
-      margin-top: 0.25rem;
+      margin-top: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
     }
     
-    .profile-stats {
+    /* Quick Stats Bar */
+    .profile-quick-stats {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.75rem;
-      margin-top: 1.25rem;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin: 1rem 0;
     }
     
-    .profile-stat {
+    .quick-stat-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1rem;
       text-align: center;
-      padding: 0.75rem;
-      background: rgba(255,255,255,0.15);
-      border-radius: 10px;
+      border: 1px solid var(--border);
+      transition: all 0.2s;
     }
     
-    .profile-stat-value {
+    .quick-stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    
+    .quick-stat-icon {
+      font-size: 1.5rem;
+      margin-bottom: 0.25rem;
+    }
+    
+    .quick-stat-value {
       font-size: 1.5rem;
       font-weight: 700;
+      color: var(--text-main);
     }
     
-    .profile-stat-label {
+    .quick-stat-label {
       font-size: 0.75rem;
-      opacity: 0.9;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    
+    /* Profile Tabs */
+    .profile-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+    
+    .profile-tab {
+      padding: 0.75rem 1.25rem;
+      background: transparent;
+      border: none;
+      border-radius: 10px 10px 0 0;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .profile-tab:hover {
+      background: var(--bg-light);
+      color: var(--text-main);
+    }
+    
+    .profile-tab.active {
+      background: var(--primary-soft);
+      color: var(--primary);
+      border-bottom: 3px solid var(--primary);
+      margin-bottom: -2px;
+    }
+    
+    .profile-tab-content {
+      display: none;
+    }
+    
+    .profile-tab-content.active {
+      display: block;
+    }
+    
+    .profile-section-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    
+    .profile-settings-card {
+      border: 1px solid var(--border);
+    }
+    
+    /* Preferences */
+    .preference-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .preference-item:last-child {
+      border-bottom: none;
+    }
+    
+    .preference-label {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text-main);
+    }
+    
+    .preference-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    
+    /* Toggle Switch */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 28px;
+    }
+    
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #cbd5e1;
+      transition: 0.3s;
+      border-radius: 28px;
+    }
+    
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 22px;
+      width: 22px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .toggle-switch input:checked + .toggle-slider {
+      background-color: var(--primary);
+    }
+    
+    .toggle-switch input:checked + .toggle-slider:before {
+      transform: translateX(22px);
+    }
+    
+    @media (max-width: 768px) {
+      .profile-quick-stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .profile-section-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .profile-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      .profile-tab {
+        white-space: nowrap;
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+      }
+      
+      .profile-hero-card {
+        padding: 1.5rem;
+      }
+      
+      .profile-hero-avatar {
+        width: 70px;
+        height: 70px;
+        font-size: 1.75rem;
+      }
+      
+      .profile-hero-name {
+        font-size: 1.4rem;
+      }
     }
 
    .linkish {
@@ -2329,28 +2555,106 @@
       <!-- PROFILE VIEW -->
       <section id="view-profile" style="display:none;">
         <!-- Profile Hero Card -->
-        <div id="profileHeroCard" class="profile-hero"></div>
+        <div id="profileHeroCard" class="profile-hero-card"></div>
         
-        <div class="layout-grid" style="gap: 1rem; margin-top: 1rem;">
-          <div>
-            <div class="card" style="margin-bottom: 1rem;">
-              <div class="card-header">
-                <div class="card-title">✏️ Edit Profile</div>
+        <!-- Quick Stats -->
+        <div id="profileQuickStats" class="profile-quick-stats"></div>
+        
+        <!-- Tab Navigation -->
+        <div class="profile-tabs">
+          <button class="profile-tab active" data-tab="settings">⚙️ Settings</button>
+          <button class="profile-tab" data-tab="jobs">📋 My Jobs</button>
+          <button class="profile-tab" data-tab="earnings">💰 Earnings</button>
+        </div>
+        
+        <!-- Settings Tab -->
+        <div id="profileTabSettings" class="profile-tab-content active">
+          <div class="profile-section-grid">
+            <!-- Left Column -->
+            <div>
+              <!-- Edit Profile -->
+              <div class="card profile-settings-card">
+                <div class="card-header">
+                  <div class="card-title">✏️ Edit Profile</div>
+                </div>
+                <div id="profileContent"></div>
               </div>
-              <div id="profileContent"></div>
+              
+              <!-- Preferences -->
+              <div class="card profile-settings-card" style="margin-top: 1rem;">
+                <div class="card-header">
+                  <div class="card-title">🔔 Preferences</div>
+                </div>
+                <div id="profilePreferences">
+                  <div class="preference-item">
+                    <div>
+                      <div class="preference-label">Email Notifications</div>
+                      <div class="preference-desc">Get notified about new jobs and messages</div>
+                    </div>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="prefEmailNotif" checked>
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                  <div class="preference-item">
+                    <div>
+                      <div class="preference-label">Job Alerts</div>
+                      <div class="preference-desc">Get alerts for jobs near you</div>
+                    </div>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="prefJobAlerts" checked>
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="card" id="stripeConnectSection" style="border: 2px solid #22c55e;">
-              <div class="card-header">
-                <div class="card-title" style="color: #16a34a;">💳 Payment Setup</div>
+            
+            <!-- Right Column -->
+            <div>
+              <!-- Payment Setup -->
+              <div class="card profile-settings-card" id="stripeConnectSection">
+                <div class="card-header">
+                  <div class="card-title" style="color: #16a34a;">💳 Payment Setup</div>
+                </div>
+                <div id="stripeConnectContent"></div>
               </div>
-              <div id="stripeConnectContent"></div>
+              
+              <!-- Account Actions -->
+              <div class="card profile-settings-card" style="margin-top: 1rem;">
+                <div class="card-header">
+                  <div class="card-title">🔐 Account</div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                  <button class="btn btn-ghost" style="width: 100%; justify-content: flex-start; gap: 0.5rem;">
+                    🔑 Change Password
+                  </button>
+                  <button class="btn btn-ghost" onclick="handleSignOut()" style="width: 100%; justify-content: flex-start; gap: 0.5rem; color: #dc2626; border-color: #fecaca;">
+                    🚪 Sign Out
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
+        
+        <!-- Jobs Tab -->
+        <div id="profileTabJobs" class="profile-tab-content" style="display: none;">
           <div class="card">
             <div class="card-header">
               <div class="card-title">📋 Your Jobs</div>
             </div>
-            <div class="jobs-list" id="profileJobsList" style="max-height: 400px; overflow-y: auto;"></div>
+            <div class="jobs-list" id="profileJobsList" style="max-height: 500px; overflow-y: auto;"></div>
+          </div>
+        </div>
+        
+        <!-- Earnings Tab -->
+        <div id="profileTabEarnings" class="profile-tab-content" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">💰 Earnings Overview</div>
+            </div>
+            <div id="profileEarningsContent"></div>
           </div>
         </div>
       </section>
@@ -6134,37 +6438,86 @@ async function renderJobs(reset = false) {
   // Render Profile Hero Card
   if (heroCard) {
     const avatarContent = user.avatarDataUrl 
-      ? `<img src="${user.avatarDataUrl}" alt="Profile" style="width:100%;height:100%;object-fit:cover;">` 
+      ? `<img src="${user.avatarDataUrl}" alt="Profile">` 
       : (user.name ? user.name[0].toUpperCase() : "?");
     
-    const roleEmoji = user.role === "HUSTLER" || user.role === "hustler" ? "💪" : "🏠";
-    const roleLabel = user.role === "HUSTLER" || user.role === "hustler" ? "Hustler" : "Customer";
+    const isHustler = user.role === "HUSTLER" || user.role === "hustler";
+    const roleEmoji = isHustler ? "💪" : "🏠";
+    const roleLabel = isHustler ? "Hustler" : "Customer";
     
     heroCard.innerHTML = `
       <div class="profile-hero-top">
-        <div class="profile-hero-avatar">${avatarContent}</div>
+        <div class="profile-hero-avatar" onclick="document.getElementById('avatarUploadInput')?.click()">
+          ${avatarContent}
+          <div class="avatar-camera-icon">📷</div>
+        </div>
         <div class="profile-hero-info">
           <div class="profile-hero-name">${user.name || 'User'}</div>
-          <div class="profile-hero-role">${roleEmoji} ${roleLabel}</div>
+          <div class="profile-hero-email">${user.email || ''}</div>
+          <div class="profile-hero-badge">${roleEmoji} ${roleLabel}</div>
           <div class="profile-hero-location">📍 ${user.city || 'Tennessee'}${user.zip ? ', ' + user.zip : ''}</div>
-        </div>
-      </div>
-      <div class="profile-stats">
-        <div class="profile-stat">
-          <div class="profile-stat-value">${completedJobs.length}</div>
-          <div class="profile-stat-label">Jobs Done</div>
-        </div>
-        <div class="profile-stat">
-          <div class="profile-stat-value">$${totalEarned.toFixed(0)}</div>
-          <div class="profile-stat-label">Earned</div>
-        </div>
-        <div class="profile-stat">
-          <div class="profile-stat-value">⭐ ${user.rating || '--'}</div>
-          <div class="profile-stat-label">Rating</div>
         </div>
       </div>
     `;
   }
+  
+  // Render Quick Stats
+  const quickStats = document.getElementById("profileQuickStats");
+  if (quickStats) {
+    const isHustler = user.role === "HUSTLER" || user.role === "hustler";
+    quickStats.innerHTML = `
+      <div class="quick-stat-card">
+        <div class="quick-stat-icon">✅</div>
+        <div class="quick-stat-value">${completedJobs.length}</div>
+        <div class="quick-stat-label">Jobs Done</div>
+      </div>
+      <div class="quick-stat-card">
+        <div class="quick-stat-icon">${isHustler ? '💰' : '💸'}</div>
+        <div class="quick-stat-value">$${isHustler ? totalEarned.toFixed(0) : totalSpent.toFixed(0)}</div>
+        <div class="quick-stat-label">${isHustler ? 'Earned' : 'Spent'}</div>
+      </div>
+      <div class="quick-stat-card">
+        <div class="quick-stat-icon">⭐</div>
+        <div class="quick-stat-value">${user.rating || '5.0'}</div>
+        <div class="quick-stat-label">Rating</div>
+      </div>
+      <div class="quick-stat-card">
+        <div class="quick-stat-icon">🔥</div>
+        <div class="quick-stat-value">${activeJobs.length}</div>
+        <div class="quick-stat-label">Active Jobs</div>
+      </div>
+    `;
+  }
+  
+  // Render Earnings Tab Content
+  const earningsContent = document.getElementById("profileEarningsContent");
+  if (earningsContent) {
+    const isHustler = user.role === "HUSTLER" || user.role === "hustler";
+    earningsContent.innerHTML = `
+      <div style="text-align: center; padding: 2rem;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">${isHustler ? '💰' : '📊'}</div>
+        <div style="font-size: 2rem; font-weight: 700; color: var(--primary); margin-bottom: 0.5rem;">
+          $${isHustler ? totalEarned.toFixed(2) : totalSpent.toFixed(2)}
+        </div>
+        <div style="color: var(--text-muted); margin-bottom: 1.5rem;">
+          ${isHustler ? 'Total Earnings' : 'Total Spent'}
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; text-align: left;">
+          <div style="padding: 1rem; background: #f0fdf4; border-radius: 10px;">
+            <div style="font-size: 1.25rem; font-weight: 700; color: #16a34a;">✅ ${completedJobs.length}</div>
+            <div style="font-size: 0.85rem; color: #15803d;">Completed Jobs</div>
+          </div>
+          <div style="padding: 1rem; background: #fef3c7; border-radius: 10px;">
+            <div style="font-size: 1.25rem; font-weight: 700; color: #d97706;">🔄 ${activeJobs.length}</div>
+            <div style="font-size: 0.85rem; color: #b45309;">In Progress</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  
+  // Initialize Profile Tabs
+  initProfileTabs();
 
   // Stripe Connect Content
   if (stripeContent) {
@@ -7336,6 +7689,33 @@ try {
     }
   }
   window.handleSignOut = handleSignOut;
+  
+  // Profile Tabs
+  function initProfileTabs() {
+    const tabs = document.querySelectorAll('.profile-tab');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Remove active from all tabs
+        tabs.forEach(t => t.classList.remove('active'));
+        // Add active to clicked tab
+        tab.classList.add('active');
+        
+        // Hide all tab content
+        document.querySelectorAll('.profile-tab-content').forEach(content => {
+          content.style.display = 'none';
+          content.classList.remove('active');
+        });
+        
+        // Show selected tab content
+        const tabName = tab.dataset.tab;
+        const tabContent = document.getElementById('profileTab' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+        if (tabContent) {
+          tabContent.style.display = 'block';
+          tabContent.classList.add('active');
+        }
+      });
+    });
+  }
 
   // Expose functions globally for inline onclick handlers
   window.setView = setView;
