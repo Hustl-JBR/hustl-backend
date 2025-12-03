@@ -1541,90 +1541,81 @@
             <input id="jobTitle" type="text" placeholder="Example: Dump run from West Knoxville" />
           </div>
 
-          <!-- Category Selection - Uber-style -->
+          <!-- Category Selection - Mobile-friendly -->
           <div class="field">
-            <label for="jobCategory" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
-              <span>📂 Job Category</span>
-              <span class="muted" style="font-weight: 400;">(required)</span>
-            </label>
-            <select id="jobCategory" style="font-size: 1rem;">
-              <option value="">Select a category...</option>
-              
-              <!-- Outdoor & Property -->
-              <optgroup label="🏡 Outdoor & Property">
-                <option value="power-washing">💦 Power Washing</option>
-                <option value="yard-work">🌿 Yard Work / Lawn Care</option>
-                <option value="landscaping">🌳 Landscaping</option>
-                <option value="mulching">🍂 Mulching</option>
-                <option value="snow-removal">❄️ Snow Removal</option>
-                <option value="driveway-sealing">🛣️ Driveway Sealing</option>
-                <option value="gutter-cleaning">🏠 Gutter Cleaning</option>
-                <option value="tree-trimming">🌲 Tree Trimming</option>
-              </optgroup>
-              
-              <!-- Moving & Hauling -->
-              <optgroup label="🚚 Moving & Hauling">
-                <option value="moving">📦 Moving / Hauling</option>
-                <option value="dump-run">🗑️ Dump Run / Junk Removal</option>
-                <option value="furniture-moving">🛋️ Furniture Moving</option>
-                <option value="appliance-moving">🧊 Appliance Moving</option>
-                <option value="storage-help">📦 Storage Unit Help</option>
-              </optgroup>
-              
-              <!-- Home Services -->
-              <optgroup label="🏠 Home Services">
-                <option value="cleaning">🧹 Cleaning / Organizing</option>
-                <option value="furniture-assembly">🔧 Furniture Assembly</option>
-                <option value="painting">🎨 Painting (Indoor/Outdoor)</option>
-                <option value="handyman">🔨 Handyman Help</option>
-                <option value="pressure-washing">💧 Pressure Washing</option>
-                <option value="window-cleaning">🪟 Window Cleaning</option>
-                <option value="carpet-cleaning">🧽 Carpet Cleaning</option>
-              </optgroup>
-              
-              <!-- Vehicles -->
-              <optgroup label="🚗 Vehicles">
-                <option value="car-cleaning">🚿 Car Washing / Detailing</option>
-                <option value="car-help">🔧 Car Help / Light Mechanical</option>
-              </optgroup>
-              
-              <!-- Errands & Delivery -->
-              <optgroup label="📦 Errands & Delivery">
-                <option value="delivery">🚚 Delivery / Pickup</option>
-                <option value="errands">🏃 Errands</option>
-                <option value="grocery">🛒 Grocery Shopping</option>
-                <option value="waiting-in-line">⏰ Waiting in Line</option>
-              </optgroup>
-              
-              <!-- Events & Special -->
-              <optgroup label="🎉 Events & Special">
-                <option value="event-setup">🎪 Event Setup / Takedown</option>
-                <option value="party-help">🥳 Party Help</option>
-                <option value="moving-day-help">📅 Moving Day Assistance</option>
-              </optgroup>
-              
-              <!-- Pets -->
-              <optgroup label="🐕 Pet Care">
-                <option value="pet-walking">🐕 Dog Walking</option>
-                <option value="pet-sitting">🏠 Pet Sitting</option>
-                <option value="pet-transport">🚗 Pet Transport</option>
-              </optgroup>
-              
-              <!-- Other -->
-              <optgroup label="✨ Other">
-                <option value="other">📝 Other / Custom Job</option>
-              </optgroup>
-            </select>
-          </div>
-
-          <!-- Sub-tags (shown based on category) -->
-          <div id="subTagsContainer" class="field" style="display: none;">
             <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
-              <span>🏷️ What specifically?</span>
-              <span class="muted" style="font-weight: 400;">(select all that apply)</span>
+              <span>📂 What do you need help with?</span>
             </label>
-            <div id="subTagsGrid" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-              <!-- Dynamically populated -->
+            
+            <!-- Hidden select for form submission -->
+            <select id="jobCategory" style="display: none;">
+              <option value="">Select...</option>
+              <option value="moving">Moving / Hauling</option>
+              <option value="yard-work">Yard Work</option>
+              <option value="dump-run">Dump Run</option>
+              <option value="cleaning">Cleaning</option>
+              <option value="power-washing">Power Washing</option>
+              <option value="furniture-assembly">Furniture Assembly</option>
+              <option value="painting">Painting</option>
+              <option value="handyman">Handyman</option>
+              <option value="landscaping">Landscaping</option>
+              <option value="pet-care">Pet Care</option>
+              <option value="delivery">Delivery</option>
+              <option value="car-cleaning">Car Cleaning</option>
+              <option value="event-setup">Event Setup</option>
+              <option value="snow-removal">Snow Removal</option>
+              <option value="other">Other</option>
+            </select>
+
+            <!-- Popular Categories - Big tappable chips -->
+            <div id="categoryChips" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+              <button type="button" class="category-chip" data-value="moving" style="padding: 0.6rem 1rem; border: 2px solid var(--border); background: #fff; border-radius: 999px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem;">
+                🚚 Moving
+              </button>
+              <button type="button" class="category-chip" data-value="yard-work" style="padding: 0.6rem 1rem; border: 2px solid var(--border); background: #fff; border-radius: 999px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem;">
+                🌿 Yard Work
+              </button>
+              <button type="button" class="category-chip" data-value="dump-run" style="padding: 0.6rem 1rem; border: 2px solid var(--border); background: #fff; border-radius: 999px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem;">
+                🗑️ Dump Run
+              </button>
+              <button type="button" class="category-chip" data-value="cleaning" style="padding: 0.6rem 1rem; border: 2px solid var(--border); background: #fff; border-radius: 999px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem;">
+                🧹 Cleaning
+              </button>
+              <button type="button" class="category-chip" data-value="power-washing" style="padding: 0.6rem 1rem; border: 2px solid var(--border); background: #fff; border-radius: 999px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem;">
+                💦 Power Wash
+              </button>
+              <button type="button" class="category-chip" data-value="furniture-assembly" style="padding: 0.6rem 1rem; border: 2px solid var(--border); background: #fff; border-radius: 999px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem;">
+                🔧 Assembly
+              </button>
+            </div>
+            
+            <!-- See More Categories -->
+            <div id="moreCategoriesSection">
+              <button type="button" id="showMoreCategoriesBtn" style="width: 100%; padding: 0.6rem; border: 1px dashed var(--border); background: transparent; border-radius: 8px; color: var(--primary); font-size: 0.9rem; cursor: pointer; transition: all 0.2s;">
+                + See all categories
+              </button>
+              
+              <div id="allCategoriesGrid" style="display: none; margin-top: 0.75rem;">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+                  <button type="button" class="category-chip" data-value="painting" style="padding: 0.6rem; border: 2px solid var(--border); background: #fff; border-radius: 8px; font-size: 0.85rem; cursor: pointer; text-align: left;">🎨 Painting</button>
+                  <button type="button" class="category-chip" data-value="handyman" style="padding: 0.6rem; border: 2px solid var(--border); background: #fff; border-radius: 8px; font-size: 0.85rem; cursor: pointer; text-align: left;">🔨 Handyman</button>
+                  <button type="button" class="category-chip" data-value="landscaping" style="padding: 0.6rem; border: 2px solid var(--border); background: #fff; border-radius: 8px; font-size: 0.85rem; cursor: pointer; text-align: left;">🌳 Landscaping</button>
+                  <button type="button" class="category-chip" data-value="pet-care" style="padding: 0.6rem; border: 2px solid var(--border); background: #fff; border-radius: 8px; font-size: 0.85rem; cursor: pointer; text-align: left;">🐕 Pet Care</button>
+                  <button type="button" class="category-chip" data-value="delivery" style="padding: 0.6rem; border: 2px solid var(--border); background: #fff; border-radius: 8px; font-size: 0.85rem; cursor: pointer; text-align: left;">🚚 Delivery</button>
+                  <button type="button" class="category-chip" data-value="car-cleaning" style="padding: 0.6rem; border: 2px solid var(--border); background: #fff; border-radius: 8px; font-size: 0.85rem; cursor: pointer; text-align: left;">🚿 Car Cleaning</button>
+                  <button type="button" class="category-chip" data-value="event-setup" style="padding: 0.6rem; border: 2px solid var(--border); background: #fff; border-radius: 8px; font-size: 0.85rem; cursor: pointer; text-align: left;">🎪 Event Setup</button>
+                  <button type="button" class="category-chip" data-value="snow-removal" style="padding: 0.6rem; border: 2px solid var(--border); background: #fff; border-radius: 8px; font-size: 0.85rem; cursor: pointer; text-align: left;">❄️ Snow Removal</button>
+                  <button type="button" class="category-chip" data-value="other" style="padding: 0.6rem; border: 2px solid var(--border); background: #fff; border-radius: 8px; font-size: 0.85rem; cursor: pointer; text-align: left; grid-column: span 2;">✨ Other / Custom Job</button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Selected category display -->
+            <div id="selectedCategoryDisplay" style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: var(--primary-soft); border: 2px solid var(--primary); border-radius: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span id="selectedCategoryText" style="font-weight: 600; color: var(--primary);"></span>
+                <button type="button" id="changeCategoryBtn" style="padding: 0.25rem 0.5rem; background: transparent; border: 1px solid var(--primary); border-radius: 4px; color: var(--primary); font-size: 0.8rem; cursor: pointer;">Change</button>
+              </div>
             </div>
           </div>
 
@@ -1632,6 +1623,17 @@
           <div class="field" id="customCategoryField" style="display: none;">
             <label for="customCategory">Describe your job type</label>
             <input id="customCategory" type="text" placeholder="What kind of help do you need?" />
+          </div>
+
+          <!-- Sub-tags (shown based on category) -->
+          <div id="subTagsContainer" class="field" style="display: none;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+              <span>🏷️ More details</span>
+              <span class="muted" style="font-weight: 400;">(optional)</span>
+            </label>
+            <div id="subTagsGrid" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+              <!-- Dynamically populated -->
+            </div>
           </div>
 
           <div class="field">
@@ -2598,72 +2600,136 @@ window.startExploring = function() {
 
       // Sub-tags data based on category
       const subTagsData = {
-        'power-washing': ['Siding', 'Driveway', 'Roof', 'Deck', 'Patio', 'Fence', 'Sidewalk'],
-        'yard-work': ['Mowing', 'Edging', 'Leaf Removal', 'Weeding', 'Trimming', 'Fertilizing'],
-        'landscaping': ['Planting', 'Garden Bed', 'Rock/Stone', 'Irrigation', 'Design', 'Sod'],
-        'mulching': ['Spread Mulch', 'Mulch Delivery', 'Bed Prep', 'Weed Barrier'],
-        'snow-removal': ['Driveway', 'Sidewalk', 'Parking Lot', 'Salting', 'Roof'],
-        'moving': ['Full Move', 'Load Only', 'Unload Only', 'Packing Help', 'Furniture Only'],
-        'dump-run': ['Construction Debris', 'Furniture', 'Yard Waste', 'Electronics', 'Appliances'],
-        'cleaning': ['Deep Clean', 'Regular Clean', 'Move-out Clean', 'Organizing', 'Declutter'],
-        'furniture-assembly': ['IKEA', 'Office Furniture', 'Bed Frame', 'Shelving', 'Outdoor Furniture'],
-        'painting': ['Interior', 'Exterior', 'Trim', 'Fence', 'Deck Staining', 'Touch-ups'],
-        'handyman': ['Minor Repairs', 'Mounting', 'Drywall', 'Plumbing', 'Electrical', 'Door/Window'],
-        'car-cleaning': ['Exterior Wash', 'Interior Detail', 'Full Detail', 'Wax', 'Engine Clean'],
-        'pet-walking': ['Single Walk', 'Regular Schedule', 'Group Walk', 'Running'],
-        'pet-sitting': ['Day Visit', 'Overnight', 'Extended Stay', 'Multiple Pets'],
-        'event-setup': ['Tent/Canopy', 'Tables/Chairs', 'Decorations', 'Cleanup', 'AV Equipment'],
+        'power-washing': ['Siding', 'Driveway', 'Roof', 'Deck', 'Patio', 'Fence'],
+        'yard-work': ['Mowing', 'Leaf Removal', 'Weeding', 'Trimming', 'Edging'],
+        'landscaping': ['Planting', 'Garden Bed', 'Rock/Stone', 'Sod'],
+        'snow-removal': ['Driveway', 'Sidewalk', 'Salting'],
+        'moving': ['Full Move', 'Load Only', 'Unload Only', 'Packing Help'],
+        'dump-run': ['Furniture', 'Yard Waste', 'Construction', 'Appliances'],
+        'cleaning': ['Deep Clean', 'Move-out', 'Organizing', 'Regular'],
+        'furniture-assembly': ['IKEA', 'Bed Frame', 'Shelving', 'Desk'],
+        'painting': ['Interior', 'Exterior', 'Fence', 'Deck'],
+        'handyman': ['Repairs', 'Mounting', 'Drywall', 'Plumbing'],
+        'car-cleaning': ['Exterior', 'Interior', 'Full Detail'],
+        'pet-care': ['Walking', 'Sitting', 'Transport'],
+        'delivery': ['Pickup', 'Drop-off', 'Store Run'],
+        'event-setup': ['Tables/Chairs', 'Tent', 'Cleanup'],
       };
 
-      // Category change handler with sub-tags
+      // Category names for display
+      const categoryNames = {
+        'moving': '🚚 Moving / Hauling',
+        'yard-work': '🌿 Yard Work',
+        'dump-run': '🗑️ Dump Run',
+        'cleaning': '🧹 Cleaning',
+        'power-washing': '💦 Power Washing',
+        'furniture-assembly': '🔧 Furniture Assembly',
+        'painting': '🎨 Painting',
+        'handyman': '🔨 Handyman',
+        'landscaping': '🌳 Landscaping',
+        'pet-care': '🐕 Pet Care',
+        'delivery': '🚚 Delivery',
+        'car-cleaning': '🚿 Car Cleaning',
+        'event-setup': '🎪 Event Setup',
+        'snow-removal': '❄️ Snow Removal',
+        'other': '✨ Other'
+      };
+
+      // Category chip selection handler
       const jobCategory = document.getElementById("jobCategory");
       const customCategoryField = document.getElementById("customCategoryField");
       const subTagsContainer = document.getElementById("subTagsContainer");
       const subTagsGrid = document.getElementById("subTagsGrid");
-      
-      if (jobCategory) {
-        jobCategory.addEventListener("change", () => {
-          const category = jobCategory.value;
-          
-          // Show/hide custom category field
-          if (customCategoryField) {
-            customCategoryField.style.display = category === "other" ? "block" : "none";
-          }
-          
-          // Show/hide sub-tags
-          if (subTagsContainer && subTagsGrid) {
-            const tags = subTagsData[category];
-            if (tags && tags.length > 0) {
-              subTagsGrid.innerHTML = tags.map(tag => `
-                <label class="sub-tag-chip" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.875rem; background: #fff; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; transition: all 0.2s; font-size: 0.875rem;">
-                  <input type="checkbox" name="subTags" value="${tag.toLowerCase().replace(/\s+/g, '-')}" style="width: 16px; height: 16px; accent-color: var(--primary);" />
-                  <span>${tag}</span>
-                </label>
-              `).join('');
-              subTagsContainer.style.display = "block";
-              
-              // Add toggle effect for sub-tag chips
-              subTagsGrid.querySelectorAll('.sub-tag-chip').forEach(chip => {
-                const cb = chip.querySelector('input');
-                cb.addEventListener('change', () => {
-                  if (cb.checked) {
-                    chip.style.background = 'var(--primary-soft)';
-                    chip.style.borderColor = 'var(--primary)';
-                    chip.style.color = 'var(--primary)';
-                  } else {
-                    chip.style.background = '#fff';
-                    chip.style.borderColor = 'var(--border)';
-                    chip.style.color = 'inherit';
-                  }
-                });
-              });
-            } else {
-              subTagsContainer.style.display = "none";
-              subTagsGrid.innerHTML = "";
-            }
-          }
+      const selectedCategoryDisplay = document.getElementById("selectedCategoryDisplay");
+      const selectedCategoryText = document.getElementById("selectedCategoryText");
+      const categoryChips = document.getElementById("categoryChips");
+      const moreCategoriesSection = document.getElementById("moreCategoriesSection");
+      const showMoreCategoriesBtn = document.getElementById("showMoreCategoriesBtn");
+      const allCategoriesGrid = document.getElementById("allCategoriesGrid");
+      const changeCategoryBtn = document.getElementById("changeCategoryBtn");
+
+      // Handle "See all categories" toggle
+      if (showMoreCategoriesBtn && allCategoriesGrid) {
+        showMoreCategoriesBtn.addEventListener("click", () => {
+          const isHidden = allCategoriesGrid.style.display === "none";
+          allCategoriesGrid.style.display = isHidden ? "block" : "none";
+          showMoreCategoriesBtn.textContent = isHidden ? "− Show less" : "+ See all categories";
         });
       }
+
+      // Handle category chip clicks
+      function selectCategory(value) {
+        // Update hidden select
+        if (jobCategory) jobCategory.value = value;
+        
+        // Hide chips, show selected
+        if (categoryChips) categoryChips.style.display = "none";
+        if (moreCategoriesSection) moreCategoriesSection.style.display = "none";
+        if (selectedCategoryDisplay) {
+          selectedCategoryDisplay.style.display = "block";
+          if (selectedCategoryText) {
+            selectedCategoryText.textContent = categoryNames[value] || value;
+          }
+        }
+        
+        // Show/hide custom category field
+        if (customCategoryField) {
+          customCategoryField.style.display = value === "other" ? "block" : "none";
+        }
+        
+        // Show sub-tags if available
+        if (subTagsContainer && subTagsGrid) {
+          const tags = subTagsData[value];
+          if (tags && tags.length > 0) {
+            subTagsGrid.innerHTML = tags.map(tag => `
+              <label class="sub-tag-chip" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.75rem; background: #fff; border: 1.5px solid var(--border); border-radius: 999px; cursor: pointer; transition: all 0.2s; font-size: 0.85rem;">
+                <input type="checkbox" name="subTags" value="${tag.toLowerCase().replace(/\s+/g, '-')}" style="display: none;" />
+                <span>${tag}</span>
+              </label>
+            `).join('');
+            subTagsContainer.style.display = "block";
+            
+            // Add toggle effect for sub-tag chips
+            subTagsGrid.querySelectorAll('.sub-tag-chip').forEach(chip => {
+              chip.addEventListener('click', () => {
+                const cb = chip.querySelector('input');
+                cb.checked = !cb.checked;
+                if (cb.checked) {
+                  chip.style.background = 'var(--primary-soft)';
+                  chip.style.borderColor = 'var(--primary)';
+                  chip.style.color = 'var(--primary)';
+                } else {
+                  chip.style.background = '#fff';
+                  chip.style.borderColor = 'var(--border)';
+                  chip.style.color = 'inherit';
+                }
+              });
+            });
+          } else {
+            subTagsContainer.style.display = "none";
+            subTagsGrid.innerHTML = "";
+          }
+        }
+      }
+
+      // Handle change category button
+      if (changeCategoryBtn) {
+        changeCategoryBtn.addEventListener("click", () => {
+          if (categoryChips) categoryChips.style.display = "flex";
+          if (moreCategoriesSection) moreCategoriesSection.style.display = "block";
+          if (selectedCategoryDisplay) selectedCategoryDisplay.style.display = "none";
+          if (subTagsContainer) subTagsContainer.style.display = "none";
+          if (customCategoryField) customCategoryField.style.display = "none";
+          if (jobCategory) jobCategory.value = "";
+        });
+      }
+
+      // Add click handlers to all category chips
+      document.querySelectorAll('.category-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          selectCategory(chip.dataset.value);
+        });
+      });
 
       // Equipment section toggle
       const equipmentToggle = document.getElementById("equipmentToggle");
