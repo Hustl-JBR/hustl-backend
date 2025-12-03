@@ -3309,11 +3309,10 @@ heart of Hustl.
           !job.autoCompleted
         ) {
           if (now - job.completionRequestedAt >= AUTO_COMPLETE_MS) {
-            job.status = "completed";// If there's a hustler, this will now appear in Owner payout queue
-if (job.acceptedHustlerId) {
-  console.log("Job moved to payout queue:", job.id);
-}
-
+            job.status = "completed"; // If there's a hustler, this will now appear in Owner payout queue
+            if (job.acceptedHustlerId) {
+              console.log("Job moved to payout queue:", job.id);
+            }
             job.autoCompleted = true;
             changed = true;
           }
