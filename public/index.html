@@ -307,6 +307,7 @@
       flex-wrap: wrap;
       gap: 0.25rem;
       font-size: 0.85rem;
+      margin-top: 0.5rem;
     }
 
     .nav-tab {
@@ -2142,11 +2143,23 @@
       padding: 0 !important;
       height: auto !important;
       overflow-x: hidden;
+      overflow-y: auto; /* Only show scrollbar when content exceeds viewport */
     }
     
-    /* Only show vertical scrollbar when needed */
+    /* Prevent unnecessary scrolling - only scroll when there's actual content */
     body {
       overflow-y: auto;
+      min-height: 100vh;
+    }
+    
+    /* Remove scrolling from empty views */
+    #view-home:empty,
+    #view-jobs:empty,
+    #view-post:empty,
+    #view-messages:empty,
+    #view-profile:empty {
+      overflow: hidden;
+      height: auto;
     }
     
     /* Make sure post view is visible when displayed */
@@ -2850,11 +2863,11 @@
       <!-- JOBS VIEW -->
       <section id="view-jobs" style="display:none;">
         <!-- Search & Filter Bar -->
-        <div class="card" style="margin-bottom: 1rem; padding: 1.5rem;">
+        <div class="card" style="margin-bottom: 1rem; padding: 2rem;">
           <!-- Category Filter Chips -->
-          <div style="margin-bottom: 1.25rem;">
-            <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">Filter by Category</div>
-            <div id="categoryFilterChips" style="display: flex; flex-wrap: wrap; gap: 0.75rem; min-height: 60px; align-items: center;">
+          <div style="margin-bottom: 1.5rem; padding-top: 0.5rem;">
+            <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 1rem;">Filter by Category</div>
+            <div id="categoryFilterChips" style="display: flex; flex-wrap: wrap; gap: 0.75rem; min-height: 80px; align-items: center; padding-top: 0.5rem;">
               <button class="filter-chip active" data-category="all" style="padding: 0.5rem 0.75rem; border: 1.5px solid var(--primary); background: var(--primary-soft); color: var(--primary); border-radius: 999px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
                 All Jobs
               </button>
@@ -7259,7 +7272,7 @@ async function renderJobs(reset = false) {
         <div class="profile-hero-info">
           <div class="profile-hero-name">${user.name || 'User'}</div>
           <div class="profile-hero-email">${user.email || ''}</div>
-          <div class="profile-hero-badge">${roleEmoji} ${roleLabel}</div>
+          <div class="profile-hero-badge">${roleEmoji}</div>
           <div class="profile-hero-location">📍 ${user.city || 'Tennessee'}${user.zip ? ', ' + user.zip : ''}</div>
         </div>
       </div>
