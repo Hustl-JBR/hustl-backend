@@ -224,8 +224,19 @@
     .app-shell {
       display: flex;
       flex-direction: column;
-      min-height: auto;
+      min-height: 100vh;
       justify-content: flex-start;
+    }
+    
+    /* Main content wrapper - grows to push footer down */
+    .app-shell > main,
+    .app-shell > section:not(footer) {
+      flex: 1 0 auto;
+    }
+    
+    /* Footer stays at bottom */
+    footer {
+      flex-shrink: 0;
     }
     
     /* When logged in, hide auth section completely */
@@ -3443,6 +3454,24 @@ heart of Hustl.
         } else {
           document.body.classList.remove('viewing-post');
         }
+      }
+      
+      // Re-initialize hamburger menu when switching views (fixes broken menu after tab switch)
+      if (typeof initHamburgerMenu === 'function') {
+        // Remove old listeners by cloning and replacing
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+        if (hamburgerBtn && mobileMenu) {
+          // Clone to remove all event listeners
+          const newHamburgerBtn = hamburgerBtn.cloneNode(true);
+          const newMobileMenu = mobileMenu.cloneNode(true);
+          hamburgerBtn.parentNode.replaceChild(newHamburgerBtn, hamburgerBtn);
+          mobileMenu.parentNode.replaceChild(newMobileMenu, mobileMenu);
+        }
+        // Re-initialize with fresh listeners
+        setTimeout(() => {
+          initHamburgerMenu();
+        }, 50);
       }
 
       document.querySelectorAll(".nav-tab").forEach((tab) => {
