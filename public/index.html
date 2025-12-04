@@ -3483,6 +3483,13 @@ heart of Hustl.
           initHamburgerMenu();
         }, 50);
       }
+      
+      // Re-initialize navigation tabs when switching views (fixes broken nav after tab switch)
+      if (typeof initNav === 'function') {
+        setTimeout(() => {
+          initNav();
+        }, 50);
+      }
 
       document.querySelectorAll(".nav-tab").forEach((tab) => {
         tab.classList.toggle("active", tab.dataset.view === view);
@@ -9805,9 +9812,18 @@ meta.textContent =
     /* ---------- Init ---------- */
 
     function initNav() {
-      // Nav tabs
+      // Remove old event listeners by cloning nav tabs
+      const navTabs = document.querySelectorAll(".nav-tab");
+      navTabs.forEach((tab) => {
+        const newTab = tab.cloneNode(true);
+        tab.parentNode.replaceChild(newTab, tab);
+      });
+      
+      // Nav tabs - add fresh event listeners
       document.querySelectorAll(".nav-tab").forEach((tab) => {
-        tab.addEventListener("click", () => {
+        tab.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
           const v = tab.dataset.view;
           if (v && typeof setView === 'function') {
             setView(v);
