@@ -355,7 +355,7 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
         amount: jobAmount,
         tip: tipAmount,
         feeCustomer: customerFee,
-        feeHustler: 0, // Will be calculated on capture (16% of jobAmount)
+        feeHustler: 0, // Will be calculated on capture (12% of jobAmount)
         total,
         status: 'PREAUTHORIZED',
         providerId: paymentIntent.id,

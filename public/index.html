@@ -2511,7 +2511,7 @@
           </div>
           <ul style="list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">
             <li>• All of Tennessee — Knoxville, Nashville, Memphis & more</li>
-            <li>• Hustl takes only 16% — the rest goes to hustlers</li>
+            <li>• Hustl takes only 12% — the rest goes to hustlers</li>
             <li>• Chat with hustlers before you hire</li>
             <li>• You must be 18+ to use Hustl</li>
           </ul>
@@ -3124,7 +3124,7 @@
               <div class="card-title">Owner dashboard (demo)</div>
             </div>
             <div class="muted" style="margin-bottom:0.4rem;">
-              Shows paid jobs, your 15% fee, and whether you’ve sent the Hustler their payout.
+              Shows paid jobs, your 12% fee, and whether you've sent the Hustler their payout.
             </div>
             <div id="ownerPaidList"></div>
           </div>
@@ -4965,9 +4965,37 @@ async function renderJobs(reset = false) {
 }
 
     async function openJobDetails(jobId, options = {}) {
-      const job = state.jobs.find((j) => j.id === jobId);
+      // Try to find job in state.jobs first, then allLoadedJobs
+      let job = state.jobs.find((j) => j.id === jobId);
+      if (!job && typeof allLoadedJobs !== 'undefined' && Array.isArray(allLoadedJobs)) {
+        job = allLoadedJobs.find((j) => j.id === jobId);
+      }
+      
+      // If still not found, try to fetch from API
+      if (!job) {
+        try {
+          const token = localStorage.getItem("hustl_token");
+          const response = await fetch(`${BACKEND_URL}/api/jobs/${jobId}`, {
+            headers: token ? { "Authorization": `Bearer ${token}` } : {}
+          });
+          if (response.ok) {
+            job = await response.json();
+            // Add to state for future use
+            if (job && !state.jobs.find(j => j.id === jobId)) {
+              state.jobs.push(job);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching job details:", error);
+        }
+      }
+      
       const user = getCurrentUser();
-      if (!job) return;
+      if (!job) {
+        console.error("Job not found:", jobId);
+        showToast("Job not found. Please try again.");
+        return;
+      }
 
       // Create modal overlay
       let modalOverlay = document.getElementById("jobDetailModal");
@@ -5212,7 +5240,7 @@ async function renderJobs(reset = false) {
         } else {
           total = (job.hourlyRate || 0) * (job.maxHours || 0);
         }
-        const platformPercent = 0.15;
+        const platformPercent = 0.12;
         const platformFee = Math.round(total * platformPercent);
         const hustlerPayout = total - platformFee;
 
@@ -5221,7 +5249,7 @@ async function renderJobs(reset = false) {
           "<div class='stat-value'>" +
           formatMoney(total) +
           " total</div>" +
-          "<div class='muted'>Hustl fee (15%): " +
+          "<div class='muted'>Hustl fee (12%): " +
           formatMoney(platformFee) +
           " · Hustler receives approx " +
           formatMoney(hustlerPayout) +
@@ -8580,7 +8608,7 @@ async function startPayment(jobId) {
   }
 
   // Stripe expects amount in cents
-  const platformPercent = 0.15; // 15% cut
+  const platformPercent = 0.12; // 12% cut
   const platformFee = Math.round(total * platformPercent);
   const amountToCharge = total * 100; // Convert to cents
 

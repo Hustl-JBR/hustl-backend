@@ -849,8 +849,8 @@ router.post('/:id/confirm-complete', authenticate, requireRole('CUSTOMER'), asyn
         await capturePaymentIntent(job.payment.providerId);
       }
 
-      // Calculate hustler fee (16% platform fee)
-      const hustlerFee = Number(job.payment.amount) * 0.16;
+      // Calculate hustler fee (12% platform fee)
+      const hustlerFee = Number(job.payment.amount) * 0.12;
       const hustlerAmount = Number(job.payment.amount) - hustlerFee;
 
       // Update payment

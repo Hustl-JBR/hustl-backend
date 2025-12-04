@@ -71,8 +71,8 @@ router.post('/jobs/:jobId/confirm', requireRole('CUSTOMER'), async (req, res) =>
       captured = await capturePaymentIntent(job.payment.providerId);
     }
 
-    // Calculate hustler fee (16% platform fee)
-    const hustlerFee = Number(job.payment.amount) * 0.16;
+    // Calculate hustler fee (12% platform fee)
+    const hustlerFee = Number(job.payment.amount) * 0.12;
 
     // Update payment
     const payment = await prisma.payment.update({

@@ -94,7 +94,7 @@ async function handleCheckoutSessionCompleted(session) {
         amount: jobAmount,
         tip: tipAmount,
         feeCustomer: customerFee,
-        feeHustler: 0, // Will be calculated on capture (16% of jobAmount)
+        feeHustler: 0, // Will be calculated on capture (12% of jobAmount)
         total,
         status: 'CAPTURED', // Already paid via checkout
         providerId: session.payment_intent,
@@ -258,7 +258,7 @@ async function handleTransferCreated(transfer) {
   if (!payment || !payment.hustlerId) return;
 
   const transferAmount = transfer.amount / 100; // Convert from cents
-  const platformFee = transferAmount * 0.16; // 16% platform fee
+  const platformFee = transferAmount * 0.12; // 12% platform fee
   const netAmount = transferAmount - platformFee;
 
   // Create or update payout record
