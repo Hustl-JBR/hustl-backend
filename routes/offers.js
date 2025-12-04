@@ -314,17 +314,6 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       data: { status: 'DECLINED' },
     });
 
-    // Check if payment already exists (customer paid upfront when posting job)
-    const existingPayment = await prisma.payment.findUnique({
-      where: { jobId: offer.job.id },
-    });
-
-    if (!existingPayment || existingPayment.status !== 'PREAUTHORIZED') {
-      return res.status(400).json({ 
-        error: 'Payment not found or not pre-authorized. Customer must pay upfront when posting the job.' 
-      });
-    }
-
     // Generate 6-digit verification codes
     const generateCode = () => String(Math.floor(100000 + Math.random() * 900000));
     const startCode = generateCode(); // Customer gives this to hustler to start job
