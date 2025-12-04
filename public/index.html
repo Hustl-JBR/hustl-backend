@@ -3254,6 +3254,21 @@ heart of Hustl.
 </script>
 <script src="/api-integration.js?v=3"></script>
 <script>
+  // Define stub functions early so they're available for onclick handlers in HTML
+  window.setView = function(view) {
+    console.warn("setView called before initialization, view:", view);
+    // Will be replaced with real function later
+  };
+  window.openAuthModal = function(mode) {
+    console.warn("openAuthModal called before initialization, mode:", mode);
+  };
+  window.closeAuthModal = function() {
+    console.warn("closeAuthModal called before initialization");
+  };
+  window.handleSignOut = function() {
+    console.warn("handleSignOut called before initialization");
+  };
+  
   // Backend API configuration - using NestJS API with Neon database
   // No Supabase needed - we use Railway backend with Neon PostgreSQL
   // Deploy v2.1 - Fixed button handlers
@@ -10100,7 +10115,6 @@ try {
           }
         }
       });
-    }
     
     // Desktop auth buttons
     const headerLoginBtn = document.getElementById('headerLoginBtn');
