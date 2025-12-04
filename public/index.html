@@ -9831,27 +9831,43 @@ meta.textContent =
         });
       });
 
-      // Home CTA buttons
+      // Home CTA buttons - remove old listeners first
       const homeCtaPost = document.getElementById("homeCtaPost");
       if (homeCtaPost) {
-        homeCtaPost.addEventListener("click", () => {
-          if (typeof setView === 'function') {
-            setView("post");
-            const formCard = document.getElementById("jobFormCard");
-            if (formCard) {
-              formCard.scrollIntoView({ behavior: "smooth" });
+        const newCtaPost = homeCtaPost.cloneNode(true);
+        homeCtaPost.parentNode.replaceChild(newCtaPost, homeCtaPost);
+        const freshCtaPost = document.getElementById("homeCtaPost");
+        if (freshCtaPost) {
+          freshCtaPost.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof setView === 'function') {
+              setView("post");
+              setTimeout(() => {
+                const formCard = document.getElementById("jobFormCard");
+                if (formCard) {
+                  formCard.scrollIntoView({ behavior: "smooth" });
+                }
+              }, 100);
             }
-          }
-        });
+          });
+        }
       }
       
       const homeCtaBrowse = document.getElementById("homeCtaBrowse");
       if (homeCtaBrowse) {
-        homeCtaBrowse.addEventListener("click", () => {
-          if (typeof setView === 'function') {
-            setView("jobs");
-          }
-        });
+        const newCtaBrowse = homeCtaBrowse.cloneNode(true);
+        homeCtaBrowse.parentNode.replaceChild(newCtaBrowse, homeCtaBrowse);
+        const freshCtaBrowse = document.getElementById("homeCtaBrowse");
+        if (freshCtaBrowse) {
+          freshCtaBrowse.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof setView === 'function') {
+              setView("jobs");
+            }
+          });
+        }
       }
 
       // Jobs status filter
