@@ -5742,6 +5742,10 @@ async function renderJobs(reset = false) {
       // Append modal content to overlay
       modalOverlay.appendChild(modalContent);
 
+      // Content Section (scrollable) - CREATE FIRST
+      const contentSection = document.createElement("div");
+      contentSection.style.cssText = "padding: 1.5rem 2rem; max-height: calc(90vh - 400px); overflow-y: auto;";
+      
       // Additional Details Section
       if (job.requirements) {
         const detailsSection = document.createElement("div");
@@ -5778,10 +5782,6 @@ async function renderJobs(reset = false) {
           contentSection.appendChild(detailsSection);
         }
       }
-      
-      // Content Section (scrollable)
-      const contentSection = document.createElement("div");
-      contentSection.style.cssText = "padding: 1.5rem 2rem; max-height: calc(90vh - 400px); overflow-y: auto;";
 
       // Full Job Description Section
       const descSection = document.createElement("div");
