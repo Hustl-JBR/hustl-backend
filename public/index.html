@@ -9974,26 +9974,42 @@ try {
     const hamburgerBtn = document.getElementById('hamburgerBtn');
     const mobileMenu = document.getElementById('mobileMenu');
     
-    if (hamburgerBtn && mobileMenu) {
-      // Prevent double-click issues
-      let isToggling = false;
-      hamburgerBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        if (isToggling) return;
-        isToggling = true;
-        
-        freshHamburgerBtn.classList.toggle('open');
-        freshMobileMenu.classList.toggle('open');
-        
-        setTimeout(() => {
-          isToggling = false;
-        }, 300);
-      });
+    if (!hamburgerBtn || !mobileMenu) return;
+    
+    // Remove old event listeners by cloning elements
+    const newHamburgerBtn = hamburgerBtn.cloneNode(true);
+    const newMobileMenu = mobileMenu.cloneNode(true);
+    hamburgerBtn.parentNode.replaceChild(newHamburgerBtn, hamburgerBtn);
+    mobileMenu.parentNode.replaceChild(newMobileMenu, mobileMenu);
+    
+    // Get fresh references after cloning
+    const freshHamburgerBtn = document.getElementById('hamburgerBtn');
+    const freshMobileMenu = document.getElementById('mobileMenu');
+    
+    if (!freshHamburgerBtn || !freshMobileMenu) {
+      console.warn("Hamburger menu elements not found after cloning");
+      return;
+    }
+    
+    // Prevent double-click issues
+    let isToggling = false;
+    freshHamburgerBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       
-      // Handle mobile menu item clicks using event delegation (works with dynamically added items)
-      freshMobileMenu.addEventListener('click', (e) => {
+      if (isToggling) return;
+      isToggling = true;
+      
+      freshHamburgerBtn.classList.toggle('open');
+      freshMobileMenu.classList.toggle('open');
+      
+      setTimeout(() => {
+        isToggling = false;
+      }, 300);
+    });
+    
+    // Handle mobile menu item clicks using event delegation (works with dynamically added items)
+    freshMobileMenu.addEventListener('click', (e) => {
         const item = e.target.closest('.mobile-menu-item');
         if (!item) return;
         
