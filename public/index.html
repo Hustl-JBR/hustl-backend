@@ -4881,7 +4881,7 @@ async function renderJobs(reset = false) {
         statusBadge.classList.add("status-assigned");
         statusBadge.style.backgroundColor = "#3b82f6";
         statusBadge.style.color = "#ffffff";
-        statusBadge.textContent = "✓ Applied";
+        statusBadge.textContent = "Applied — Pending Customer Response";
       } else if (job.status === "OPEN" || job.status === "open") {
         statusBadge.classList.add("status-open");
         statusBadge.textContent = "Open";
@@ -4986,6 +4986,301 @@ async function renderJobs(reset = false) {
     }
   }
 }
+
+    // Show "Apply for Job" popup modal
+    async function showApplyJobModal(job) {
+      const user = getCurrentUser();
+      if (!user) {
+        showToast("Please log in to apply for jobs.");
+        return;
+      }
+
+      // Check if already applied
+      let hasApplied = false;
+      try {
+        const token = localStorage.getItem("hustl_token");
+        const offersResponse = await fetch(`${API_BASE}/offers/${job.id}`, {
+          headers: token ? { "Authorization": `Bearer ${token}` } : {}
+        });
+        if (offersResponse.ok) {
+          const offers = await offersResponse.json();
+          hasApplied = Array.isArray(offers) && offers.some(o => o.hustlerId === user.id);
+        }
+      } catch (e) {
+        console.error("Error checking applications:", e);
+      }
+
+      if (hasApplied) {
+        showToast("You've already applied for this job.");
+        return;
+      }
+
+      // Check Stripe connection
+      const hasStripe = user.stripeAccountId && user.stripePayoutsEnabled;
+
+      // Create modal overlay
+      const modalOverlay = document.createElement("div");
+      modalOverlay.id = "applyJobModal";
+      modalOverlay.className = "modal-overlay";
+      modalOverlay.style.cssText = "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem;";
+      
+      const modalContent = document.createElement("div");
+      modalContent.className = "modal-content";
+      modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
+
+      // Close button
+      const closeBtn = document.createElement("button");
+      closeBtn.innerHTML = "×";
+      closeBtn.style.cssText = "position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; border-radius: 50%; background: #f3f4f6; border: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6b7280; z-index: 10;";
+      closeBtn.addEventListener("click", () => {
+        document.body.removeChild(modalOverlay);
+        document.body.style.overflow = "";
+      });
+
+      // Job Summary Section
+      const jobSummary = document.createElement("div");
+      jobSummary.style.cssText = "padding: 1.5rem; border-bottom: 1px solid #e5e7eb;";
+      
+      const jobTitle = document.createElement("h2");
+      jobTitle.style.cssText = "margin: 0 0 1rem 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main);";
+      jobTitle.textContent = "Apply for This Job";
+      jobSummary.appendChild(jobTitle);
+
+      const summaryInfo = document.createElement("div");
+      summaryInfo.style.cssText = "display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.9rem; color: var(--text-muted);";
+      
+      const jobTitleRow = document.createElement("div");
+      jobTitleRow.style.cssText = "font-weight: 600; color: var(--text-main);";
+      jobTitleRow.innerHTML = `<strong>Job:</strong> ${job.title || 'Untitled Job'}`;
+      summaryInfo.appendChild(jobTitleRow);
+
+      const locationRow = document.createElement("div");
+      const location = job.address || job.pickupArea || job.pickupCity || "Location TBD";
+      locationRow.innerHTML = `<strong>Location:</strong> ${location}`;
+      summaryInfo.appendChild(locationRow);
+
+      const priceRow = document.createElement("div");
+      const price = job.paymentType === "flat" 
+        ? formatMoney(job.flatAmount || job.amount || 0)
+        : `${formatMoney(job.hourlyRate || 0)}/hr`;
+      priceRow.innerHTML = `<strong>Posted Price:</strong> ${price}`;
+      summaryInfo.appendChild(priceRow);
+
+      if (job.date) {
+        const dateRow = document.createElement("div");
+        const jobDate = new Date(job.date);
+        dateRow.innerHTML = `<strong>Scheduled Date:</strong> ${jobDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+        summaryInfo.appendChild(dateRow);
+      }
+
+      jobSummary.appendChild(summaryInfo);
+      modalContent.appendChild(jobSummary);
+
+      // Form Section
+      const formSection = document.createElement("div");
+      formSection.style.cssText = "padding: 1.5rem;";
+
+      // Why are you a good fit
+      const whyFitLabel = document.createElement("label");
+      whyFitLabel.style.cssText = "display: block; font-size: 0.9rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;";
+      whyFitLabel.innerHTML = "Why Are You a Good Fit? <span style='color: #ef4444;'>*</span>";
+      formSection.appendChild(whyFitLabel);
+
+      const whyFitTextarea = document.createElement("textarea");
+      whyFitTextarea.id = "applyWhyFit";
+      whyFitTextarea.placeholder = "Write a short message...";
+      whyFitTextarea.maxLength = 400;
+      whyFitTextarea.rows = 5;
+      whyFitTextarea.style.cssText = "width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-family: inherit; font-size: 0.9rem; resize: vertical; margin-bottom: 0.5rem;";
+      formSection.appendChild(whyFitTextarea);
+
+      const charCount = document.createElement("div");
+      charCount.style.cssText = "font-size: 0.75rem; color: #6b7280; text-align: right; margin-bottom: 1rem;";
+      charCount.textContent = "0 / 400 characters";
+      formSection.appendChild(charCount);
+
+      whyFitTextarea.addEventListener("input", () => {
+        charCount.textContent = `${whyFitTextarea.value.length} / 400 characters`;
+      });
+
+      // Optional Add-Ons
+      const addOnsLabel = document.createElement("label");
+      addOnsLabel.style.cssText = "display: block; font-size: 0.9rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;";
+      addOnsLabel.textContent = "Optional Add-Ons";
+      formSection.appendChild(addOnsLabel);
+
+      const addOnsContainer = document.createElement("div");
+      addOnsContainer.style.cssText = "display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;";
+      
+      const addOns = [
+        { value: "truck", label: "🚚 I have my own truck" },
+        { value: "helper", label: "👥 I can bring another helper" },
+        { value: "same_day", label: "⚡ I can come same-day" }
+      ];
+
+      addOns.forEach(addon => {
+        const label = document.createElement("label");
+        label.style.cssText = "display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #f9fafb; border-radius: 6px; cursor: pointer; font-size: 0.85rem;";
+        
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.name = "applyAddOns";
+        checkbox.value = addon.value;
+        checkbox.style.accentColor = "var(--primary)";
+        
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(addon.label));
+        addOnsContainer.appendChild(label);
+      });
+
+      formSection.appendChild(addOnsContainer);
+
+      // Stripe Requirement
+      const stripeSection = document.createElement("div");
+      stripeSection.style.cssText = "padding: 1rem; background: #fef3c7; border-radius: 8px; border: 1px solid #fbbf24; margin-bottom: 1rem;";
+      
+      const stripeNote = document.createElement("div");
+      stripeNote.style.cssText = "font-size: 0.85rem; color: #92400e; margin-bottom: 0.75rem;";
+      stripeNote.textContent = "Note: You must have a connected Stripe account to apply for jobs.";
+      stripeSection.appendChild(stripeNote);
+
+      if (!hasStripe) {
+        const connectStripeBtn = document.createElement("button");
+        connectStripeBtn.className = "btn btn-primary";
+        connectStripeBtn.textContent = "Connect Stripe to Apply";
+        connectStripeBtn.style.cssText = "width: 100%; padding: 0.75rem;";
+        connectStripeBtn.addEventListener("click", () => {
+          document.body.removeChild(modalOverlay);
+          document.body.style.overflow = "";
+          setView("profile");
+          // Scroll to Stripe section
+          setTimeout(() => {
+            const stripeSection = document.querySelector('[style*="Stripe"]');
+            if (stripeSection) {
+              stripeSection.scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 300);
+        });
+        stripeSection.appendChild(connectStripeBtn);
+      } else {
+        const stripeConnected = document.createElement("div");
+        stripeConnected.style.cssText = "display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #059669;";
+        stripeConnected.innerHTML = "✅ Stripe account connected";
+        stripeSection.appendChild(stripeConnected);
+      }
+
+      formSection.appendChild(stripeSection);
+
+      // Buttons
+      const buttonsContainer = document.createElement("div");
+      buttonsContainer.style.cssText = "display: flex; gap: 0.75rem; margin-top: 1.5rem;";
+
+      const cancelBtn = document.createElement("button");
+      cancelBtn.className = "btn btn-ghost";
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.style.cssText = "flex: 1; padding: 0.75rem;";
+      cancelBtn.addEventListener("click", () => {
+        document.body.removeChild(modalOverlay);
+        document.body.style.overflow = "";
+      });
+      buttonsContainer.appendChild(cancelBtn);
+
+      const submitBtn = document.createElement("button");
+      submitBtn.className = "btn btn-primary";
+      submitBtn.textContent = "Submit Application";
+      submitBtn.style.cssText = "flex: 1; padding: 0.75rem;";
+      submitBtn.disabled = !hasStripe;
+      
+      if (!hasStripe) {
+        submitBtn.style.opacity = "0.5";
+        submitBtn.style.cursor = "not-allowed";
+      }
+
+      submitBtn.addEventListener("click", async () => {
+        if (!hasStripe) {
+          showToast("Please connect your Stripe account first.");
+          return;
+        }
+
+        const whyFit = whyFitTextarea.value.trim();
+        if (!whyFit) {
+          showToast("Please explain why you're a good fit for this job.");
+          whyFitTextarea.focus();
+          return;
+        }
+
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span style="display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite;"></span> Submitting...';
+        
+        try {
+          // Collect add-ons
+          const addOnsChecked = Array.from(document.querySelectorAll('input[name="applyAddOns"]:checked')).map(cb => cb.value);
+          
+          // Submit application
+          const token = localStorage.getItem("hustl_token");
+          const response = await fetch(`${API_BASE}/offers`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({
+              jobId: job.id,
+              note: whyFit,
+              addOns: addOnsChecked
+            })
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to submit application');
+          }
+
+          // Success - close modal and show toast
+          document.body.removeChild(modalOverlay);
+          document.body.style.overflow = "";
+          
+          showToast("✅ Application Submitted! You'll be notified if the customer accepts you.");
+          
+          // Refresh job details if modal is open
+          if (document.getElementById("jobDetailModal")) {
+            openJobDetails(job.id);
+          }
+          
+          // Refresh jobs list
+          renderJobs();
+        } catch (error) {
+          console.error("Error submitting application:", error);
+          showToast("Failed to submit application: " + (error.message || "Unknown error"));
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Submit Application";
+        }
+      });
+
+      buttonsContainer.appendChild(submitBtn);
+      formSection.appendChild(buttonsContainer);
+
+      modalContent.appendChild(closeBtn);
+      modalContent.appendChild(formSection);
+      modalOverlay.appendChild(modalContent);
+      
+      // Close on overlay click
+      modalOverlay.addEventListener("click", (e) => {
+        if (e.target === modalOverlay) {
+          document.body.removeChild(modalOverlay);
+          document.body.style.overflow = "";
+        }
+      });
+
+      document.body.appendChild(modalOverlay);
+      document.body.style.overflow = "hidden";
+      
+      // Focus on textarea
+      setTimeout(() => {
+        whyFitTextarea.focus();
+      }, 100);
+    }
 
     async function openJobDetails(jobId, options = {}) {
       // Try to find job in state.jobs first, then allLoadedJobs
@@ -5187,23 +5482,31 @@ async function renderJobs(reset = false) {
       const isNotPoster = currentUser && job.postedByUserId !== currentUser.id;
       
       if (isHustler && isOpen && isNotPoster) {
-        // Check if already applied (will be checked later in the apply section)
-        const applyNowBtn = document.createElement("button");
-        applyNowBtn.className = "btn btn-primary";
-        applyNowBtn.style.cssText = "width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 700; margin-top: 1rem; margin-bottom: 1rem; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);";
-        applyNowBtn.innerHTML = "🚀 Apply Now";
-        applyNowBtn.addEventListener("click", () => {
-          // Scroll to apply section
-          const applySection = detail.querySelector('[style*="background: #f0f9ff"]');
-          if (applySection) {
-            applySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            applySection.style.animation = "pulse 0.5s ease";
-            setTimeout(() => {
-              applySection.style.animation = "";
-            }, 500);
+        // Check if already applied
+        let hasApplied = false;
+        try {
+          const token = localStorage.getItem("hustl_token");
+          const offersResponse = await fetch(`${API_BASE}/offers/${job.id}`, {
+            headers: token ? { "Authorization": `Bearer ${token}` } : {}
+          });
+          if (offersResponse.ok) {
+            const offers = await offersResponse.json();
+            hasApplied = Array.isArray(offers) && offers.some(o => o.hustlerId === currentUser.id);
           }
-        });
-        detail.appendChild(applyNowBtn);
+        } catch (e) {
+          console.error("Error checking applications:", e);
+        }
+        
+        if (!hasApplied) {
+          const applyNowBtn = document.createElement("button");
+          applyNowBtn.className = "btn btn-primary";
+          applyNowBtn.style.cssText = "width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 700; margin-top: 1rem; margin-bottom: 1rem; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);";
+          applyNowBtn.innerHTML = "🚀 Apply Now";
+          applyNowBtn.addEventListener("click", () => {
+            showApplyJobModal(job);
+          });
+          detail.appendChild(applyNowBtn);
+        }
       }
 
       const locRow = document.createElement("div");
