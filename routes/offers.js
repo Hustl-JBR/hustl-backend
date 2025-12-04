@@ -76,7 +76,7 @@ router.post('/:jobId', authenticate, requireRole('HUSTLER'), [
     }
 
     const { jobId } = req.params;
-    const { note, proposedAmount } = req.body;
+    const { note, proposedAmount, proposedPriceType } = req.body;
 
     // Check if hustler is verified (optional for now - can be enabled later)
     // const user = await prisma.user.findUnique({

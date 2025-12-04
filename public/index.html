@@ -5664,11 +5664,25 @@ async function renderJobs(reset = false) {
         postedByRow.addEventListener("mouseleave", () => {
           postedByRow.style.background = "#f9fafb";
         });
-        postedByRow.addEventListener("click", () => {
-          if (typeof openUserProfile === 'function' && poster.id) {
-            document.body.removeChild(modalOverlay);
-            document.body.style.overflow = "";
-            openUserProfile(poster.id);
+        postedByRow.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (poster.id) {
+            // Close job modal first
+            if (modalOverlay && modalOverlay.parentNode) {
+              document.body.removeChild(modalOverlay);
+              document.body.style.overflow = "";
+            }
+            // Open user profile
+            if (typeof openUserProfile === 'function') {
+              setTimeout(() => {
+                openUserProfile(poster.id);
+              }, 100);
+            } else {
+              // Fallback: navigate to profile view
+              if (typeof setView === 'function') {
+                setView('profile');
+              }
+            }
           }
         });
         
@@ -5973,6 +5987,41 @@ async function renderJobs(reset = false) {
           charCounter.style.cssText = "font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem; text-align: right;";
           charCounter.textContent = "400 characters remaining";
           applySection.appendChild(charCounter);
+          
+          // Suggest Different Price (Optional)
+          const priceLabel = document.createElement("label");
+          priceLabel.style.cssText = "display: block; font-weight: 600; font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.5rem;";
+          priceLabel.textContent = "Suggest a Different Price (Optional)";
+          applySection.appendChild(priceLabel);
+          
+          const priceContainer = document.createElement("div");
+          priceContainer.style.cssText = "display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;";
+          
+          const priceInput = document.createElement("input");
+          priceInput.type = "number";
+          priceInput.id = `proposedPrice_${job.id}`;
+          priceInput.placeholder = "0.00";
+          priceInput.min = "0";
+          priceInput.step = "0.01";
+          priceInput.style.cssText = "flex: 1; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 0.9rem; font-family: inherit;";
+          priceContainer.appendChild(priceInput);
+          
+          const priceTypeSelect = document.createElement("select");
+          priceTypeSelect.id = `proposedPriceType_${job.id}`;
+          priceTypeSelect.style.cssText = "padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 0.9rem; font-family: inherit; background: white;";
+          priceTypeSelect.innerHTML = `
+            <option value="flat">Flat Rate</option>
+            <option value="hourly">Per Hour</option>
+          `;
+          priceContainer.appendChild(priceTypeSelect);
+          
+          applySection.appendChild(priceContainer);
+          
+          const priceHint = document.createElement("div");
+          priceHint.style.cssText = "font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem; font-style: italic;";
+          const currentPrice = job.payType === "flat" ? formatMoney(job.flatAmount || job.amount || 0) : formatMoney(job.hourlyRate || 0) + "/hr";
+          priceHint.textContent = `Current price: ${currentPrice}. Leave blank to accept the listed price.`;
+          applySection.appendChild(priceHint);
           
           // Stripe requirement check
           const stripeCheck = document.createElement("div");
@@ -6366,6 +6415,20 @@ async function renderJobs(reset = false) {
               messageBox.style.cssText = "padding: 0.75rem; background: #f9fafb; border-radius: 8px; margin-bottom: 0.75rem; font-size: 0.9rem; color: var(--text-main); line-height: 1.5;";
               messageBox.textContent = offer.note;
               applicantCard.appendChild(messageBox);
+            }
+            
+            // Show proposed price if different from job price
+            if (offer.proposedAmount && Number(offer.proposedAmount) > 0) {
+              const priceBox = document.createElement("div");
+              priceBox.style.cssText = "padding: 0.75rem; background: #fef3c7; border-radius: 8px; margin-bottom: 0.75rem; font-size: 0.9rem; color: #92400e; font-weight: 600;";
+              const jobPrice = job.payType === "flat" ? Number(job.flatAmount || job.amount || 0) : Number(job.hourlyRate || 0);
+              const proposedPrice = Number(offer.proposedAmount);
+              if (proposedPrice !== jobPrice) {
+                priceBox.innerHTML = `💰 Proposed Price: <strong>${formatMoney(proposedPrice)}${job.payType === 'hourly' ? '/hr' : ''}</strong> (Original: ${formatMoney(jobPrice)}${job.payType === 'hourly' ? '/hr' : ''})`;
+              } else {
+                priceBox.innerHTML = `💰 Proposed Price: <strong>${formatMoney(proposedPrice)}${job.payType === 'hourly' ? '/hr' : ''}</strong>`;
+              }
+              applicantCard.appendChild(priceBox);
             }
 
             const actionsRow = document.createElement("div");
@@ -9366,8 +9429,19 @@ function openUserProfile(userId) {
 
   const card = document.createElement("div");
   card.className = "card";
-  card.style.maxWidth = "360px";
-  card.style.width = "90%";
+  card.style.maxWidth = "500px";
+  card.style.width = "100%";
+  card.style.maxHeight = "90vh";
+  card.style.overflowY = "auto";
+  card.style.position = "relative";
+  card.style.background = "white";
+  card.style.borderRadius = "16px";
+  card.style.boxShadow = "0 20px 25px -5px rgba(0, 0, 0, 0.3)";
+  
+  // Prevent click from closing when clicking inside card
+  card.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
 
   // Header
   const header = document.createElement("div");
@@ -9376,9 +9450,12 @@ function openUserProfile(userId) {
   title.className = "card-title";
   title.textContent = user.name || "Profile";
   const closeBtn = document.createElement("button");
-  closeBtn.className = "small-btn outline";
-  closeBtn.textContent = "Close";
-  closeBtn.addEventListener("click", () => overlay.remove());
+  closeBtn.innerHTML = "×";
+  closeBtn.style.cssText = "position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px; border-radius: 50%; background: #f3f4f6; border: none; font-size: 1.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6b7280; z-index: 10;";
+  closeBtn.addEventListener("click", () => {
+    overlay.remove();
+    document.body.style.overflow = "";
+  });
   header.appendChild(title);
   header.appendChild(closeBtn);
   card.appendChild(header);
