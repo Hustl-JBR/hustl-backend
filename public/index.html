@@ -5313,6 +5313,116 @@ async function renderJobs(reset = false) {
       }, 100);
     }
 
+    // Show Stripe Payment Modal for accepting hustler
+    async function showStripePaymentModal(clientSecret, jobId, offerId) {
+      // Check if Stripe.js is loaded
+      if (typeof Stripe === 'undefined') {
+        showToast("Payment system loading... Please try again in a moment.");
+        return;
+      }
+
+      // Fetch Stripe publishable key from API
+      let publishableKey = null;
+      try {
+        const configResponse = await fetch(`${API_BASE}/payments/config`);
+        if (configResponse.ok) {
+          const config = await configResponse.json();
+          publishableKey = config.publishableKey;
+        }
+      } catch (e) {
+        console.error("Error fetching Stripe config:", e);
+      }
+
+      if (!publishableKey) {
+        showToast("Payment system not configured. Please contact support.");
+        return;
+      }
+
+      const stripe = Stripe(publishableKey);
+      
+      const modalOverlay = document.createElement("div");
+      modalOverlay.id = "stripePaymentModal";
+      modalOverlay.style.cssText = "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 1rem;";
+      
+      const modalContent = document.createElement("div");
+      modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 500px; width: 100%; padding: 2rem; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);";
+      
+      const closeBtn = document.createElement("button");
+      closeBtn.innerHTML = "×";
+      closeBtn.style.cssText = "position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; border-radius: 50%; background: #f3f4f6; border: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6b7280;";
+      closeBtn.addEventListener("click", () => {
+        document.body.removeChild(modalOverlay);
+        document.body.style.overflow = "";
+      });
+      modalContent.appendChild(closeBtn);
+      
+      const title = document.createElement("h2");
+      title.style.cssText = "margin: 0 0 1.5rem 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main);";
+      title.textContent = "Complete Payment";
+      modalContent.appendChild(title);
+      
+      const description = document.createElement("p");
+      description.style.cssText = "margin-bottom: 1.5rem; color: var(--text-muted);";
+      description.textContent = "Complete payment to accept this hustler. Payment will be held in escrow until the job is completed.";
+      modalContent.appendChild(description);
+      
+      const paymentElement = document.createElement("div");
+      paymentElement.id = "stripe-payment-element";
+      modalContent.appendChild(paymentElement);
+      
+      const submitBtn = document.createElement("button");
+      submitBtn.className = "btn btn-primary";
+      submitBtn.textContent = "Pay & Accept Hustler";
+      submitBtn.style.cssText = "width: 100%; padding: 1rem; margin-top: 1.5rem; font-size: 1rem; font-weight: 600;";
+      submitBtn.disabled = true;
+      modalContent.appendChild(submitBtn);
+      
+      modalOverlay.appendChild(modalContent);
+      document.body.appendChild(modalOverlay);
+      document.body.style.overflow = "hidden";
+      
+      // Initialize Stripe Elements
+      const elements = stripe.elements({ clientSecret });
+      const paymentElementInstance = elements.create('payment');
+      paymentElementInstance.mount('#stripe-payment-element');
+      
+      paymentElementInstance.on('ready', () => {
+        submitBtn.disabled = false;
+      });
+      
+      submitBtn.addEventListener("click", async () => {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Processing...";
+        
+        const { error, paymentIntent } = await stripe.confirmPayment({
+          elements: paymentElementInstance,
+          confirmParams: {
+            return_url: `${window.location.origin}/?payment_success=true&jobId=${jobId}`
+          },
+          redirect: 'if_required'
+        });
+        
+        if (error) {
+          showToast("Payment failed: " + error.message);
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Pay & Accept Hustler";
+        } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+          showToast("✅ Payment successful! Hustler accepted.");
+          document.body.removeChild(modalOverlay);
+          document.body.style.overflow = "";
+          openJobDetails(jobId);
+          renderJobs();
+        }
+      });
+      
+      modalOverlay.addEventListener("click", (e) => {
+        if (e.target === modalOverlay) {
+          document.body.removeChild(modalOverlay);
+          document.body.style.overflow = "";
+        }
+      });
+    }
+
     async function openJobDetails(jobId, options = {}) {
       // Try to find job in state.jobs first, then allLoadedJobs
       let job = state.jobs.find((j) => j.id === jobId);
@@ -5699,7 +5809,7 @@ async function renderJobs(reset = false) {
             verifyBtn.disabled = true;
             verifyBtn.textContent = "Verifying...";
             const token = localStorage.getItem("hustl_token");
-            const response = await fetch(`${API_BASE}/verification/job/${job.id}/verify-arrival`, {
+            const response = await fetch(`${API_BASE}/verification/job/${job.id}/verify-start`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -6113,7 +6223,7 @@ async function renderJobs(reset = false) {
                   try {
                     verifyBtn.disabled = true;
                     verifyBtn.textContent = "...";
-                    const response = await fetch(`${API_BASE}/verification/job/${job.id}/verify-arrival`, {
+                    const response = await fetch(`${API_BASE}/verification/job/${job.id}/verify-start`, {
                       method: "POST",
                       headers: {
                         "Content-Type": "application/json",
