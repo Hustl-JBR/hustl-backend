@@ -9659,8 +9659,8 @@ try {
         if (isToggling) return;
         isToggling = true;
         
-        hamburgerBtn.classList.toggle('open');
-        mobileMenu.classList.toggle('open');
+        freshHamburgerBtn.classList.toggle('open');
+        freshMobileMenu.classList.toggle('open');
         
         setTimeout(() => {
           isToggling = false;
@@ -9668,7 +9668,7 @@ try {
       });
       
       // Handle mobile menu item clicks using event delegation (works with dynamically added items)
-      mobileMenu.addEventListener('click', (e) => {
+      freshMobileMenu.addEventListener('click', (e) => {
         const item = e.target.closest('.mobile-menu-item');
         if (!item) return;
         
@@ -9691,22 +9691,22 @@ try {
         }
         
         // Close menu
-        hamburgerBtn.classList.remove('open');
-        mobileMenu.classList.remove('open');
+        freshHamburgerBtn.classList.remove('open');
+        freshMobileMenu.classList.remove('open');
         document.body.style.overflow = '';
         
         // Update active state
-        mobileMenu.querySelectorAll('.mobile-menu-item').forEach(i => i.classList.remove('active'));
+        freshMobileMenu.querySelectorAll('.mobile-menu-item').forEach(i => i.classList.remove('active'));
         item.classList.add('active');
       });
       
       // Mobile auth buttons - use event delegation for dynamically added buttons
-      mobileMenu.addEventListener('click', (e) => {
+      freshMobileMenu.addEventListener('click', (e) => {
         if (e.target.id === 'mobileLoginBtn' || e.target.closest('#mobileLoginBtn')) {
           e.preventDefault();
           e.stopPropagation();
-          hamburgerBtn.classList.remove('open');
-          mobileMenu.classList.remove('open');
+          freshHamburgerBtn.classList.remove('open');
+          freshMobileMenu.classList.remove('open');
           document.body.style.overflow = '';
           if (typeof openAuthModal === 'function') {
             openAuthModal('login');
@@ -9714,8 +9714,8 @@ try {
         } else if (e.target.id === 'mobileSignupBtn' || e.target.closest('#mobileSignupBtn')) {
           e.preventDefault();
           e.stopPropagation();
-          hamburgerBtn.classList.remove('open');
-          mobileMenu.classList.remove('open');
+          freshHamburgerBtn.classList.remove('open');
+          freshMobileMenu.classList.remove('open');
           document.body.style.overflow = '';
           if (typeof openAuthModal === 'function') {
             openAuthModal('create');
