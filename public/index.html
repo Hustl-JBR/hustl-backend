@@ -4928,20 +4928,43 @@ async function renderJobs(reset = false) {
       existingLoadMore.remove();
     }
 
-    if (pagination.hasMore && jobsList) {
+    // Show "Load More" if there are more pages OR if we have 20+ jobs loaded
+    const shouldShowLoadMore = pagination.hasMore || (allLoadedJobs.length >= 20);
+    
+    if (shouldShowLoadMore && jobsList) {
       const loadMoreBtn = document.createElement("button");
       loadMoreBtn.id = "loadMoreJobsBtn";
       loadMoreBtn.className = "btn btn-primary";
       loadMoreBtn.style.width = "100%";
       loadMoreBtn.style.marginTop = "1rem";
-      loadMoreBtn.textContent = "Load More Jobs";
-      loadMoreBtn.addEventListener("click", async () => {
+      loadMoreBtn.style.padding = "1rem";
+      loadMoreBtn.style.fontSize = "1rem";
+      loadMoreBtn.style.fontWeight = "600";
+      loadMoreBtn.textContent = `Load More Jobs (${allLoadedJobs.length} loaded)`;
+      
+      let isLoading = false;
+      loadMoreBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (isLoading) return;
+        isLoading = true;
+        
         loadMoreBtn.disabled = true;
         loadMoreBtn.textContent = "Loading...";
         currentJobsPage++;
-        await renderJobs(false); // Don't reset, just append
-        loadMoreBtn.disabled = false;
-        loadMoreBtn.textContent = "Load More Jobs";
+        
+        try {
+          await renderJobs(false); // Don't reset, just append
+          loadMoreBtn.textContent = `Load More Jobs (${allLoadedJobs.length} loaded)`;
+        } catch (error) {
+          console.error("Error loading more jobs:", error);
+          showToast("Failed to load more jobs. Please try again.");
+          loadMoreBtn.textContent = "Load More Jobs";
+        } finally {
+          loadMoreBtn.disabled = false;
+          isLoading = false;
+        }
       });
       jobsList.appendChild(loadMoreBtn);
     }
