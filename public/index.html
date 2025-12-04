@@ -5156,6 +5156,32 @@ async function renderJobs(reset = false) {
       right.innerHTML = statusHtml;
       whoRow.appendChild(right);
       detail.appendChild(whoRow);
+      
+      // Add prominent "Apply Now" button for open jobs (if user is hustler and hasn't applied)
+      const currentUser = getCurrentUser();
+      const isHustler = currentUser && (currentUser.role === "HUSTLER" || currentUser.role === "hustler");
+      const isOpen = job.status === "OPEN" || job.status === "open";
+      const isNotPoster = currentUser && job.postedByUserId !== currentUser.id;
+      
+      if (isHustler && isOpen && isNotPoster) {
+        // Check if already applied (will be checked later in the apply section)
+        const applyNowBtn = document.createElement("button");
+        applyNowBtn.className = "btn btn-primary";
+        applyNowBtn.style.cssText = "width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 700; margin-top: 1rem; margin-bottom: 1rem; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);";
+        applyNowBtn.innerHTML = "🚀 Apply Now";
+        applyNowBtn.addEventListener("click", () => {
+          // Scroll to apply section
+          const applySection = detail.querySelector('[style*="background: #f0f9ff"]');
+          if (applySection) {
+            applySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            applySection.style.animation = "pulse 0.5s ease";
+            setTimeout(() => {
+              applySection.style.animation = "";
+            }, 500);
+          }
+        });
+        detail.appendChild(applyNowBtn);
+      }
 
       const locRow = document.createElement("div");
       locRow.className = "detail-row";
@@ -5176,11 +5202,20 @@ async function renderJobs(reset = false) {
       locRow.appendChild(locRight);
       detail.appendChild(locRow);
 
+      // Full Job Description Section
+      const descSection = document.createElement("div");
+      descSection.style.cssText = "margin-top: 1.5rem; padding: 1.5rem; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;";
+      
+      const descTitle = document.createElement("div");
+      descTitle.style.cssText = "font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.75rem;";
+      descTitle.textContent = "Job Description";
+      descSection.appendChild(descTitle);
+      
       const desc = document.createElement("div");
-      desc.className = "muted";
-      desc.style.marginTop = "0.35rem";
-      desc.textContent = job.description || "";
-      detail.appendChild(desc);
+      desc.style.cssText = "color: var(--text-main); font-size: 1rem; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;";
+      desc.textContent = job.description || "No description provided.";
+      descSection.appendChild(desc);
+      detail.appendChild(descSection);
 
       if (job.notes) {
         const notesEl = document.createElement("div");
@@ -8011,18 +8046,60 @@ async function renderJobs(reset = false) {
           return;
         }
         
-        // Save to database
+        // Upload to R2 first, then save URL to database
         showToast("Uploading...");
-        await window.hustlAPI.users.updateProfile({ photoUrl });
         
-        // Update local storage
-        const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
-        storedUser.photoUrl = photoUrl;
-        localStorage.setItem('hustl_user', JSON.stringify(storedUser));
-        
-        // Refresh profile display
-        await renderProfile();
-        showToast("✅ Profile picture saved!");
+        try {
+          // Convert data URL to blob
+          const response = await fetch(photoUrl);
+          const blob = await response.blob();
+          
+          // Upload to R2
+          const formData = new FormData();
+          formData.append('file', blob, `avatar-${Date.now()}.jpg`);
+          
+          const token = localStorage.getItem("hustl_token");
+          const uploadResponse = await fetch(`${BACKEND_URL}/api/r2/upload`, {
+            method: 'POST',
+            headers: token ? { "Authorization": `Bearer ${token}` } : {},
+            body: formData
+          });
+          
+          if (!uploadResponse.ok) {
+            throw new Error("Upload failed");
+          }
+          
+          const uploadData = await uploadResponse.json();
+          const uploadedUrl = uploadData.url || uploadData.fileUrl || photoUrl;
+          
+          // Save URL to database
+          await window.hustlAPI.users.updateProfile({ photoUrl: uploadedUrl });
+          
+          // Update local storage
+          const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
+          storedUser.photoUrl = uploadedUrl;
+          localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+          
+          // Refresh profile display
+          await renderProfile();
+          showToast("✅ Profile picture saved!");
+        } catch (uploadError) {
+          // Fallback: try saving base64 directly if R2 fails
+          console.warn("R2 upload failed, trying direct save:", uploadError);
+          try {
+            await window.hustlAPI.users.updateProfile({ photoUrl });
+            
+            const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
+            storedUser.photoUrl = photoUrl;
+            localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+            
+            await renderProfile();
+            showToast("✅ Profile picture saved!");
+          } catch (error) {
+            console.error("Error saving profile picture:", error);
+            showToast("Failed to save profile picture. Please try again.");
+          }
+        }
       } catch (error) {
         console.error("Error saving profile picture:", error);
         showToast("Failed to save profile picture. Please try again.");
@@ -8641,11 +8718,21 @@ try {
     const mobileMenu = document.getElementById('mobileMenu');
     
     if (hamburgerBtn && mobileMenu) {
-      hamburgerBtn.addEventListener('click', () => {
+      // Prevent double-click issues
+      let isToggling = false;
+      hamburgerBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (isToggling) return;
+        isToggling = true;
+        
         hamburgerBtn.classList.toggle('open');
         mobileMenu.classList.toggle('open');
-        // Don't prevent body scroll - let the menu scroll instead
-        // document.body.style.overflow = mobileMenu.classList.contains('open') ? 'hidden' : '';
+        
+        setTimeout(() => {
+          isToggling = false;
+        }, 300);
       });
       
       // Handle mobile menu item clicks using event delegation (works with dynamically added items)
