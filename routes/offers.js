@@ -421,5 +421,88 @@ router.post('/:id/decline', authenticate, requireRole('CUSTOMER'), async (req, r
   }
 });
 
+// POST /offers/:id/unaccept - Unaccept a hustler (customer only, before start code)
+router.post('/:id/unaccept', authenticate, requireRole('CUSTOMER'), async (req, res) => {
+  try {
+    const offer = await prisma.offer.findUnique({
+      where: { id: req.params.id },
+      include: {
+        job: {
+          include: {
+            payment: true,
+            customer: { select: { id: true, email: true, name: true } },
+            hustler: { select: { id: true, email: true, name: true } }
+          }
+        },
+        hustler: { select: { id: true, email: true, name: true } }
+      }
+    });
+
+    if (!offer) {
+      return res.status(404).json({ error: 'Offer not found' });
+    }
+
+    if (offer.job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    if (offer.status !== 'ACCEPTED') {
+      return res.status(400).json({ error: 'Offer is not accepted' });
+    }
+
+    // Check if start code has been used - cannot unaccept if it has
+    if (offer.job.startCodeVerified) {
+      return res.status(400).json({ 
+        error: 'Cannot unaccept: Start code has already been entered. Job is active.',
+        startCodeUsed: true
+      });
+    }
+
+    // Update offer status back to PENDING
+    await prisma.offer.update({
+      where: { id: req.params.id },
+      data: { status: 'PENDING' }
+    });
+
+    // Update job - remove hustler, set back to OPEN
+    await prisma.job.update({
+      where: { id: offer.job.id },
+      data: {
+        status: 'OPEN',
+        hustlerId: null,
+        acceptedHustlerId: null,
+        startCode: null,
+        startCodeExpiresAt: null
+      }
+    });
+
+    // Payment stays in hold (not refunded) - customer can accept another hustler
+
+    // Send notification email to hustler
+    const { sendJobUnacceptedEmail } = require('../services/email');
+    try {
+      await sendJobUnacceptedEmail(
+        offer.hustler.email,
+        offer.hustler.name,
+        offer.job.title,
+        offer.job.id
+      );
+    } catch (emailError) {
+      console.error('Error sending unaccept email:', emailError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Hustler unaccepted. Job is now open for other applicants.',
+      job: await prisma.job.findUnique({
+        where: { id: offer.job.id }
+      })
+    });
+  } catch (error) {
+    console.error('Unaccept offer error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
 

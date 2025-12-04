@@ -4825,20 +4825,34 @@ async function renderJobs(reset = false) {
       postedBy.textContent = `👤 Posted by ${posterName}`;
       textContent.appendChild(postedBy);
 
-      // Location line
+      // Location line (tappable to see full address)
       const loc = document.createElement("div");
       loc.className = "job-meta";
-      loc.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem;";
+      loc.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted); cursor: pointer;";
+      loc.title = "Tap to see full address";
 
       const requirements = job.requirements || {};
+      let locationText = "";
       if (requirements.onSiteOnly || job.onSiteOnly) {
-        loc.textContent = `📍 ${requirements.pickupArea || requirements.pickupCity || job.address || "TBD"}`;
+        locationText = requirements.pickupCity || requirements.pickupArea || job.address?.split(',')[0] || "TBD";
       } else {
-        const pick = requirements.pickupArea || requirements.pickupCity || job.address || "TBD";
-        const drop = requirements.dropoffArea || requirements.dropoffCity || "";
-        loc.textContent = `📍 ${pick}${drop ? " → " + drop : ""}`;
+        locationText = requirements.pickupCity || requirements.pickupArea || job.address?.split(',')[0] || "TBD";
       }
+      loc.textContent = `📍 ${locationText}`;
+      loc.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openJobDetails(job.id);
+      });
       textContent.appendChild(loc);
+      
+      // Number of applicants (if available)
+      const applicantCount = job._count?.offers || 0;
+      if (applicantCount > 0 && (job.status === "OPEN" || job.status === "open")) {
+        const applicantsBadge = document.createElement("div");
+        applicantsBadge.style.cssText = "margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #f0f9ff; border-radius: 6px; font-size: 0.75rem; color: #0369a1; display: inline-block;";
+        applicantsBadge.textContent = `👥 ${applicantCount} ${applicantCount === 1 ? 'applicant' : 'applicants'}`;
+        textContent.appendChild(applicantsBadge);
+      }
       
       headerRow.appendChild(textContent);
       card.appendChild(headerRow);
@@ -4881,23 +4895,36 @@ async function renderJobs(reset = false) {
           : false;
       }
 
-      if (hasApplied && (job.status === "OPEN" || job.status === "open")) {
+      // Status badge with proper colors
+      const statusUpper = (job.status || "OPEN").toUpperCase();
+      if (hasApplied && (statusUpper === "OPEN")) {
         statusBadge.classList.add("status-assigned");
         statusBadge.style.backgroundColor = "#3b82f6";
         statusBadge.style.color = "#ffffff";
-        statusBadge.textContent = "Applied — Pending Customer Response";
-      } else if (job.status === "OPEN" || job.status === "open") {
+        statusBadge.textContent = "Applied — Pending";
+      } else if (statusUpper === "OPEN") {
         statusBadge.classList.add("status-open");
+        statusBadge.style.backgroundColor = "#dcfce7";
+        statusBadge.style.color = "#059669";
         statusBadge.textContent = "Open";
-      } else if (job.status === "ASSIGNED" || job.status === "assigned") {
+      } else if (statusUpper === "ASSIGNED" || statusUpper === "PENDING_START") {
         statusBadge.classList.add("status-assigned");
-        statusBadge.textContent = "Assigned";
-      } else if (job.status === "COMPLETED" || job.status === "completed") {
+        statusBadge.style.backgroundColor = "#fef3c7";
+        statusBadge.style.color = "#d97706";
+        statusBadge.textContent = "Pending Start";
+      } else if (statusUpper === "PAID" || statusUpper === "IN_PROGRESS") {
+        statusBadge.classList.add("status-assigned");
+        statusBadge.style.backgroundColor = "#dbeafe";
+        statusBadge.style.color = "#2563eb";
+        statusBadge.textContent = "In Progress";
+      } else if (statusUpper === "COMPLETED" || statusUpper === "PAID") {
         statusBadge.classList.add("status-completed");
         statusBadge.style.backgroundColor = "#9333ea";
         statusBadge.style.color = "#ffffff";
-        statusBadge.textContent = "✓ Completed!";
+        statusBadge.textContent = "✓ Completed";
       } else {
+        statusBadge.style.backgroundColor = "#f3f4f6";
+        statusBadge.style.color = "#6b7280";
         statusBadge.textContent = job.status || "Open";
       }
 
@@ -5494,11 +5521,11 @@ async function renderJobs(reset = false) {
         }
       }
       
-      modalContent.appendChild(contentSection);
-
-      // Content Section (scrollable)
-      const contentSection = document.createElement("div");
-      contentSection.style.cssText = "padding: 1.5rem 2rem; max-height: calc(90vh - 300px); overflow-y: auto;";
+      // Content Section (scrollable) - already created above
+      if (!contentSection) {
+        contentSection = document.createElement("div");
+        contentSection.style.cssText = "padding: 1.5rem 2rem; max-height: calc(90vh - 300px); overflow-y: auto;";
+      }
 
       // Full Job Description Section
       const descSection = document.createElement("div");
@@ -5542,10 +5569,42 @@ async function renderJobs(reset = false) {
         const applySection = document.createElement("div");
         applySection.style.cssText = "padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; background: white; position: sticky; bottom: 0; border-radius: 0 0 16px 16px;";
         
+        // Check job status for hustler
+        const jobStatusUpper = (job.status || "OPEN").toUpperCase();
+        
         if (hasApplied) {
+          let statusText = "✓ Applied — Pending Customer Response";
+          let statusBg = "#dcfce7";
+          let statusColor = "#059669";
+          
+          // Check if accepted
+          if (job.hustlerId === currentUser.id || job.acceptedHustlerId === currentUser.id) {
+            const hasStartCode = job.arrivalCode && !job.arrivalCodeVerified;
+            const isInProgress = job.arrivalCodeVerified && !job.completionCodeVerified;
+            const isCompleted = job.completionCodeVerified;
+            
+            if (hasStartCode) {
+              statusText = "✓ Accepted — Waiting for Start Code";
+              statusBg = "#fef3c7";
+              statusColor = "#d97706";
+            } else if (isInProgress) {
+              statusText = "✓ Job Active — In Progress";
+              statusBg = "#dbeafe";
+              statusColor = "#2563eb";
+            } else if (isCompleted) {
+              statusText = "✓ Completed";
+              statusBg = "#e9d5ff";
+              statusColor = "#9333ea";
+            } else {
+              statusText = "✓ Accepted — Waiting for Start Code";
+              statusBg = "#fef3c7";
+              statusColor = "#d97706";
+            }
+          }
+          
           const appliedBadge = document.createElement("div");
-          appliedBadge.style.cssText = "padding: 1rem; background: #dcfce7; border-radius: 8px; text-align: center; color: #059669; font-weight: 600;";
-          appliedBadge.textContent = "✓ Applied — Pending Customer Response";
+          appliedBadge.style.cssText = `padding: 1rem; background: ${statusBg}; border-radius: 8px; text-align: center; color: ${statusColor}; font-weight: 600;`;
+          appliedBadge.textContent = statusText;
           applySection.appendChild(appliedBadge);
         } else {
           const applyNowBtn = document.createElement("button");
@@ -5569,6 +5628,199 @@ async function renderJobs(reset = false) {
         }
         
         modalContent.appendChild(applySection);
+      }
+
+      // Customer view: Show start code if hustler is accepted but not started
+      if (user && user.id === job.postedByUserId && job.hustlerId && job.arrivalCode && !job.arrivalCodeVerified) {
+        const startCodeSection = document.createElement("div");
+        startCodeSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #fef3c7; border-radius: 12px; border: 2px solid #fbbf24;";
+        
+        const startCodeTitle = document.createElement("div");
+        startCodeTitle.style.cssText = "font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 0.75rem;";
+        startCodeTitle.textContent = "🔐 Start Code (Give to Hustler)";
+        startCodeSection.appendChild(startCodeTitle);
+        
+        const startCodeDisplay = document.createElement("div");
+        startCodeDisplay.style.cssText = "font-size: 2rem; font-weight: 700; letter-spacing: 0.3em; color: #92400e; text-align: center; padding: 1rem; background: white; border-radius: 8px; font-family: 'Courier New', monospace; margin-bottom: 0.75rem;";
+        startCodeDisplay.textContent = job.arrivalCode;
+        startCodeSection.appendChild(startCodeDisplay);
+        
+        const startCodeInstructions = document.createElement("div");
+        startCodeInstructions.style.cssText = "font-size: 0.9rem; color: #92400e; line-height: 1.5;";
+        const expiresAt = job.arrivalCodeExpiresAt ? new Date(job.arrivalCodeExpiresAt) : null;
+        const hoursLeft = expiresAt ? Math.max(0, Math.floor((expiresAt - new Date()) / (1000 * 60 * 60))) : 78;
+        startCodeInstructions.innerHTML = `
+          <div style="margin-bottom: 0.5rem;">Share this 6-digit code with your hustler when they arrive to start the job.</div>
+          <div style="font-weight: 600;">⏰ Code expires in ${hoursLeft} hours. If not used, job will be cancelled and you'll be refunded.</div>
+        `;
+        startCodeSection.appendChild(startCodeInstructions);
+        
+        contentSection.appendChild(startCodeSection);
+      }
+      
+      // Hustler view: Show start code input if accepted but not started
+      if (user && user.id === job.hustlerId && job.arrivalCode && !job.arrivalCodeVerified) {
+        const startCodeInputSection = document.createElement("div");
+        startCodeInputSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #dbeafe; border-radius: 12px; border: 2px solid #3b82f6;";
+        
+        const startCodeTitle = document.createElement("div");
+        startCodeTitle.style.cssText = "font-weight: 700; font-size: 1.1rem; color: #1e40af; margin-bottom: 0.75rem;";
+        startCodeTitle.textContent = "🔐 Enter Start Code";
+        startCodeInputSection.appendChild(startCodeTitle);
+        
+        const startCodeInstructions = document.createElement("div");
+        startCodeInstructions.style.cssText = "font-size: 0.9rem; color: #1e40af; margin-bottom: 1rem;";
+        startCodeInstructions.textContent = "Ask the customer for the 6-digit start code to begin the job.";
+        startCodeInputSection.appendChild(startCodeInstructions);
+        
+        const codeInput = document.createElement("input");
+        codeInput.type = "text";
+        codeInput.id = `startCodeInput_${job.id}`;
+        codeInput.placeholder = "Enter 6-digit code";
+        codeInput.maxLength = 6;
+        codeInput.style.cssText = "width: 100%; padding: 1rem; font-size: 1.5rem; text-align: center; letter-spacing: 0.3em; border: 2px solid #3b82f6; border-radius: 8px; font-family: 'Courier New', monospace; font-weight: 600; margin-bottom: 0.75rem;";
+        codeInput.addEventListener("input", (e) => {
+          e.target.value = e.target.value.replace(/\D/g, ""); // Only numbers
+        });
+        startCodeInputSection.appendChild(codeInput);
+        
+        const verifyBtn = document.createElement("button");
+        verifyBtn.className = "btn btn-primary";
+        verifyBtn.textContent = "Verify & Start Job";
+        verifyBtn.style.cssText = "width: 100%; padding: 0.75rem;";
+        verifyBtn.addEventListener("click", async () => {
+          const code = codeInput.value.trim();
+          if (code.length !== 6) {
+            showToast("Please enter a 6-digit code");
+            return;
+          }
+          
+          try {
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = "Verifying...";
+            const token = localStorage.getItem("hustl_token");
+            const response = await fetch(`${API_BASE}/verification/job/${job.id}/verify-arrival`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+              },
+              body: JSON.stringify({ code })
+            });
+            
+            const data = await response.json();
+            if (!response.ok) {
+              throw new Error(data.error || "Verification failed");
+            }
+            
+            showToast("✅ Start code verified! Job is now active.");
+            document.body.removeChild(modalOverlay);
+            document.body.style.overflow = "";
+            openJobDetails(job.id);
+            renderJobs();
+          } catch (error) {
+            showToast("Error: " + (error.message || "Failed to verify"));
+            verifyBtn.disabled = false;
+            verifyBtn.textContent = "Verify & Start Job";
+          }
+        });
+        startCodeInputSection.appendChild(verifyBtn);
+        
+        contentSection.appendChild(startCodeInputSection);
+      }
+      
+      // Hustler view: Show completion code if job is active
+      if (user && user.id === job.hustlerId && job.arrivalCodeVerified && job.completionCode && !job.completionCodeVerified) {
+        const completionCodeSection = document.createElement("div");
+        completionCodeSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #dcfce7; border-radius: 12px; border: 2px solid #16a34a;";
+        
+        const completionCodeTitle = document.createElement("div");
+        completionCodeTitle.style.cssText = "font-weight: 700; font-size: 1.1rem; color: #166534; margin-bottom: 0.75rem;";
+        completionCodeTitle.textContent = "🔐 Completion Code (Give to Customer)";
+        completionCodeSection.appendChild(completionCodeTitle);
+        
+        const completionCodeDisplay = document.createElement("div");
+        completionCodeDisplay.style.cssText = "font-size: 2rem; font-weight: 700; letter-spacing: 0.3em; color: #166534; text-align: center; padding: 1rem; background: white; border-radius: 8px; font-family: 'Courier New', monospace; margin-bottom: 0.75rem;";
+        completionCodeDisplay.textContent = job.completionCode;
+        completionCodeSection.appendChild(completionCodeDisplay);
+        
+        const completionInstructions = document.createElement("div");
+        completionInstructions.style.cssText = "font-size: 0.9rem; color: #166534;";
+        completionInstructions.textContent = "Share this 6-digit code with the customer when the job is complete. They will enter it to release payment.";
+        completionCodeSection.appendChild(completionInstructions);
+        
+        contentSection.appendChild(completionCodeSection);
+      }
+      
+      // Customer view: Show completion code input if job is active
+      if (user && user.id === job.postedByUserId && job.arrivalCodeVerified && job.completionCode && !job.completionCodeVerified) {
+        const completionCodeInputSection = document.createElement("div");
+        completionCodeInputSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #dbeafe; border-radius: 12px; border: 2px solid #3b82f6;";
+        
+        const completionCodeTitle = document.createElement("div");
+        completionCodeTitle.style.cssText = "font-weight: 700; font-size: 1.1rem; color: #1e40af; margin-bottom: 0.75rem;";
+        completionCodeTitle.textContent = "🔐 Enter Completion Code";
+        completionCodeInputSection.appendChild(completionCodeTitle);
+        
+        const completionInstructions = document.createElement("div");
+        completionInstructions.style.cssText = "font-size: 0.9rem; color: #1e40af; margin-bottom: 1rem;";
+        completionInstructions.textContent = "Ask the hustler for the 6-digit completion code to release payment.";
+        completionCodeInputSection.appendChild(completionInstructions);
+        
+        const codeInput = document.createElement("input");
+        codeInput.type = "text";
+        codeInput.id = `completionCodeInput_${job.id}`;
+        codeInput.placeholder = "Enter 6-digit code";
+        codeInput.maxLength = 6;
+        codeInput.style.cssText = "width: 100%; padding: 1rem; font-size: 1.5rem; text-align: center; letter-spacing: 0.3em; border: 2px solid #3b82f6; border-radius: 8px; font-family: 'Courier New', monospace; font-weight: 600; margin-bottom: 0.75rem;";
+        codeInput.addEventListener("input", (e) => {
+          e.target.value = e.target.value.replace(/\D/g, ""); // Only numbers
+        });
+        completionCodeInputSection.appendChild(codeInput);
+        
+        const verifyBtn = document.createElement("button");
+        verifyBtn.className = "btn btn-primary";
+        verifyBtn.textContent = "Verify & Complete Job";
+        verifyBtn.style.cssText = "width: 100%; padding: 0.75rem;";
+        verifyBtn.addEventListener("click", async () => {
+          const code = codeInput.value.trim();
+          if (code.length !== 6) {
+            showToast("Please enter a 6-digit code");
+            return;
+          }
+          
+          try {
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = "Verifying...";
+            const token = localStorage.getItem("hustl_token");
+            const response = await fetch(`${API_BASE}/verification/job/${job.id}/verify-completion`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+              },
+              body: JSON.stringify({ code })
+            });
+            
+            const data = await response.json();
+            if (!response.ok) {
+              throw new Error(data.error || "Verification failed");
+            }
+            
+            showToast("✅ Job completed! Payment released to hustler.");
+            document.body.removeChild(modalOverlay);
+            document.body.style.overflow = "";
+            openJobDetails(job.id);
+            renderJobs();
+          } catch (error) {
+            showToast("Error: " + (error.message || "Failed to verify"));
+            verifyBtn.disabled = false;
+            verifyBtn.textContent = "Verify & Complete Job";
+          }
+        });
+        completionCodeInputSection.appendChild(verifyBtn);
+        
+        contentSection.appendChild(completionCodeInputSection);
       }
 
       // Customer view: Show applicants if job is posted by current user
@@ -5688,11 +5940,23 @@ async function renderJobs(reset = false) {
                     throw new Error(error.error || 'Failed to accept hustler');
                   }
 
-                  showToast("✅ Hustler accepted! Payment will be processed.");
-                  document.body.removeChild(modalOverlay);
-                  document.body.style.overflow = "";
-                  openJobDetails(job.id);
-                  renderJobs();
+                  const data = await response.json();
+                  
+                  // If payment intent is returned, show Stripe payment modal
+                  if (data.payment && data.payment.clientSecret) {
+                    // Close job modal first
+                    document.body.removeChild(modalOverlay);
+                    document.body.style.overflow = "";
+                    
+                    // Show Stripe payment modal
+                    showStripePaymentModal(data.payment.clientSecret, job.id, offer.id);
+                  } else {
+                    showToast("✅ Hustler accepted! Payment will be processed.");
+                    document.body.removeChild(modalOverlay);
+                    document.body.style.overflow = "";
+                    openJobDetails(job.id);
+                    renderJobs();
+                  }
                 } catch (error) {
                   console.error("Error accepting hustler:", error);
                   showToast("Failed to accept hustler: " + (error.message || "Unknown error"));
@@ -9398,6 +9662,7 @@ try {
   </script>
   
   <!-- Performance-optimized script loading -->
+  <script src="https://js.stripe.com/v3/"></script>
   <script src="/app-core.js" defer></script>
   <script src="/mobile-core.js" defer></script>
 </body>
