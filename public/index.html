@@ -7115,101 +7115,154 @@ async function renderJobs(reset = false) {
         }
       }
 
-            // Applicants & accept button (customer)
+            // Applicants & accept button (customer) - Enhanced view
       if (user && user.id === job.postedByUserId) {
         const appsBox = document.createElement("div");
         appsBox.className = "stat-card";
         appsBox.style.marginTop = "0.5rem";
 
-        if (!job.applicants || job.applicants.length === 0) {
+        // Fetch offers from API
+        let offers = [];
+        try {
+          const token = localStorage.getItem("hustl_token");
+          const offersResponse = await fetch(`${API_BASE}/offers/${job.id}`, {
+            headers: token ? { "Authorization": `Bearer ${token}` } : {}
+          });
+          if (offersResponse.ok) {
+            offers = await offersResponse.json();
+            if (!Array.isArray(offers)) offers = [];
+          }
+        } catch (e) {
+          console.error("Error fetching offers:", e);
+        }
+
+        if (!offers || offers.length === 0) {
           appsBox.innerHTML =
             "<div class='stat-label'>Applicants</div><div class='muted'>No Hustlers have applied yet.</div>";
         } else {
-          const hasAccepted = !!job.acceptedHustlerId;
+          const hasAccepted = !!job.hustlerId || !!job.acceptedHustlerId;
           appsBox.innerHTML =
             "<div class='stat-label'>Applicants</div>" +
             (hasAccepted
-              ? "<div class='muted'>You’ve already accepted a Hustler for this job.</div>"
-              : "<div class='muted'>Tap accept to assign.</div>");
+              ? "<div class='muted' style='margin-bottom: 1rem;'>You've already accepted a Hustler for this job.</div>"
+              : "<div class='muted' style='margin-bottom: 1rem;'>Review applicants and select the best fit.</div>");
 
-          job.applicants.forEach((a) => {
-            const u = state.users.find((x) => x.id === a.userId);
-            const isAccepted = job.acceptedHustlerId === a.userId;
+          offers.forEach((offer) => {
+            const hustler = offer.hustler || state.users.find((x) => x.id === offer.hustlerId);
+            if (!hustler) return;
+            
+            const isAccepted = (job.hustlerId === offer.hustlerId) || (job.acceptedHustlerId === offer.hustlerId);
 
-            const row = document.createElement("div");
-            row.style.display = "flex";
-            row.style.justifyContent = "space-between";
-            row.style.alignItems = "center";
-            row.style.marginTop = "0.25rem";
-            row.style.gap = "0.4rem";
+            const applicantCard = document.createElement("div");
+            applicantCard.style.cssText = "padding: 1rem; background: #f9fafb; border-radius: 12px; margin-bottom: 1rem; border: 1px solid #e5e7eb;";
 
-            const leftPart = document.createElement("div");
+            // Top row: Avatar + Name + Rating
+            const topRow = document.createElement("div");
+            topRow.style.cssText = "display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem;";
 
-            // clickable name + role chip
-            const line1 = document.createElement("div");
-            const nameEl = document.createElement("span");
-            nameEl.className = "linkish";
-            nameEl.textContent = u?.name || "Unknown";
-            if (u) {
-              nameEl.addEventListener("click", () => openUserProfile(u.id));
+            // Avatar
+            const avatar = document.createElement("div");
+            avatar.style.cssText = "width: 50px; height: 50px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.25rem; flex-shrink: 0; cursor: pointer;";
+            avatar.textContent = (hustler.name || hustler.email || "U")[0].toUpperCase();
+            if (hustler.photoUrl) {
+              avatar.innerHTML = `<img src="${hustler.photoUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" />`;
             }
-            line1.appendChild(nameEl);
-            const roleChip = document.createElement("span");
-            roleChip.className = "muted";
-            roleChip.textContent =
-              " · " + (u?.role === "hustler" ? "Hustler" : "Customer");
-            line1.appendChild(roleChip);
+            avatar.addEventListener("click", () => openUserProfile(hustler.id));
+            topRow.appendChild(avatar);
 
-            const line2 = document.createElement("div");
-            line2.className = "muted";
-            line2.textContent =
-              (a.message || "") +
-              (a.suggestedPrice
-                ? " · suggested " + formatMoney(a.suggestedPrice)
-                : "");
+            // Name and Rating
+            const nameRating = document.createElement("div");
+            nameRating.style.cssText = "flex: 1;";
+            
+            const name = document.createElement("div");
+            name.style.cssText = "font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem; cursor: pointer;";
+            name.textContent = hustler.name || hustler.username || hustler.email?.split('@')[0] || "Unknown User";
+            name.addEventListener("click", () => openUserProfile(hustler.id));
+            nameRating.appendChild(name);
 
-            const line3 = document.createElement("div");
-            line3.className = "muted";
-            line3.style.fontSize = "0.7rem";
-            line3.style.marginTop = "0.1rem";
-            line3.textContent = u?.bio
-              ? "About: " + u.bio
-              : "About: (no bio yet)";
+            const rating = document.createElement("div");
+            rating.style.cssText = "display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
+            const ratingValue = hustler.ratingAvg || hustler.rating || 5.0;
+            const ratingCount = hustler.ratingCount || hustler.reviewCount || 0;
+            rating.innerHTML = `⭐ ${Number(ratingValue).toFixed(1)}`;
+            if (ratingCount > 0) {
+              rating.innerHTML += ` <span>(${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})</span>`;
+            } else {
+              rating.innerHTML += ` <span style='color: #9ca3af;'>(No reviews yet)</span>`;
+            }
+            nameRating.appendChild(rating);
+            topRow.appendChild(nameRating);
 
-            leftPart.appendChild(line1);
-            leftPart.appendChild(line2);
-            leftPart.appendChild(line3);
-            row.appendChild(leftPart);
+            applicantCard.appendChild(topRow);
 
-            const rightPart = document.createElement("div");
+            // Message from hustler
+            if (offer.note) {
+              const messageBox = document.createElement("div");
+              messageBox.style.cssText = "padding: 0.75rem; background: white; border-radius: 8px; margin-bottom: 0.75rem; border: 1px solid #e5e7eb;";
+              messageBox.innerHTML = `<div style="font-size: 0.85rem; color: var(--text-main); line-height: 1.5;">${offer.note}</div>`;
+              applicantCard.appendChild(messageBox);
+            }
+
+            // Action buttons
+            const actionsRow = document.createElement("div");
+            actionsRow.style.cssText = "display: flex; gap: 0.5rem;";
+
+            const viewProfileBtn = document.createElement("button");
+            viewProfileBtn.className = "btn btn-ghost";
+            viewProfileBtn.textContent = "View Profile";
+            viewProfileBtn.style.cssText = "flex: 1; padding: 0.6rem; font-size: 0.9rem;";
+            viewProfileBtn.addEventListener("click", () => openUserProfile(hustler.id));
+            actionsRow.appendChild(viewProfileBtn);
 
             if (isAccepted) {
-              const badge = document.createElement("span");
-              badge.className = "badge status-assigned";
-              badge.textContent = "Hustler accepted";
-              rightPart.appendChild(badge);
+              const acceptedBadge = document.createElement("div");
+              acceptedBadge.style.cssText = "flex: 1; padding: 0.6rem; background: #dcfce7; color: #059669; border-radius: 8px; text-align: center; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; justify-content: center;";
+              acceptedBadge.textContent = "✓ Accepted";
+              actionsRow.appendChild(acceptedBadge);
             } else if (!hasAccepted) {
               const acceptBtn = document.createElement("button");
-              acceptBtn.className = "small-btn";
-              acceptBtn.textContent = "Accept this Hustler";
-              acceptBtn.addEventListener("click", () => {
-                job.acceptedHustlerId = a.userId;
-                job.status = "assigned";
-                saveState();
-                showToast("Hustler accepted for this job.");
-                renderAll();
-                openJobDetails(job.id);
+              acceptBtn.className = "btn btn-primary";
+              acceptBtn.textContent = "Accept Hustler";
+              acceptBtn.style.cssText = "flex: 1; padding: 0.6rem; font-size: 0.9rem;";
+              acceptBtn.addEventListener("click", async () => {
+                try {
+                  const token = localStorage.getItem("hustl_token");
+                  const response = await fetch(`${API_BASE}/offers/${offer.id}/accept`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    }
+                  });
+
+                  if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to accept hustler');
+                  }
+
+                  const data = await response.json();
+                  
+                  // If payment intent is returned, show Stripe popup
+                  if (data.payment && data.payment.clientSecret) {
+                    // Stripe payment popup will appear here
+                    showToast("Hustler accepted! Payment will be processed.");
+                  } else {
+                    showToast("✅ Hustler accepted for this job!");
+                  }
+                  
+                  // Refresh job details
+                  openJobDetails(job.id);
+                  renderJobs();
+                } catch (error) {
+                  console.error("Error accepting hustler:", error);
+                  showToast("Failed to accept hustler: " + (error.message || "Unknown error"));
+                }
               });
-              rightPart.appendChild(acceptBtn);
-            } else {
-              const note = document.createElement("span");
-              note.className = "muted";
-              note.textContent = "Not selected";
-              rightPart.appendChild(note);
+              actionsRow.appendChild(acceptBtn);
             }
 
-            row.appendChild(rightPart);
-            appsBox.appendChild(row);
+            applicantCard.appendChild(actionsRow);
+            appsBox.appendChild(applicantCard);
           });
         }
         detail.appendChild(appsBox);
