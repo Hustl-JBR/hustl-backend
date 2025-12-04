@@ -5745,22 +5745,152 @@ async function renderJobs(reset = false) {
           appliedBadge.textContent = statusText;
           applySection.appendChild(appliedBadge);
         } else {
+          // Apply form directly in the modal
+          const applyTitle = document.createElement("div");
+          applyTitle.style.cssText = "font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 1rem;";
+          applyTitle.textContent = "Apply for This Job";
+          applySection.appendChild(applyTitle);
+          
+          // Why you're a good fit textarea
+          const whyFitLabel = document.createElement("label");
+          whyFitLabel.style.cssText = "display: block; font-weight: 600; font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.5rem;";
+          whyFitLabel.textContent = "Why are you a good fit for this job? *";
+          applySection.appendChild(whyFitLabel);
+          
+          const whyFitTextarea = document.createElement("textarea");
+          whyFitTextarea.id = `whyFitTextarea_${job.id}`;
+          whyFitTextarea.placeholder = "Tell the customer why you're right for this job. Include your experience, tools, availability, etc.";
+          whyFitTextarea.maxLength = 400;
+          whyFitTextarea.required = true;
+          whyFitTextarea.style.cssText = "width: 100%; min-height: 120px; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 0.9rem; font-family: inherit; resize: vertical; margin-bottom: 0.5rem;";
+          whyFitTextarea.addEventListener("input", (e) => {
+            const remaining = 400 - e.target.value.length;
+            charCounter.textContent = `${remaining} characters remaining`;
+            if (remaining < 50) {
+              charCounter.style.color = "#dc2626";
+            } else {
+              charCounter.style.color = "var(--text-muted)";
+            }
+          });
+          applySection.appendChild(whyFitTextarea);
+          
+          const charCounter = document.createElement("div");
+          charCounter.style.cssText = "font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem; text-align: right;";
+          charCounter.textContent = "400 characters remaining";
+          applySection.appendChild(charCounter);
+          
+          // Stripe requirement check
+          const stripeCheck = document.createElement("div");
+          stripeCheck.style.cssText = "padding: 0.75rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-muted);";
+          
+          let hasStripe = false;
+          try {
+            const token = localStorage.getItem("hustl_token");
+            const userResponse = await fetch(`${API_BASE}/users/me`, {
+              headers: token ? { "Authorization": `Bearer ${token}` } : {}
+            });
+            if (userResponse.ok) {
+              const userData = await userResponse.json();
+              hasStripe = !!(userData.stripeAccountId || userData.stripeConnectAccountId);
+            }
+          } catch (e) {
+            console.error("Error checking Stripe:", e);
+          }
+          
+          if (!hasStripe) {
+            stripeCheck.innerHTML = `
+              <div style="margin-bottom: 0.5rem; color: #dc2626; font-weight: 600;">⚠️ Stripe Account Required</div>
+              <div style="margin-bottom: 0.75rem;">You must have a connected Stripe account to apply for jobs.</div>
+              <button id="connectStripeBtn_${job.id}" class="btn btn-primary" style="width: 100%; padding: 0.6rem; font-size: 0.9rem;">
+                Connect Stripe to Apply
+              </button>
+            `;
+            const connectBtn = stripeCheck.querySelector(`#connectStripeBtn_${job.id}`);
+            if (connectBtn) {
+              connectBtn.addEventListener("click", () => {
+                document.body.removeChild(modalOverlay);
+                document.body.style.overflow = "";
+                setView("profile");
+                setTimeout(() => {
+                  const stripeSection = document.getElementById("stripeConnectSection");
+                  if (stripeSection) {
+                    stripeSection.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }
+                }, 300);
+              });
+            }
+          } else {
+            stripeCheck.innerHTML = `<div style="color: #059669; font-weight: 600;">✅ Stripe account connected</div>`;
+          }
+          applySection.appendChild(stripeCheck);
+          
+          // Apply button
           const applyNowBtn = document.createElement("button");
           applyNowBtn.className = "btn btn-primary";
-          applyNowBtn.style.cssText = "width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 700; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); border: none; border-radius: 12px; color: white; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;";
-          applyNowBtn.innerHTML = "🚀 Apply Now";
+          applyNowBtn.textContent = "Submit Application";
+          applyNowBtn.style.cssText = "width: 100%; padding: 1rem; font-size: 1rem; font-weight: 700; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); border: none; border-radius: 12px; color: white; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;";
+          applyNowBtn.disabled = !hasStripe;
+          if (!hasStripe) {
+            applyNowBtn.style.opacity = "0.5";
+            applyNowBtn.style.cursor = "not-allowed";
+          }
+          
           applyNowBtn.addEventListener("mouseenter", () => {
-            applyNowBtn.style.transform = "translateY(-2px)";
-            applyNowBtn.style.boxShadow = "0 6px 16px rgba(59, 130, 246, 0.5)";
+            if (!applyNowBtn.disabled) {
+              applyNowBtn.style.transform = "translateY(-2px)";
+              applyNowBtn.style.boxShadow = "0 6px 16px rgba(59, 130, 246, 0.5)";
+            }
           });
           applyNowBtn.addEventListener("mouseleave", () => {
             applyNowBtn.style.transform = "translateY(0)";
             applyNowBtn.style.boxShadow = "0 4px 12px rgba(59, 130, 246, 0.4)";
           });
-          applyNowBtn.addEventListener("click", () => {
-            document.body.removeChild(modalOverlay);
-            document.body.style.overflow = "";
-            showApplyJobModal(job);
+          
+          applyNowBtn.addEventListener("click", async () => {
+            const whyFit = whyFitTextarea.value.trim();
+            if (!whyFit) {
+              showToast("Please explain why you're a good fit for this job.");
+              whyFitTextarea.focus();
+              return;
+            }
+            
+            if (!hasStripe) {
+              showToast("Please connect your Stripe account first.");
+              return;
+            }
+            
+            try {
+              applyNowBtn.disabled = true;
+              applyNowBtn.textContent = "Submitting...";
+              
+              const token = localStorage.getItem("hustl_token");
+              const response = await fetch(`${API_BASE}/offers`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  jobId: job.id,
+                  note: whyFit
+                })
+              });
+              
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || "Failed to submit application");
+              }
+              
+              showToast("✅ Application Submitted!");
+              document.body.removeChild(modalOverlay);
+              document.body.style.overflow = "";
+              renderJobs();
+            } catch (error) {
+              console.error("Error submitting application:", error);
+              showToast("Failed to submit application: " + (error.message || "Unknown error"));
+              applyNowBtn.disabled = false;
+              applyNowBtn.textContent = "Submit Application";
+            }
           });
           applySection.appendChild(applyNowBtn);
         }
