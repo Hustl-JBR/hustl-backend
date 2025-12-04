@@ -2939,11 +2939,11 @@
             </div>
             
             <!-- Status Pills -->
-            <div class="job-status-group" id="jobsStatusFilter" style="flex: 2; display: flex; gap: 0.25rem;">
-              <span data-status="all" class="active" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">All</span>
-              <span data-status="applied" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">✓ Applied</span>
-              <span data-status="assigned" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">🟡 In Progress</span>
-              <span data-status="completed" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">✅ Done</span>
+            <div class="job-status-group" id="jobsStatusFilter" style="flex: 2; display: flex; gap: 0.25rem; flex-wrap: wrap;">
+              <span data-status="all" class="active" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; background: #f3f4f6; color: var(--text-main); transition: all 0.2s;">1️⃣ All</span>
+              <span data-status="applied" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; background: #f3f4f6; color: var(--text-main); transition: all 0.2s;">2️⃣ ✓ Applied</span>
+              <span data-status="in_progress" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; background: #f3f4f6; color: var(--text-main); transition: all 0.2s;">3️⃣ 🟡 In Progress</span>
+              <span data-status="done" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; background: #f3f4f6; color: var(--text-main); transition: all 0.2s;">4️⃣ ✅ Done</span>
             </div>
           </div>
         </div>
@@ -4673,17 +4673,45 @@ async function renderJobs(reset = false) {
     const currentUser = getCurrentUser();
     
     if (activeJobsStatusFilter === "all") {
-      filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => j.status !== "COMPLETED") : [];
-    } else if (activeJobsStatusFilter === "applied") {
-      // Filter for jobs the user has applied to
+      // All: Shows everything related to the user (jobs applied to, accepted, in progress, completed)
       filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => {
-        if (j.status === "COMPLETED") return false;
-        if (currentUser && j.offers) {
-          return Array.isArray(j.offers) && j.offers.some(offer => offer.hustlerId === currentUser.id);
-        }
-        return false;
+        if (!currentUser) return j.status === "OPEN" || j.status === "open";
+        // Show jobs user posted, applied to, accepted, or completed
+        const isPoster = j.postedByUserId === currentUser.id;
+        const hasApplied = j.offers && Array.isArray(j.offers) && j.offers.some(offer => offer.hustlerId === currentUser.id);
+        const isAssigned = j.hustlerId === currentUser.id;
+        return isPoster || hasApplied || isAssigned || j.status === "OPEN" || j.status === "open";
+      }) : [];
+    } else if (activeJobsStatusFilter === "applied") {
+      // Applied: Shows only jobs the hustler has applied for (still waiting on customer)
+      filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => {
+        if (!currentUser) return false;
+        // Must have applied AND not be accepted yet
+        const hasApplied = j.offers && Array.isArray(j.offers) && j.offers.some(offer => offer.hustlerId === currentUser.id && offer.status === "PENDING");
+        const isAccepted = j.hustlerId === currentUser.id;
+        return hasApplied && !isAccepted && (j.status === "OPEN" || j.status === "open");
+      }) : [];
+    } else if (activeJobsStatusFilter === "in_progress") {
+      // In Progress: Shows jobs where start code has been used (actively being worked on)
+      filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => {
+        if (!currentUser) return false;
+        // Must be assigned to user AND start code verified (job is active)
+        const isAssigned = j.hustlerId === currentUser.id || j.postedByUserId === currentUser.id;
+        const isActive = j.arrivalCodeVerified && !j.completionCodeVerified;
+        return isAssigned && isActive;
+      }) : [];
+    } else if (activeJobsStatusFilter === "done") {
+      // Done: Shows completed jobs (completion code entered, payment released)
+      filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => {
+        if (!currentUser) return false;
+        // Must be related to user AND completed
+        const isPoster = j.postedByUserId === currentUser.id;
+        const isHustler = j.hustlerId === currentUser.id;
+        const isCompleted = j.completionCodeVerified || j.status === "COMPLETED" || j.status === "PAID";
+        return (isPoster || isHustler) && isCompleted;
       }) : [];
     } else if (activeJobsStatusFilter) {
+      // Fallback for other status filters
       filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => j.status === activeJobsStatusFilter) : [];
     }
     
@@ -9324,6 +9352,21 @@ meta.textContent =
       // Jobs status filter
       const jobsStatusFilter = document.getElementById("jobsStatusFilter");
       if (jobsStatusFilter) {
+        // Update active state styling
+        jobsStatusFilter.querySelectorAll("span").forEach((el) => {
+          if (el.dataset.status === activeJobsStatusFilter) {
+            el.classList.add("active");
+            el.style.background = "var(--primary)";
+            el.style.color = "white";
+            el.style.fontWeight = "600";
+          } else {
+            el.classList.remove("active");
+            el.style.background = "#f3f4f6";
+            el.style.color = "var(--text-main)";
+            el.style.fontWeight = "normal";
+          }
+        });
+        
         jobsStatusFilter.querySelectorAll("span").forEach((el) => {
           el.addEventListener("click", () => {
             activeJobsStatusFilter = el.dataset.status;
