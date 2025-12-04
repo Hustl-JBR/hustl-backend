@@ -6107,17 +6107,33 @@ async function renderJobs(reset = false) {
               applyNowBtn.disabled = true;
               applyNowBtn.textContent = "Submitting...";
               
+              // Get proposed price if entered
+              const proposedPrice = priceInput.value ? parseFloat(priceInput.value) : null;
+              const proposedPriceType = priceTypeSelect.value;
+              
+              const requestBody = {
+                note: whyFit
+              };
+              
+              // Add proposed amount if provided
+              if (proposedPrice && proposedPrice > 0) {
+                requestBody.proposedAmount = proposedPrice;
+                // Add price type info to note if different from job
+                if (proposedPriceType !== job.payType) {
+                  requestBody.note = whyFit + `\n\n[Proposed ${proposedPriceType === 'flat' ? 'flat rate' : 'hourly rate'}: ${formatMoney(proposedPrice)}${proposedPriceType === 'hourly' ? '/hr' : ''}]`;
+                } else {
+                  requestBody.note = whyFit + `\n\n[Proposed price: ${formatMoney(proposedPrice)}${proposedPriceType === 'hourly' ? '/hr' : ''}]`;
+                }
+              }
+              
               const token = localStorage.getItem("hustl_token");
-              const response = await fetch(`${API_BASE}/offers`, {
+              const response = await fetch(`${API_BASE}/offers/${job.id}`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
                   "Authorization": `Bearer ${token}`
                 },
-                body: JSON.stringify({
-                  jobId: job.id,
-                  note: whyFit
-                })
+                body: JSON.stringify(requestBody)
               });
               
               if (!response.ok) {
