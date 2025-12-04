@@ -224,19 +224,8 @@
     .app-shell {
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
+      min-height: auto;
       justify-content: flex-start;
-    }
-    
-    /* Main content wrapper - grows to push footer down */
-    .app-shell > main,
-    .app-shell > section:not(footer) {
-      flex: 1 0 auto;
-    }
-    
-    /* Footer stays at bottom */
-    footer {
-      flex-shrink: 0;
     }
     
     /* When logged in, hide auth section completely */
@@ -3339,17 +3328,38 @@ heart of Hustl.
     }
 
     function timeAgo(timestamp) {
-      if (!timestamp) return "";
+      if (!timestamp) return "Recently";
+      // Handle both Date objects and timestamps
+      let timeMs;
+      if (timestamp instanceof Date) {
+        timeMs = timestamp.getTime();
+      } else if (typeof timestamp === 'string') {
+        timeMs = new Date(timestamp).getTime();
+      } else if (typeof timestamp === 'number') {
+        timeMs = timestamp;
+      } else {
+        return "Recently";
+      }
+      
+      // Check if valid date
+      if (isNaN(timeMs)) return "Recently";
+      
       const now = Date.now();
-      const diffMs = now - timestamp;
+      const diffMs = now - timeMs;
+      if (diffMs < 0) return "Recently"; // Future date
+      
       const diffMin = Math.floor(diffMs / 60000);
       if (diffMin < 1) return "just now";
-      if (diffMin < 60) return diffMin + " min ago";
+      if (diffMin < 60) return diffMin + (diffMin === 1 ? " min ago" : " mins ago");
       const diffHr = Math.floor(diffMin / 60);
-      if (diffHr < 24) return diffHr + " hr ago";
+      if (diffHr < 24) return diffHr + (diffHr === 1 ? " hr ago" : " hrs ago");
       const diffDay = Math.floor(diffHr / 24);
-      if (diffDay === 1) return "yesterday";
-      return diffDay + " days ago";
+      if (diffDay === 1) return "1 day ago";
+      if (diffDay < 7) return diffDay + " days ago";
+      const diffWeek = Math.floor(diffDay / 7);
+      if (diffWeek < 4) return diffWeek + (diffWeek === 1 ? " week ago" : " weeks ago");
+      const diffMonth = Math.floor(diffDay / 30);
+      return diffMonth + (diffMonth === 1 ? " month ago" : " months ago");
     }
 
     let toastTimeout = null;
@@ -5610,10 +5620,14 @@ async function renderJobs(reset = false) {
       statusRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Status:</span> <span style="color: ${statusColor}; font-weight: 600;">${statusText}</span>`;
       summaryGrid.appendChild(statusRow);
 
-      // Time Posted
+      // Time Posted - Fix NaN bug
       const timeRow = document.createElement("div");
       timeRow.style.cssText = "display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;";
-      const postedTime = job.createdAt ? timeAgo(job.createdAt) : "Recently";
+      let postedTime = "Recently";
+      if (job.createdAt) {
+        const createdDate = typeof job.createdAt === 'string' ? new Date(job.createdAt) : (job.createdAt instanceof Date ? job.createdAt : new Date(job.createdAt));
+        postedTime = timeAgo(createdDate);
+      }
       timeRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Posted:</span> <span style="color: var(--text-muted);">${postedTime}</span>`;
       summaryGrid.appendChild(timeRow);
 
@@ -5624,13 +5638,76 @@ async function renderJobs(reset = false) {
       locationRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Location:</span> <span style="color: var(--text-muted);">${fullAddress}</span>`;
       summaryGrid.appendChild(locationRow);
 
-      // Posted By
+      // Posted By - Make clickable to view customer profile
       let poster = state.users?.find((u) => u.id === job.postedByUserId) || job.postedBy || job.customer;
+      if (!poster && job.postedByUserId) {
+        // Try to fetch customer from API
+        try {
+          const token = localStorage.getItem("hustl_token");
+          const userResponse = await fetch(`${API_BASE}/users/${job.postedByUserId}`, {
+            headers: token ? { "Authorization": `Bearer ${token}` } : {}
+          });
+          if (userResponse.ok) {
+            poster = await userResponse.json();
+          }
+        } catch (e) {
+          console.error("Error fetching customer:", e);
+        }
+      }
+      
       if (poster) {
         const postedByRow = document.createElement("div");
-        postedByRow.style.cssText = "display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; margin-top: 0.25rem;";
-        const posterName = poster.name || poster.username || poster.email?.split('@')[0] || "Unknown";
-        postedByRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Posted by:</span> <span style="color: var(--text-muted);">${posterName}</span>`;
+        postedByRow.style.cssText = "display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; margin-top: 0.5rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px; cursor: pointer; transition: background 0.2s;";
+        postedByRow.addEventListener("mouseenter", () => {
+          postedByRow.style.background = "#f3f4f6";
+        });
+        postedByRow.addEventListener("mouseleave", () => {
+          postedByRow.style.background = "#f9fafb";
+        });
+        postedByRow.addEventListener("click", () => {
+          if (typeof openUserProfile === 'function' && poster.id) {
+            document.body.removeChild(modalOverlay);
+            document.body.style.overflow = "";
+            openUserProfile(poster.id);
+          }
+        });
+        
+        const posterAvatar = document.createElement("div");
+        posterAvatar.style.cssText = "width: 40px; height: 40px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1rem; flex-shrink: 0;";
+        const posterInitial = (poster.name || poster.email || "U")[0].toUpperCase();
+        if (poster.photoUrl) {
+          posterAvatar.innerHTML = `<img src="${poster.photoUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" />`;
+        } else {
+          posterAvatar.textContent = posterInitial;
+        }
+        postedByRow.appendChild(posterAvatar);
+        
+        const posterInfo = document.createElement("div");
+        posterInfo.style.cssText = "flex: 1; min-width: 0;";
+        
+        const posterName = document.createElement("div");
+        posterName.style.cssText = "font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem;";
+        posterName.textContent = poster.name || poster.username || poster.email?.split('@')[0] || "Unknown";
+        posterInfo.appendChild(posterName);
+        
+        const posterRating = document.createElement("div");
+        posterRating.style.cssText = "font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.25rem;";
+        const ratingValue = poster.ratingAvg || poster.rating || 0;
+        const ratingCount = poster.ratingCount || poster.reviewCount || 0;
+        if (ratingCount > 0) {
+          posterRating.innerHTML = `⭐ ${Number(ratingValue).toFixed(1)} (${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})`;
+        } else {
+          posterRating.textContent = "⭐ No reviews yet";
+        }
+        posterInfo.appendChild(posterRating);
+        
+        postedByRow.appendChild(posterInfo);
+        
+        const viewProfileBtn = document.createElement("div");
+        viewProfileBtn.style.cssText = "font-size: 0.85rem; color: var(--primary); font-weight: 600;";
+        viewProfileBtn.textContent = "View Profile →";
+        postedByRow.appendChild(viewProfileBtn);
+        
         summaryGrid.appendChild(postedByRow);
       }
 
@@ -5688,11 +5765,9 @@ async function renderJobs(reset = false) {
         }
       }
       
-      // Content Section (scrollable) - already created above
-      if (!contentSection) {
-        contentSection = document.createElement("div");
-        contentSection.style.cssText = "padding: 1.5rem 2rem; max-height: calc(90vh - 300px); overflow-y: auto;";
-      }
+      // Content Section (scrollable)
+      const contentSection = document.createElement("div");
+      contentSection.style.cssText = "padding: 1.5rem 2rem; max-height: calc(90vh - 400px); overflow-y: auto;";
 
       // Full Job Description Section
       const descSection = document.createElement("div");
@@ -5705,11 +5780,102 @@ async function renderJobs(reset = false) {
       
       const desc = document.createElement("div");
       desc.style.cssText = "color: var(--text-main); font-size: 1rem; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;";
-      // Fix: Get full description from job object
-      const fullDescription = job.description || job.requirements?.notes || "No description provided.";
+      // Get full description from job object
+      const fullDescription = job.description || job.requirements?.notes || job.notes || "No description provided.";
       desc.textContent = fullDescription;
       descSection.appendChild(desc);
+      
+      // Job Photos (if any)
+      if (job.photos && Array.isArray(job.photos) && job.photos.length > 0) {
+        const photosSection = document.createElement("div");
+        photosSection.style.cssText = "margin-top: 1rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.5rem;";
+        job.photos.forEach(photoUrl => {
+          const photo = document.createElement("img");
+          photo.src = photoUrl;
+          photo.style.cssText = "width: 100%; height: 100px; object-fit: cover; border-radius: 8px; cursor: pointer;";
+          photo.addEventListener("click", () => {
+            window.open(photoUrl, '_blank');
+          });
+          photosSection.appendChild(photo);
+        });
+        descSection.appendChild(photosSection);
+      }
+      
       contentSection.appendChild(descSection);
+      
+      // Location with Map Preview
+      const locationSection = document.createElement("div");
+      locationSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;";
+      
+      const locationTitle = document.createElement("div");
+      locationTitle.style.cssText = "font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.75rem;";
+      locationTitle.textContent = "📍 Location";
+      locationSection.appendChild(locationTitle);
+      
+      const locationText = document.createElement("div");
+      locationText.style.cssText = "color: var(--text-main); font-size: 0.95rem; margin-bottom: 1rem; line-height: 1.5;";
+      locationText.textContent = fullAddress;
+      locationSection.appendChild(locationText);
+      
+      // Map preview (Google Maps embed)
+      if (fullAddress && fullAddress !== "Location TBD") {
+        const mapContainer = document.createElement("div");
+        mapContainer.style.cssText = "width: 100%; height: 200px; border-radius: 8px; overflow: hidden; background: #e5e7eb;";
+        const mapIframe = document.createElement("iframe");
+        mapIframe.style.cssText = "width: 100%; height: 100%; border: none;";
+        mapIframe.src = `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6d-s6V4pcZaLjys&q=${encodeURIComponent(fullAddress)}`;
+        mapContainer.appendChild(mapIframe);
+        locationSection.appendChild(mapContainer);
+      }
+      
+      contentSection.appendChild(locationSection);
+      
+      // Tools/Equipment Needed
+      const equipment = job.requirements?.equipment || job.requirements?.equipment_needed || [];
+      if (equipment.length > 0) {
+        const equipmentSection = document.createElement("div");
+        equipmentSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;";
+        
+        const equipmentTitle = document.createElement("div");
+        equipmentTitle.style.cssText = "font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.75rem;";
+        equipmentTitle.textContent = "🔧 Tools & Equipment Needed";
+        equipmentSection.appendChild(equipmentTitle);
+        
+        const equipmentList = document.createElement("div");
+        equipmentList.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.5rem;";
+        equipment.forEach(eq => {
+          const badge = document.createElement("span");
+          badge.style.cssText = "padding: 0.5rem 0.75rem; background: white; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 0.9rem; color: var(--text-main);";
+          badge.textContent = eq;
+          equipmentList.appendChild(badge);
+        });
+        equipmentSection.appendChild(equipmentList);
+        contentSection.appendChild(equipmentSection);
+      }
+      
+      // Estimated Time/Difficulty
+      if (job.estHours || job.maxHours || job.difficulty) {
+        const timeSection = document.createElement("div");
+        timeSection.style.cssText = "margin-bottom: 1.5rem; padding: 1rem; background: #f9fafb; border-radius: 8px;";
+        
+        if (job.estHours || job.maxHours) {
+          const timeInfo = document.createElement("div");
+          timeInfo.style.cssText = "font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.5rem;";
+          timeInfo.textContent = `⏱️ Estimated Time: ${job.estHours || job.maxHours} ${(job.estHours || job.maxHours) === 1 ? 'hour' : 'hours'}`;
+          timeSection.appendChild(timeInfo);
+        }
+        
+        if (job.difficulty) {
+          const difficultyInfo = document.createElement("div");
+          difficultyInfo.style.cssText = "font-size: 0.9rem; color: var(--text-main);";
+          difficultyInfo.textContent = `📊 Difficulty: ${job.difficulty}`;
+          timeSection.appendChild(difficultyInfo);
+        }
+        
+        contentSection.appendChild(timeSection);
+      }
+      
+      modalContent.appendChild(contentSection);
 
       // Apply Now Button Section (sticky at bottom for hustlers)
       const currentUser = getCurrentUser();
