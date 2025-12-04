@@ -7,3 +7,4 @@ ALTER TABLE "jobs" ADD COLUMN "completion_verified" BOOLEAN NOT NULL DEFAULT fal
 
 
 
+

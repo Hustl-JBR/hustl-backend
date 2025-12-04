@@ -5893,11 +5893,21 @@ async function renderJobs(reset = false) {
 
       // Apply Now Button Section (sticky at bottom for hustlers)
       const currentUser = getCurrentUser();
-      const isHustler = currentUser && (currentUser.role === "HUSTLER" || currentUser.role === "hustler");
-      const isOpen = job.status === "OPEN" || job.status === "open";
+      // More robust hustler check - check role or if user has stripe account (hustlers need stripe)
+      const isHustler = currentUser && (
+        currentUser.role === "HUSTLER" || 
+        currentUser.role === "hustler" ||
+        currentUser.role === "Hustler" ||
+        (!currentUser.role || currentUser.role === "CUSTOMER" || currentUser.role === "customer") && currentUser.stripeAccountId // If has stripe, likely a hustler
+      );
+      // Check if job is open (case-insensitive)
+      const jobStatusUpper = (job.status || "").toUpperCase();
+      const isOpen = jobStatusUpper === "OPEN" || jobStatusUpper === "";
       const isNotPoster = currentUser && job.postedByUserId !== currentUser.id;
       
-      if (isHustler && isOpen && isNotPoster) {
+      // Show apply section if: user is logged in, job is open, and user is not the poster
+      // OR if user is a hustler (has stripe account) and job is open
+      if (currentUser && isOpen && isNotPoster) {
         // Check if already applied
         let hasApplied = false;
         try {
@@ -6118,12 +6128,7 @@ async function renderJobs(reset = false) {
               // Add proposed amount if provided
               if (proposedPrice && proposedPrice > 0) {
                 requestBody.proposedAmount = proposedPrice;
-                // Add price type info to note if different from job
-                if (proposedPriceType !== job.payType) {
-                  requestBody.note = whyFit + `\n\n[Proposed ${proposedPriceType === 'flat' ? 'flat rate' : 'hourly rate'}: ${formatMoney(proposedPrice)}${proposedPriceType === 'hourly' ? '/hr' : ''}]`;
-                } else {
-                  requestBody.note = whyFit + `\n\n[Proposed price: ${formatMoney(proposedPrice)}${proposedPriceType === 'hourly' ? '/hr' : ''}]`;
-                }
+                requestBody.proposedPriceType = proposedPriceType;
               }
               
               const token = localStorage.getItem("hustl_token");
