@@ -5,9 +5,9 @@ const { authenticate } = require('../middleware/auth');
 
 const prisma = new PrismaClient();
 
-// Generate a random 4-digit code
+// Generate a random 6-digit code
 function generateCode() {
-  return String(Math.floor(1000 + Math.random() * 9000));
+  return String(Math.floor(100000 + Math.random() * 900000));
 }
 
 // ============================================
@@ -83,62 +83,98 @@ router.get('/job/:jobId/codes', authenticate, async (req, res) => {
 });
 
 // ============================================
-// POST /verification/job/:jobId/verify-arrival
-// Hustler enters the arrival code (from customer)
+// POST /verification/job/:jobId/verify-start
+// Hustler enters the 6-digit start code (from customer) to activate the job
 // ============================================
-router.post('/job/:jobId/verify-arrival', authenticate, async (req, res) => {
+router.post('/job/:jobId/verify-start', authenticate, async (req, res) => {
   try {
     const { jobId } = req.params;
     const { code } = req.body;
     const userId = req.user.id;
 
-    if (!code) {
-      return res.status(400).json({ error: 'Code is required' });
+    if (!code || code.length !== 6) {
+      return res.status(400).json({ error: 'Start code must be 6 digits' });
     }
 
     const job = await prisma.job.findUnique({
-      where: { id: jobId }
+      where: { id: jobId },
+      include: { payment: true }
     });
 
     if (!job) {
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    // Only the assigned hustler can verify arrival
+    // Only the assigned hustler can verify start code
     if (job.hustlerId !== userId) {
-      return res.status(403).json({ error: 'Only the assigned hustler can verify arrival' });
+      return res.status(403).json({ error: 'Only the assigned hustler can verify start code' });
     }
 
     if (job.status !== 'ASSIGNED') {
-      return res.status(400).json({ error: 'Job must be in ASSIGNED status to verify arrival' });
+      return res.status(400).json({ error: 'Job must be in ASSIGNED status to verify start code' });
     }
 
-    if (job.arrivalCodeVerified) {
-      return res.status(400).json({ error: 'Arrival already verified' });
+    // Check if code has expired (78 hours)
+    if (job.startCodeExpiresAt && new Date() > new Date(job.startCodeExpiresAt)) {
+      // Job expired - refund customer
+      const { voidPaymentIntent } = require('../services/stripe');
+      try {
+        if (job.payment && job.payment.providerId) {
+          await voidPaymentIntent(job.payment.providerId);
+          await prisma.payment.update({
+            where: { id: job.payment.id },
+            data: { status: 'REFUNDED' }
+          });
+        }
+        await prisma.job.update({
+          where: { id: jobId },
+          data: { status: 'EXPIRED' }
+        });
+      } catch (refundError) {
+        console.error('Error processing expiration refund:', refundError);
+      }
+      return res.status(400).json({ 
+        error: 'Start code has expired (78 hours). Job has been cancelled and customer refunded.',
+        expired: true 
+      });
     }
 
-    // Check the code
-    if (code.trim() !== job.arrivalCode) {
-      return res.status(400).json({ error: 'Incorrect code. Ask the customer for the correct code.' });
+    if (job.startCodeVerified) {
+      return res.status(400).json({ error: 'Start code already verified' });
     }
 
-    // Mark arrival as verified
+    // Check the code (use startCode, fallback to arrivalCode for migration)
+    const expectedCode = job.startCode || job.arrivalCode;
+    if (code.trim() !== expectedCode) {
+      return res.status(400).json({ error: 'Incorrect code. Ask the customer for the correct 6-digit start code.' });
+    }
+
+    // Mark start code as verified - job is now ACTIVE
     const updatedJob = await prisma.job.update({
       where: { id: jobId },
-      data: { arrivalCodeVerified: true }
+      data: { 
+        startCodeVerified: true,
+        status: 'PAID' // Job is now active, payment is held
+      }
     });
 
     res.json({
       success: true,
-      message: 'Arrival verified! You can now start the job.',
-      arrivalCodeVerified: true,
+      message: 'Start code verified! Job is now active. You can begin work.',
+      startCodeVerified: true,
       completionCode: updatedJob.completionCode
     });
 
   } catch (error) {
-    console.error('Error verifying arrival:', error);
-    res.status(500).json({ error: 'Failed to verify arrival' });
+    console.error('Error verifying start code:', error);
+    res.status(500).json({ error: 'Failed to verify start code' });
   }
+});
+
+// Legacy endpoint - redirect to verify-start
+router.post('/job/:jobId/verify-arrival', authenticate, async (req, res) => {
+  req.url = req.url.replace('/verify-arrival', '/verify-start');
+  return require('./verification').router.handle(req, res);
 });
 
 // ============================================
@@ -169,8 +205,13 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Only the customer can verify completion' });
     }
 
-    if (!job.arrivalCodeVerified) {
-      return res.status(400).json({ error: 'Arrival must be verified first' });
+    if (!code || code.length !== 6) {
+      return res.status(400).json({ error: 'Completion code must be 6 digits' });
+    }
+
+    // Job must be active (start code verified) to complete
+    if (!job.startCodeVerified && !job.arrivalCodeVerified) {
+      return res.status(400).json({ error: 'Job must be started (start code verified) before completion can be verified' });
     }
 
     if (job.completionCodeVerified) {
@@ -179,24 +220,83 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
 
     // Check the code
     if (code.trim() !== job.completionCode) {
-      return res.status(400).json({ error: 'Incorrect code. Ask the hustler for the correct code.' });
+      return res.status(400).json({ error: 'Incorrect code. Ask the hustler for the correct 6-digit completion code.' });
     }
 
-    // Mark completion as verified and update job status
-    const updatedJob = await prisma.job.update({
-      where: { id: jobId },
-      data: { 
-        completionCodeVerified: true,
-        status: 'AWAITING_CUSTOMER_CONFIRM'
-      }
-    });
+    // Calculate 12% platform fee
+    const platformFee = Number(job.payment.amount) * 0.12;
+    const hustlerPayout = Number(job.payment.amount) - platformFee;
 
-    res.json({
-      success: true,
-      message: 'Job completion verified! Payment will be released to the hustler.',
-      completionCodeVerified: true,
-      jobStatus: updatedJob.status
-    });
+    // Release payment to hustler (capture payment intent and transfer to hustler)
+    const { capturePaymentIntent, transferToHustler } = require('../services/stripe');
+    
+    try {
+      // Capture the payment intent
+      if (job.payment.providerId) {
+        await capturePaymentIntent(job.payment.providerId);
+      }
+
+      // Transfer to hustler's Stripe Connect account (minus 12% fee)
+      const jobWithHustler = await prisma.job.findUnique({
+        where: { id: jobId },
+        include: {
+          hustler: {
+            select: { stripeAccountId: true, email: true, name: true }
+          }
+        }
+      });
+
+      if (jobWithHustler.hustler.stripeAccountId) {
+        await transferToHustler(
+          jobWithHustler.hustler.stripeAccountId,
+          hustlerPayout,
+          job.id,
+          `Payment for job: ${job.title}`
+        );
+      }
+
+      // Update payment record
+      await prisma.payment.update({
+        where: { id: job.payment.id },
+        data: {
+          status: 'CAPTURED',
+          feeHustler: platformFee,
+        }
+      });
+
+      // Mark completion as verified and update job status
+      const updatedJob = await prisma.job.update({
+        where: { id: jobId },
+        data: { 
+          completionCodeVerified: true,
+          status: 'PAID'
+        }
+      });
+
+      res.json({
+        success: true,
+        message: 'Job completion verified! Payment released to hustler.',
+        completionCodeVerified: true,
+        jobStatus: updatedJob.status,
+        paymentReleased: true,
+        hustlerPayout: hustlerPayout,
+        platformFee: platformFee
+      });
+    } catch (paymentError) {
+      console.error('Error releasing payment:', paymentError);
+      // Still mark completion as verified even if payment fails (can be retried)
+      const updatedJob = await prisma.job.update({
+        where: { id: jobId },
+        data: { 
+          completionCodeVerified: true,
+          status: 'COMPLETED_BY_HUSTLER'
+        }
+      });
+      return res.status(500).json({ 
+        error: 'Completion verified but payment release failed. Please contact support.',
+        job: updatedJob
+      });
+    }
 
   } catch (error) {
     console.error('Error verifying completion:', error);

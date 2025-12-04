@@ -293,6 +293,25 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
     
     console.log('[POST /jobs] Creating job with data:', JSON.stringify(jobData, null, 2));
     
+    // Calculate payment amounts (customer pays upfront)
+    const jobAmount = parseFloat(amount);
+    const tipPercent = Math.min(parseFloat(req.body.tipPercent || 0), 25); // Max 25%
+    const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50); // Max $50 tip
+    const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10); // 3% customer fee min $1, max $10
+    const total = jobAmount + tipAmount + customerFee;
+
+    // Require payment upfront - check if payment intent is provided
+    const { paymentIntentId, clientSecret } = req.body;
+    
+    if (!paymentIntentId && process.env.SKIP_STRIPE_CHECK !== 'true') {
+      return res.status(400).json({ 
+        error: 'Payment required upfront. Please complete payment before posting the job.',
+        requiresPayment: true,
+        amount: total,
+      });
+    }
+
+    // Create job first
     const job = await prisma.job.create({
       data: jobData,
       include: {
@@ -308,7 +327,57 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
       },
     });
 
-    res.status(201).json(job);
+    // Create payment record (payment is already pre-authorized via Stripe)
+    const { createPaymentIntent } = require('../services/stripe');
+    let paymentIntent;
+    
+    if (process.env.SKIP_STRIPE_CHECK === 'true') {
+      // Test mode - create fake payment
+      paymentIntent = {
+        id: paymentIntentId || `pi_test_${Date.now()}`,
+        status: 'requires_capture',
+      };
+    } else {
+      // Verify payment intent exists and is pre-authorized
+      const Stripe = require('stripe');
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+      paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      
+      if (paymentIntent.status !== 'requires_capture' && paymentIntent.status !== 'succeeded') {
+        // Delete the job if payment is invalid
+        await prisma.job.delete({ where: { id: job.id } });
+        return res.status(400).json({ 
+          error: 'Payment not authorized. Please complete payment before posting the job.',
+          paymentStatus: paymentIntent.status,
+        });
+      }
+    }
+
+    // Create payment record with PREAUTHORIZED status (held in escrow)
+    const payment = await prisma.payment.create({
+      data: {
+        jobId: job.id,
+        customerId: req.user.id,
+        hustlerId: null, // Will be set when offer is accepted
+        amount: jobAmount,
+        tip: tipAmount,
+        feeCustomer: customerFee,
+        feeHustler: 0, // Will be calculated on release (12% of jobAmount)
+        total,
+        status: 'PREAUTHORIZED',
+        providerId: paymentIntent.id,
+      },
+    });
+
+    res.status(201).json({
+      ...job,
+      payment: {
+        id: payment.id,
+        status: payment.status,
+        amount: payment.amount,
+        total: payment.total,
+      },
+    });
   } catch (error) {
     console.error('Create job error:', error);
     console.error('Error message:', error.message);

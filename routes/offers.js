@@ -280,37 +280,21 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       console.log('[TEST MODE] Skipping Stripe account check for hustler:', offer.hustlerId);
     }
 
-    // Calculate payment amounts
-    const jobAmount = Number(offer.job.amount);
-    const tipPercent = Math.min(parseFloat(req.body.tipPercent || 0), 25); // Max 25%
-    const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50); // Max $50 tip
-    const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10); // 3% customer fee min $1, max $10
-    const total = jobAmount + tipAmount + customerFee;
+    // Payment should already exist (customer paid upfront when posting job)
+    // We just need to verify it exists and is pre-authorized
+    const existingPayment = await prisma.payment.findUnique({
+      where: { jobId: offer.job.id },
+    });
 
-    // Create Stripe payment intent (pre-auth) - Skip in test mode
-    let paymentIntent;
-    if (skipStripeCheck) {
-      // In test mode, create a fake payment intent
-      console.log('[TEST MODE] Skipping Stripe payment intent creation');
-      paymentIntent = {
-        id: `pi_test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        client_secret: `pi_test_${Date.now()}_secret`,
-        status: 'requires_capture',
-        amount: Math.round(total * 100),
-      };
-    } else {
-      paymentIntent = await createPaymentIntent({
-        amount: Math.round(total * 100), // Convert to cents
-        customerId: req.user.id,
-        jobId: offer.job.id,
-        metadata: {
-          jobId: offer.job.id,
-          customerId: req.user.id,
-          hustlerId: offer.hustlerId,
-          amount: jobAmount.toString(),
-          tip: tipAmount.toString(),
-          customerFee: customerFee.toString(),
-        },
+    if (!existingPayment) {
+      return res.status(400).json({ 
+        error: 'Payment not found. Customer must pay upfront when posting the job.' 
+      });
+    }
+
+    if (existingPayment.status !== 'PREAUTHORIZED') {
+      return res.status(400).json({ 
+        error: `Payment is not pre-authorized. Current status: ${existingPayment.status}` 
       });
     }
 
@@ -330,10 +314,25 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       data: { status: 'DECLINED' },
     });
 
-    // Generate verification codes (Uber-style safety)
-    const generateCode = () => String(Math.floor(1000 + Math.random() * 9000));
-    const arrivalCode = generateCode();
-    const completionCode = generateCode();
+    // Check if payment already exists (customer paid upfront when posting job)
+    const existingPayment = await prisma.payment.findUnique({
+      where: { jobId: offer.job.id },
+    });
+
+    if (!existingPayment || existingPayment.status !== 'PREAUTHORIZED') {
+      return res.status(400).json({ 
+        error: 'Payment not found or not pre-authorized. Customer must pay upfront when posting the job.' 
+      });
+    }
+
+    // Generate 6-digit verification codes
+    const generateCode = () => String(Math.floor(100000 + Math.random() * 900000));
+    const startCode = generateCode(); // Customer gives this to hustler to start job
+    const completionCode = generateCode(); // Hustler gives this to customer to complete
+    
+    // Set expiration: 78 hours from now
+    const startCodeExpiresAt = new Date();
+    startCodeExpiresAt.setHours(startCodeExpiresAt.getHours() + 78);
 
     // Update job with hustler and verification codes
     const job = await prisma.job.update({
@@ -341,24 +340,26 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       data: {
         status: 'ASSIGNED',
         hustlerId: offer.hustlerId,
-        arrivalCode,
+        startCode,
+        startCodeExpiresAt,
         completionCode,
+        // Update payment with hustler info
       },
     });
 
-    // Create payment record
-    const payment = await prisma.payment.create({
+    // Update payment with hustler ID (payment was created when job was posted)
+    await prisma.payment.update({
+      where: { id: existingPayment.id },
       data: {
-        jobId: offer.job.id,
-        customerId: req.user.id,
         hustlerId: offer.hustlerId,
-        amount: jobAmount,
-        tip: tipAmount,
-        feeCustomer: customerFee,
-        feeHustler: 0, // Will be calculated on capture (12% of jobAmount)
-        total,
-        status: 'PREAUTHORIZED',
-        providerId: paymentIntent.id,
+      },
+    });
+
+    // Payment already exists, just update hustler ID
+    const payment = await prisma.payment.update({
+      where: { id: existingPayment.id },
+      data: {
+        hustlerId: offer.hustlerId,
       },
     });
 
@@ -389,10 +390,9 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     res.json({
       job,
       offer,
-      payment: {
-        ...payment,
-        clientSecret: paymentIntent.client_secret,
-      },
+      payment,
+      startCode, // Customer needs to give this to hustler
+      startCodeExpiresAt, // 78 hours from now
     });
   } catch (error) {
     console.error('Accept offer error:', error);

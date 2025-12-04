@@ -136,6 +136,72 @@ async function cleanup72HourJobs() {
 }
 
 /**
+ * Clean up jobs with expired start codes (78 hours from acceptance)
+ * If start code not verified within 78 hours, refund customer and expire job
+ */
+async function cleanupExpiredStartCodes() {
+  try {
+    const now = new Date();
+    
+    // Find ASSIGNED jobs where start code has expired
+    const expiredJobs = await prisma.job.findMany({
+      where: {
+        status: 'ASSIGNED',
+        startCodeExpiresAt: {
+          lt: now
+        },
+        startCodeVerified: false
+      },
+      include: {
+        payment: true,
+        customer: {
+          select: { email: true, name: true }
+        }
+      }
+    });
+
+    if (expiredJobs.length === 0) {
+      console.log('[Cleanup Start Codes] No expired start codes found');
+      return { expired: 0, refunded: 0 };
+    }
+
+    console.log(`[Cleanup Start Codes] Found ${expiredJobs.length} jobs with expired start codes`);
+
+    const { voidPaymentIntent } = require('./stripe');
+    let refunded = 0;
+
+    for (const job of expiredJobs) {
+      try {
+        // Refund customer
+        if (job.payment && job.payment.providerId && job.payment.status === 'PREAUTHORIZED') {
+          await voidPaymentIntent(job.payment.providerId);
+          await prisma.payment.update({
+            where: { id: job.payment.id },
+            data: { status: 'REFUNDED' }
+          });
+          refunded++;
+        }
+
+        // Mark job as expired
+        await prisma.job.update({
+          where: { id: job.id },
+          data: { status: 'EXPIRED' }
+        });
+
+        console.log(`[Cleanup Start Codes] Expired and refunded job ${job.id}`);
+      } catch (error) {
+        console.error(`[Cleanup Start Codes] Error processing job ${job.id}:`, error);
+      }
+    }
+
+    return { expired: expiredJobs.length, refunded };
+  } catch (error) {
+    console.error('[Cleanup Start Codes] Error:', error);
+    throw error;
+  }
+}
+
+/**
  * Clean up very old jobs (older than 2 weeks regardless of status)
  * Optimized with better error handling
  */
@@ -224,6 +290,7 @@ async function runAllCleanup() {
   
   const results = {
     '72h': await cleanup72HourJobs().catch(e => ({ error: e.message })),
+    'startCodes': await cleanupExpiredStartCodes().catch(e => ({ error: e.message })),
     '2w': await cleanupOldJobs().catch(e => ({ error: e.message })),
   };
   return results;
@@ -232,6 +299,7 @@ async function runAllCleanup() {
 module.exports = {
   cleanupOldJobs,
   cleanup72HourJobs,
+  cleanupExpiredStartCodes,
   runAllCleanup,
 };
 
