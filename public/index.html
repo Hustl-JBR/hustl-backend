@@ -9857,16 +9857,14 @@ meta.textContent =
           }
         }
       });
-    }
-
-      // Home CTA buttons - use event delegation
+      
+      // Home CTA buttons
       const homeCtaPost = document.getElementById("homeCtaPost");
       if (homeCtaPost && !homeCtaPost.dataset.listenerAttached) {
         homeCtaPost.dataset.listenerAttached = 'true';
         homeCtaPost.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
-          console.log("Home CTA Post clicked");
           if (window.setView && typeof window.setView === 'function') {
             window.setView("post");
             setTimeout(() => {
@@ -9885,12 +9883,12 @@ meta.textContent =
         homeCtaBrowse.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
-          console.log("Home CTA Browse clicked");
           if (window.setView && typeof window.setView === 'function') {
             window.setView("jobs");
           }
         });
       }
+    }
 
       // Jobs status filter
       const jobsStatusFilter = document.getElementById("jobsStatusFilter");
