@@ -6405,9 +6405,10 @@ async function renderJobs(reset = false) {
       const isOpen = jobStatusUpper === "OPEN" || jobStatusUpper === "";
       const isNotPoster = currentUser ? (job.postedByUserId !== currentUser.id) : true; // If no user object, assume not poster
       
-      // Show apply section if: user is logged in (has token), job is open, and user is not the poster
-      // Show for ALL logged-in users (they can apply even if not marked as hustler yet)
-      if (isLoggedIn && isOpen && isNotPoster) {
+      // Show apply section if: user is logged in (has token) and job is open
+      // We'll check if user is poster inside the form and show appropriate message
+      console.log("Apply section visibility check:", { isLoggedIn, isOpen, isNotPoster, jobStatus: job.status, hasToken: !!token });
+      if (isLoggedIn && isOpen) {
         // Check if already applied
         let hasApplied = false;
         try {
