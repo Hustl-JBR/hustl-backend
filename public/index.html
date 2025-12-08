@@ -3265,21 +3265,56 @@ heart of Hustl.
 <script src="/api-integration.js?v=3"></script>
 <script>
   // Define stub functions early so they're available for onclick handlers in HTML
-  // These will be replaced with real functions when they're defined
+  // These will queue calls until real functions are ready
+  let setViewQueue = [];
   window.setView = function(view) {
-    console.warn("setView called before initialization, view:", view);
+    // If real function is ready, use it
+    if (window._realSetView && typeof window._realSetView === 'function') {
+      return window._realSetView(view);
+    }
+    // Otherwise queue the call
+    setViewQueue.push(view);
+    // Try to process queue after a delay
+    setTimeout(() => {
+      if (window._realSetView && typeof window._realSetView === 'function') {
+        setViewQueue.forEach(v => window._realSetView(v));
+        setViewQueue = [];
+      }
+    }, 100);
   };
   
+  let openAuthModalQueue = [];
   window.openAuthModal = function(mode) {
-    console.warn("openAuthModal called before initialization, mode:", mode);
+    if (window._realOpenAuthModal && typeof window._realOpenAuthModal === 'function') {
+      return window._realOpenAuthModal(mode);
+    }
+    openAuthModalQueue.push(mode);
+    setTimeout(() => {
+      if (window._realOpenAuthModal && typeof window._realOpenAuthModal === 'function') {
+        openAuthModalQueue.forEach(m => window._realOpenAuthModal(m));
+        openAuthModalQueue = [];
+      }
+    }, 100);
   };
   
   window.closeAuthModal = function() {
-    console.warn("closeAuthModal called before initialization");
+    if (window._realCloseAuthModal && typeof window._realCloseAuthModal === 'function') {
+      return window._realCloseAuthModal();
+    }
   };
   
+  let handleSignOutQueue = [];
   window.handleSignOut = function() {
-    console.warn("handleSignOut called before initialization");
+    if (window._realHandleSignOut && typeof window._realHandleSignOut === 'function') {
+      return window._realHandleSignOut();
+    }
+    handleSignOutQueue.push(true);
+    setTimeout(() => {
+      if (window._realHandleSignOut && typeof window._realHandleSignOut === 'function') {
+        handleSignOutQueue.forEach(() => window._realHandleSignOut());
+        handleSignOutQueue = [];
+      }
+    }, 100);
   };
   
   // Backend API configuration - using NestJS API with Neon database
@@ -3505,7 +3540,13 @@ heart of Hustl.
       await renderAll();
     }
     // Expose setView globally immediately after definition
+    window._realSetView = setView;
     window.setView = setView;
+    // Process any queued calls
+    if (setViewQueue && setViewQueue.length > 0) {
+      setViewQueue.forEach(v => setView(v));
+      setViewQueue = [];
+    }
 
     /* ---------- Auth visibility ---------- */
 
@@ -10195,7 +10236,13 @@ try {
     }, 50);
   }
   // Expose openAuthModal globally immediately after definition
+  window._realOpenAuthModal = openAuthModal;
   window.openAuthModal = openAuthModal;
+  // Process any queued calls
+  if (openAuthModalQueue && openAuthModalQueue.length > 0) {
+    openAuthModalQueue.forEach(m => openAuthModal(m));
+    openAuthModalQueue = [];
+  }
   
   function closeAuthModal() {
     const overlay = document.getElementById('authModalOverlay');
@@ -10205,6 +10252,7 @@ try {
     }
   }
   // Expose closeAuthModal globally immediately after definition
+  window._realCloseAuthModal = closeAuthModal;
   window.closeAuthModal = closeAuthModal;
   
   // Update header when logged in/out - uses API to get current user
@@ -10310,7 +10358,13 @@ try {
       await renderAll();
     }
   }
+  window._realHandleSignOut = handleSignOut;
   window.handleSignOut = handleSignOut;
+  // Process any queued calls
+  if (handleSignOutQueue && handleSignOutQueue.length > 0) {
+    handleSignOutQueue.forEach(() => handleSignOut());
+    handleSignOutQueue = [];
+  }
   
   // Profile Tabs
   function initProfileTabs() {
