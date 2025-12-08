@@ -73,12 +73,14 @@ async function sendSignupEmail(email, name) {
 async function sendEmailVerificationEmail(email, name, verificationCode) {
   if (!isEmailConfigured()) {
     console.warn('[Email] Verification email not sent - RESEND_API_KEY not configured');
-    return;
+    throw new Error('RESEND_API_KEY not configured');
   }
   try {
     console.log('[Email] Sending verification email to:', email, 'with code:', verificationCode);
+    console.log('[Email] Using FROM_EMAIL:', FROM_EMAIL);
+    console.log('[Email] Resend configured:', !!resend);
     
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: `🔐 Your Hustl verification code: ${verificationCode}`,
@@ -127,10 +129,19 @@ async function sendEmailVerificationEmail(email, name, verificationCode) {
         </div>
       `,
     });
-    console.log('[Email] Verification email sent successfully to:', email);
+    console.log('[Email] ✅ Verification email sent successfully to:', email);
+    console.log('[Email] Resend response:', JSON.stringify(result, null, 2));
+    return result;
   } catch (error) {
-    console.error('[Email] Send email verification error:', error);
-    // Don't throw - allow signup to continue even if email fails
+    console.error('[Email] ❌ Send email verification error:', error);
+    console.error('[Email] Error details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      response: error.response?.data || error.response
+    });
+    // Throw error so signup route can handle it
+    throw error;
   }
 }
 

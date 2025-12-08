@@ -133,14 +133,21 @@ const { email, password, name, username, city, zip, role, referralCode } = req.b
       console.error('[signup] ❌ Failed to send welcome email:', welcomeEmailError.message);
     }
     
-    // Send email verification email with code (non-blocking)
+    // Send email verification email with code
     console.log('[signup] About to send verification email to:', user.email, 'with code:', verificationCode);
     try {
       await sendEmailVerificationEmail(user.email, user.name, verificationCode);
       console.log('[signup] ✅ Verification email sent successfully to:', user.email);
     } catch (emailError) {
-      console.error('[signup] ❌ Failed to send verification email:', emailError.message, emailError.stack);
-      // Don't fail signup if email fails
+      console.error('[signup] ❌ Failed to send verification email:', emailError.message);
+      console.error('[signup] Email error details:', {
+        message: emailError.message,
+        name: emailError.name,
+        response: emailError.response?.data || emailError.response,
+        stack: emailError.stack
+      });
+      // Still allow signup to continue, but log the error
+      // User can use "Resend Code" button if email doesn't arrive
     }
 
     // Generate token (but user won't be able to post jobs until verified)
