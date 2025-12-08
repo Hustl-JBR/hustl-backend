@@ -3266,60 +3266,61 @@ heart of Hustl.
 <script>
   // Define stub functions early so they're available for onclick handlers in HTML
   // These will queue calls until real functions are ready
-  let setViewQueue = [];
-  let setViewRealFunction = null; // Store reference to avoid recursion
+  // Use window properties to ensure they're accessible from all scopes
+  window._setViewQueue = [];
+  window._setViewRealFunction = null;
   window.setView = function(view) {
-    // If real function is ready, use it directly (not through window)
-    if (setViewRealFunction && typeof setViewRealFunction === 'function') {
-      return setViewRealFunction(view);
+    // If real function is ready, use it directly (not through window.setView to avoid recursion)
+    if (window._setViewRealFunction && typeof window._setViewRealFunction === 'function') {
+      return window._setViewRealFunction(view);
     }
     // Otherwise queue the call
-    setViewQueue.push(view);
+    window._setViewQueue.push(view);
     // Try to process queue after a delay
     setTimeout(() => {
-      if (setViewRealFunction && typeof setViewRealFunction === 'function') {
-        const queued = [...setViewQueue];
-        setViewQueue = [];
-        queued.forEach(v => setViewRealFunction(v));
+      if (window._setViewRealFunction && typeof window._setViewRealFunction === 'function') {
+        const queued = [...window._setViewQueue];
+        window._setViewQueue = [];
+        queued.forEach(v => window._setViewRealFunction(v));
       }
     }, 100);
   };
   
-  let openAuthModalQueue = [];
-  let openAuthModalRealFunction = null;
+  window._openAuthModalQueue = [];
+  window._openAuthModalRealFunction = null;
   window.openAuthModal = function(mode) {
-    if (openAuthModalRealFunction && typeof openAuthModalRealFunction === 'function') {
-      return openAuthModalRealFunction(mode);
+    if (window._openAuthModalRealFunction && typeof window._openAuthModalRealFunction === 'function') {
+      return window._openAuthModalRealFunction(mode);
     }
-    openAuthModalQueue.push(mode);
+    window._openAuthModalQueue.push(mode);
     setTimeout(() => {
-      if (openAuthModalRealFunction && typeof openAuthModalRealFunction === 'function') {
-        const queued = [...openAuthModalQueue];
-        openAuthModalQueue = [];
-        queued.forEach(m => openAuthModalRealFunction(m));
+      if (window._openAuthModalRealFunction && typeof window._openAuthModalRealFunction === 'function') {
+        const queued = [...window._openAuthModalQueue];
+        window._openAuthModalQueue = [];
+        queued.forEach(m => window._openAuthModalRealFunction(m));
       }
     }, 100);
   };
   
-  let closeAuthModalRealFunction = null;
+  window._closeAuthModalRealFunction = null;
   window.closeAuthModal = function() {
-    if (closeAuthModalRealFunction && typeof closeAuthModalRealFunction === 'function') {
-      return closeAuthModalRealFunction();
+    if (window._closeAuthModalRealFunction && typeof window._closeAuthModalRealFunction === 'function') {
+      return window._closeAuthModalRealFunction();
     }
   };
   
-  let handleSignOutQueue = [];
-  let handleSignOutRealFunction = null;
+  window._handleSignOutQueue = [];
+  window._handleSignOutRealFunction = null;
   window.handleSignOut = function() {
-    if (handleSignOutRealFunction && typeof handleSignOutRealFunction === 'function') {
-      return handleSignOutRealFunction();
+    if (window._handleSignOutRealFunction && typeof window._handleSignOutRealFunction === 'function') {
+      return window._handleSignOutRealFunction();
     }
-    handleSignOutQueue.push(true);
+    window._handleSignOutQueue.push(true);
     setTimeout(() => {
-      if (handleSignOutRealFunction && typeof handleSignOutRealFunction === 'function') {
-        const queued = [...handleSignOutQueue];
-        handleSignOutQueue = [];
-        queued.forEach(() => handleSignOutRealFunction());
+      if (window._handleSignOutRealFunction && typeof window._handleSignOutRealFunction === 'function') {
+        const queued = [...window._handleSignOutQueue];
+        window._handleSignOutQueue = [];
+        queued.forEach(() => window._handleSignOutRealFunction());
       }
     }, 100);
   };
@@ -3547,13 +3548,13 @@ heart of Hustl.
       await renderAll();
     }
     // Expose setView globally immediately after definition
-    // Store reference in closure variable to avoid recursion
-    setViewRealFunction = setView;
+    // Store reference in window property to avoid recursion and scope issues
+    window._setViewRealFunction = setView;
     window.setView = setView; // Replace stub with real function
     // Process any queued calls using the real function directly
-    if (typeof setViewQueue !== 'undefined' && setViewQueue.length > 0) {
-      const queued = [...setViewQueue];
-      setViewQueue = [];
+    if (window._setViewQueue && window._setViewQueue.length > 0) {
+      const queued = [...window._setViewQueue];
+      window._setViewQueue = [];
       queued.forEach(v => setView(v)); // Call directly, not through window
     }
 
@@ -10245,12 +10246,12 @@ try {
     }, 50);
   }
   // Expose openAuthModal globally immediately after definition
-  openAuthModalRealFunction = openAuthModal;
+  window._openAuthModalRealFunction = openAuthModal;
   window.openAuthModal = openAuthModal;
   // Process any queued calls
-  if (typeof openAuthModalQueue !== 'undefined' && openAuthModalQueue.length > 0) {
-    const queued = [...openAuthModalQueue];
-    openAuthModalQueue = [];
+  if (window._openAuthModalQueue && window._openAuthModalQueue.length > 0) {
+    const queued = [...window._openAuthModalQueue];
+    window._openAuthModalQueue = [];
     queued.forEach(m => openAuthModal(m));
   }
   
@@ -10262,7 +10263,7 @@ try {
     }
   }
   // Expose closeAuthModal globally immediately after definition
-  closeAuthModalRealFunction = closeAuthModal;
+  window._closeAuthModalRealFunction = closeAuthModal;
   window.closeAuthModal = closeAuthModal;
   
   // Update header when logged in/out - uses API to get current user
@@ -10368,12 +10369,12 @@ try {
       await renderAll();
     }
   }
-  handleSignOutRealFunction = handleSignOut;
+  window._handleSignOutRealFunction = handleSignOut;
   window.handleSignOut = handleSignOut;
   // Process any queued calls
-  if (typeof handleSignOutQueue !== 'undefined' && handleSignOutQueue.length > 0) {
-    const queued = [...handleSignOutQueue];
-    handleSignOutQueue = [];
+  if (window._handleSignOutQueue && window._handleSignOutQueue.length > 0) {
+    const queued = [...window._handleSignOutQueue];
+    window._handleSignOutQueue = [];
     queued.forEach(() => handleSignOut());
   }
   
