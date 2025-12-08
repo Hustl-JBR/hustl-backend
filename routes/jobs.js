@@ -370,6 +370,14 @@ router.get('/', optionalAuth, [
     const where = {};
     if (status) where.status = status;
     if (category) where.category = category;
+    
+    // Filter by ZIP code if provided (searches in address field)
+    if (zip && zip.trim().length > 0) {
+      where.address = {
+        contains: zip.trim(),
+        mode: 'insensitive'
+      };
+    }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
