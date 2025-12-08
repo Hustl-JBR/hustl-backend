@@ -3268,15 +3268,20 @@ heart of Hustl.
   // These will delegate to real functions when available
   window.setView = function(view) {
     // Check if real function exists (assigned later)
+    // Use _realSetView to avoid calling the stub recursively
     if (window._realSetView && typeof window._realSetView === 'function') {
       return window._realSetView(view);
     }
-    // If not ready, try again after a short delay
-    setTimeout(() => {
-      if (window._realSetView && typeof window._realSetView === 'function') {
-        window._realSetView(view);
-      }
-    }, 50);
+    // If not ready, try again after a short delay (only once)
+    if (!window._setViewRetrying) {
+      window._setViewRetrying = true;
+      setTimeout(() => {
+        window._setViewRetrying = false;
+        if (window._realSetView && typeof window._realSetView === 'function') {
+          window._realSetView(view);
+        }
+      }, 100);
+    }
   };
   
   window.openAuthModal = function(mode) {
@@ -3519,31 +3524,10 @@ heart of Hustl.
         }
       }
       
-      // Re-initialize hamburger menu when switching views (fixes broken menu after tab switch)
-      if (typeof initHamburgerMenu === 'function') {
-        // Remove old listeners by cloning and replacing
-        const hamburgerBtn = document.getElementById('hamburgerBtn');
-        const mobileMenu = document.getElementById('mobileMenu');
-        if (hamburgerBtn && mobileMenu) {
-          // Clone to remove all event listeners
-          const newHamburgerBtn = hamburgerBtn.cloneNode(true);
-          const newMobileMenu = mobileMenu.cloneNode(true);
-          hamburgerBtn.parentNode.replaceChild(newHamburgerBtn, hamburgerBtn);
-          mobileMenu.parentNode.replaceChild(newMobileMenu, mobileMenu);
-        }
-        // Re-initialize with fresh listeners
-        setTimeout(() => {
-          initHamburgerMenu();
-        }, 50);
-      }
+      // Don't re-initialize hamburger menu - it uses event delegation and doesn't need re-initialization
+      // Re-initializing causes infinite loops
       
-      // Re-initialize navigation tabs when switching views (fixes broken nav after tab switch)
-      if (typeof initNav === 'function') {
-        setTimeout(() => {
-          initNav();
-        }, 50);
-      }
-
+      // Update active state for nav tabs (don't re-initialize - that causes infinite loops)
       document.querySelectorAll(".nav-tab").forEach((tab) => {
         tab.classList.toggle("active", tab.dataset.view === view);
       });
@@ -9867,7 +9851,14 @@ meta.textContent =
 
     /* ---------- Init ---------- */
 
+    let navInitialized = false;
     function initNav() {
+      // Prevent multiple initializations
+      if (navInitialized) {
+        return;
+      }
+      navInitialized = true;
+      
       // Remove old event listeners by cloning nav tabs
       const navTabs = document.querySelectorAll(".nav-tab");
       navTabs.forEach((tab) => {
