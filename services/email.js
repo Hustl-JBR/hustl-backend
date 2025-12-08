@@ -17,6 +17,7 @@ function isEmailConfigured() {
 // IMPORTANT: If domain is not verified in Resend, use onboarding@resend.dev
 // Check Resend dashboard to see if hustljobs.com shows "Verified"
 const FROM_EMAIL = process.env.FROM_EMAIL || 'Hustl <onboarding@resend.dev>';
+const FALLBACK_EMAIL = 'Hustl <onboarding@resend.dev>'; // Always works, use as fallback
 
 // Log which FROM_EMAIL is being used
 console.log('[Email] FROM_EMAIL configured as:', FROM_EMAIL);
@@ -85,10 +86,13 @@ async function sendEmailVerificationEmail(email, name, verificationCode) {
     console.log('[Email] Using FROM_EMAIL:', FROM_EMAIL);
     console.log('[Email] Resend configured:', !!resend);
     
-    const result = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: email,
-      subject: `🔐 Your Hustl verification code: ${verificationCode}`,
+    let result;
+    try {
+      // Try with configured FROM_EMAIL first
+      result = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: email,
+        subject: `🔐 Your Hustl verification code: ${verificationCode}`,
       html: `
         <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #ffffff;">
           <!-- Header -->
@@ -133,10 +137,76 @@ async function sendEmailVerificationEmail(email, name, verificationCode) {
           </div>
         </div>
       `,
-    });
-    console.log('[Email] ✅ Verification email sent successfully to:', email);
-    console.log('[Email] Resend response:', JSON.stringify(result, null, 2));
-    return result;
+      });
+      console.log('[Email] ✅ Verification email sent successfully to:', email);
+      console.log('[Email] Resend response:', JSON.stringify(result, null, 2));
+      return result;
+    } catch (firstError) {
+      // If custom domain fails, try fallback email
+      if (FROM_EMAIL !== FALLBACK_EMAIL && firstError.message?.includes('domain') || firstError.message?.includes('not verified')) {
+        console.warn('[Email] ⚠️ Custom domain failed, trying fallback email:', firstError.message);
+        console.log('[Email] Retrying with fallback email:', FALLBACK_EMAIL);
+        
+        try {
+          result = await resend.emails.send({
+            from: FALLBACK_EMAIL,
+            to: email,
+            subject: `🔐 Your Hustl verification code: ${verificationCode}`,
+            html: `
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #ffffff;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.5rem;">Verify Your Email 🔐</h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hey <strong>${name}</strong>!
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              You're almost ready! Enter this 6-digit code to verify your email and start using Hustl:
+            </p>
+            
+            <!-- Code Box -->
+            <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border: 3px solid #2563eb; border-radius: 12px; padding: 2rem; margin: 1.5rem 0; text-align: center;">
+              <div style="font-size: 2.5rem; font-weight: 800; color: #1e40af; letter-spacing: 0.75rem; font-family: 'Courier New', monospace;">
+                ${verificationCode}
+              </div>
+              <p style="margin: 1rem 0 0 0; color: #3b82f6; font-size: 0.9rem; font-weight: 500;">
+                Your verification code
+              </p>
+            </div>
+            
+            <p style="color: #64748b; font-size: 0.9rem; text-align: center; margin: 1.5rem 0;">
+              ⏰ This code expires in <strong>5 minutes</strong>
+            </p>
+            
+            <!-- Security Note -->
+            <div style="background: #fef3c7; border-radius: 8px; padding: 1rem; margin-top: 1.5rem; border-left: 4px solid #f59e0b;">
+              <p style="color: #92400e; margin: 0; font-size: 0.85rem;">
+                <strong>🔒 Security tip:</strong> Never share this code with anyone. Hustl will never ask for your code over the phone.
+              </p>
+            </div>
+            
+            <p style="color: #94a3b8; font-size: 0.8rem; margin-top: 1.5rem; text-align: center;">
+              If you didn't create a Hustl account, you can safely ignore this email.
+            </p>
+          </div>
+        </div>
+      `,
+          });
+          console.log('[Email] ✅ Verification email sent successfully using fallback email to:', email);
+          return result;
+        } catch (fallbackError) {
+          console.error('[Email] ❌ Both custom domain and fallback failed');
+          throw firstError; // Throw original error
+        }
+      } else {
+        throw firstError;
+      }
+    }
   } catch (error) {
     console.error('[Email] ❌ Send email verification error:', error);
     console.error('[Email] Error details:', {
