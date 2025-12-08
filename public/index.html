@@ -540,7 +540,7 @@
     }
     
     /* Remove all top margins from profile elements */
-    #view-profile .profile-hero-card {
+    #view-profile .profile-basic-info {
       margin-top: 0 !important;
     }
     
@@ -2220,12 +2220,35 @@
     }
     
     /* Remove duplicate spacing */
-    #view-profile .profile-hero-card:empty,
+    #view-profile .profile-basic-info:empty,
     #view-profile .profile-quick-stats:empty {
       display: none !important;
       height: 0 !important;
       margin: 0 !important;
       padding: 0 !important;
+    }
+    
+    /* Profile Basic Info Styles */
+    .profile-basic-info {
+      margin-bottom: 1.5rem;
+    }
+    
+    .profile-basic-info .card {
+      transition: all 0.2s ease;
+    }
+    
+    .profile-basic-info input,
+    .profile-basic-info textarea,
+    .profile-basic-info select {
+      transition: all 0.2s ease;
+    }
+    
+    .profile-basic-info input:focus,
+    .profile-basic-info textarea:focus,
+    .profile-basic-info select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
     }
   </style>
 </head>
@@ -3049,8 +3072,8 @@
 
       <!-- PROFILE VIEW -->
       <section id="view-profile" style="display:none;">
-        <!-- Profile Hero Card -->
-        <div id="profileHeroCard" class="profile-hero-card"></div>
+        <!-- Basic Info Section -->
+        <div id="profileBasicInfo" class="profile-basic-info"></div>
         
         <!-- Quick Stats -->
         <div id="profileQuickStats" class="profile-quick-stats"></div>
@@ -3068,19 +3091,6 @@
           <div class="profile-section-grid">
             <!-- Left Column -->
             <div>
-              <!-- Edit Profile -->
-              <div class="card profile-settings-card">
-                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                  <div class="card-title">✏️ Edit Profile</div>
-                  <button class="btn btn-primary" id="editProfileButton" style="padding: 0.5rem 1rem; font-size: 0.9rem; display: none;">Edit Profile</button>
-                </div>
-                <div id="profileContent"></div>
-                <div id="profileSaveCancelButtons" style="display: none; padding: 1rem; border-top: 1px solid var(--border); margin-top: 1rem; gap: 0.75rem; flex-direction: row; justify-content: flex-end;">
-                  <button class="btn btn-ghost" id="cancelProfileEditButton" style="padding: 0.75rem 1.5rem;">Cancel</button>
-                  <button class="btn btn-primary" id="saveProfileButton" style="padding: 0.75rem 1.5rem;">Save Changes</button>
-                </div>
-              </div>
-              
               <!-- Preferences -->
               <div class="card profile-settings-card" style="margin-top: 1rem;">
                 <div class="card-header">
@@ -9420,6 +9430,247 @@ async function renderJobs(reset = false) {
 
     /* ---------- Profile ---------- */
 
+    // Render Basic Info Section - View Mode
+    function renderBasicInfoView(user, ratingAvg, ratingCount, container) {
+      const avatarContent = user.photoUrl 
+        ? `<img src="${user.photoUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">` 
+        : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 700; color: var(--primary); background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);">${(user.name || 'U')[0].toUpperCase()}</div>`;
+      
+      const genderLabel = user.gender ? 
+        (user.gender === 'male' ? 'Male' : 
+         user.gender === 'female' ? 'Female' : 
+         user.gender === 'other' ? 'Non-binary' : 
+         user.gender === 'prefer_not_to_say' ? 'Prefer not to say' : user.gender) : '';
+      
+      container.innerHTML = `
+        <div class="card" style="padding: 2rem; margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;">
+          <div style="display: flex; gap: 2rem; align-items: flex-start;">
+            <!-- Profile Photo -->
+            <div style="width: 120px; height: 120px; border-radius: 50%; overflow: hidden; flex-shrink: 0; border: 3px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+              ${avatarContent}
+            </div>
+            
+            <!-- Info -->
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+                <div>
+                  <h2 style="margin: 0; font-size: 1.75rem; font-weight: 700; color: var(--text-main);">${user.name || 'User'}</h2>
+                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                    <span style="font-size: 1.1rem;">⭐</span>
+                    <span style="font-weight: 600; color: var(--text-main);">${ratingAvg.toFixed(1)}</span>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">(${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})</span>
+                  </div>
+                </div>
+                <button class="btn btn-primary" id="basicInfoEditBtn" style="padding: 0.5rem 1rem; font-size: 0.9rem; white-space: nowrap;">Edit Profile</button>
+              </div>
+              
+              ${genderLabel ? `<div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;">${genderLabel}</div>` : ''}
+              
+              ${user.bio ? `<div style="color: var(--text-main); line-height: 1.6; margin-top: 0.75rem; font-size: 0.95rem;">${user.bio}</div>` : '<div style="color: var(--text-muted); font-style: italic; margin-top: 0.75rem; font-size: 0.9rem;">No description yet.</div>'}
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Add Edit button handler
+      setTimeout(() => {
+        const editBtn = document.getElementById("basicInfoEditBtn");
+        if (editBtn) {
+          editBtn.addEventListener("click", () => {
+            renderBasicInfoEdit(user, ratingAvg, ratingCount, container);
+          });
+        }
+      }, 100);
+    }
+    
+    // Render Basic Info Section - Edit Mode
+    function renderBasicInfoEdit(user, ratingAvg, ratingCount, container) {
+      let photoPreview = user.photoUrl || null;
+      let newPhotoFile = null;
+      
+      const avatarContent = photoPreview 
+        ? `<img src="${photoPreview}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">` 
+        : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 700; color: var(--primary); background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);">${(user.name || 'U')[0].toUpperCase()}</div>`;
+      
+      container.innerHTML = `
+        <div class="card" style="padding: 2rem; margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;">
+          <div style="display: flex; gap: 2rem; align-items: flex-start;">
+            <!-- Profile Photo with Upload -->
+            <div style="flex-shrink: 0;">
+              <div style="width: 120px; height: 120px; border-radius: 50%; overflow: hidden; border: 3px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 1rem;" id="basicInfoPhotoPreview">
+                ${avatarContent}
+              </div>
+              <input type="file" id="basicInfoPhotoUpload" accept="image/*" style="display: none;" />
+              <button class="btn btn-ghost" onclick="document.getElementById('basicInfoPhotoUpload').click();" style="width: 100%; padding: 0.5rem; font-size: 0.85rem;">Upload new photo</button>
+            </div>
+            
+            <!-- Edit Fields -->
+            <div style="flex: 1; min-width: 0;">
+              <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; font-size: 0.9rem;">Full Name</label>
+                <input type="text" id="basicInfoName" value="${(user.name || '').replace(/"/g, '&quot;')}" placeholder="Your full name" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; background: white;" />
+              </div>
+              
+              <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; font-size: 0.9rem;">Gender (Optional)</label>
+                <select id="basicInfoGender" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; background: white;">
+                  <option value="">Select...</option>
+                  <option value="male" ${user.gender === 'male' ? 'selected' : ''}>Male</option>
+                  <option value="female" ${user.gender === 'female' ? 'selected' : ''}>Female</option>
+                  <option value="other" ${user.gender === 'other' ? 'selected' : ''}>Non-binary</option>
+                  <option value="prefer_not_to_say" ${user.gender === 'prefer_not_to_say' ? 'selected' : ''}>Prefer not to say</option>
+                </select>
+              </div>
+              
+              <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; font-size: 0.9rem;">Description / Bio</label>
+                <textarea id="basicInfoBio" placeholder="Tell people about yourself, your experience, and what jobs you like to do." rows="4" maxlength="300" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; font-family: inherit; resize: vertical; background: white;">${(user.bio || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                <div style="text-align: right; color: var(--text-muted); font-size: 0.8rem; margin-top: 0.25rem;">
+                  <span id="basicInfoBioCount">0</span>/300 characters
+                </div>
+              </div>
+              
+              <!-- Rating Display (read-only) -->
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px;">
+                <span style="font-size: 1.1rem;">⭐</span>
+                <span style="font-weight: 600; color: var(--text-main);">${ratingAvg.toFixed(1)}</span>
+                <span style="color: var(--text-muted); font-size: 0.9rem;">(${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})</span>
+              </div>
+              
+              <!-- Save/Cancel Buttons -->
+              <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                <button class="btn btn-ghost" id="basicInfoCancelBtn" style="padding: 0.75rem 1.5rem;">Cancel</button>
+                <button class="btn btn-primary" id="basicInfoSaveBtn" style="padding: 0.75rem 1.5rem;">Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Update bio character count
+      const bioInput = document.getElementById("basicInfoBio");
+      const bioCount = document.getElementById("basicInfoBioCount");
+      if (bioInput && bioCount) {
+        bioCount.textContent = bioInput.value.length;
+        bioInput.addEventListener("input", () => {
+          bioCount.textContent = bioInput.value.length;
+        });
+      }
+      
+      // Photo upload handler
+      const photoUpload = document.getElementById("basicInfoPhotoUpload");
+      const photoPreviewDiv = document.getElementById("basicInfoPhotoPreview");
+      if (photoUpload && photoPreviewDiv) {
+        photoUpload.addEventListener("change", async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          
+          if (!file.type.startsWith('image/')) {
+            showToast("Please select an image file.");
+            return;
+          }
+          
+          // Show preview
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            photoPreview = event.target.result;
+            newPhotoFile = file;
+            photoPreviewDiv.innerHTML = `<img src="${photoPreview}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+      
+      // Cancel button handler
+      const cancelBtn = document.getElementById("basicInfoCancelBtn");
+      if (cancelBtn) {
+        cancelBtn.addEventListener("click", () => {
+          renderBasicInfoView(user, ratingAvg, ratingCount, container);
+        });
+      }
+      
+      // Save button handler
+      const saveBtn = document.getElementById("basicInfoSaveBtn");
+      if (saveBtn) {
+        saveBtn.addEventListener("click", async () => {
+          const nameInput = document.getElementById("basicInfoName");
+          const genderSelect = document.getElementById("basicInfoGender");
+          const bioInput = document.getElementById("basicInfoBio");
+          
+          const name = nameInput?.value.trim() || '';
+          const gender = genderSelect?.value || '';
+          const bio = bioInput?.value.trim() || '';
+          
+          if (!name) {
+            showToast("Please enter your name.");
+            if (nameInput) nameInput.focus();
+            return;
+          }
+          
+          if (bio.length > 300) {
+            showToast("Description must be 300 characters or less.");
+            if (bioInput) bioInput.focus();
+            return;
+          }
+          
+          saveBtn.disabled = true;
+          saveBtn.textContent = "Saving...";
+          
+          try {
+            const updates = { name, gender, bio };
+            
+            // Upload photo if new one selected
+            if (newPhotoFile) {
+              const formData = new FormData();
+              formData.append('file', newPhotoFile);
+              
+              const token = localStorage.getItem('hustl_token');
+              const uploadResponse = await fetch(`${API_BASE}/r2/upload`, {
+                method: 'POST',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                body: formData
+              });
+              
+              if (uploadResponse.ok) {
+                const uploadData = await uploadResponse.json();
+                updates.photoUrl = uploadData.publicUrl || uploadData.url;
+              } else {
+                throw new Error("Failed to upload photo");
+              }
+            }
+            
+            // Update profile
+            await window.hustlAPI.users.updateProfile(updates);
+            
+            // Update local storage
+            const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
+            Object.assign(storedUser, updates);
+            localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+            
+            // Update user object for re-render
+            Object.assign(user, updates);
+            if (updates.photoUrl) {
+              photoPreview = updates.photoUrl;
+            }
+            
+            // Show success toast
+            showToast("Profile updated.");
+            
+            // Return to view mode
+            renderBasicInfoView(user, ratingAvg, ratingCount, container);
+            
+            // Re-render profile to update other sections
+            setTimeout(() => renderProfile(), 500);
+          } catch (error) {
+            console.error("Error saving profile:", error);
+            showToast("Error saving profile. Please try again.");
+            saveBtn.disabled = false;
+            saveBtn.textContent = "Save";
+          }
+        });
+      }
+    }
+
     async function renderProfile() {
   // Use API to get current user
   let user = null;
@@ -9429,8 +9680,7 @@ async function renderJobs(reset = false) {
     console.error("Error getting user for profile:", error);
   }
   
-  const container = document.getElementById("profileContent");
-  const heroCard = document.getElementById("profileHeroCard");
+  const basicInfoSection = document.getElementById("profileBasicInfo");
   const stripeContent = document.getElementById("stripeConnectContent");
   const quickStats = document.getElementById("profileQuickStats");
   
@@ -9443,18 +9693,14 @@ async function renderJobs(reset = false) {
   const jobsList = document.getElementById("profileJobsList");
 
   if (!user) {
-    if (heroCard) heroCard.innerHTML = "";
-    if (quickStats) quickStats.innerHTML = "";
-    container.innerHTML = `
+    if (basicInfoSection) basicInfoSection.innerHTML = `
       <div class='muted' style='padding: 2rem; text-align: center;'>
         <div style="margin-bottom: 1rem; font-size: 1.1rem;">Please log in to see your profile.</div>
         <button class="btn btn-primary" onclick="if(window.openAuthModal) window.openAuthModal('login'); else setView('auth');" style="padding: 0.75rem 1.5rem;">Log In / Sign Up</button>
       </div>
     `;
+    if (quickStats) quickStats.innerHTML = "";
     if (jobsList) jobsList.innerHTML = "";
-    // Hide Edit Profile button when not logged in
-    const editProfileBtn = document.getElementById("editProfileButton");
-    if (editProfileBtn) editProfileBtn.style.display = 'none';
     return;
   }
 
@@ -9484,30 +9730,30 @@ async function renderJobs(reset = false) {
     return sum;
   }, 0);
 
-  // Render Profile Hero Card
-  if (heroCard) {
-    const avatarContent = user.photoUrl 
-      ? `<img src="${user.photoUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">` 
-      : (user.name ? user.name[0].toUpperCase() : "?");
-    
-    const isHustler = user.role === "HUSTLER" || user.role === "hustler";
-    const roleEmoji = isHustler ? "💪" : "🏠";
-    const roleLabel = isHustler ? "Hustler" : "Customer";
-    
-    heroCard.innerHTML = `
-      <div class="profile-hero-top">
-        <div class="profile-hero-avatar" onclick="document.getElementById('avatarUploadInput')?.click()">
-          ${avatarContent}
-          <div class="avatar-camera-icon">📷</div>
-        </div>
-        <div class="profile-hero-info">
-          <div class="profile-hero-name">${user.name || 'User'}</div>
-          <div class="profile-hero-email">${user.email || ''}</div>
-          <div class="profile-hero-badge">${roleEmoji}</div>
-          <div class="profile-hero-location">📍 ${user.city || 'Tennessee'}${user.zip ? ', ' + user.zip : ''}</div>
-        </div>
-      </div>
-    `;
+  // Fetch ratings/reviews for Basic Info section
+  let ratingAvg = 5.0;
+  let ratingCount = 0;
+  try {
+    const token = localStorage.getItem('hustl_token');
+    const reviewsResponse = await fetch(`${API_BASE}/reviews/user/${user.id}`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+    if (reviewsResponse.ok) {
+      const reviewsData = await reviewsResponse.json();
+      const reviews = Array.isArray(reviewsData) ? reviewsData : (reviewsData.reviews || []);
+      ratingCount = reviews.length;
+      if (reviews.length > 0) {
+        const sum = reviews.reduce((acc, r) => acc + (r.stars || 5), 0);
+        ratingAvg = sum / reviews.length;
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching reviews:", error);
+  }
+
+  // Render Basic Info Section (View Mode by default)
+  if (basicInfoSection) {
+    renderBasicInfoView(user, ratingAvg, ratingCount, basicInfoSection);
   }
   
   // Render Quick Stats (already got quickStats above, but check again)
@@ -9774,11 +10020,7 @@ async function renderJobs(reset = false) {
     }
   }
 
-  container.innerHTML = "";
-
-  // Create organized profile form with clear sections
-  const profileForm = document.createElement("div");
-  profileForm.style.cssText = "display: flex; flex-direction: column; gap: 1.25rem;";
+  // Old profile form code removed - now using Basic Info section at top
   
   // Section 1: Profile Picture - Card Style
   const photoSection = document.createElement("div");
