@@ -14,7 +14,12 @@ function isEmailConfigured() {
 
 // Use Resend's onboarding domain for testing, or set FROM_EMAIL with your verified domain
 // Example: 'Hustl <hello@hustljobs.com>' (after verifying hustljobs.com in Resend)
+// IMPORTANT: If domain is not verified in Resend, use onboarding@resend.dev
+// Check Resend dashboard to see if hustljobs.com shows "Verified"
 const FROM_EMAIL = process.env.FROM_EMAIL || 'Hustl <onboarding@resend.dev>';
+
+// Log which FROM_EMAIL is being used
+console.log('[Email] FROM_EMAIL configured as:', FROM_EMAIL);
 
 async function sendSignupEmail(email, name) {
   if (!isEmailConfigured()) return;
