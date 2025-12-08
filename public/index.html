@@ -9862,6 +9862,10 @@ async function renderJobs(reset = false) {
 
   container.appendChild(profileForm);
   
+  // Show Edit Profile button now that we have a logged-in user
+  const editProfileBtn = document.getElementById("editProfileButton");
+  if (editProfileBtn) editProfileBtn.style.display = 'block';
+  
   // Store original values for cancel functionality
   const originalValues = {
     name: user.name || '',
