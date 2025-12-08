@@ -3283,8 +3283,6 @@ heart of Hustl.
   // No Supabase needed - we use Railway backend with Neon PostgreSQL
   // Deploy v2.1 - Fixed button handlers
   
-  console.log("DEBUG: Script execution starting after stubs");
-  
   const STORAGE_KEY = "hustl_state_v3";
     // Get backend URL from config or default
     const BACKEND_URL = (window.HUSTL_CONFIG && window.HUSTL_CONFIG.API_URL) || 
@@ -3525,9 +3523,7 @@ heart of Hustl.
       await renderAll();
     }
     // Expose setView globally immediately after definition
-    console.log("DEBUG: About to expose setView globally");
     window.setView = setView;
-    console.log("DEBUG: setView exposed globally, typeof:", typeof window.setView);
 
     /* ---------- Auth visibility ---------- */
 
@@ -9856,8 +9852,8 @@ meta.textContent =
           e.preventDefault();
           e.stopPropagation();
           const v = tab.dataset.view;
-          if (v && typeof setView === 'function') {
-            setView(v);
+          if (v && typeof window.setView === 'function') {
+            window.setView(v);
           }
         });
       });
@@ -9872,8 +9868,8 @@ meta.textContent =
           freshCtaPost.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (typeof setView === 'function') {
-              setView("post");
+            if (typeof window.setView === 'function') {
+              window.setView("post");
               setTimeout(() => {
                 const formCard = document.getElementById("jobFormCard");
                 if (formCard) {
@@ -9894,8 +9890,8 @@ meta.textContent =
           freshCtaBrowse.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (typeof setView === 'function') {
-              setView("jobs");
+            if (typeof window.setView === 'function') {
+              window.setView("jobs");
             }
           });
         }
@@ -10087,8 +10083,8 @@ try {
         const view = item.dataset.view;
         const action = item.dataset.action;
         
-        if (view && typeof setView === 'function') {
-          setView(view);
+        if (view && typeof window.setView === 'function') {
+          window.setView(view);
           
           // Handle special actions
           if (action === 'earnings') {
