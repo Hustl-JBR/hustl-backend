@@ -2675,6 +2675,7 @@
               <option value="tomorrow">📆 Tomorrow</option>
               <option value="custom_date">📅 Custom date</option>
               <option value="whenever">⏰ Whenever (flexible)</option>
+              <option value="until_completed">✅ Until completed (no deadline)</option>
             </select>
           </div>
           
@@ -2695,6 +2696,12 @@
                 </select>
               </div>
             </div>
+          </div>
+          
+          <div id="flexibleDeadlineNote" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: #fef3c7; border-radius: 8px; border-left: 3px solid #f59e0b;">
+            <p style="margin: 0; font-size: 0.85rem; color: #92400e;">
+              <strong>⏰ Flexible Deadline:</strong> This job will stay active until someone completes it. No rush!
+            </p>
           </div>
 
           <!-- Keep job active for -->
@@ -4283,17 +4290,23 @@ function showChangePasswordModal() {
       // Custom date selection - show immediately when selected
       const jobWhenSelect = document.getElementById("jobWhen");
       const customDateFields = document.getElementById("customDateFields");
-      if (jobWhenSelect && customDateFields) {
+      const flexibleDeadlineNote = document.getElementById("flexibleDeadlineNote");
+      if (jobWhenSelect) {
         jobWhenSelect.addEventListener("change", () => {
           if (jobWhenSelect.value === "custom_date") {
-            customDateFields.style.display = "block";
+            if (customDateFields) customDateFields.style.display = "block";
+            if (flexibleDeadlineNote) flexibleDeadlineNote.style.display = "none";
             // Focus on date input immediately
             setTimeout(() => {
               const customDateInput = document.getElementById("customDate");
               if (customDateInput) customDateInput.focus();
             }, 100);
+          } else if (jobWhenSelect.value === "whenever" || jobWhenSelect.value === "until_completed") {
+            if (customDateFields) customDateFields.style.display = "none";
+            if (flexibleDeadlineNote) flexibleDeadlineNote.style.display = "block";
           } else {
-            customDateFields.style.display = "none";
+            if (customDateFields) customDateFields.style.display = "none";
+            if (flexibleDeadlineNote) flexibleDeadlineNote.style.display = "none";
           }
         });
       }
@@ -4605,14 +4618,84 @@ function showChangePasswordModal() {
               return showToast("Please provide a valid pickup address.");
             }
             
-            // Build date/time - use today + 1 day as default, 9am-5pm
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const date = tomorrow.toISOString().split('T')[0];
-            const startTime = new Date(tomorrow);
-            startTime.setHours(9, 0, 0, 0);
-            const endTime = new Date(tomorrow);
-            endTime.setHours(17, 0, 0, 0);
+            // Build date/time based on user's "when" selection
+            const jobWhen = document.getElementById("jobWhen")?.value || "tomorrow";
+            const now = new Date();
+            let date, startTime, endTime, deadlinePreference;
+            
+            if (jobWhen === "until_completed" || jobWhen === "whenever") {
+              // Flexible deadline - set far future date (1 year from now)
+              const futureDate = new Date(now);
+              futureDate.setFullYear(futureDate.getFullYear() + 1);
+              date = futureDate.toISOString().split('T')[0];
+              startTime = new Date(futureDate);
+              startTime.setHours(9, 0, 0, 0);
+              endTime = new Date(futureDate);
+              endTime.setHours(17, 0, 0, 0);
+              deadlinePreference = jobWhen === "until_completed" ? "until_completed" : "flexible";
+            } else if (jobWhen === "custom_date") {
+              const customDate = document.getElementById("customDate")?.value;
+              const customTime = document.getElementById("customTime")?.value || "morning";
+              if (!customDate) {
+                return showToast("Please select a date for your custom deadline.");
+              }
+              date = customDate;
+              const selectedDate = new Date(customDate);
+              // Set time based on custom time selection
+              if (customTime === "morning") {
+                startTime = new Date(selectedDate);
+                startTime.setHours(8, 0, 0, 0);
+                endTime = new Date(selectedDate);
+                endTime.setHours(12, 0, 0, 0);
+              } else if (customTime === "afternoon") {
+                startTime = new Date(selectedDate);
+                startTime.setHours(12, 0, 0, 0);
+                endTime = new Date(selectedDate);
+                endTime.setHours(17, 0, 0, 0);
+              } else if (customTime === "evening") {
+                startTime = new Date(selectedDate);
+                startTime.setHours(17, 0, 0, 0);
+                endTime = new Date(selectedDate);
+                endTime.setHours(21, 0, 0, 0);
+              } else { // night
+                startTime = new Date(selectedDate);
+                startTime.setHours(21, 0, 0, 0);
+                endTime = new Date(selectedDate);
+                endTime.setHours(23, 0, 0, 0);
+              }
+              deadlinePreference = "custom";
+            } else {
+              // this_morning, this_afternoon, this_evening, tomorrow
+              let targetDate = new Date(now);
+              if (jobWhen === "tomorrow") {
+                targetDate.setDate(targetDate.getDate() + 1);
+              }
+              
+              date = targetDate.toISOString().split('T')[0];
+              
+              if (jobWhen === "this_morning" || (jobWhen === "tomorrow" && document.getElementById("customTime")?.value === "morning")) {
+                startTime = new Date(targetDate);
+                startTime.setHours(8, 0, 0, 0);
+                endTime = new Date(targetDate);
+                endTime.setHours(12, 0, 0, 0);
+              } else if (jobWhen === "this_afternoon" || (jobWhen === "tomorrow" && document.getElementById("customTime")?.value === "afternoon")) {
+                startTime = new Date(targetDate);
+                startTime.setHours(12, 0, 0, 0);
+                endTime = new Date(targetDate);
+                endTime.setHours(17, 0, 0, 0);
+              } else { // this_evening or default
+                startTime = new Date(targetDate);
+                startTime.setHours(17, 0, 0, 0);
+                endTime = new Date(targetDate);
+                endTime.setHours(21, 0, 0, 0);
+              }
+              deadlinePreference = jobWhen;
+            }
+            
+            // Ensure deadlinePreference is set
+            if (!deadlinePreference) {
+              deadlinePreference = jobWhen || "tomorrow";
+            }
             
             // Transform payment data to backend format
             const payType = paymentType || 'flat';
@@ -4662,6 +4745,7 @@ function showChangePasswordModal() {
                 sub_tags: subTags.length > 0 ? subTags : null,
                 notes: notes || null,
                 pricing_option: pricingOption, // Store for future use
+                deadline_preference: deadlinePreference || jobWhen, // Store deadline preference
               },
             };
             
@@ -4982,7 +5066,7 @@ async function renderJobs(reset = false) {
       titleRow.appendChild(pay);
       textContent.appendChild(titleRow);
 
-      // Category + time line
+      // Category + posted time line
       const meta = document.createElement("div");
       meta.className = "job-meta";
       meta.style.cssText = "margin-top: 0.25rem;";
@@ -4991,8 +5075,73 @@ async function renderJobs(reset = false) {
         ? new Date(job.createdAt).getTime()
         : Date.now();
 
-      meta.textContent = `${catName} • ${timeAgo(createdMs)}`;
+      const postedTime = new Date(job.createdAt || Date.now());
+      const postedTimeStr = postedTime.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+
+      meta.textContent = `${catName} • Posted ${timeAgo(createdMs)} (${postedTimeStr})`;
       textContent.appendChild(meta);
+      
+      // Deadline/needed by line (with error handling)
+      try {
+        const deadlineMeta = document.createElement("div");
+        deadlineMeta.className = "job-meta";
+        deadlineMeta.style.cssText = "margin-top: 0.25rem; font-size: 0.85rem; color: var(--text-muted);";
+        
+        const requirements = job.requirements || {};
+        const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
+        
+        if (deadlinePreference === "until_completed" || deadlinePreference === "whenever" || deadlinePreference === "flexible") {
+          deadlineMeta.textContent = "⏰ Flexible deadline - Until completed";
+          deadlineMeta.style.color = "#f59e0b";
+        } else if (job.startTime) {
+          try {
+            const deadlineDate = new Date(job.startTime);
+            if (!isNaN(deadlineDate.getTime())) {
+              const deadlineStr = deadlineDate.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+              });
+              deadlineMeta.textContent = `📅 Needed by: ${deadlineStr}`;
+              deadlineMeta.style.color = "#059669";
+            } else {
+              deadlineMeta.textContent = "📅 Deadline: Not specified";
+            }
+          } catch (e) {
+            deadlineMeta.textContent = "📅 Deadline: Not specified";
+          }
+        } else if (job.date) {
+          try {
+            const deadlineDate = new Date(job.date);
+            if (!isNaN(deadlineDate.getTime())) {
+              const deadlineStr = deadlineDate.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric'
+              });
+              deadlineMeta.textContent = `📅 Needed by: ${deadlineStr}`;
+              deadlineMeta.style.color = "#059669";
+            } else {
+              deadlineMeta.textContent = "📅 Deadline: Not specified";
+            }
+          } catch (e) {
+            deadlineMeta.textContent = "📅 Deadline: Not specified";
+          }
+        } else {
+          deadlineMeta.textContent = "📅 Deadline: Not specified";
+        }
+        textContent.appendChild(deadlineMeta);
+      } catch (e) {
+        // Silently fail if deadline display breaks - don't break job rendering
+        console.warn("Error rendering deadline:", e);
+      }
 
       // Description line (short preview)
       if (job.description) {
