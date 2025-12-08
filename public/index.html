@@ -3265,18 +3265,46 @@ heart of Hustl.
 <script src="/api-integration.js?v=3"></script>
 <script>
   // Define stub functions early so they're available for onclick handlers in HTML
+  // These will delegate to real functions when available
   window.setView = function(view) {
-    console.warn("setView called before initialization, view:", view);
-    // Will be replaced with real function later
+    // Check if real function exists (assigned later)
+    if (window._realSetView && typeof window._realSetView === 'function') {
+      return window._realSetView(view);
+    }
+    // If not ready, try again after a short delay
+    setTimeout(() => {
+      if (window._realSetView && typeof window._realSetView === 'function') {
+        window._realSetView(view);
+      }
+    }, 50);
   };
+  
   window.openAuthModal = function(mode) {
-    console.warn("openAuthModal called before initialization, mode:", mode);
+    if (window._realOpenAuthModal && typeof window._realOpenAuthModal === 'function') {
+      return window._realOpenAuthModal(mode);
+    }
+    setTimeout(() => {
+      if (window._realOpenAuthModal && typeof window._realOpenAuthModal === 'function') {
+        window._realOpenAuthModal(mode);
+      }
+    }, 50);
   };
+  
   window.closeAuthModal = function() {
-    console.warn("closeAuthModal called before initialization");
+    if (window._realCloseAuthModal && typeof window._realCloseAuthModal === 'function') {
+      return window._realCloseAuthModal();
+    }
   };
+  
   window.handleSignOut = function() {
-    console.warn("handleSignOut called before initialization");
+    if (window._realHandleSignOut && typeof window._realHandleSignOut === 'function') {
+      return window._realHandleSignOut();
+    }
+    setTimeout(() => {
+      if (window._realHandleSignOut && typeof window._realHandleSignOut === 'function') {
+        window._realHandleSignOut();
+      }
+    }, 50);
   };
   
   // Backend API configuration - using NestJS API with Neon database
@@ -3523,6 +3551,7 @@ heart of Hustl.
       await renderAll();
     }
     // Expose setView globally immediately after definition
+    window._realSetView = setView;
     window.setView = setView;
 
     /* ---------- Auth visibility ---------- */
@@ -10203,6 +10232,7 @@ try {
     }, 50);
   }
   // Expose openAuthModal globally immediately after definition
+  window._realOpenAuthModal = openAuthModal;
   window.openAuthModal = openAuthModal;
   
   function closeAuthModal() {
@@ -10213,6 +10243,7 @@ try {
     }
   }
   // Expose closeAuthModal globally immediately after definition
+  window._realCloseAuthModal = closeAuthModal;
   window.closeAuthModal = closeAuthModal;
   
   // Update header when logged in/out - uses API to get current user
@@ -10322,6 +10353,7 @@ try {
       await renderAll();
     }
   }
+  window._realHandleSignOut = handleSignOut;
   window.handleSignOut = handleSignOut;
   
   // Profile Tabs
@@ -10352,9 +10384,14 @@ try {
   }
 
   // Expose functions globally for inline onclick handlers
+  // Also set _real versions for stub functions to call
+  window._realSetView = setView;
   window.setView = setView;
+  window._realOpenAuthModal = openAuthModal;
   window.openAuthModal = openAuthModal;
+  window._realCloseAuthModal = closeAuthModal;
   window.closeAuthModal = closeAuthModal;
+  window._realHandleSignOut = handleSignOut;
   window.handleSignOut = handleSignOut;
   // goToStripeSetup, startExploring, closeWelcomeModal are already defined globally above
 
