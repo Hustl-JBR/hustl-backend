@@ -5968,7 +5968,7 @@ async function renderJobs(reset = false) {
       
       const modalContent = document.createElement("div");
       modalContent.className = "modal-content";
-      modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); margin: auto;";
+      modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 600px; width: 100%; max-height: 90vh; overflow: hidden; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); margin: auto; display: flex; flex-direction: column;";
       
       // Close button (X) - top right
       const closeBtn = document.createElement("button");
@@ -5988,9 +5988,9 @@ async function renderJobs(reset = false) {
       });
       modalContent.appendChild(closeBtn);
 
-      // Job Summary Section - Top of Modal
+      // Job Summary Section - Top of Modal (not scrollable)
       const summarySection = document.createElement("div");
-      summarySection.style.cssText = "padding: 2rem 2rem 1.5rem 2rem; border-bottom: 1px solid #e5e7eb;";
+      summarySection.style.cssText = "padding: 2rem 2rem 1.5rem 2rem; border-bottom: 1px solid #e5e7eb; flex-shrink: 0;";
       
       // Job Title
       const jobTitle = document.createElement("h2");
@@ -6245,7 +6245,7 @@ async function renderJobs(reset = false) {
 
       // Content Section (scrollable) - CREATE FIRST
       const contentSection = document.createElement("div");
-      contentSection.style.cssText = "padding: 1.5rem 2rem; flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; scroll-behavior: smooth;";
+      contentSection.style.cssText = "padding: 1.5rem 2rem; flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; min-height: 0;";
       
       // Additional Details Section
       if (job.requirements) {
@@ -6452,7 +6452,7 @@ async function renderJobs(reset = false) {
         }
         
         const applySection = document.createElement("div");
-        applySection.style.cssText = "padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; background: white; border-radius: 0 0 16px 16px;";
+        applySection.style.cssText = "padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; background: white; border-radius: 0 0 16px 16px; flex-shrink: 0;";
         
         // Check job status for hustler
         const jobStatusUpper = (job.status || "OPEN").toUpperCase();
