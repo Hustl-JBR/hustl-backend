@@ -3497,6 +3497,11 @@ heart of Hustl.
       document.querySelectorAll(".nav-tab").forEach((tab) => {
         tab.classList.toggle("active", tab.dataset.view === view);
       });
+      
+      // Update mobile bottom nav active state if it exists
+      if (window.mobileCore && window.mobileCore.bottomNav) {
+        window.mobileCore.bottomNav.updateActiveTab(view);
+      }
 
       await renderAll();
     }
@@ -10085,18 +10090,15 @@ try {
 }
 
   // ========== HAMBURGER MENU ==========
-  let hamburgerMenuInitialized = false;
   function initHamburgerMenu() {
-    // Prevent multiple initializations to avoid infinite loops
-    if (hamburgerMenuInitialized) {
-      return;
-    }
-    hamburgerMenuInitialized = true;
-    
     const hamburgerBtn = document.getElementById('hamburgerBtn');
     const mobileMenu = document.getElementById('mobileMenu');
     
-    if (!hamburgerBtn || !mobileMenu) return;
+    if (!hamburgerBtn || !mobileMenu) {
+      // Retry if elements not ready
+      setTimeout(initHamburgerMenu, 100);
+      return;
+    }
     
     // Remove old event listeners by cloning elements
     const newHamburgerBtn = hamburgerBtn.cloneNode(true);
@@ -10143,14 +10145,22 @@ try {
         
         // Call window.setView
         if (view && window.setView && typeof window.setView === 'function') {
-          window.setView(view);
-          
-          // Handle special actions
-          if (action === 'earnings') {
-            setTimeout(() => {
-              const earningsTab = document.querySelector('.profile-tab[data-tab="earnings"]');
-              if (earningsTab) earningsTab.click();
-            }, 100);
+          const funcStr = window.setView.toString();
+          if (!funcStr.includes('not ready yet')) {
+            window.setView(view);
+            
+            // Handle special actions
+            if (action === 'earnings') {
+              setTimeout(() => {
+                const earningsTab = document.querySelector('.profile-tab[data-tab="earnings"]');
+                if (earningsTab) earningsTab.click();
+              }, 100);
+            }
+          } else {
+            // Fallback if setView is stub
+            document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+            const target = document.getElementById("view-" + view);
+            if (target) target.style.display = "block";
           }
         }
         
@@ -10364,8 +10374,11 @@ try {
       }
     }
     
-    // Don't re-initialize hamburger menu - it uses event delegation and doesn't need re-initialization
-    // Re-initializing causes infinite loops with setView -> renderAll -> updateHeaderAuth -> initHamburgerMenu -> setView
+    // Re-initialize hamburger menu after updating HTML to ensure event listeners work
+    // Use setTimeout to avoid immediate re-initialization issues
+    setTimeout(() => {
+      initHamburgerMenu();
+    }, 100);
   }
   
   // Handle sign out
@@ -10398,17 +10411,37 @@ try {
         window.hustlAPI.auth.currentUser = null;
       }
       
-      // Update UI
+      // Update UI first
       await updateHeaderAuth();
       
-      // Hide auth section and show it on home
-      const authSection = document.getElementById("authSection");
-      if (authSection && activeView === 'home') {
-        authSection.style.display = 'block';
+      // Switch to home view and show auth section
+      if (window.setView && typeof window.setView === 'function') {
+        window.setView('home');
+      } else {
+        // Fallback
+        document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+        const homeView = document.getElementById("view-home");
+        if (homeView) homeView.style.display = "block";
       }
       
+      // Show auth section
+      const authSection = document.getElementById("authSection");
+      if (authSection) {
+        authSection.style.display = 'block';
+        // Scroll to auth section
+        setTimeout(() => {
+          authSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      }
+      
+      // Open login modal automatically
+      setTimeout(() => {
+        if (window.openAuthModal && typeof window.openAuthModal === 'function') {
+          window.openAuthModal('login');
+        }
+      }, 300);
+      
       showToast("✅ Signed out successfully");
-      setView('home');
       await renderAll();
     }
   }

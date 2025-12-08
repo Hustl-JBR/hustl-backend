@@ -414,11 +414,34 @@ class MobileBottomNav {
     this.nav.querySelectorAll('.mobile-bottom-nav-item').forEach(item => {
       item.addEventListener('click', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         const view = item.dataset.view;
-        if (typeof setView === 'function') {
-          setView(view);
+        if (view) {
+          // Use window.setView and check if it's the real function
+          if (window.setView && typeof window.setView === 'function') {
+            const funcStr = window.setView.toString();
+            if (!funcStr.includes('not ready yet')) {
+              window.setView(view);
+              this.updateActiveTab(view);
+            } else {
+              // Fallback if setView is stub
+              document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+              const target = document.getElementById("view-" + view);
+              if (target) {
+                target.style.display = "block";
+                this.updateActiveTab(view);
+              }
+            }
+          } else {
+            // Fallback if setView not available
+            document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+            const target = document.getElementById("view-" + view);
+            if (target) {
+              target.style.display = "block";
+              this.updateActiveTab(view);
+            }
+          }
         }
-        this.updateActiveTab(view);
       });
     });
   }
