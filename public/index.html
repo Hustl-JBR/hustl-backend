@@ -3265,51 +3265,21 @@ heart of Hustl.
 <script src="/api-integration.js?v=3"></script>
 <script>
   // Define stub functions early so they're available for onclick handlers in HTML
-  // These will delegate to real functions when available
+  // These will be replaced with real functions when they're defined
   window.setView = function(view) {
-    // Check if real function exists (assigned later)
-    // Use _realSetView to avoid calling the stub recursively
-    if (window._realSetView && typeof window._realSetView === 'function') {
-      return window._realSetView(view);
-    }
-    // If not ready, try again after a short delay (only once)
-    if (!window._setViewRetrying) {
-      window._setViewRetrying = true;
-      setTimeout(() => {
-        window._setViewRetrying = false;
-        if (window._realSetView && typeof window._realSetView === 'function') {
-          window._realSetView(view);
-        }
-      }, 100);
-    }
+    console.warn("setView called before initialization, view:", view);
   };
   
   window.openAuthModal = function(mode) {
-    if (window._realOpenAuthModal && typeof window._realOpenAuthModal === 'function') {
-      return window._realOpenAuthModal(mode);
-    }
-    setTimeout(() => {
-      if (window._realOpenAuthModal && typeof window._realOpenAuthModal === 'function') {
-        window._realOpenAuthModal(mode);
-      }
-    }, 50);
+    console.warn("openAuthModal called before initialization, mode:", mode);
   };
   
   window.closeAuthModal = function() {
-    if (window._realCloseAuthModal && typeof window._realCloseAuthModal === 'function') {
-      return window._realCloseAuthModal();
-    }
+    console.warn("closeAuthModal called before initialization");
   };
   
   window.handleSignOut = function() {
-    if (window._realHandleSignOut && typeof window._realHandleSignOut === 'function') {
-      return window._realHandleSignOut();
-    }
-    setTimeout(() => {
-      if (window._realHandleSignOut && typeof window._realHandleSignOut === 'function') {
-        window._realHandleSignOut();
-      }
-    }, 50);
+    console.warn("handleSignOut called before initialization");
   };
   
   // Backend API configuration - using NestJS API with Neon database
@@ -3535,7 +3505,6 @@ heart of Hustl.
       await renderAll();
     }
     // Expose setView globally immediately after definition
-    window._realSetView = setView;
     window.setView = setView;
 
     /* ---------- Auth visibility ---------- */
@@ -9866,32 +9835,21 @@ meta.textContent =
         tab.parentNode.replaceChild(newTab, tab);
       });
       
-      // Nav tabs - add fresh event listeners using window._realSetView directly
+      // Nav tabs - add event listeners
       document.querySelectorAll(".nav-tab").forEach((tab) => {
         tab.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
           const v = tab.dataset.view;
-          // Call the real setView function directly (avoid stub recursion)
-          if (v) {
-            try {
-              // Use _realSetView to bypass stub and avoid recursion
-              if (window._realSetView && typeof window._realSetView === 'function') {
-                window._realSetView(v);
-              } else if (window.setView && typeof window.setView === 'function') {
-                // Fallback to window.setView if _realSetView not available yet
-                window.setView(v);
-              } else {
-                // Final fallback: basic view switching
-                document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
-                const target = document.getElementById("view-" + v);
-                if (target) target.style.display = "block";
-                document.querySelectorAll(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === v));
-                window.scrollTo({ top: 0, behavior: 'instant' });
-              }
-            } catch(err) {
-              console.error("Nav error:", err);
-            }
+          if (v && window.setView && typeof window.setView === 'function') {
+            window.setView(v);
+          } else if (v) {
+            // Fallback: basic view switching
+            document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+            const target = document.getElementById("view-" + v);
+            if (target) target.style.display = "block";
+            document.querySelectorAll(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === v));
+            window.scrollTo({ top: 0, behavior: 'instant' });
           }
         });
       });
@@ -9906,10 +9864,8 @@ meta.textContent =
           freshCtaPost.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
-            // Use _realSetView to avoid stub recursion
-            if (window._realSetView && typeof window._realSetView === 'function') {
-              window._realSetView("post");
-            } else if (window.setView && typeof window.setView === 'function') {
+            // Call window.setView
+            if (window.setView && typeof window.setView === 'function') {
               window.setView("post");
               setTimeout(() => {
                 const formCard = document.getElementById("jobFormCard");
@@ -9931,10 +9887,8 @@ meta.textContent =
           freshCtaBrowse.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
-            // Use _realSetView to avoid stub recursion
-            if (window._realSetView && typeof window._realSetView === 'function') {
-              window._realSetView("jobs");
-            } else if (window.setView && typeof window.setView === 'function') {
+            // Call window.setView
+            if (window.setView && typeof window.setView === 'function') {
               window.setView("jobs");
             }
           });
@@ -10134,10 +10088,8 @@ try {
         const view = item.dataset.view;
         const action = item.dataset.action;
         
-        // Use _realSetView to avoid stub recursion
-        if (view && window._realSetView && typeof window._realSetView === 'function') {
-          window._realSetView(view);
-        } else if (view && window.setView && typeof window.setView === 'function') {
+        // Call window.setView
+        if (view && window.setView && typeof window.setView === 'function') {
           window.setView(view);
           
           // Handle special actions
@@ -10243,7 +10195,6 @@ try {
     }, 50);
   }
   // Expose openAuthModal globally immediately after definition
-  window._realOpenAuthModal = openAuthModal;
   window.openAuthModal = openAuthModal;
   
   function closeAuthModal() {
@@ -10254,7 +10205,6 @@ try {
     }
   }
   // Expose closeAuthModal globally immediately after definition
-  window._realCloseAuthModal = closeAuthModal;
   window.closeAuthModal = closeAuthModal;
   
   // Update header when logged in/out - uses API to get current user
@@ -10360,7 +10310,6 @@ try {
       await renderAll();
     }
   }
-  window._realHandleSignOut = handleSignOut;
   window.handleSignOut = handleSignOut;
   
   // Profile Tabs
