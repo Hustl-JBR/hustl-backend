@@ -6393,15 +6393,21 @@ async function renderJobs(reset = false) {
       modalContent.appendChild(contentSection);
 
       // Apply Now Button Section (sticky at bottom for hustlers)
-      const currentUser = getCurrentUser();
+      // Check if user is logged in (check token first, then get user)
+      const token = localStorage.getItem("hustl_token");
+      const isLoggedIn = !!token;
+      
+      // Use the user variable from earlier in the function, or get it again
+      const currentUser = user || getCurrentUser();
+      
       // Check if job is open (case-insensitive)
       const jobStatusUpper = (job.status || "").toUpperCase();
       const isOpen = jobStatusUpper === "OPEN" || jobStatusUpper === "";
-      const isNotPoster = currentUser && job.postedByUserId !== currentUser.id;
+      const isNotPoster = currentUser ? (job.postedByUserId !== currentUser.id) : true; // If no user object, assume not poster
       
-      // Show apply section if: user is logged in, job is open, and user is not the poster
+      // Show apply section if: user is logged in (has token), job is open, and user is not the poster
       // Show for ALL logged-in users (they can apply even if not marked as hustler yet)
-      if (currentUser && isOpen && isNotPoster) {
+      if (isLoggedIn && isOpen && isNotPoster) {
         // Check if already applied
         let hasApplied = false;
         try {
