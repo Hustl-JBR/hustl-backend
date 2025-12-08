@@ -52,6 +52,8 @@ router.get('/:jobId', authenticate, async (req, res) => {
             ratingAvg: true,
             ratingCount: true,
             photoUrl: true,
+            bio: true,
+            tools: true,
           },
         },
       },
@@ -76,7 +78,8 @@ router.post('/:jobId', authenticate, requireRole('HUSTLER'), [
     }
 
     const { jobId } = req.params;
-    const { note, proposedAmount, proposedPriceType } = req.body;
+    const { note, proposedAmount } = req.body;
+    // Note: proposedPriceType is sent from frontend but not stored in DB (used for display only)
 
     // Check if hustler is verified (optional for now - can be enabled later)
     // const user = await prisma.user.findUnique({

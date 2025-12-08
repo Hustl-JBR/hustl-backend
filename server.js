@@ -377,21 +377,6 @@ app.use((req, res, next) => {
   res.sendFile(path.join(publicPath, "index.html"));
 });
 
-// Export function to send messages from API routes
-global.sendWebSocketMessage = function(userId, message) {
-  const userConnections = connectedClients.get(userId);
-  if (userConnections) {
-    userConnections.forEach(ws => {
-      if (ws.readyState === 1) {
-        ws.send(JSON.stringify(message));
-      }
-    });
-  }
-};
-
-// Export function to broadcast to thread participants
-global.broadcastToThread = broadcastToThread;
-
 // Start server (using http server for WebSocket support)
 const host = process.env.HOST || "0.0.0.0";
 server.listen(PORT, host, () => {

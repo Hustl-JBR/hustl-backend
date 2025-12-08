@@ -110,9 +110,7 @@ router.get('/my-jobs', authenticate, async (req, res) => {
 
 // POST /jobs - Create a job (Customer only)
 router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) => {
-  // Check email verification before allowing job posting
-  // TEMPORARILY DISABLED: Email verification field doesn't exist in production database yet
-  // TODO: Re-enable after running migration to add emailVerified field
+  // Check email verification before allowing job posting (controlled by env var)
   try {
     if (!req.user || !req.user.id) {
       console.error('[POST /jobs] req.user is missing:', req.user);
