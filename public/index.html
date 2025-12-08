@@ -3543,9 +3543,10 @@ heart of Hustl.
     window._realSetView = setView;
     window.setView = setView;
     // Process any queued calls
-    if (setViewQueue && setViewQueue.length > 0) {
-      setViewQueue.forEach(v => setView(v));
+    if (typeof setViewQueue !== 'undefined' && setViewQueue.length > 0) {
+      const queued = [...setViewQueue];
       setViewQueue = [];
+      queued.forEach(v => window.setView(v));
     }
 
     /* ---------- Auth visibility ---------- */
@@ -10239,9 +10240,10 @@ try {
   window._realOpenAuthModal = openAuthModal;
   window.openAuthModal = openAuthModal;
   // Process any queued calls
-  if (openAuthModalQueue && openAuthModalQueue.length > 0) {
-    openAuthModalQueue.forEach(m => openAuthModal(m));
+  if (typeof openAuthModalQueue !== 'undefined' && openAuthModalQueue.length > 0) {
+    const queued = [...openAuthModalQueue];
     openAuthModalQueue = [];
+    queued.forEach(m => window.openAuthModal(m));
   }
   
   function closeAuthModal() {
@@ -10361,9 +10363,10 @@ try {
   window._realHandleSignOut = handleSignOut;
   window.handleSignOut = handleSignOut;
   // Process any queued calls
-  if (handleSignOutQueue && handleSignOutQueue.length > 0) {
-    handleSignOutQueue.forEach(() => handleSignOut());
+  if (typeof handleSignOutQueue !== 'undefined' && handleSignOutQueue.length > 0) {
+    const queued = [...handleSignOutQueue];
     handleSignOutQueue = [];
+    queued.forEach(() => window.handleSignOut());
   }
   
   // Profile Tabs
