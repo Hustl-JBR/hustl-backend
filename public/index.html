@@ -6245,7 +6245,7 @@ async function renderJobs(reset = false) {
 
       // Content Section (scrollable) - CREATE FIRST
       const contentSection = document.createElement("div");
-      contentSection.style.cssText = "padding: 1.5rem 2rem; max-height: calc(90vh - 400px); overflow-y: auto;";
+      contentSection.style.cssText = "padding: 1.5rem 2rem; flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; scroll-behavior: smooth;";
       
       // Additional Details Section
       if (job.requirements) {
@@ -6276,6 +6276,19 @@ async function renderJobs(reset = false) {
           const equipmentDetail = document.createElement("div");
           equipmentDetail.innerHTML = `<strong>Equipment Needed:</strong> ${job.requirements.equipment_needed.join(', ')}`;
           detailsList.appendChild(equipmentDetail);
+        }
+        
+        // Team Size / Workers Needed - VERY IMPORTANT
+        const teamSize = job.teamSize || job.workersNeeded || job.requirements?.team_size || 1;
+        if (teamSize && teamSize > 0) {
+          const teamSizeDetail = document.createElement("div");
+          teamSizeDetail.style.cssText = "font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-top: 0.5rem; padding: 0.75rem; background: #eff6ff; border-radius: 6px; border-left: 3px solid #3b82f6;";
+          if (teamSize === 1) {
+            teamSizeDetail.innerHTML = `👤 <strong>Workers Needed:</strong> 1 person`;
+          } else {
+            teamSizeDetail.innerHTML = `👥 <strong>Workers Needed:</strong> ${teamSize} people<br><span style="font-size: 0.85rem; color: #1e40af; font-weight: 500;">💡 Bring some friends! This job requires ${teamSize} ${teamSize === 2 ? 'people' : 'people'} to complete.</span>`;
+          }
+          detailsList.appendChild(teamSizeDetail);
         }
         
         if (detailsList.children.length > 0) {
