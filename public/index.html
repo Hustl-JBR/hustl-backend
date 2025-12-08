@@ -6530,16 +6530,43 @@ async function renderJobs(reset = false) {
 
           offers.forEach((offer) => {
             const hustler = offer.hustler || state.users.find((x) => x.id === offer.hustlerId);
-            if (!hustler) return;
+            if (!hustler) {
+              // Try to fetch hustler from API
+              (async () => {
+                try {
+                  const token = localStorage.getItem("hustl_token");
+                  const userResponse = await fetch(`${API_BASE}/users/${offer.hustlerId}`, {
+                    headers: token ? { "Authorization": `Bearer ${token}` } : {}
+                  });
+                  if (userResponse.ok) {
+                    const fetchedHustler = await userResponse.json();
+                    // Re-render this section with the fetched hustler
+                    openJobDetails(job.id);
+                  }
+                } catch (e) {
+                  console.error("Error fetching hustler:", e);
+                }
+              })();
+              return;
+            }
 
             const applicantCard = document.createElement("div");
-            applicantCard.style.cssText = "padding: 1rem; background: white; border-radius: 8px; margin-bottom: 0.75rem; border: 1px solid #e5e7eb;";
+            applicantCard.style.cssText = "padding: 1.25rem; background: white; border-radius: 12px; margin-bottom: 1rem; border: 2px solid #e5e7eb; transition: all 0.2s;";
+            applicantCard.addEventListener("mouseenter", () => {
+              applicantCard.style.borderColor = "var(--primary)";
+              applicantCard.style.boxShadow = "0 4px 12px rgba(37, 99, 235, 0.1)";
+            });
+            applicantCard.addEventListener("mouseleave", () => {
+              applicantCard.style.borderColor = "#e5e7eb";
+              applicantCard.style.boxShadow = "none";
+            });
 
+            // Top row: Avatar, Name, Rating
             const topRow = document.createElement("div");
-            topRow.style.cssText = "display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem;";
+            topRow.style.cssText = "display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;";
 
             const avatar = document.createElement("div");
-            avatar.style.cssText = "width: 50px; height: 50px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.25rem; flex-shrink: 0; cursor: pointer;";
+            avatar.style.cssText = "width: 60px; height: 60px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.5rem; flex-shrink: 0; cursor: pointer; border: 2px solid var(--primary-soft);";
             avatar.textContent = (hustler.name || hustler.email || "U")[0].toUpperCase();
             if (hustler.photoUrl) {
               avatar.innerHTML = `<img src="${hustler.photoUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" />`;
@@ -6547,56 +6574,88 @@ async function renderJobs(reset = false) {
             avatar.addEventListener("click", () => {
               document.body.removeChild(modalOverlay);
               document.body.style.overflow = "";
-              openUserProfile(hustler.id);
+              if (typeof openUserProfile === 'function') {
+                openUserProfile(hustler.id);
+              }
             });
             topRow.appendChild(avatar);
 
             const nameRating = document.createElement("div");
-            nameRating.style.cssText = "flex: 1;";
+            nameRating.style.cssText = "flex: 1; min-width: 0;";
             
             const name = document.createElement("div");
-            name.style.cssText = "font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem; cursor: pointer;";
+            name.style.cssText = "font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.25rem; cursor: pointer;";
             name.textContent = hustler.name || hustler.username || hustler.email?.split('@')[0] || "Unknown User";
             name.addEventListener("click", () => {
               document.body.removeChild(modalOverlay);
               document.body.style.overflow = "";
-              openUserProfile(hustler.id);
+              if (typeof openUserProfile === 'function') {
+                openUserProfile(hustler.id);
+              }
             });
             nameRating.appendChild(name);
 
             const rating = document.createElement("div");
-            rating.style.cssText = "display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
+            rating.style.cssText = "display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text-muted);";
             const ratingValue = hustler.ratingAvg || hustler.rating || 5.0;
             const ratingCount = hustler.ratingCount || hustler.reviewCount || 0;
-            rating.innerHTML = `⭐ ${Number(ratingValue).toFixed(1)}`;
+            rating.innerHTML = `⭐ <strong>${Number(ratingValue).toFixed(1)}</strong>`;
             if (ratingCount > 0) {
               rating.innerHTML += ` <span>(${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})</span>`;
+            } else {
+              rating.innerHTML += ` <span style="color: #9ca3af;">(No reviews yet)</span>`;
             }
             nameRating.appendChild(rating);
             topRow.appendChild(nameRating);
 
             applicantCard.appendChild(topRow);
 
+            // Hustler Bio (if available)
+            if (hustler.bio) {
+              const bioBox = document.createElement("div");
+              bioBox.style.cssText = "padding: 0.75rem; background: #f0f9ff; border-radius: 8px; margin-bottom: 0.75rem; font-size: 0.9rem; color: var(--text-main); line-height: 1.5; border-left: 3px solid var(--primary);";
+              bioBox.textContent = hustler.bio;
+              applicantCard.appendChild(bioBox);
+            }
+
+            // Tools & Equipment (if available)
+            if (hustler.tools) {
+              const toolsBox = document.createElement("div");
+              toolsBox.style.cssText = "padding: 0.75rem; background: #fef3c7; border-radius: 8px; margin-bottom: 0.75rem; font-size: 0.85rem; color: #92400e;";
+              toolsBox.innerHTML = `<strong>🔧 Tools & Equipment:</strong> ${hustler.tools}`;
+              applicantCard.appendChild(toolsBox);
+            }
+
+            // Their Pitch/Note
             if (offer.note) {
               const messageBox = document.createElement("div");
-              messageBox.style.cssText = "padding: 0.75rem; background: #f9fafb; border-radius: 8px; margin-bottom: 0.75rem; font-size: 0.9rem; color: var(--text-main); line-height: 1.5;";
-              messageBox.textContent = offer.note;
+              messageBox.style.cssText = "padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 0.75rem; font-size: 0.95rem; color: var(--text-main); line-height: 1.6; border: 1px solid #e5e7eb;";
+              const pitchLabel = document.createElement("div");
+              pitchLabel.style.cssText = "font-weight: 600; color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem;";
+              pitchLabel.textContent = "💬 Why I'm a good fit:";
+              messageBox.appendChild(pitchLabel);
+              const pitchText = document.createElement("div");
+              pitchText.style.cssText = "white-space: pre-wrap;";
+              pitchText.textContent = offer.note;
+              messageBox.appendChild(pitchText);
               applicantCard.appendChild(messageBox);
             }
             
-            // Show proposed price if different from job price
-            if (offer.proposedAmount && Number(offer.proposedAmount) > 0) {
-              const priceBox = document.createElement("div");
-              priceBox.style.cssText = "padding: 0.75rem; background: #fef3c7; border-radius: 8px; margin-bottom: 0.75rem; font-size: 0.9rem; color: #92400e; font-weight: 600;";
-              const jobPrice = job.payType === "flat" ? Number(job.flatAmount || job.amount || 0) : Number(job.hourlyRate || 0);
-              const proposedPrice = Number(offer.proposedAmount);
-              if (proposedPrice !== jobPrice) {
-                priceBox.innerHTML = `💰 Proposed Price: <strong>${formatMoney(proposedPrice)}${job.payType === 'hourly' ? '/hr' : ''}</strong> (Original: ${formatMoney(jobPrice)}${job.payType === 'hourly' ? '/hr' : ''})`;
-              } else {
-                priceBox.innerHTML = `💰 Proposed Price: <strong>${formatMoney(proposedPrice)}${job.payType === 'hourly' ? '/hr' : ''}</strong>`;
-              }
-              applicantCard.appendChild(priceBox);
+            // Show proposed price
+            const priceBox = document.createElement("div");
+            priceBox.style.cssText = "padding: 0.75rem; background: #dcfce7; border-radius: 8px; margin-bottom: 0.75rem; font-size: 0.95rem; font-weight: 600;";
+            const jobPrice = job.payType === "flat" ? Number(job.amount || job.flatAmount || 0) : Number(job.hourlyRate || 0);
+            const proposedPrice = offer.proposedAmount ? Number(offer.proposedAmount) : jobPrice;
+            
+            if (offer.proposedAmount && proposedPrice !== jobPrice) {
+              priceBox.style.background = "#fef3c7";
+              priceBox.style.color = "#92400e";
+              priceBox.innerHTML = `💰 <strong>Proposed: ${formatMoney(proposedPrice)}${job.payType === 'hourly' ? '/hr' : ''}</strong> <span style="font-weight: normal; font-size: 0.85rem; color: #78350f;">(Original: ${formatMoney(jobPrice)}${job.payType === 'hourly' ? '/hr' : ''})</span>`;
+            } else {
+              priceBox.style.color = "#166534";
+              priceBox.innerHTML = `💰 <strong>Price: ${formatMoney(proposedPrice)}${job.payType === 'hourly' ? '/hr' : ''}</strong> <span style="font-weight: normal; font-size: 0.85rem; color: #15803d;">(Accepting listed price)</span>`;
             }
+            applicantCard.appendChild(priceBox);
 
             const actionsRow = document.createElement("div");
             actionsRow.style.cssText = "display: flex; gap: 0.5rem;";
@@ -9244,66 +9303,132 @@ async function renderJobs(reset = false) {
 
   container.innerHTML = "";
 
-  // avatar upload
-  const avatarUploadField = document.createElement("div");
-  avatarUploadField.className = "field";
-  avatarUploadField.innerHTML =
-    "<label>Profile photo (demo)</label>" +
-    "<input id='avatarUploadInput' type='file' accept='image/*' />";
-  container.appendChild(avatarUploadField);
-
-  // about you / bio
-  const bioField = document.createElement("div");
-  bioField.className = "field";
-  bioField.innerHTML =
-    "<label for='profileBioInput'>About you (profile bio)</label>" +
-    `<textarea id='profileBioInput' placeholder='Tell people a little about yourself. Jobs you like, if you have a truck, experience, etc.'>${user.bio || ''}</textarea>` +
-    "<button class='btn btn-primary' id='saveBioButton' style='margin-top:0.35rem;'>Save profile</button>";
-  container.appendChild(bioField);
+  // Create organized profile form with clear sections
+  const profileForm = document.createElement("div");
+  profileForm.style.cssText = "display: flex; flex-direction: column; gap: 1.5rem;";
   
-  // Gender dropdown
-  const genderField = document.createElement("div");
-  genderField.className = "field";
-  genderField.style.marginTop = "0.8rem";
-  genderField.innerHTML = `
-    <label for="profileGenderInput">Gender</label>
-    <select id="profileGenderInput" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: white;">
-      <option value="">Select...</option>
-      <option value="male" ${user.gender === 'male' ? 'selected' : ''}>Male</option>
-      <option value="female" ${user.gender === 'female' ? 'selected' : ''}>Female</option>
-      <option value="other" ${user.gender === 'other' ? 'selected' : ''}>Other</option>
-      <option value="prefer_not_to_say" ${user.gender === 'prefer_not_to_say' ? 'selected' : ''}>Prefer not to say</option>
-    </select>
-    <button class="btn btn-primary" id="saveGenderButton" style="margin-top:0.35rem;">Save</button>
-  `;
-  container.appendChild(genderField);
-  
-  // Tools/Equipment section
-  const toolsField = document.createElement("div");
-  toolsField.className = "field";
-  toolsField.style.marginTop = "0.8rem";
-  toolsField.innerHTML = `
-    <label for="profileToolsInput">🔧 Tools & Equipment</label>
-    <p class="muted" style="margin: 0 0 0.5rem 0; font-size: 0.8rem;">List the tools or equipment you have available (e.g., "Pickup truck, pressure washer, lawn mower")</p>
-    <textarea id="profileToolsInput" placeholder="Example: Pickup truck, pressure washer, lawn mower, moving straps" rows="3">${user.tools || ''}</textarea>
-    <button class="btn btn-primary" id="saveToolsButton" style="margin-top:0.35rem;">Save</button>
-  `;
-  container.appendChild(toolsField);
-
-  // Location / ZIP code edit
-  const locationField = document.createElement("div");
-  locationField.className = "field";
-  locationField.style.marginTop = "0.8rem";
-  locationField.innerHTML = `
-    <label for="profileCityInput">📍 Your Location</label>
-    <p class="muted" style="margin: 0 0 0.5rem 0; font-size: 0.8rem;">Used for "Near Me" filter - you can still see all jobs in Tennessee</p>
-    <div style="display: flex; gap: 0.5rem;">
-      <input id="profileCityInput" type="text" placeholder="City" value="${user.city || ''}" style="flex: 2;" />
-      <input id="profileZipInput" type="text" placeholder="ZIP" value="${user.zip || ''}" maxlength="5" style="flex: 1;" />
-      <button class="btn btn-primary" id="saveLocationButton">Save</button>
+  // Section 1: Profile Picture
+  const photoSection = document.createElement("div");
+  photoSection.className = "field";
+  photoSection.innerHTML = `
+    <label style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; display: block;">📷 Profile Picture</label>
+    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem;">
+      <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--bg-light); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+        ${user.photoUrl ? `<img src="${user.photoUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">` : `<div style="font-size: 2rem;">${(user.name || 'U')[0].toUpperCase()}</div>`}
+      </div>
+      <div style="flex: 1;">
+        <input id='avatarUploadInput' type='file' accept='image/*' style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem;" />
+        <p class="muted" style="margin: 0.25rem 0 0 0; font-size: 0.8rem;">Upload a clear photo of yourself</p>
+      </div>
     </div>
   `;
-  container.appendChild(locationField);
+  profileForm.appendChild(photoSection);
+
+  // Section 2: Basic Info
+  const nameSection = document.createElement("div");
+  nameSection.className = "field";
+  nameSection.innerHTML = `
+    <label for="profileNameInput" style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; display: block;">👤 Name</label>
+    <div style="display: flex; gap: 0.5rem;">
+      <input id="profileNameInput" type="text" placeholder="Your full name" value="${user.name || ''}" style="flex: 1; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem;" />
+      <button class="btn btn-primary" id="saveNameButton" style="white-space: nowrap;">Save</button>
+    </div>
+  `;
+  profileForm.appendChild(nameSection);
+
+  // Section 3: Bio/Description
+  const bioSection = document.createElement("div");
+  bioSection.className = "field";
+  bioSection.innerHTML = `
+    <label for='profileBioInput' style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; display: block;">📝 About You</label>
+    <p class="muted" style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">Tell people about yourself, your experience, and what jobs you like to do.</p>
+    <textarea id='profileBioInput' placeholder='Example: Experienced mover with a pickup truck. I specialize in moving, yard work, and dump runs. Available weekdays and weekends.' rows="4" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-family: inherit; resize: vertical;"></textarea>
+    <button class='btn btn-primary' id='saveBioButton' style='margin-top:0.5rem;'>Save Bio</button>
+  `;
+  bioSection.querySelector('#profileBioInput').value = user.bio || '';
+  profileForm.appendChild(bioSection);
+  
+  // Section 4: Tools & Equipment
+  const toolsSection = document.createElement("div");
+  toolsSection.className = "field";
+  toolsSection.innerHTML = `
+    <label for="profileToolsInput" style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; display: block;">🔧 Tools & Equipment</label>
+    <p class="muted" style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">List the tools or equipment you have available</p>
+    <textarea id="profileToolsInput" placeholder="Example: Pickup truck, pressure washer, lawn mower, moving straps, hand tools" rows="3" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-family: inherit; resize: vertical;"></textarea>
+    <button class="btn btn-primary" id="saveToolsButton" style="margin-top:0.5rem;">Save Tools</button>
+  `;
+  toolsSection.querySelector('#profileToolsInput').value = user.tools || '';
+  profileForm.appendChild(toolsSection);
+  
+  // Section 5: Gender (optional)
+  const genderSection = document.createElement("div");
+  genderSection.className = "field";
+  genderSection.innerHTML = `
+    <label for="profileGenderInput" style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; display: block;">Gender (Optional)</label>
+    <div style="display: flex; gap: 0.5rem;">
+      <select id="profileGenderInput" style="flex: 1; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: white;">
+        <option value="">Select...</option>
+        <option value="male" ${user.gender === 'male' ? 'selected' : ''}>Male</option>
+        <option value="female" ${user.gender === 'female' ? 'selected' : ''}>Female</option>
+        <option value="other" ${user.gender === 'other' ? 'selected' : ''}>Other</option>
+        <option value="prefer_not_to_say" ${user.gender === 'prefer_not_to_say' ? 'selected' : ''}>Prefer not to say</option>
+      </select>
+      <button class="btn btn-primary" id="saveGenderButton" style="white-space: nowrap;">Save</button>
+    </div>
+  `;
+  profileForm.appendChild(genderSection);
+
+  // Section 6: Location
+  const locationSection = document.createElement("div");
+  locationSection.className = "field";
+  locationSection.innerHTML = `
+    <label for="profileCityInput" style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; display: block;">📍 Location</label>
+    <p class="muted" style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">Used for location-based job filtering</p>
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      <input id="profileCityInput" type="text" placeholder="City" value="${user.city || ''}" style="flex: 2; min-width: 150px; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem;" />
+      <input id="profileZipInput" type="text" placeholder="ZIP" value="${user.zip || ''}" maxlength="5" style="flex: 1; min-width: 100px; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem;" />
+      <button class="btn btn-primary" id="saveLocationButton" style="white-space: nowrap;">Save</button>
+    </div>
+  `;
+  profileForm.appendChild(locationSection);
+
+  container.appendChild(profileForm);
+  
+  // Add save handler for name
+  setTimeout(() => {
+    const saveNameBtn = document.getElementById("saveNameButton");
+    if (saveNameBtn) {
+      saveNameBtn.addEventListener("click", async () => {
+        const name = document.getElementById("profileNameInput").value.trim();
+        if (!name) {
+          showToast("Please enter your name.");
+          return;
+        }
+        const originalText = saveNameBtn.textContent;
+        saveNameBtn.disabled = true;
+        saveNameBtn.textContent = "Saving...";
+        try {
+          await window.hustlAPI.users.updateProfile({ name });
+          const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
+          storedUser.name = name;
+          localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+          saveNameBtn.textContent = "Saved";
+          saveNameBtn.style.background = "#16a34a";
+          setTimeout(() => {
+            saveNameBtn.textContent = "Save";
+            saveNameBtn.style.background = "";
+            saveNameBtn.disabled = false;
+          }, 2000);
+          showToast("✅ Name updated!");
+          await renderProfile();
+        } catch (error) {
+          saveNameBtn.textContent = originalText;
+          saveNameBtn.disabled = false;
+          showToast("Failed to update name.");
+        }
+      });
+    }
+  }, 100);
 
   // Location save handler with confirmation
   setTimeout(() => {
