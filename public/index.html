@@ -3264,65 +3264,18 @@ heart of Hustl.
 </script>
 <script src="/api-integration.js?v=3"></script>
 <script>
-  // Define stub functions early so they're available for onclick handlers in HTML
-  // These will queue calls until real functions are ready
-  // Use window properties to ensure they're accessible from all scopes
-  window._setViewQueue = [];
-  window._setViewRealFunction = null;
+  // Simple stub functions - will be replaced when real functions are defined
   window.setView = function(view) {
-    // If real function is ready, use it directly (not through window.setView to avoid recursion)
-    if (window._setViewRealFunction && typeof window._setViewRealFunction === 'function') {
-      return window._setViewRealFunction(view);
-    }
-    // Otherwise queue the call
-    window._setViewQueue.push(view);
-    // Try to process queue after a delay
-    setTimeout(() => {
-      if (window._setViewRealFunction && typeof window._setViewRealFunction === 'function') {
-        const queued = [...window._setViewQueue];
-        window._setViewQueue = [];
-        queued.forEach(v => window._setViewRealFunction(v));
-      }
-    }, 100);
+    console.warn("setView not ready yet, view:", view);
   };
-  
-  window._openAuthModalQueue = [];
-  window._openAuthModalRealFunction = null;
   window.openAuthModal = function(mode) {
-    if (window._openAuthModalRealFunction && typeof window._openAuthModalRealFunction === 'function') {
-      return window._openAuthModalRealFunction(mode);
-    }
-    window._openAuthModalQueue.push(mode);
-    setTimeout(() => {
-      if (window._openAuthModalRealFunction && typeof window._openAuthModalRealFunction === 'function') {
-        const queued = [...window._openAuthModalQueue];
-        window._openAuthModalQueue = [];
-        queued.forEach(m => window._openAuthModalRealFunction(m));
-      }
-    }, 100);
+    console.warn("openAuthModal not ready yet, mode:", mode);
   };
-  
-  window._closeAuthModalRealFunction = null;
   window.closeAuthModal = function() {
-    if (window._closeAuthModalRealFunction && typeof window._closeAuthModalRealFunction === 'function') {
-      return window._closeAuthModalRealFunction();
-    }
+    console.warn("closeAuthModal not ready yet");
   };
-  
-  window._handleSignOutQueue = [];
-  window._handleSignOutRealFunction = null;
   window.handleSignOut = function() {
-    if (window._handleSignOutRealFunction && typeof window._handleSignOutRealFunction === 'function') {
-      return window._handleSignOutRealFunction();
-    }
-    window._handleSignOutQueue.push(true);
-    setTimeout(() => {
-      if (window._handleSignOutRealFunction && typeof window._handleSignOutRealFunction === 'function') {
-        const queued = [...window._handleSignOutQueue];
-        window._handleSignOutQueue = [];
-        queued.forEach(() => window._handleSignOutRealFunction());
-      }
-    }, 100);
+    console.warn("handleSignOut not ready yet");
   };
   
   // Backend API configuration - using NestJS API with Neon database
@@ -3548,15 +3501,7 @@ heart of Hustl.
       await renderAll();
     }
     // Expose setView globally immediately after definition
-    // Store reference in window property to avoid recursion and scope issues
-    window._setViewRealFunction = setView;
-    window.setView = setView; // Replace stub with real function
-    // Process any queued calls using the real function directly
-    if (window._setViewQueue && window._setViewQueue.length > 0) {
-      const queued = [...window._setViewQueue];
-      window._setViewQueue = [];
-      queued.forEach(v => setView(v)); // Call directly, not through window
-    }
+    window.setView = setView;
 
     /* ---------- Auth visibility ---------- */
 
@@ -9872,41 +9817,26 @@ meta.textContent =
     /* ---------- Init ---------- */
 
     function initNav() {
-      // Nav tabs - add event listeners using event delegation on parent
       const navContainer = document.querySelector(".nav-tabs");
       if (!navContainer) {
-        console.warn("Nav container not found, retrying...");
-        setTimeout(initNav, 100);
+        setTimeout(initNav, 50);
         return;
       }
       
-      // Only attach listener if not already attached
-      if (!navContainer.dataset.listenerAttached) {
-        navContainer.dataset.listenerAttached = 'true';
-        console.log("Attaching nav event listener");
-        navContainer.addEventListener("click", (e) => {
-          const tab = e.target.closest(".nav-tab");
-          if (!tab) return;
-          
-          e.preventDefault();
-          e.stopPropagation();
-          const v = tab.dataset.view;
-          console.log("Nav tab clicked:", v);
-          if (v && window.setView && typeof window.setView === 'function') {
-            console.log("Calling window.setView with:", v);
-            window.setView(v);
-          } else if (v) {
-            console.log("Using fallback view switching for:", v);
-            // Fallback: basic view switching
-            document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
-            const target = document.getElementById("view-" + v);
-            if (target) target.style.display = "block";
-            document.querySelectorAll(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === v));
-            window.scrollTo({ top: 0, behavior: 'instant' });
-          }
-        });
-        console.log("Nav event listener attached successfully");
-      }
+      if (navContainer.dataset.listenerAttached) return;
+      navContainer.dataset.listenerAttached = 'true';
+      
+      navContainer.addEventListener("click", (e) => {
+        const tab = e.target.closest(".nav-tab");
+        if (!tab) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const v = tab.dataset.view;
+        if (v && window.setView) {
+          window.setView(v);
+        }
+      });
+    }
 
       // Home CTA buttons - use event delegation
       const homeCtaPost = document.getElementById("homeCtaPost");
@@ -10241,14 +10171,7 @@ try {
     }, 50);
   }
   // Expose openAuthModal globally immediately after definition
-  window._openAuthModalRealFunction = openAuthModal;
   window.openAuthModal = openAuthModal;
-  // Process any queued calls
-  if (window._openAuthModalQueue && window._openAuthModalQueue.length > 0) {
-    const queued = [...window._openAuthModalQueue];
-    window._openAuthModalQueue = [];
-    queued.forEach(m => openAuthModal(m));
-  }
   
   function closeAuthModal() {
     const overlay = document.getElementById('authModalOverlay');
@@ -10258,7 +10181,6 @@ try {
     }
   }
   // Expose closeAuthModal globally immediately after definition
-  window._closeAuthModalRealFunction = closeAuthModal;
   window.closeAuthModal = closeAuthModal;
   
   // Update header when logged in/out - uses API to get current user
@@ -10364,14 +10286,7 @@ try {
       await renderAll();
     }
   }
-  window._handleSignOutRealFunction = handleSignOut;
   window.handleSignOut = handleSignOut;
-  // Process any queued calls
-  if (window._handleSignOutQueue && window._handleSignOutQueue.length > 0) {
-    const queued = [...window._handleSignOutQueue];
-    window._handleSignOutQueue = [];
-    queued.forEach(() => handleSignOut());
-  }
   
   // Profile Tabs
   function initProfileTabs() {
