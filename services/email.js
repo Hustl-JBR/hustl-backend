@@ -110,7 +110,7 @@ async function sendEmailVerificationEmail(email, name, verificationCode) {
             </div>
             
             <p style="color: #64748b; font-size: 0.9rem; text-align: center; margin: 1.5rem 0;">
-              ⏰ This code expires in <strong>24 hours</strong>
+              ⏰ This code expires in <strong>5 minutes</strong>
             </p>
             
             <!-- Security Note -->

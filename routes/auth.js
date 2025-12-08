@@ -49,7 +49,7 @@ const { email, password, name, username, city, zip, role, referralCode } = req.b
 
 // Generate 6-digit verification code
     const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
-    const verificationCodeExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+    const verificationCodeExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
 
     // Create user with both roles (users can be both customer and hustler)
     let user;
@@ -206,6 +206,7 @@ router.post('/login', [
         ratingAvg: true,
         ratingCount: true,
         idVerified: true,
+        emailVerified: true,
         createdAt: true,
       },
     });
@@ -219,6 +220,16 @@ router.post('/login', [
     if (!valid) {
       console.error('Login failed: Invalid password for user:', user.email);
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Block login if email is not verified
+    const isEmailVerified = user.emailVerified === true;
+    if (!isEmailVerified) {
+      return res.status(403).json({ 
+        error: 'Email not verified',
+        requiresEmailVerification: true,
+        message: 'Please verify your email address before logging in. Check your inbox for the verification code.'
+      });
     }
 
     const token = jwt.sign(
@@ -235,7 +246,7 @@ router.post('/login', [
         username: user.username,
         roles: user.roles,
         idVerified: user.idVerified,
-        emailVerified: user.emailVerified || false,
+        emailVerified: true,
       },
       token,
     });
@@ -420,7 +431,7 @@ router.post('/resend-verification', [
     if (user && (user.emailVerified === false || user.emailVerified === undefined)) {
       // Generate new verification code
       const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
-      const verificationCodeExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+      const verificationCodeExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
       // Update user with new code
       await prisma.user.update({

@@ -273,6 +273,94 @@ async function cleanupOldJobs() {
 }
 
 /**
+ * Clean up unverified user accounts
+ * Deletes users who:
+ * 1. Have emailVerified = false
+ * 2. Have an expired verification code (emailVerificationExpiry < now)
+ * OR
+ * 3. Have emailVerified = false and were created more than 10 minutes ago (abandoned signup)
+ */
+async function cleanupUnverifiedAccounts() {
+  try {
+    const now = new Date();
+    const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000); // 10 minutes ago
+    
+    // Find unverified users with expired codes OR abandoned signups
+    const unverifiedUsers = await prisma.user.findMany({
+      where: {
+        emailVerified: false,
+        OR: [
+          // Expired verification codes
+          {
+            emailVerificationExpiry: {
+              lt: now
+            }
+          },
+          // Abandoned signups (created more than 10 minutes ago, no verification code or expired)
+          {
+            createdAt: {
+              lt: tenMinutesAgo
+            },
+            OR: [
+              { emailVerificationCode: null },
+              { emailVerificationExpiry: { lt: now } }
+            ]
+          }
+        ]
+      },
+      select: {
+        id: true,
+        email: true,
+        createdAt: true,
+        emailVerificationExpiry: true
+      }
+    });
+
+    if (unverifiedUsers.length === 0) {
+      console.log('[Cleanup Unverified] No unverified accounts to delete');
+      return { deleted: 0 };
+    }
+
+    console.log(`[Cleanup Unverified] Found ${unverifiedUsers.length} unverified accounts to delete`);
+
+    const userIds = unverifiedUsers.map(u => u.id);
+    
+    // Delete related data first (in order of dependencies)
+    const safeDelete = async (model, where) => {
+      try {
+        await model.deleteMany({ where });
+      } catch (e) {
+        if (e.code !== 'P2021') console.error(`[Cleanup Unverified] Delete error (non-fatal):`, e.message);
+      }
+    };
+
+    // Delete user's related data
+    await safeDelete(prisma.message, { senderId: { in: userIds } });
+    await safeDelete(prisma.thread, { OR: [{ userAId: { in: userIds } }, { userBId: { in: userIds } }] });
+    await safeDelete(prisma.offer, { hustlerId: { in: userIds } });
+    await safeDelete(prisma.review, { OR: [{ reviewerId: { in: userIds } }, { revieweeId: { in: userIds } }] });
+    await safeDelete(prisma.payment, { OR: [{ customerId: { in: userIds } }, { hustlerId: { in: userIds } }] });
+    await safeDelete(prisma.job, { OR: [{ customerId: { in: userIds } }, { hustlerId: { in: userIds } }] });
+    await safeDelete(prisma.locationUpdate, { hustlerId: { in: userIds } });
+    await safeDelete(prisma.referral, { OR: [{ referrerId: { in: userIds } }, { referredUserId: { in: userIds } }] });
+
+    // Finally delete the users
+    const result = await prisma.user.deleteMany({
+      where: {
+        id: { in: userIds }
+      }
+    });
+
+    console.log(`[Cleanup Unverified] Deleted ${result.count} unverified accounts`);
+    
+    return { deleted: result.count };
+  } catch (error) {
+    console.error('[Cleanup Unverified] Error cleaning up unverified accounts:', error);
+    throw error;
+  }
+}
+
+/**
  * Run all cleanup tasks
  */
 async function runAllCleanup() {
@@ -292,6 +380,7 @@ async function runAllCleanup() {
     '72h': await cleanup72HourJobs().catch(e => ({ error: e.message })),
     'startCodes': await cleanupExpiredStartCodes().catch(e => ({ error: e.message })),
     '2w': await cleanupOldJobs().catch(e => ({ error: e.message })),
+    'unverified': await cleanupUnverifiedAccounts().catch(e => ({ error: e.message })),
   };
   return results;
 }
@@ -300,6 +389,7 @@ module.exports = {
   cleanupOldJobs,
   cleanup72HourJobs,
   cleanupExpiredStartCodes,
+  cleanupUnverifiedAccounts,
   runAllCleanup,
 };
 
