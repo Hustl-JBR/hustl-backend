@@ -3274,8 +3274,9 @@ heart of Hustl.
   window.closeAuthModal = function() {
     console.warn("closeAuthModal not ready yet");
   };
+  // Stub will be replaced by real function below
   window.handleSignOut = function() {
-    console.warn("handleSignOut not ready yet");
+    console.warn("handleSignOut not ready yet - please wait for page to load");
   };
   
   // Backend API configuration - using NestJS API with Neon database
@@ -8865,9 +8866,15 @@ async function renderJobs(reset = false) {
     // Profile sign out button
     const profileSignOutBtn = document.getElementById("profileSignOutBtn");
     if (profileSignOutBtn) {
-      profileSignOutBtn.addEventListener("click", () => {
-        if (typeof window.handleSignOut === 'function') {
+      profileSignOutBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Profile sign out button clicked');
+        // Call handleSignOut directly
+        if (window.handleSignOut) {
           window.handleSignOut();
+        } else {
+          console.error('handleSignOut not available');
         }
       });
     }
@@ -10257,11 +10264,15 @@ try {
                  e.target.closest('[data-action="signout"]')) {
           e.preventDefault();
           e.stopPropagation();
+          console.log('Mobile sign out button clicked');
           freshHamburgerBtn.classList.remove('open');
           freshMobileMenu.classList.remove('open');
           document.body.style.overflow = '';
-          if (typeof window.handleSignOut === 'function') {
+          // Call handleSignOut directly
+          if (window.handleSignOut) {
             window.handleSignOut();
+          } else {
+            console.error('handleSignOut not available');
           }
         }
       });
@@ -10364,9 +10375,15 @@ try {
           });
         }
         if (desktopLogoutBtn) {
-          desktopLogoutBtn.addEventListener('click', () => {
-            if (typeof window.handleSignOut === 'function') {
+          desktopLogoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Desktop logout button clicked');
+            // Call handleSignOut directly - it's always defined
+            if (window.handleSignOut) {
               window.handleSignOut();
+            } else {
+              console.error('handleSignOut not available');
             }
           });
         }
@@ -10435,6 +10452,7 @@ try {
   
   // Handle sign out - COMPLETE and IMMEDIATE logout
   async function handleSignOut() {
+    console.log('handleSignOut called - starting logout process');
     // IMMEDIATELY clear everything FIRST (don't wait for API)
     // Clear ALL localStorage
     localStorage.removeItem('hustl_token');
