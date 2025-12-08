@@ -9908,45 +9908,37 @@ meta.textContent =
         console.log("Nav event listener attached successfully");
       }
 
-      // Home CTA buttons - remove old listeners first
+      // Home CTA buttons - use event delegation
       const homeCtaPost = document.getElementById("homeCtaPost");
-      if (homeCtaPost) {
-        const newCtaPost = homeCtaPost.cloneNode(true);
-        homeCtaPost.parentNode.replaceChild(newCtaPost, homeCtaPost);
-        const freshCtaPost = document.getElementById("homeCtaPost");
-        if (freshCtaPost) {
-          freshCtaPost.addEventListener("click", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            // Call window.setView
-            if (window.setView && typeof window.setView === 'function') {
-              window.setView("post");
-              setTimeout(() => {
-                const formCard = document.getElementById("jobFormCard");
-                if (formCard) {
-                  formCard.scrollIntoView({ behavior: "smooth" });
-                }
-              }, 100);
-            }
-          });
-        }
+      if (homeCtaPost && !homeCtaPost.dataset.listenerAttached) {
+        homeCtaPost.dataset.listenerAttached = 'true';
+        homeCtaPost.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log("Home CTA Post clicked");
+          if (window.setView && typeof window.setView === 'function') {
+            window.setView("post");
+            setTimeout(() => {
+              const formCard = document.getElementById("jobFormCard");
+              if (formCard) {
+                formCard.scrollIntoView({ behavior: "smooth" });
+              }
+            }, 100);
+          }
+        });
       }
       
       const homeCtaBrowse = document.getElementById("homeCtaBrowse");
-      if (homeCtaBrowse) {
-        const newCtaBrowse = homeCtaBrowse.cloneNode(true);
-        homeCtaBrowse.parentNode.replaceChild(newCtaBrowse, homeCtaBrowse);
-        const freshCtaBrowse = document.getElementById("homeCtaBrowse");
-        if (freshCtaBrowse) {
-          freshCtaBrowse.addEventListener("click", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            // Call window.setView
-            if (window.setView && typeof window.setView === 'function') {
-              window.setView("jobs");
-            }
-          });
-        }
+      if (homeCtaBrowse && !homeCtaBrowse.dataset.listenerAttached) {
+        homeCtaBrowse.dataset.listenerAttached = 'true';
+        homeCtaBrowse.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log("Home CTA Browse clicked");
+          if (window.setView && typeof window.setView === 'function') {
+            window.setView("jobs");
+          }
+        });
       }
 
       // Jobs status filter
