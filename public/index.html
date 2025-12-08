@@ -9848,12 +9848,28 @@ meta.textContent =
       
       // Nav tabs - add fresh event listeners
       document.querySelectorAll(".nav-tab").forEach((tab) => {
-        tab.addEventListener("click", (e) => {
+        tab.addEventListener("click", async (e) => {
           e.preventDefault();
           e.stopPropagation();
           const v = tab.dataset.view;
-          if (v && typeof window.setView === 'function') {
-            window.setView(v);
+          if (v) {
+            // Call the view navigation directly to avoid any scope issues
+            const activeView = v;
+            
+            // Hide all sections
+            document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+            
+            // Show target section
+            const target = document.getElementById("view-" + v);
+            if (target) {
+              target.style.display = "block";
+              window.scrollTo({ top: 0, behavior: 'instant' });
+            }
+            
+            // Update active tab styling
+            document.querySelectorAll(".nav-tab").forEach((t) => {
+              t.classList.toggle("active", t.dataset.view === v);
+            });
           }
         });
       });
