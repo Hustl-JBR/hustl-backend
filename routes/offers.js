@@ -280,21 +280,92 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       console.log('[TEST MODE] Skipping Stripe account check for hustler:', offer.hustlerId);
     }
 
-    // Payment should already exist (customer paid upfront when posting job)
-    // We just need to verify it exists and is pre-authorized
-    const existingPayment = await prisma.payment.findUnique({
-      where: { jobId: offer.job.id },
-    });
-
-    if (!existingPayment) {
+    // Payment is required when accepting an offer (industry standard)
+    // Check if payment intent is provided
+    const { paymentIntentId } = req.body;
+    
+    if (!paymentIntentId && process.env.SKIP_STRIPE_CHECK !== 'true') {
+      // Calculate payment amounts from job
+      const jobAmount = parseFloat(offer.job.amount || 0);
+      const tipPercent = Math.min(parseFloat(offer.job.tipPercent || 0), 25);
+      const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50);
+      const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10);
+      const total = jobAmount + tipAmount + customerFee;
+      
       return res.status(400).json({ 
-        error: 'Payment not found. Customer must pay upfront when posting the job.' 
+        error: 'Payment required to accept this offer. Please complete payment to proceed.',
+        requiresPayment: true,
+        amount: total,
+        jobId: offer.job.id,
+        offerId: offer.id,
       });
     }
 
-    if (existingPayment.status !== 'PREAUTHORIZED') {
-      return res.status(400).json({ 
-        error: `Payment is not pre-authorized. Current status: ${existingPayment.status}` 
+    // Check if payment already exists (from previous attempt)
+    let existingPayment = await prisma.payment.findUnique({
+      where: { jobId: offer.job.id },
+    });
+
+    let paymentIntent;
+    
+    if (process.env.SKIP_STRIPE_CHECK === 'true') {
+      // Test mode - create fake payment
+      paymentIntent = {
+        id: paymentIntentId || `pi_test_${Date.now()}`,
+        status: 'requires_capture',
+      };
+    } else {
+      // Verify payment intent exists and is pre-authorized
+      const Stripe = require('stripe');
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+      paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      
+      if (paymentIntent.status !== 'requires_capture' && paymentIntent.status !== 'succeeded') {
+        return res.status(400).json({ 
+          error: 'Payment not authorized. Please complete payment to accept this offer.',
+          paymentStatus: paymentIntent.status,
+        });
+      }
+    }
+
+    // Calculate payment amounts
+    const jobAmount = parseFloat(offer.job.amount || 0);
+    const tipPercent = Math.min(parseFloat(offer.job.tipPercent || 0), 25);
+    const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50);
+    const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10);
+    const total = jobAmount + tipAmount + customerFee;
+
+    // Create or update payment record with PREAUTHORIZED status (held in escrow)
+    if (existingPayment) {
+      // Update existing payment
+      existingPayment = await prisma.payment.update({
+        where: { id: existingPayment.id },
+        data: {
+          hustlerId: offer.hustlerId,
+          amount: jobAmount,
+          tip: tipAmount,
+          feeCustomer: customerFee,
+          feeHustler: 0, // Will be calculated on release (12% of jobAmount)
+          total,
+          status: 'PREAUTHORIZED',
+          providerId: paymentIntent.id,
+        },
+      });
+    } else {
+      // Create new payment
+      existingPayment = await prisma.payment.create({
+        data: {
+          jobId: offer.job.id,
+          customerId: req.user.id,
+          hustlerId: offer.hustlerId,
+          amount: jobAmount,
+          tip: tipAmount,
+          feeCustomer: customerFee,
+          feeHustler: 0, // Will be calculated on release (12% of jobAmount)
+          total,
+          status: 'PREAUTHORIZED',
+          providerId: paymentIntent.id,
+        },
       });
     }
 

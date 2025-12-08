@@ -23,6 +23,97 @@ router.post('/intent', requireRole('CUSTOMER'), async (req, res) => {
   }
 });
 
+// POST /payments/create-intent/offer/:offerId - Create payment intent for accepting an offer
+router.post('/create-intent/offer/:offerId', requireRole('CUSTOMER'), async (req, res) => {
+  try {
+    const { offerId } = req.params;
+
+    const offer = await prisma.offer.findUnique({
+      where: { id: offerId },
+      include: {
+        job: {
+          include: {
+            customer: { select: { id: true, email: true, name: true } },
+            hustler: {
+              select: {
+                id: true,
+                stripeAccountId: true,
+              },
+            },
+          },
+        },
+        hustler: {
+          select: {
+            id: true,
+            stripeAccountId: true,
+          },
+        },
+      },
+    });
+
+    if (!offer) {
+      return res.status(404).json({ error: 'Offer not found' });
+    }
+
+    if (offer.job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    if (offer.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Offer is not pending' });
+    }
+
+    // Calculate payment amounts
+    const jobAmount = parseFloat(offer.job.amount || 0);
+    const tipPercent = Math.min(parseFloat(offer.job.tipPercent || 0), 25);
+    const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50);
+    const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10);
+    const total = jobAmount + tipAmount + customerFee;
+
+    // Create payment intent
+    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+    let paymentIntent;
+
+    if (skipStripeCheck) {
+      // Test mode
+      paymentIntent = {
+        id: `pi_test_${Date.now()}`,
+        client_secret: `pi_test_${Date.now()}_secret_${Math.random().toString(36).substr(2, 9)}`,
+        status: 'requires_payment_method',
+      };
+    } else {
+      // Real Stripe payment intent - use manual capture to hold funds in escrow
+      paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(total * 100),
+        currency: 'usd',
+        payment_method_types: ['card'],
+        metadata: {
+          jobId: offer.job.id,
+          offerId: offer.id,
+          customerId: req.user.id,
+          hustlerId: offer.hustlerId,
+          amount: jobAmount.toString(),
+          tip: tipAmount.toString(),
+          customerFee: customerFee.toString(),
+        },
+        capture_method: 'manual', // Hold funds in escrow until job completion
+      });
+    }
+
+    res.json({ 
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+      amount: total,
+    });
+  } catch (error) {
+    console.error('Create payment intent for offer error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Internal server error',
+      message: error.message || 'Failed to create payment intent'
+    });
+  }
+});
+
 // POST /jobs/:id/confirm - Capture payment (Customer confirms completion)
 router.post('/jobs/:jobId/confirm', requireRole('CUSTOMER'), async (req, res) => {
   try {

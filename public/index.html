@@ -5456,7 +5456,7 @@ async function renderJobs(reset = false) {
     }
 
     // Show Stripe Payment Modal for accepting hustler
-    async function showStripePaymentModal(clientSecret, jobId, offerId) {
+    async function showStripePaymentModal(clientSecret, jobId, onSuccessCallback) {
       // Check if Stripe.js is loaded
       if (typeof Stripe === 'undefined') {
         showToast("Payment system loading... Please try again in a moment.");
@@ -5548,12 +5548,20 @@ async function renderJobs(reset = false) {
           showToast("Payment failed: " + error.message);
           submitBtn.disabled = false;
           submitBtn.textContent = "Pay & Accept Hustler";
-        } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-          showToast("✅ Payment successful! Hustler accepted.");
+        } else if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'requires_capture')) {
+          // Payment succeeded or is pre-authorized (held in escrow)
+          showToast("✅ Payment successful! Processing...");
           document.body.removeChild(modalOverlay);
           document.body.style.overflow = "";
-          openJobDetails(jobId);
-          renderJobs();
+          
+          // Call the callback with paymentIntentId if provided
+          if (onSuccessCallback && typeof onSuccessCallback === 'function') {
+            await onSuccessCallback(paymentIntent.id);
+          } else {
+            // Default behavior: refresh job details
+            openJobDetails(jobId);
+            renderJobs();
+          }
         }
       });
       
@@ -6547,9 +6555,14 @@ async function renderJobs(reset = false) {
               acceptBtn.textContent = "Accept Hustler";
               acceptBtn.style.cssText = "flex: 1; padding: 0.6rem; font-size: 0.9rem;";
               acceptBtn.addEventListener("click", async () => {
+                acceptBtn.disabled = true;
+                acceptBtn.textContent = "Accepting...";
+                
                 try {
                   const token = localStorage.getItem("hustl_token");
-                  const response = await fetch(`${API_BASE}/offers/${offer.id}/accept`, {
+                  
+                  // First, try to accept the offer
+                  let response = await fetch(`${API_BASE}/offers/${offer.id}/accept`, {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
@@ -6558,30 +6571,77 @@ async function renderJobs(reset = false) {
                   });
 
                   if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to accept hustler');
+                    const errorData = await response.json();
+                    
+                    // If payment is required, create payment intent and show payment modal
+                    if (errorData.requiresPayment) {
+                      acceptBtn.disabled = false;
+                      acceptBtn.textContent = "Accept Hustler";
+                      
+                      // Create payment intent
+                      const paymentResponse = await fetch(`${API_BASE}/payments/create-intent/offer/${offer.id}`, {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          "Authorization": `Bearer ${token}`
+                        }
+                      });
+                      
+                      if (!paymentResponse.ok) {
+                        const paymentError = await paymentResponse.json();
+                        throw new Error(paymentError.error || "Failed to create payment");
+                      }
+                      
+                      const paymentData = await paymentResponse.json();
+                      
+                      // Close job modal first
+                      document.body.removeChild(modalOverlay);
+                      document.body.style.overflow = "";
+                      
+                      // Show Stripe payment modal
+                      await showStripePaymentModal(paymentData.clientSecret, job.id, async (paymentIntentId) => {
+                        // After payment succeeds, accept the offer with paymentIntentId
+                        try {
+                          const acceptResponse = await fetch(`${API_BASE}/offers/${offer.id}/accept`, {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ paymentIntentId })
+                          });
+                          
+                          if (!acceptResponse.ok) {
+                            const acceptError = await acceptResponse.json();
+                            throw new Error(acceptError.error || "Failed to accept offer");
+                          }
+                          
+                          showToast("✅ Hustler accepted! You can now message them.");
+                          openJobDetails(job.id);
+                          renderJobs();
+                        } catch (acceptError) {
+                          showToast("Error accepting offer: " + (acceptError.message || "Unknown error"));
+                        }
+                      });
+                      
+                      return;
+                    }
+                    
+                    throw new Error(errorData.error || 'Failed to accept hustler');
                   }
 
                   const data = await response.json();
                   
-                  // If payment intent is returned, show Stripe payment modal
-                  if (data.payment && data.payment.clientSecret) {
-                    // Close job modal first
-                    document.body.removeChild(modalOverlay);
-                    document.body.style.overflow = "";
-                    
-                    // Show Stripe payment modal
-                    showStripePaymentModal(data.payment.clientSecret, job.id, offer.id);
-                  } else {
-                    showToast("✅ Hustler accepted! Payment will be processed.");
-                    document.body.removeChild(modalOverlay);
-                    document.body.style.overflow = "";
-                    openJobDetails(job.id);
-                    renderJobs();
-                  }
+                  showToast("✅ Hustler accepted! You can now message them.");
+                  document.body.removeChild(modalOverlay);
+                  document.body.style.overflow = "";
+                  openJobDetails(job.id);
+                  renderJobs();
                 } catch (error) {
                   console.error("Error accepting hustler:", error);
                   showToast("Failed to accept hustler: " + (error.message || "Unknown error"));
+                  acceptBtn.disabled = false;
+                  acceptBtn.textContent = "Accept Hustler";
                 }
               });
               actionsRow.appendChild(acceptBtn);
@@ -7447,7 +7507,9 @@ async function renderJobs(reset = false) {
                 
                 try {
                   const token = localStorage.getItem("hustl_token");
-                  const response = await fetch(`/offers/${offerId}/accept`, {
+                  
+                  // First, try to accept the offer
+                  let response = await fetch(`/offers/${offerId}/accept`, {
                     method: "POST",
                     headers: {
                       "Content-Type": "application/json",
@@ -7456,8 +7518,60 @@ async function renderJobs(reset = false) {
                   });
                   
                   if (!response.ok) {
-                    const data = await response.json();
-                    throw new Error(data.error || "Failed to accept");
+                    const errorData = await response.json();
+                    
+                    // If payment is required, create payment intent and show payment modal
+                    if (errorData.requiresPayment) {
+                      btn.disabled = false;
+                      btn.textContent = "✓ Accept";
+                      
+                      // Create payment intent
+                      const paymentResponse = await fetch(`/payments/create-intent/offer/${offerId}`, {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          "Authorization": `Bearer ${token}`
+                        }
+                      });
+                      
+                      if (!paymentResponse.ok) {
+                        const paymentError = await paymentResponse.json();
+                        throw new Error(paymentError.error || "Failed to create payment");
+                      }
+                      
+                      const paymentData = await paymentResponse.json();
+                      
+                      // Show Stripe payment modal
+                      await showStripePaymentModal(paymentData.clientSecret, jobId, async (paymentIntentId) => {
+                        // After payment succeeds, accept the offer with paymentIntentId
+                        try {
+                          const acceptResponse = await fetch(`/offers/${offerId}/accept`, {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              "Authorization": `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ paymentIntentId })
+                          });
+                          
+                          if (!acceptResponse.ok) {
+                            const acceptError = await acceptResponse.json();
+                            throw new Error(acceptError.error || "Failed to accept offer");
+                          }
+                          
+                          showToast("✓ Hustler accepted! You can now message them.");
+                          overlay.remove();
+                          document.body.style.overflow = "";
+                          openJobDetails(jobId); // Refresh
+                        } catch (acceptError) {
+                          showToast("Error accepting offer: " + (acceptError.message || "Unknown error"));
+                        }
+                      });
+                      
+                      return;
+                    }
+                    
+                    throw new Error(errorData.error || "Failed to accept");
                   }
                   
                   showToast("✓ Hustler accepted! You can now message them.");
@@ -8088,9 +8202,14 @@ async function renderJobs(reset = false) {
               acceptBtn.textContent = "Accept Hustler";
               acceptBtn.style.cssText = "flex: 1; padding: 0.6rem; font-size: 0.9rem;";
               acceptBtn.addEventListener("click", async () => {
+                acceptBtn.disabled = true;
+                acceptBtn.textContent = "Accepting...";
+                
                 try {
                   const token = localStorage.getItem("hustl_token");
-                  const response = await fetch(`${API_BASE}/offers/${offer.id}/accept`, {
+                  
+                  // First, try to accept the offer
+                  let response = await fetch(`${API_BASE}/offers/${offer.id}/accept`, {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
@@ -8099,26 +8218,71 @@ async function renderJobs(reset = false) {
                   });
 
                   if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to accept hustler');
+                    const errorData = await response.json();
+                    
+                    // If payment is required, create payment intent and show payment modal
+                    if (errorData.requiresPayment) {
+                      acceptBtn.disabled = false;
+                      acceptBtn.textContent = "Accept Hustler";
+                      
+                      // Create payment intent
+                      const paymentResponse = await fetch(`${API_BASE}/payments/create-intent/offer/${offer.id}`, {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          "Authorization": `Bearer ${token}`
+                        }
+                      });
+                      
+                      if (!paymentResponse.ok) {
+                        const paymentError = await paymentResponse.json();
+                        throw new Error(paymentError.error || "Failed to create payment");
+                      }
+                      
+                      const paymentData = await paymentResponse.json();
+                      
+                      // Show Stripe payment modal
+                      await showStripePaymentModal(paymentData.clientSecret, job.id, async (paymentIntentId) => {
+                        // After payment succeeds, accept the offer with paymentIntentId
+                        try {
+                          const acceptResponse = await fetch(`${API_BASE}/offers/${offer.id}/accept`, {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ paymentIntentId })
+                          });
+                          
+                          if (!acceptResponse.ok) {
+                            const acceptError = await acceptResponse.json();
+                            throw new Error(acceptError.error || "Failed to accept offer");
+                          }
+                          
+                          showToast("✅ Hustler accepted for this job!");
+                          openJobDetails(job.id);
+                          renderJobs();
+                        } catch (acceptError) {
+                          showToast("Error accepting offer: " + (acceptError.message || "Unknown error"));
+                        }
+                      });
+                      
+                      return;
+                    }
+                    
+                    throw new Error(errorData.error || 'Failed to accept hustler');
                   }
 
                   const data = await response.json();
                   
-                  // If payment intent is returned, show Stripe popup
-                  if (data.payment && data.payment.clientSecret) {
-                    // Stripe payment popup will appear here
-                    showToast("Hustler accepted! Payment will be processed.");
-                  } else {
-                    showToast("✅ Hustler accepted for this job!");
-                  }
-                  
-                  // Refresh job details
+                  showToast("✅ Hustler accepted for this job!");
                   openJobDetails(job.id);
                   renderJobs();
                 } catch (error) {
                   console.error("Error accepting hustler:", error);
                   showToast("Failed to accept hustler: " + (error.message || "Unknown error"));
+                  acceptBtn.disabled = false;
+                  acceptBtn.textContent = "Accept Hustler";
                 }
               });
               actionsRow.appendChild(acceptBtn);

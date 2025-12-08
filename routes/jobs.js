@@ -293,25 +293,21 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
     
     console.log('[POST /jobs] Creating job with data:', JSON.stringify(jobData, null, 2));
     
-    // Calculate payment amounts (customer pays upfront)
+    // Calculate payment amounts (will be required when accepting an offer)
     const jobAmount = parseFloat(amount);
     const tipPercent = Math.min(parseFloat(req.body.tipPercent || 0), 25); // Max 25%
     const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50); // Max $50 tip
     const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10); // 3% customer fee min $1, max $10
     const total = jobAmount + tipAmount + customerFee;
 
-    // Require payment upfront - check if payment intent is provided
-    const { paymentIntentId, clientSecret } = req.body;
-    
-    if (!paymentIntentId && process.env.SKIP_STRIPE_CHECK !== 'true') {
-      return res.status(400).json({ 
-        error: 'Payment required upfront. Please complete payment before posting the job.',
-        requiresPayment: true,
-        amount: total,
-      });
-    }
+    // NO PAYMENT REQUIRED UPFRONT - Jobs can be posted for free
+    // Payment will be required when accepting an offer (industry standard)
+    // This allows customers to:
+    // 1. Post jobs without paying (lower barrier to entry)
+    // 2. Compare offers before committing
+    // 3. Payment is still protected (held in escrow when accepting)
 
-    // Create job first
+    // Create job WITHOUT payment (payment created when accepting offer)
     const job = await prisma.job.create({
       data: jobData,
       include: {
@@ -327,55 +323,16 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
       },
     });
 
-    // Create payment record (payment is already pre-authorized via Stripe)
-    const { createPaymentIntent } = require('../services/stripe');
-    let paymentIntent;
-    
-    if (process.env.SKIP_STRIPE_CHECK === 'true') {
-      // Test mode - create fake payment
-      paymentIntent = {
-        id: paymentIntentId || `pi_test_${Date.now()}`,
-        status: 'requires_capture',
-      };
-    } else {
-      // Verify payment intent exists and is pre-authorized
-      const Stripe = require('stripe');
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-      paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-      
-      if (paymentIntent.status !== 'requires_capture' && paymentIntent.status !== 'succeeded') {
-        // Delete the job if payment is invalid
-        await prisma.job.delete({ where: { id: job.id } });
-        return res.status(400).json({ 
-          error: 'Payment not authorized. Please complete payment before posting the job.',
-          paymentStatus: paymentIntent.status,
-        });
-      }
-    }
-
-    // Create payment record with PREAUTHORIZED status (held in escrow)
-    const payment = await prisma.payment.create({
-      data: {
-        jobId: job.id,
-        customerId: req.user.id,
-        hustlerId: null, // Will be set when offer is accepted
-        amount: jobAmount,
-        tip: tipAmount,
-        feeCustomer: customerFee,
-        feeHustler: 0, // Will be calculated on release (12% of jobAmount)
-        total,
-        status: 'PREAUTHORIZED',
-        providerId: paymentIntent.id,
-      },
-    });
+    // Store payment amounts in job metadata for later use when accepting offer
+    // Payment will be created when customer accepts an offer
 
     res.status(201).json({
       ...job,
-      payment: {
-        id: payment.id,
-        status: payment.status,
-        amount: payment.amount,
-        total: payment.total,
+      paymentAmounts: {
+        amount: jobAmount,
+        tip: tipAmount,
+        fee: customerFee,
+        total: total,
       },
     });
   } catch (error) {
