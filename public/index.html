@@ -3100,7 +3100,7 @@
                   <button class="btn btn-ghost" id="changePasswordBtn" style="width: 100%; justify-content: flex-start; gap: 0.5rem;">
                     🔑 Change Password
                   </button>
-                  <button class="btn btn-ghost" onclick="if(typeof window.handleSignOut === 'function') window.handleSignOut()" style="width: 100%; justify-content: flex-start; gap: 0.5rem; color: #dc2626; border-color: #fecaca;">
+                  <button class="btn btn-ghost" id="profileSignOutBtn" data-action="signout" style="width: 100%; justify-content: flex-start; gap: 0.5rem; color: #dc2626; border-color: #fecaca;">
                     🚪 Sign Out
                   </button>
                 </div>
@@ -3542,9 +3542,14 @@ async function renderAuthPill() {
     const logoutBtn = document.getElementById("logoutButton");
     if (logoutBtn) {
       logoutBtn.addEventListener("click", async () => {
-        await window.hustlAPI.auth.signOut();
-        showToast("Logged out.");
-        renderAll();
+        if (typeof window.handleSignOut === 'function') {
+          await window.handleSignOut();
+        } else {
+          // Fallback if handleSignOut not ready
+          await window.hustlAPI.auth.signOut();
+          showToast("Logged out.");
+          renderAll();
+        }
       });
     }
   }
@@ -8799,6 +8804,16 @@ async function renderJobs(reset = false) {
         showChangePasswordModal();
       });
     }
+    
+    // Profile sign out button
+    const profileSignOutBtn = document.getElementById("profileSignOutBtn");
+    if (profileSignOutBtn) {
+      profileSignOutBtn.addEventListener("click", () => {
+        if (typeof window.handleSignOut === 'function') {
+          window.handleSignOut();
+        }
+      });
+    }
   }, 100);
 
   // Stripe Connect Content (clear first to prevent duplicates)
@@ -10151,6 +10166,7 @@ try {
       
       // Mobile auth buttons - use event delegation for dynamically added buttons
       freshMobileMenu.addEventListener('click', (e) => {
+        // Handle login button
         if (e.target.id === 'mobileLoginBtn' || e.target.closest('#mobileLoginBtn')) {
           e.preventDefault();
           e.stopPropagation();
@@ -10160,7 +10176,9 @@ try {
           if (typeof window.openAuthModal === 'function') {
             window.openAuthModal('login');
           }
-        } else if (e.target.id === 'mobileSignupBtn' || e.target.closest('#mobileSignupBtn')) {
+        } 
+        // Handle signup button
+        else if (e.target.id === 'mobileSignupBtn' || e.target.closest('#mobileSignupBtn')) {
           e.preventDefault();
           e.stopPropagation();
           freshHamburgerBtn.classList.remove('open');
@@ -10170,26 +10188,23 @@ try {
             window.openAuthModal('create');
           }
         }
-      });
-    
-    // Desktop auth buttons
-    const headerLoginBtn = document.getElementById('headerLoginBtn');
-    const headerSignupBtn = document.getElementById('headerSignupBtn');
-    
-    if (headerLoginBtn) {
-      headerLoginBtn.addEventListener('click', () => {
-        if (typeof window.openAuthModal === 'function') {
-          window.openAuthModal('login');
+        // Handle sign out button - check for ID, data-action, or text content
+        else if (e.target.id === 'mobileSignOutBtn' || 
+                 e.target.closest('#mobileSignOutBtn') ||
+                 e.target.dataset.action === 'signout' || 
+                 e.target.closest('[data-action="signout"]')) {
+          e.preventDefault();
+          e.stopPropagation();
+          freshHamburgerBtn.classList.remove('open');
+          freshMobileMenu.classList.remove('open');
+          document.body.style.overflow = '';
+          if (typeof window.handleSignOut === 'function') {
+            window.handleSignOut();
+          }
         }
       });
-    }
-    if (headerSignupBtn) {
-      headerSignupBtn.addEventListener('click', () => {
-        if (typeof window.openAuthModal === 'function') {
-          window.openAuthModal('create');
-        }
-      });
-    }
+    
+    // Desktop auth buttons are now handled in updateHeaderAuth() to avoid duplicate listeners
   }
   
   // ========== AUTH MODAL ==========
@@ -10273,9 +10288,26 @@ try {
       if (desktopAuth) {
         desktopAuth.innerHTML = `
           <span style="color: var(--text-main); font-size: 0.85rem; font-weight: 500; margin-right: 0.75rem;">👋 ${firstName}</span>
-          <button class="btn-login-header" onclick="if(typeof window.setView === 'function') window.setView('profile')">Profile</button>
-          <button class="btn-signup-header" onclick="if(typeof window.handleSignOut === 'function') window.handleSignOut()" style="background: #fee2e2; color: #dc2626; border-color: #fca5a5;">Logout</button>
+          <button class="btn-login-header" id="desktopProfileBtn" data-action="profile">Profile</button>
+          <button class="btn-signup-header" id="desktopLogoutBtn" data-action="signout" style="background: #fee2e2; color: #dc2626; border-color: #fca5a5;">Logout</button>
         `;
+        // Add event listeners for desktop buttons
+        const desktopProfileBtn = document.getElementById('desktopProfileBtn');
+        const desktopLogoutBtn = document.getElementById('desktopLogoutBtn');
+        if (desktopProfileBtn) {
+          desktopProfileBtn.addEventListener('click', () => {
+            if (typeof window.setView === 'function') {
+              window.setView('profile');
+            }
+          });
+        }
+        if (desktopLogoutBtn) {
+          desktopLogoutBtn.addEventListener('click', () => {
+            if (typeof window.handleSignOut === 'function') {
+              window.handleSignOut();
+            }
+          });
+        }
       }
       // Update entire mobile menu for logged-in users
       if (mobileMenu) {
@@ -10287,7 +10319,7 @@ try {
           <button class="mobile-menu-item" data-view="profile">👤 Profile</button>
           <div class="header-auth" id="mobileMenuAuth">
             <div style="padding: 0.5rem; color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border);">👋 Signed in as ${firstName}</div>
-            <button class="btn-signup-header" onclick="if(typeof window.handleSignOut === 'function') window.handleSignOut()" style="width:100%; margin-top: 0.5rem; padding: 1rem; background: #fee2e2 !important; color: #dc2626 !important; border: 2px solid #fca5a5 !important; font-weight: 600; font-size: 1rem; z-index: 1; position: relative; opacity: 1 !important; visibility: visible !important; display: block !important;">🚪 Sign Out</button>
+            <button class="btn-signup-header" id="mobileSignOutBtn" data-action="signout" style="width:100%; margin-top: 0.5rem; padding: 1rem; background: #fee2e2 !important; color: #dc2626 !important; border: 2px solid #fca5a5 !important; font-weight: 600; font-size: 1rem; z-index: 1; position: relative; opacity: 1 !important; visibility: visible !important; display: block !important;">🚪 Sign Out</button>
           </div>
         `;
       }
@@ -10295,9 +10327,26 @@ try {
       // Logged out state - restore default buttons
       if (desktopAuth) {
         desktopAuth.innerHTML = `
-          <button class="btn-login-header" id="headerLoginBtn" onclick="if(typeof window.openAuthModal === 'function') window.openAuthModal('login')">Log In</button>
-          <button class="btn-signup-header" id="headerSignupBtn" onclick="if(typeof window.openAuthModal === 'function') window.openAuthModal('create')">Sign Up Free</button>
+          <button class="btn-login-header" id="headerLoginBtn">Log In</button>
+          <button class="btn-signup-header" id="headerSignupBtn">Sign Up Free</button>
         `;
+        // Add event listeners for desktop buttons
+        const headerLoginBtn = document.getElementById('headerLoginBtn');
+        const headerSignupBtn = document.getElementById('headerSignupBtn');
+        if (headerLoginBtn) {
+          headerLoginBtn.addEventListener('click', () => {
+            if (typeof window.openAuthModal === 'function') {
+              window.openAuthModal('login');
+            }
+          });
+        }
+        if (headerSignupBtn) {
+          headerSignupBtn.addEventListener('click', () => {
+            if (typeof window.openAuthModal === 'function') {
+              window.openAuthModal('create');
+            }
+          });
+        }
       }
       // Update entire mobile menu for logged-out users
       if (mobileMenu) {
@@ -10308,8 +10357,8 @@ try {
           <button class="mobile-menu-item" data-view="messages">💬 Messages</button>
           <button class="mobile-menu-item" data-view="profile">👤 Profile</button>
           <div class="header-auth" id="mobileMenuAuth">
-            <button class="btn-login-header" id="mobileLoginBtn" onclick="const menu = document.getElementById('mobileMenu'); const btn = document.getElementById('hamburgerBtn'); if(menu) menu.classList.remove('open'); if(btn) btn.classList.remove('open'); if(typeof window.openAuthModal === 'function') window.openAuthModal('login')">Log In</button>
-            <button class="btn-signup-header" id="mobileSignupBtn" onclick="const menu = document.getElementById('mobileMenu'); const btn = document.getElementById('hamburgerBtn'); if(menu) menu.classList.remove('open'); if(btn) btn.classList.remove('open'); if(typeof window.openAuthModal === 'function') window.openAuthModal('create')">Sign Up Free</button>
+            <button class="btn-login-header" id="mobileLoginBtn">Log In</button>
+            <button class="btn-signup-header" id="mobileSignupBtn">Sign Up Free</button>
           </div>
         `;
       }
@@ -10322,17 +10371,32 @@ try {
   // Handle sign out
   async function handleSignOut() {
     try {
+      // Close mobile menu if open
+      const hamburgerBtn = document.getElementById('hamburgerBtn');
+      const mobileMenu = document.getElementById('mobileMenu');
+      if (hamburgerBtn) hamburgerBtn.classList.remove('open');
+      if (mobileMenu) mobileMenu.classList.remove('open');
+      document.body.style.overflow = '';
+      
+      // Call API sign out
       await window.hustlAPI.auth.signOut();
     } catch (error) {
       console.error("Sign out error:", error);
     } finally {
-      // Always clear local storage
+      // Always clear local storage - clear ALL auth-related items
       localStorage.removeItem('hustl_token');
       localStorage.removeItem('hustl_user');
+      localStorage.removeItem('hustl_state_v3');
       
       // Clear old state
       state.currentUserId = null;
+      state.users = [];
       saveState();
+      
+      // Clear any cached user data
+      if (window.hustlAPI && window.hustlAPI.auth) {
+        window.hustlAPI.auth.currentUser = null;
+      }
       
       // Update UI
       await updateHeaderAuth();
