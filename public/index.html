@@ -9432,6 +9432,11 @@ async function renderJobs(reset = false) {
 
     // Render Basic Info Section - View Mode
     function renderBasicInfoView(user, ratingAvg, ratingCount, container) {
+      console.log("renderBasicInfoView called with user:", user?.name, "container:", container);
+      if (!container) {
+        console.error("Container is null in renderBasicInfoView");
+        return;
+      }
       const avatarContent = user.photoUrl 
         ? `<img src="${user.photoUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">` 
         : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 700; color: var(--primary); background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);">${(user.name || 'U')[0].toUpperCase()}</div>`;
@@ -9748,9 +9753,12 @@ async function renderJobs(reset = false) {
   }
 
   // Render Basic Info Section (View Mode by default)
+  console.log("Rendering Basic Info section. basicInfoSection exists:", !!basicInfoSection, "User:", user?.name);
   if (basicInfoSection) {
     try {
+      console.log("Calling renderBasicInfoView with rating:", ratingAvg, "count:", ratingCount);
       renderBasicInfoView(user, ratingAvg, ratingCount, basicInfoSection);
+      console.log("Basic Info rendered successfully");
     } catch (error) {
       console.error("Error rendering Basic Info:", error);
       // Fallback: show basic info even if render fails
