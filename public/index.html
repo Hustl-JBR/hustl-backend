@@ -3442,6 +3442,31 @@ heart of Hustl.
     /* ---------- View navigation ---------- */
 
     async function setView(view) {
+      // Protected views that require authentication
+      const protectedViews = ['profile', 'messages', 'post'];
+      
+      // Check auth for protected views
+      if (protectedViews.includes(view)) {
+        let user = null;
+        try {
+          user = await window.hustlAPI.auth.getCurrentUser();
+        } catch (e) {
+          // Ignore errors, user will be null
+        }
+        
+        if (!user) {
+          // Not authenticated - redirect to home and show login
+          showToast("Please log in to access this page");
+          view = 'home';
+          // Open login modal
+          setTimeout(() => {
+            if (window.openAuthModal && typeof window.openAuthModal === 'function') {
+              window.openAuthModal('login');
+            }
+          }, 300);
+        }
+      }
+      
       activeView = view;
       
       // Hide ALL sections first including auth section
@@ -10381,7 +10406,7 @@ try {
     }, 100);
   }
   
-  // Handle sign out
+  // Handle sign out - COMPLETE logout
   async function handleSignOut() {
     try {
       // Close mobile menu if open
@@ -10391,58 +10416,82 @@ try {
       if (mobileMenu) mobileMenu.classList.remove('open');
       document.body.style.overflow = '';
       
-      // Call API sign out
+      // Call API sign out (clears backend session if any, and all client storage)
       await window.hustlAPI.auth.signOut();
     } catch (error) {
       console.error("Sign out error:", error);
-    } finally {
-      // Always clear local storage - clear ALL auth-related items
-      localStorage.removeItem('hustl_token');
-      localStorage.removeItem('hustl_user');
-      localStorage.removeItem('hustl_state_v3');
-      
-      // Clear old state
-      state.currentUserId = null;
-      state.users = [];
-      saveState();
-      
-      // Clear any cached user data
-      if (window.hustlAPI && window.hustlAPI.auth) {
-        window.hustlAPI.auth.currentUser = null;
-      }
-      
-      // Update UI first
-      await updateHeaderAuth();
-      
-      // Switch to home view and show auth section
-      if (window.setView && typeof window.setView === 'function') {
-        window.setView('home');
-      } else {
-        // Fallback
-        document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
-        const homeView = document.getElementById("view-home");
-        if (homeView) homeView.style.display = "block";
-      }
-      
-      // Show auth section
-      const authSection = document.getElementById("authSection");
-      if (authSection) {
-        authSection.style.display = 'block';
-        // Scroll to auth section
-        setTimeout(() => {
-          authSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-      }
-      
-      // Open login modal automatically
+      // Continue with logout even if API call fails
+    }
+    
+    // ALWAYS clear everything - even if API call failed
+    // Clear ALL localStorage
+    localStorage.removeItem('hustl_token');
+    localStorage.removeItem('hustl_user');
+    localStorage.removeItem('hustl_state_v3');
+    
+    // Clear ALL sessionStorage
+    sessionStorage.removeItem('hustl_token');
+    sessionStorage.removeItem('hustl_user');
+    
+    // Clear cookies
+    document.cookie.split(";").forEach((c) => {
+      document.cookie = c
+        .replace(/^ +/, "")
+        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+    });
+    
+    // Clear state
+    state.currentUserId = null;
+    state.users = [];
+    saveState();
+    
+    // Clear any cached user data
+    if (window.hustlAPI && window.hustlAPI.auth) {
+      window.hustlAPI.auth.currentUser = null;
+    }
+    
+    // Force clear any cached API responses
+    if (window.optimizedApi) {
+      window.optimizedApi.invalidateCache();
+    }
+    
+    // Update UI
+    await updateHeaderAuth();
+    
+    // Switch to home view and show auth section
+    if (window.setView && typeof window.setView === 'function') {
+      window.setView('home');
+    } else {
+      // Fallback
+      document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+      const homeView = document.getElementById("view-home");
+      if (homeView) homeView.style.display = "block";
+    }
+    
+    // Show auth section
+    const authSection = document.getElementById("authSection");
+    if (authSection) {
+      authSection.style.display = 'block';
+      // Scroll to auth section
       setTimeout(() => {
-        if (window.openAuthModal && typeof window.openAuthModal === 'function') {
-          window.openAuthModal('login');
-        }
-      }, 300);
-      
-      showToast("✅ Signed out successfully");
-      await renderAll();
+        authSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+    
+    // Open login modal automatically
+    setTimeout(() => {
+      if (window.openAuthModal && typeof window.openAuthModal === 'function') {
+        window.openAuthModal('login');
+      }
+    }, 300);
+    
+    showToast("✅ Signed out successfully");
+    await renderAll();
+    
+    // Force a page reload to clear any cached state (prevents back button issues)
+    // Use replaceState to prevent back button from going to logged-in state
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', window.location.pathname);
     }
   }
   window.handleSignOut = handleSignOut;
@@ -10501,10 +10550,33 @@ try {
       // Initialize auth state and render
       (async () => {
         try {
+          // Check auth on page load
+          const user = await window.hustlAPI.auth.getCurrentUser();
+          
+          // If on a protected view and not authenticated, redirect to home
+          const protectedViews = ['profile', 'messages', 'post'];
+          const currentView = activeView || 'home';
+          
+          if (protectedViews.includes(currentView) && !user) {
+            // Not authenticated on protected view - redirect to home
+            if (window.setView && typeof window.setView === 'function') {
+              window.setView('home');
+            }
+            // Show login modal
+            setTimeout(() => {
+              if (window.openAuthModal && typeof window.openAuthModal === 'function') {
+                window.openAuthModal('login');
+              }
+            }, 500);
+          }
+          
           await updateHeaderAuth();
           await renderAll();
         } catch (error) {
           console.error('Error initializing auth state:', error);
+          // If auth check fails, assume not logged in
+          await updateHeaderAuth();
+          await renderAll();
         }
       })();
       

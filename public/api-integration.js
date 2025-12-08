@@ -114,8 +114,34 @@
     },
 
     async signOut() {
+      // Call backend logout (optional, but good practice)
+      try {
+        const token = localStorage.getItem('hustl_token');
+        if (token) {
+          await apiRequest('/auth/logout', {
+            method: 'POST',
+          });
+        }
+      } catch (error) {
+        // Ignore errors - logout should always succeed even if backend call fails
+        console.warn('Backend logout call failed (non-critical):', error);
+      }
+      
+      // Clear all storage
       localStorage.removeItem('hustl_token');
       localStorage.removeItem('hustl_user');
+      sessionStorage.removeItem('hustl_token');
+      sessionStorage.removeItem('hustl_user');
+      
+      // Clear cookies (if any)
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c
+          .replace(/^ +/, "")
+          .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      
+      // Clear cached user
+      this.currentUser = null;
     },
 
     async verifyEmail(email, code) {
@@ -140,28 +166,30 @@
     },
 
     async getCurrentUser() {
-      const storedUser = localStorage.getItem('hustl_user');
-      if (storedUser) {
-        try {
-          return JSON.parse(storedUser);
-        } catch (e) {
-          // Invalid stored user, try to fetch from API
-        }
-      }
-
-      const token = localStorage.getItem('hustl_token');
+      const token = localStorage.getItem('hustl_token') || sessionStorage.getItem('hustl_token');
       if (!token) {
+        // No token - clear any stale user data
+        localStorage.removeItem('hustl_user');
+        sessionStorage.removeItem('hustl_user');
+        this.currentUser = null;
         return null;
       }
 
+      // Always validate token with backend - don't trust cached user data
       try {
         const user = await apiRequest('/users/me');
+        // Update cached user only after successful validation
         localStorage.setItem('hustl_user', JSON.stringify(user));
+        this.currentUser = user;
         return user;
       } catch (error) {
-        // Token might be invalid, clear it
+        // Token is invalid or expired - clear everything
+        console.warn('Token validation failed, clearing auth data:', error);
         localStorage.removeItem('hustl_token');
         localStorage.removeItem('hustl_user');
+        sessionStorage.removeItem('hustl_token');
+        sessionStorage.removeItem('hustl_user');
+        this.currentUser = null;
         return null;
       }
     },

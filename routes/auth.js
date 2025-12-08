@@ -401,6 +401,18 @@ router.post('/verify-email', [
   }
 });
 
+// POST /auth/logout - Logout user (optional, mainly for server-side session cleanup if needed)
+router.post('/logout', async (req, res) => {
+  try {
+    // In a stateless JWT system, logout is mainly client-side
+    // But we can log it or do any server-side cleanup here if needed
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /auth/resend-verification - Resend verification email
 router.post('/resend-verification', [
   body('email').isEmail().normalizeEmail(),
