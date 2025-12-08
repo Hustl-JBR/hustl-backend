@@ -9832,8 +9832,29 @@ meta.textContent =
         e.preventDefault();
         e.stopPropagation();
         const v = tab.dataset.view;
-        if (v && window.setView) {
-          window.setView(v);
+        if (v) {
+          // Try to call setView - if it's the stub, use fallback
+          if (window.setView && typeof window.setView === 'function') {
+            // Check if it's the real function (not the stub)
+            const funcStr = window.setView.toString();
+            if (!funcStr.includes('not ready yet')) {
+              window.setView(v);
+            } else {
+              // Stub function - use fallback
+              document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+              const target = document.getElementById("view-" + v);
+              if (target) target.style.display = "block";
+              document.querySelectorAll(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === v));
+              window.scrollTo({ top: 0, behavior: 'instant' });
+            }
+          } else {
+            // Fallback: basic view switching
+            document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+            const target = document.getElementById("view-" + v);
+            if (target) target.style.display = "block";
+            document.querySelectorAll(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === v));
+            window.scrollTo({ top: 0, behavior: 'instant' });
+          }
         }
       });
     }
