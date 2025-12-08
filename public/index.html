@@ -6411,13 +6411,27 @@ async function renderJobs(reset = false) {
         // Check if already applied
         let hasApplied = false;
         try {
-          const token = localStorage.getItem("hustl_token");
           const offersResponse = await fetch(`${API_BASE}/offers/${job.id}`, {
             headers: token ? { "Authorization": `Bearer ${token}` } : {}
           });
           if (offersResponse.ok) {
             const offers = await offersResponse.json();
-            hasApplied = Array.isArray(offers) && offers.some(o => o.hustlerId === currentUser.id);
+            // Get user ID from currentUser or fetch from API
+            let userId = currentUser?.id;
+            if (!userId && token) {
+              try {
+                const userResponse = await fetch(`${API_BASE}/auth/me`, {
+                  headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (userResponse.ok) {
+                  const userData = await userResponse.json();
+                  userId = userData.id;
+                }
+              } catch (e) {
+                console.error("Error getting user ID:", e);
+              }
+            }
+            hasApplied = userId && Array.isArray(offers) && offers.some(o => o.hustlerId === userId);
           }
         } catch (e) {
           console.error("Error checking applications:", e);
