@@ -10281,7 +10281,8 @@ try {
   }
   
   // ========== AUTH MODAL ==========
-  function openAuthModal(mode = 'create') {
+  // Define and assign to window immediately
+  window.openAuthModal = function openAuthModal(mode = 'create') {
     // Check if user is already logged in
     const user = getCurrentUser();
     if (user) {
