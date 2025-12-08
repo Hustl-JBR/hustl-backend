@@ -9970,7 +9970,8 @@ meta.textContent =
         });
       }
     }
-async function startPayment(jobId) {
+    
+    async function startPayment(jobId) {
   const job = state.jobs.find((j) => j.id === jobId);
   const user = getCurrentUser();
 
