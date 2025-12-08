@@ -10390,16 +10390,11 @@ try {
     });
   }
 
-  // Expose functions globally for inline onclick handlers
-  // Also set _real versions for stub functions to call
-  window._realSetView = setView;
-  window.setView = setView;
-  window._realOpenAuthModal = openAuthModal;
-  window.openAuthModal = openAuthModal;
-  window._realCloseAuthModal = closeAuthModal;
-  window.closeAuthModal = closeAuthModal;
-  window._realHandleSignOut = handleSignOut;
-  window.handleSignOut = handleSignOut;
+  // Functions are already exposed globally at their definition points:
+  // - setView: line 3538-3539
+  // - openAuthModal: line 10246-10247
+  // - closeAuthModal: line 10237-10238
+  // - handleSignOut: line 10363-10364
   // goToStripeSetup, startExploring, closeWelcomeModal are already defined globally above
 
   // Boot - initialize when DOM is ready
