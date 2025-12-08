@@ -9312,13 +9312,14 @@ async function renderJobs(reset = false) {
   photoSection.className = "field";
   photoSection.innerHTML = `
     <label style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; display: block;">📷 Profile Picture</label>
-    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem;">
-      <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--bg-light); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
-        ${user.photoUrl ? `<img src="${user.photoUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">` : `<div style="font-size: 2rem;">${(user.name || 'U')[0].toUpperCase()}</div>`}
+    <p class="muted" style="margin: 0 0 0.75rem 0; font-size: 0.85rem;">A clear profile picture helps build trust with customers and hustlers.</p>
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--bg-light); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+        ${user.photoUrl ? `<img src="${user.photoUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">` : `<div style="font-size: 2.5rem; color: var(--text-muted);">${(user.name || 'U')[0].toUpperCase()}</div>`}
       </div>
       <div style="flex: 1;">
-        <input id='avatarUploadInput' type='file' accept='image/*' style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem;" />
-        <p class="muted" style="margin: 0.25rem 0 0 0; font-size: 0.8rem;">Upload a clear photo of yourself</p>
+        <input id='avatarUploadInput' type='file' accept='image/*' style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; cursor: pointer;" />
+        <p class="muted" style="margin: 0.5rem 0 0 0; font-size: 0.8rem;">Click to select a photo. Image will be automatically compressed and saved.</p>
       </div>
     </div>
   `;
@@ -9327,11 +9328,13 @@ async function renderJobs(reset = false) {
   // Section 2: Basic Info
   const nameSection = document.createElement("div");
   nameSection.className = "field";
+  const nameValue = user.name || '';
+  const nameIsEditable = !nameValue; // Start editable if no name, otherwise start in view mode
   nameSection.innerHTML = `
     <label for="profileNameInput" style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; display: block;">👤 Name</label>
-    <div style="display: flex; gap: 0.5rem;">
-      <input id="profileNameInput" type="text" placeholder="Your full name" value="${user.name || ''}" style="flex: 1; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem;" />
-      <button class="btn btn-primary" id="saveNameButton" style="white-space: nowrap;">Save</button>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <input id="profileNameInput" type="text" placeholder="Your full name" value="${nameValue}" ${nameIsEditable ? '' : 'readonly'} style="flex: 1; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; ${nameIsEditable ? '' : 'background: var(--bg-light); cursor: default;'}" />
+      <button class="btn btn-primary" id="saveNameButton" style="white-space: nowrap;">${nameIsEditable ? 'Save' : 'Edit'}</button>
     </div>
   `;
   profileForm.appendChild(nameSection);
@@ -9339,25 +9342,29 @@ async function renderJobs(reset = false) {
   // Section 3: Bio/Description
   const bioSection = document.createElement("div");
   bioSection.className = "field";
+  const bioValue = user.bio || '';
+  const bioIsEditable = !bioValue; // Start editable if no bio, otherwise start in view mode
   bioSection.innerHTML = `
     <label for='profileBioInput' style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; display: block;">📝 About You</label>
     <p class="muted" style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">Tell people about yourself, your experience, and what jobs you like to do.</p>
-    <textarea id='profileBioInput' placeholder='Example: Experienced mover with a pickup truck. I specialize in moving, yard work, and dump runs. Available weekdays and weekends.' rows="4" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-family: inherit; resize: vertical;"></textarea>
-    <button class='btn btn-primary' id='saveBioButton' style='margin-top:0.5rem;'>Save Bio</button>
+    <textarea id='profileBioInput' placeholder='Example: Experienced mover with a pickup truck. I specialize in moving, yard work, and dump runs. Available weekdays and weekends.' rows="4" ${bioIsEditable ? '' : 'readonly'} style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-family: inherit; resize: vertical; ${bioIsEditable ? '' : 'background: var(--bg-light); cursor: default;'}"></textarea>
+    <button class='btn btn-primary' id='saveBioButton' style='margin-top:0.5rem;'>${bioIsEditable ? 'Save Bio' : 'Edit Bio'}</button>
   `;
-  bioSection.querySelector('#profileBioInput').value = user.bio || '';
+  bioSection.querySelector('#profileBioInput').value = bioValue;
   profileForm.appendChild(bioSection);
   
   // Section 4: Tools & Equipment
   const toolsSection = document.createElement("div");
   toolsSection.className = "field";
+  const toolsValue = user.tools || '';
+  const toolsIsEditable = !toolsValue; // Start editable if no tools, otherwise start in view mode
   toolsSection.innerHTML = `
     <label for="profileToolsInput" style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; display: block;">🔧 Tools & Equipment</label>
     <p class="muted" style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">List the tools or equipment you have available</p>
-    <textarea id="profileToolsInput" placeholder="Example: Pickup truck, pressure washer, lawn mower, moving straps, hand tools" rows="3" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-family: inherit; resize: vertical;"></textarea>
-    <button class="btn btn-primary" id="saveToolsButton" style="margin-top:0.5rem;">Save Tools</button>
+    <textarea id="profileToolsInput" placeholder="Example: Pickup truck, pressure washer, lawn mower, moving straps, hand tools" rows="3" ${toolsIsEditable ? '' : 'readonly'} style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-family: inherit; resize: vertical; ${toolsIsEditable ? '' : 'background: var(--bg-light); cursor: default;'}"></textarea>
+    <button class="btn btn-primary" id="saveToolsButton" style="margin-top:0.5rem;">${toolsIsEditable ? 'Save Tools' : 'Edit Tools'}</button>
   `;
-  toolsSection.querySelector('#profileToolsInput').value = user.tools || '';
+  toolsSection.querySelector('#profileToolsInput').value = toolsValue;
   profileForm.appendChild(toolsSection);
   
   // Section 5: Gender (optional)
@@ -9394,17 +9401,28 @@ async function renderJobs(reset = false) {
 
   container.appendChild(profileForm);
   
-  // Add save handler for name
+  // Add save/edit handler for name
   setTimeout(() => {
     const saveNameBtn = document.getElementById("saveNameButton");
-    if (saveNameBtn) {
+    const nameInput = document.getElementById("profileNameInput");
+    if (saveNameBtn && nameInput) {
       saveNameBtn.addEventListener("click", async () => {
-        const name = document.getElementById("profileNameInput").value.trim();
+        // If button says "Edit", make field editable
+        if (saveNameBtn.textContent === "Edit") {
+          nameInput.removeAttribute('readonly');
+          nameInput.style.background = 'white';
+          nameInput.style.cursor = 'text';
+          saveNameBtn.textContent = "Save";
+          nameInput.focus();
+          return;
+        }
+        
+        // Otherwise, save the name
+        const name = nameInput.value.trim();
         if (!name) {
           showToast("Please enter your name.");
           return;
         }
-        const originalText = saveNameBtn.textContent;
         saveNameBtn.disabled = true;
         saveNameBtn.textContent = "Saving...";
         try {
@@ -9412,17 +9430,22 @@ async function renderJobs(reset = false) {
           const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
           storedUser.name = name;
           localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+          
+          // Make field read-only and change button to "Edit"
+          nameInput.setAttribute('readonly', 'readonly');
+          nameInput.style.background = 'var(--bg-light)';
+          nameInput.style.cursor = 'default';
           saveNameBtn.textContent = "Saved";
           saveNameBtn.style.background = "#16a34a";
           setTimeout(() => {
-            saveNameBtn.textContent = "Save";
+            saveNameBtn.textContent = "Edit";
             saveNameBtn.style.background = "";
             saveNameBtn.disabled = false;
           }, 2000);
           showToast("✅ Name updated!");
           await renderProfile();
         } catch (error) {
-          saveNameBtn.textContent = originalText;
+          saveNameBtn.textContent = "Save";
           saveNameBtn.disabled = false;
           showToast("Failed to update name.");
         }
@@ -9777,13 +9800,23 @@ async function renderJobs(reset = false) {
     });
   }
 
-  // hook up bio save - save to DB with confirmation
+  // hook up bio save/edit - save to DB with confirmation
   const bioInput = document.getElementById("profileBioInput");
   const saveBioBtn = document.getElementById("saveBioButton");
   if (bioInput && saveBioBtn) {
     saveBioBtn.addEventListener("click", async () => {
+      // If button says "Edit Bio", make field editable
+      if (saveBioBtn.textContent === "Edit Bio") {
+        bioInput.removeAttribute('readonly');
+        bioInput.style.background = 'white';
+        bioInput.style.cursor = 'text';
+        saveBioBtn.textContent = "Save Bio";
+        bioInput.focus();
+        return;
+      }
+      
+      // Otherwise, save the bio
       const bio = bioInput.value.trim();
-      const originalText = saveBioBtn.textContent;
       saveBioBtn.disabled = true;
       saveBioBtn.textContent = "Saving...";
       try {
@@ -9795,18 +9828,21 @@ async function renderJobs(reset = false) {
         storedUser.bio = bio;
         localStorage.setItem('hustl_user', JSON.stringify(storedUser));
         
-        // Show confirmation
+        // Make field read-only and change button to "Edit Bio"
+        bioInput.setAttribute('readonly', 'readonly');
+        bioInput.style.background = 'var(--bg-light)';
+        bioInput.style.cursor = 'default';
         saveBioBtn.textContent = "Saved";
         saveBioBtn.style.background = "#16a34a";
         setTimeout(() => {
-          saveBioBtn.textContent = "Edit";
+          saveBioBtn.textContent = "Edit Bio";
           saveBioBtn.style.background = "";
           saveBioBtn.disabled = false;
         }, 2000);
-        showToast("✅ Profile saved!");
+        showToast("✅ Bio saved!");
       } catch (error) {
         console.error("Error saving profile:", error);
-        saveBioBtn.textContent = originalText;
+        saveBioBtn.textContent = "Save Bio";
         saveBioBtn.disabled = false;
         showToast("Failed to save profile. Please try again.");
       }
@@ -9844,13 +9880,24 @@ async function renderJobs(reset = false) {
     }
   }, 100);
   
-  // Tools save handler
+  // Tools save/edit handler
   setTimeout(() => {
     const saveToolsBtn = document.getElementById("saveToolsButton");
-    if (saveToolsBtn) {
+    const toolsInput = document.getElementById("profileToolsInput");
+    if (saveToolsBtn && toolsInput) {
       saveToolsBtn.addEventListener("click", async () => {
-        const tools = document.getElementById("profileToolsInput").value.trim();
-        const originalText = saveToolsBtn.textContent;
+        // If button says "Edit Tools", make field editable
+        if (saveToolsBtn.textContent === "Edit Tools") {
+          toolsInput.removeAttribute('readonly');
+          toolsInput.style.background = 'white';
+          toolsInput.style.cursor = 'text';
+          saveToolsBtn.textContent = "Save Tools";
+          toolsInput.focus();
+          return;
+        }
+        
+        // Otherwise, save the tools
+        const tools = toolsInput.value.trim();
         saveToolsBtn.disabled = true;
         saveToolsBtn.textContent = "Saving...";
         try {
@@ -9858,16 +9905,21 @@ async function renderJobs(reset = false) {
           const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
           storedUser.tools = tools;
           localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+          
+          // Make field read-only and change button to "Edit Tools"
+          toolsInput.setAttribute('readonly', 'readonly');
+          toolsInput.style.background = 'var(--bg-light)';
+          toolsInput.style.cursor = 'default';
           saveToolsBtn.textContent = "Saved";
           saveToolsBtn.style.background = "#16a34a";
           setTimeout(() => {
-            saveToolsBtn.textContent = "Edit";
+            saveToolsBtn.textContent = "Edit Tools";
             saveToolsBtn.style.background = "";
             saveToolsBtn.disabled = false;
           }, 2000);
           showToast("✅ Tools updated!");
         } catch (error) {
-          saveToolsBtn.textContent = originalText;
+          saveToolsBtn.textContent = "Save Tools";
           saveToolsBtn.disabled = false;
           showToast("Failed to save tools.");
         }
