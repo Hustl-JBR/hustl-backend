@@ -5269,6 +5269,30 @@ async function renderJobs(reset = false) {
       actions.appendChild(left);
 
       const right = document.createElement("div");
+      right.style.cssText = "display: flex; gap: 0.5rem; align-items: center;";
+      
+      // Add Apply button for hustlers on open jobs
+      const isHustler = currentUser && (currentUser.role === "HUSTLER" || currentUser.roles?.includes("HUSTLER"));
+      const isOpen = (statusUpper === "OPEN");
+      
+      if (isHustler && isOpen && !hasApplied) {
+        const applyBtn = document.createElement("button");
+        applyBtn.className = "small-btn primary";
+        applyBtn.textContent = "Apply";
+        applyBtn.style.cssText = "background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem;";
+        applyBtn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          try {
+            await showApplyJobModal(job);
+          } catch (error) {
+            console.error("Error showing apply modal:", error);
+            showToast("Error opening apply form. Please try again.");
+          }
+        });
+        right.appendChild(applyBtn);
+      }
+      
       const viewBtn = document.createElement("button");
       viewBtn.className = "small-btn outline";
       viewBtn.textContent = "View";
@@ -5428,9 +5452,13 @@ async function renderJobs(reset = false) {
       summaryInfo.appendChild(locationRow);
 
       const priceRow = document.createElement("div");
-      const price = job.paymentType === "flat" 
-        ? formatMoney(job.flatAmount || job.amount || 0)
-        : `${formatMoney(job.hourlyRate || 0)}/hr`;
+      const jobAmount = Number(job.amount) || 0;
+      const jobHourlyRate = Number(job.hourlyRate) || 0;
+      const price = job.payType === "flat" || job.paymentType === "flat"
+        ? `$${jobAmount.toFixed(2)}`
+        : jobHourlyRate > 0 
+          ? `$${jobHourlyRate.toFixed(2)}/hr`
+          : `$${jobAmount.toFixed(2)}`;
       priceRow.innerHTML = `<strong>Posted Price:</strong> ${price}`;
       summaryInfo.appendChild(priceRow);
 
@@ -5469,6 +5497,93 @@ async function renderJobs(reset = false) {
 
       whyFitTextarea.addEventListener("input", () => {
         charCount.textContent = `${whyFitTextarea.value.length} / 400 characters`;
+      });
+
+      // Price Negotiation Section
+      const priceSection = document.createElement("div");
+      priceSection.style.cssText = "margin-bottom: 1rem;";
+      
+      const priceLabel = document.createElement("label");
+      priceLabel.style.cssText = "display: block; font-size: 0.9rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;";
+      priceLabel.textContent = "Price";
+      formSection.appendChild(priceLabel);
+
+      const priceOptions = document.createElement("div");
+      priceOptions.style.cssText = "display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;";
+      
+      // Accept listed price option
+      const acceptPriceLabel = document.createElement("label");
+      acceptPriceLabel.style.cssText = "display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;";
+      
+      const acceptPriceRadio = document.createElement("input");
+      acceptPriceRadio.type = "radio";
+      acceptPriceRadio.name = "priceOption";
+      acceptPriceRadio.value = "accept";
+      acceptPriceRadio.checked = true;
+      acceptPriceRadio.style.accentColor = "var(--primary)";
+      
+      const acceptPriceText = document.createElement("span");
+      acceptPriceText.textContent = `Accept listed price: ${price}`;
+      acceptPriceLabel.appendChild(acceptPriceRadio);
+      acceptPriceLabel.appendChild(acceptPriceText);
+      priceOptions.appendChild(acceptPriceLabel);
+
+      // Negotiate price option
+      const negotiatePriceLabel = document.createElement("label");
+      negotiatePriceLabel.style.cssText = "display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;";
+      
+      const negotiatePriceRadio = document.createElement("input");
+      negotiatePriceRadio.type = "radio";
+      negotiatePriceRadio.name = "priceOption";
+      negotiatePriceRadio.value = "negotiate";
+      negotiatePriceRadio.style.accentColor = "var(--primary)";
+      
+      const negotiatePriceText = document.createElement("span");
+      negotiatePriceText.textContent = "Propose a different price";
+      negotiatePriceLabel.appendChild(negotiatePriceRadio);
+      negotiatePriceLabel.appendChild(negotiatePriceText);
+      priceOptions.appendChild(negotiatePriceLabel);
+
+      formSection.appendChild(priceOptions);
+
+      // Proposed price input (shown when negotiate is selected)
+      const proposedPriceContainer = document.createElement("div");
+      proposedPriceContainer.id = "proposedPriceContainer";
+      proposedPriceContainer.style.cssText = "display: none; margin-bottom: 1rem;";
+      
+      const proposedPriceLabel = document.createElement("label");
+      proposedPriceLabel.style.cssText = "display: block; font-size: 0.85rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;";
+      proposedPriceLabel.textContent = "Your Proposed Price";
+      proposedPriceContainer.appendChild(proposedPriceLabel);
+
+      const proposedPriceInput = document.createElement("input");
+      proposedPriceInput.type = "number";
+      proposedPriceInput.id = "proposedPriceInput";
+      proposedPriceInput.min = "1";
+      proposedPriceInput.step = "0.01";
+      proposedPriceInput.placeholder = job.payType === "hourly" ? "Enter hourly rate" : "Enter total amount";
+      proposedPriceInput.style.cssText = "width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.9rem;";
+      proposedPriceContainer.appendChild(proposedPriceInput);
+
+      const priceTypeLabel = document.createElement("div");
+      priceTypeLabel.style.cssText = "margin-top: 0.25rem; font-size: 0.75rem; color: #6b7280;";
+      priceTypeLabel.textContent = job.payType === "hourly" ? "Per hour" : "Total amount";
+      proposedPriceContainer.appendChild(priceTypeLabel);
+
+      formSection.appendChild(proposedPriceContainer);
+
+      // Show/hide proposed price input based on radio selection
+      const priceRadios = [acceptPriceRadio, negotiatePriceRadio];
+      priceRadios.forEach(radio => {
+        radio.addEventListener("change", () => {
+          if (radio.value === "negotiate") {
+            proposedPriceContainer.style.display = "block";
+            proposedPriceInput.focus();
+          } else {
+            proposedPriceContainer.style.display = "none";
+            proposedPriceInput.value = "";
+          }
+        });
       });
 
       // Optional Add-Ons
@@ -5577,6 +5692,20 @@ async function renderJobs(reset = false) {
           return;
         }
 
+        // Get price option
+        const selectedPriceOption = document.querySelector('input[name="priceOption"]:checked')?.value || "accept";
+        let proposedAmount = null;
+        
+        if (selectedPriceOption === "negotiate") {
+          const proposedPrice = parseFloat(proposedPriceInput.value);
+          if (!proposedPrice || proposedPrice <= 0) {
+            showToast("Please enter a valid proposed price.");
+            proposedPriceInput.focus();
+            return;
+          }
+          proposedAmount = proposedPrice;
+        }
+
         // Show loading state
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span style="display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite;"></span> Submitting...';
@@ -5587,17 +5716,24 @@ async function renderJobs(reset = false) {
           
           // Submit application
           const token = localStorage.getItem("hustl_token");
+          const offerData = {
+            jobId: job.id,
+            note: whyFit,
+            addOns: addOnsChecked
+          };
+          
+          // Add proposed amount if negotiating
+          if (proposedAmount !== null) {
+            offerData.proposedAmount = proposedAmount;
+          }
+          
           const response = await fetch(`${API_BASE}/offers`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               ...(token ? { 'Authorization': `Bearer ${token}` } : {})
             },
-            body: JSON.stringify({
-              jobId: job.id,
-              note: whyFit,
-              addOns: addOnsChecked
-            })
+            body: JSON.stringify(offerData)
           });
 
           if (!response.ok) {
