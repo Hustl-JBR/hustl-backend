@@ -10472,7 +10472,8 @@ try {
   }
   
   // Handle sign out - COMPLETE and IMMEDIATE logout
-  async function handleSignOut() {
+  // Define and assign to window immediately
+  window.handleSignOut = async function handleSignOut() {
     console.log('handleSignOut called - starting logout process');
     // IMMEDIATELY clear everything FIRST (don't wait for API)
     // Clear ALL localStorage
@@ -10562,10 +10563,9 @@ try {
     
     // Render all (non-blocking)
     renderAll().catch(err => console.error("Render error:", err));
-  }
+  };
   
-  // Assign handleSignOut to window IMMEDIATELY after definition
-  window.handleSignOut = handleSignOut;
+  // Function is already assigned above, just log confirmation
   console.log('✅ handleSignOut function assigned to window.handleSignOut');
   
   // Profile Tabs
