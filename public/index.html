@@ -5508,6 +5508,23 @@ async function renderJobs(reset = false) {
       description.textContent = "Complete payment to accept this hustler. Payment will be held in escrow until the job is completed.";
       modalContent.appendChild(description);
       
+      // Add test mode indicator and test card instructions
+      const isTestMode = publishableKey && publishableKey.startsWith('pk_test_');
+      if (isTestMode) {
+        const testModeNotice = document.createElement("div");
+        testModeNotice.style.cssText = "padding: 1rem; background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; margin-bottom: 1.5rem;";
+        testModeNotice.innerHTML = `
+          <div style="font-weight: 600; color: #92400e; margin-bottom: 0.5rem;">🧪 Test Mode</div>
+          <div style="font-size: 0.85rem; color: #78350f; line-height: 1.5;">
+            <strong>Test Card Numbers:</strong><br>
+            • Success: <code style="background: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">4242 4242 4242 4242</code><br>
+            • Decline: <code style="background: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">4000 0000 0000 0002</code><br>
+            Use any future expiry date (e.g., 12/34) and any 3-digit CVC (e.g., 123)
+          </div>
+        `;
+        modalContent.appendChild(testModeNotice);
+      }
+      
       const paymentElement = document.createElement("div");
       paymentElement.id = "stripe-payment-element";
       modalContent.appendChild(paymentElement);
