@@ -9821,6 +9821,8 @@ meta.textContent =
     /* ---------- Init ---------- */
 
     let navInitialized = false;
+    const navTabListeners = new WeakSet(); // Track which elements have listeners
+    
     function initNav() {
       // Prevent multiple initializations
       if (navInitialized) {
@@ -9828,16 +9830,14 @@ meta.textContent =
       }
       navInitialized = true;
       
-      // Remove old event listeners by cloning nav tabs
-      const navTabs = document.querySelectorAll(".nav-tab");
-      navTabs.forEach((tab) => {
-        const newTab = tab.cloneNode(true);
-        tab.parentNode.replaceChild(newTab, tab);
-      });
-      
-      // Nav tabs - add event listeners
-      document.querySelectorAll(".nav-tab").forEach((tab) => {
-        tab.addEventListener("click", (e) => {
+      // Nav tabs - add event listeners using event delegation on parent
+      const navContainer = document.querySelector(".nav-tabs");
+      if (navContainer && !navContainer.dataset.listenerAttached) {
+        navContainer.dataset.listenerAttached = 'true';
+        navContainer.addEventListener("click", (e) => {
+          const tab = e.target.closest(".nav-tab");
+          if (!tab) return;
+          
           e.preventDefault();
           e.stopPropagation();
           const v = tab.dataset.view;
@@ -9852,7 +9852,7 @@ meta.textContent =
             window.scrollTo({ top: 0, behavior: 'instant' });
           }
         });
-      });
+      }
 
       // Home CTA buttons - remove old listeners first
       const homeCtaPost = document.getElementById("homeCtaPost");
