@@ -10068,7 +10068,14 @@ try {
 }
 
   // ========== HAMBURGER MENU ==========
+  let hamburgerMenuInitialized = false;
   function initHamburgerMenu() {
+    // Prevent multiple initializations to avoid infinite loops
+    if (hamburgerMenuInitialized) {
+      return;
+    }
+    hamburgerMenuInitialized = true;
+    
     const hamburgerBtn = document.getElementById('hamburgerBtn');
     const mobileMenu = document.getElementById('mobileMenu');
     
@@ -10307,12 +10314,8 @@ try {
       }
     }
     
-    // Re-initialize hamburger menu after updating HTML to restore event listeners
-    setTimeout(() => {
-      if (typeof initHamburgerMenu === 'function') {
-        initHamburgerMenu();
-      }
-    }, 100);
+    // Don't re-initialize hamburger menu - it uses event delegation and doesn't need re-initialization
+    // Re-initializing causes infinite loops with setView -> renderAll -> updateHeaderAuth -> initHamburgerMenu -> setView
   }
   
   // Handle sign out
