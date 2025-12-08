@@ -2950,10 +2950,27 @@
             
             <!-- Status Pills -->
             <div class="job-status-group" id="jobsStatusFilter" style="flex: 2; display: flex; gap: 0.25rem;">
-              <span data-status="all" class="active" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">All</span>
-              <span data-status="applied" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">✓ Applied</span>
-              <span data-status="in_progress" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">🟡 In Progress</span>
-              <span data-status="done" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">✅ Done</span>
+              <span data-status="all" class="job-status-tab active" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; background: var(--primary); color: white; font-weight: 600; border: 2px solid var(--primary); transition: all 0.2s;">All</span>
+              <span data-status="applied" class="job-status-tab" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; background: white; color: var(--text-main); border: 2px solid var(--border); transition: all 0.2s;">✓ Applied</span>
+              <span data-status="in_progress" class="job-status-tab" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; background: white; color: var(--text-main); border: 2px solid var(--border); transition: all 0.2s;">🟡 In Progress</span>
+              <span data-status="done" class="job-status-tab" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; background: white; color: var(--text-main); border: 2px solid var(--border); transition: all 0.2s;">✅ Done</span>
+            </div>
+          </div>
+          
+          <!-- Location Filter -->
+          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+            <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">📍 Filter by Location</div>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+              <div style="flex: 1; min-width: 120px;">
+                <input type="text" id="locationZipFilter" placeholder="ZIP code (e.g., 37919)" maxlength="5" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: white;" />
+              </div>
+              <div style="flex: 1; min-width: 140px;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <input type="range" id="locationRadiusFilter" min="5" max="100" value="25" step="5" style="flex: 1;" />
+                  <span id="radiusValueDisplay" style="font-size: 0.85rem; color: var(--text-muted); min-width: 50px; text-align: right;">25 mi</span>
+                </div>
+              </div>
+              <button id="clearLocationFilter" style="padding: 0.6rem 1rem; background: transparent; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; white-space: nowrap;">Clear</button>
             </div>
           </div>
         </div>
@@ -3034,6 +3051,7 @@
         <!-- Tab Navigation -->
         <div class="profile-tabs">
           <button class="profile-tab active" data-tab="settings">⚙️ Settings</button>
+          <button class="profile-tab" data-tab="ratings">⭐ View Ratings</button>
           <button class="profile-tab" data-tab="jobs">📋 My Jobs</button>
           <button class="profile-tab" data-tab="earnings">💰 Earnings</button>
         </div>
@@ -3104,6 +3122,27 @@
                     🚪 Sign Out
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Ratings Tab -->
+        <div id="profileTabRatings" class="profile-tab-content" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">⭐ Your Ratings & Reviews</div>
+            </div>
+            <div id="profileRatingsContent" style="padding: 1.5rem;">
+              <div style="text-align: center; padding: 2rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">⭐</div>
+                <div style="font-size: 2rem; font-weight: 700; color: var(--primary); margin-bottom: 0.5rem;" id="profileRatingValue">
+                  ${user.ratingAvg ? user.ratingAvg.toFixed(1) : '5.0'}
+                </div>
+                <div style="color: var(--text-muted); margin-bottom: 1.5rem;" id="profileRatingCount">
+                  Based on ${user.ratingCount || 0} ${user.ratingCount === 1 ? 'review' : 'reviews'}
+                </div>
+                <div id="profileReviewsList" style="text-align: left; margin-top: 2rem;"></div>
               </div>
             </div>
           </div>
@@ -4677,8 +4716,11 @@ async function renderJobs(reset = false) {
   }
 
   try {
-    // Get saved zip filter
-    const savedZip = localStorage.getItem('savedZipFilter') || '';
+    // Get location filters
+    const locationZipFilter = document.getElementById("locationZipFilter");
+    const locationRadiusFilter = document.getElementById("locationRadiusFilter");
+    const zip = locationZipFilter ? locationZipFilter.value.trim() : '';
+    const radius = locationRadiusFilter ? parseInt(locationRadiusFilter.value) : 25;
     
     // Build filters for API
     const filters = {
@@ -4687,8 +4729,12 @@ async function renderJobs(reset = false) {
       sortBy: activeSortBy
     };
     
-    if (savedZip) {
-      filters.zip = savedZip;
+    if (zip && zip.length === 5) {
+      filters.zip = zip;
+    }
+    
+    if (radius && radius !== 25) {
+      filters.radius = radius;
     }
     
     // Add category filter if not "all"
@@ -8990,6 +9036,66 @@ async function renderJobs(reset = false) {
   setTimeout(() => {
     initProfileTabs();
     
+    // Populate Ratings tab when clicked
+    const ratingsTab = document.querySelector('.profile-tab[data-tab="ratings"]');
+    if (ratingsTab && !ratingsTab.dataset.listenerAttached) {
+      ratingsTab.dataset.listenerAttached = 'true';
+      ratingsTab.addEventListener('click', async () => {
+        const ratingsContent = document.getElementById("profileRatingsContent");
+        if (ratingsContent) {
+          try {
+            // Fetch reviews for this user
+            const token = localStorage.getItem('hustl_token');
+            const reviewsResponse = await fetch(`${API_BASE}/reviews/user/${user.id}`, {
+              headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+            
+            let reviews = [];
+            if (reviewsResponse.ok) {
+              const reviewsData = await reviewsResponse.json();
+              reviews = Array.isArray(reviewsData) ? reviewsData : (reviewsData.reviews || []);
+            }
+            
+            const ratingValue = document.getElementById("profileRatingValue");
+            const ratingCount = document.getElementById("profileRatingCount");
+            const reviewsList = document.getElementById("profileReviewsList");
+            
+            if (ratingValue) {
+              ratingValue.textContent = user.ratingAvg ? user.ratingAvg.toFixed(1) : '5.0';
+            }
+            if (ratingCount) {
+              ratingCount.textContent = `Based on ${user.ratingCount || 0} ${user.ratingCount === 1 ? 'review' : 'reviews'}`;
+            }
+            
+            if (reviewsList) {
+              if (reviews.length === 0) {
+                reviewsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>No reviews yet. Complete jobs to get reviews!</div>";
+              } else {
+                reviewsList.innerHTML = reviews.map(review => `
+                  <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 1px solid var(--border);">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                      <div>
+                        <div style="font-weight: 600; color: var(--text-main);">${review.reviewer?.name || 'Anonymous'}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">${new Date(review.createdAt).toLocaleDateString()}</div>
+                      </div>
+                      <div style="font-size: 1.25rem;">${'⭐'.repeat(review.stars)}</div>
+                    </div>
+                    <div style="color: var(--text-main); line-height: 1.5;">${review.text || ''}</div>
+                  </div>
+                `).join('');
+              }
+            }
+          } catch (error) {
+            console.error("Error loading ratings:", error);
+            const reviewsList = document.getElementById("profileReviewsList");
+            if (reviewsList) {
+              reviewsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Error loading reviews.</div>";
+            }
+          }
+        }
+      });
+    }
+    
     // Populate Jobs tab when clicked
     const jobsTab = document.querySelector('.profile-tab[data-tab="jobs"]');
     if (jobsTab) {
@@ -10192,34 +10298,82 @@ meta.textContent =
         });
       }
       
-      // Jobs status filter
+      // Jobs status filter with improved highlighting
       const jobsStatusFilter = document.getElementById("jobsStatusFilter");
       if (jobsStatusFilter) {
-        // Update active state styling
-        jobsStatusFilter.querySelectorAll("span").forEach((el) => {
-          if (el.dataset.status === activeJobsStatusFilter) {
-            el.classList.add("active");
-            el.style.background = "var(--primary)";
-            el.style.color = "white";
-            el.style.fontWeight = "600";
-          } else {
-            el.classList.remove("active");
-            el.style.background = "#f3f4f6";
-            el.style.color = "var(--text-main)";
-            el.style.fontWeight = "normal";
-          }
-        });
+        const updateStatusTabStyles = () => {
+          jobsStatusFilter.querySelectorAll(".job-status-tab").forEach((el) => {
+            if (el.dataset.status === activeJobsStatusFilter) {
+              el.classList.add("active");
+              el.style.background = "var(--primary)";
+              el.style.color = "white";
+              el.style.fontWeight = "600";
+              el.style.border = "2px solid var(--primary)";
+            } else {
+              el.classList.remove("active");
+              el.style.background = "white";
+              el.style.color = "var(--text-main)";
+              el.style.fontWeight = "normal";
+              el.style.border = "2px solid var(--border)";
+            }
+          });
+        };
         
-        jobsStatusFilter.querySelectorAll("span").forEach((el) => {
+        updateStatusTabStyles();
+        
+        jobsStatusFilter.querySelectorAll(".job-status-tab").forEach((el) => {
           el.addEventListener("click", () => {
             activeJobsStatusFilter = el.dataset.status;
-            jobsStatusFilter.querySelectorAll("span").forEach((s) =>
-              s.classList.toggle("active", s.dataset.status === activeJobsStatusFilter)
-            );
+            updateStatusTabStyles();
             if (typeof renderJobs === 'function') {
               renderJobs(true); // Reset pagination when filter changes
             }
           });
+        });
+      }
+      
+      // Location filter handlers
+      const locationZipFilter = document.getElementById("locationZipFilter");
+      const locationRadiusFilter = document.getElementById("locationRadiusFilter");
+      const radiusValueDisplay = document.getElementById("radiusValueDisplay");
+      const clearLocationFilter = document.getElementById("clearLocationFilter");
+      
+      if (locationRadiusFilter && radiusValueDisplay) {
+        locationRadiusFilter.addEventListener("input", (e) => {
+          radiusValueDisplay.textContent = e.target.value + " mi";
+        });
+        radiusValueDisplay.textContent = locationRadiusFilter.value + " mi";
+      }
+      
+      if (locationZipFilter) {
+        locationZipFilter.addEventListener("input", (e) => {
+          e.target.value = e.target.value.replace(/\D/g, '').slice(0, 5);
+        });
+        locationZipFilter.addEventListener("change", () => {
+          if (typeof renderJobs === 'function') {
+            renderJobs(true);
+          }
+        });
+      }
+      
+      if (locationRadiusFilter) {
+        locationRadiusFilter.addEventListener("change", () => {
+          if (typeof renderJobs === 'function') {
+            renderJobs(true);
+          }
+        });
+      }
+      
+      if (clearLocationFilter) {
+        clearLocationFilter.addEventListener("click", () => {
+          if (locationZipFilter) locationZipFilter.value = "";
+          if (locationRadiusFilter) {
+            locationRadiusFilter.value = "25";
+            if (radiusValueDisplay) radiusValueDisplay.textContent = "25 mi";
+          }
+          if (typeof renderJobs === 'function') {
+            renderJobs(true);
+          }
         });
       }
       

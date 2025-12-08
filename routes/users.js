@@ -30,11 +30,12 @@ router.get('/me', async (req, res) => {
           createdAt: true,
           gender: true,
           bio: true,
+          tools: true,
         },
       });
     } catch (genderError) {
-      // If gender/bio columns don't exist, query without them
-      if (genderError.message && genderError.message.includes('gender')) {
+      // If gender/bio/tools columns don't exist, query without them
+      if (genderError.message && (genderError.message.includes('gender') || genderError.message.includes('tools'))) {
         user = await prisma.user.findUnique({
           where: { id: req.user.id },
           select: {
@@ -54,6 +55,7 @@ router.get('/me', async (req, res) => {
         });
         user.gender = null;
         user.bio = null;
+        user.tools = null;
       } else {
         throw genderError;
       }
@@ -86,11 +88,12 @@ router.get('/:id', async (req, res) => {
           createdAt: true,
           gender: true,
           bio: true,
+          tools: true,
         },
       });
     } catch (genderError) {
-      // If gender/bio columns don't exist, query without them
-      if (genderError.message && genderError.message.includes('gender')) {
+      // If gender/bio/tools columns don't exist, query without them
+      if (genderError.message && (genderError.message.includes('gender') || genderError.message.includes('tools'))) {
         user = await prisma.user.findUnique({
           where: { id: req.params.id },
           select: {
@@ -108,6 +111,7 @@ router.get('/:id', async (req, res) => {
         });
         user.gender = null;
         user.bio = null;
+        user.tools = null;
       } else {
         throw genderError;
       }
@@ -130,6 +134,7 @@ router.patch('/me', [
   body('city').optional().trim().notEmpty(),
   body('bio').optional().trim(),
   body('gender').optional().isIn(['male', 'female', 'other', 'prefer_not_to_say']),
+  body('tools').optional().trim(),
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -137,7 +142,7 @@ router.patch('/me', [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { name, city, zip, photoUrl, bio, gender } = req.body;
+    const { name, city, zip, photoUrl, bio, gender, tools } = req.body;
     const updateData = {};
 
     if (name) updateData.name = name;
@@ -146,16 +151,17 @@ router.patch('/me', [
       // Allow clearing zip by setting to null or empty string
       updateData.zip = (zip === '' || zip === null) ? null : zip;
     }
-    if (photoUrl) updateData.photoUrl = photoUrl;
+    if (photoUrl !== undefined) updateData.photoUrl = photoUrl;
     
-    // Handle bio and gender - only include if columns exist
+    // Handle bio, gender, and tools - only include if columns exist
     try {
-      // Try to update with bio and gender
+      // Try to update with bio, gender, and tools
       if (bio !== undefined) updateData.bio = bio;
       if (gender !== undefined) updateData.gender = gender;
+      if (tools !== undefined) updateData.tools = tools;
     } catch (e) {
       // If columns don't exist, skip them
-      console.warn('Bio/gender columns may not exist:', e.message);
+      console.warn('Bio/gender/tools columns may not exist:', e.message);
     }
 
     let user;
@@ -178,13 +184,15 @@ router.patch('/me', [
           updatedAt: true,
           gender: true,
           bio: true,
+          tools: true,
         },
       });
     } catch (updateError) {
-      // If gender/bio columns don't exist, update without them
-      if (updateError.message && updateError.message.includes('gender')) {
+      // If gender/bio/tools columns don't exist, update without them
+      if (updateError.message && (updateError.message.includes('gender') || updateError.message.includes('tools'))) {
         delete updateData.bio;
         delete updateData.gender;
+        delete updateData.tools;
         user = await prisma.user.update({
           where: { id: req.user.id },
           data: updateData,
@@ -205,6 +213,7 @@ router.patch('/me', [
         });
         user.gender = null;
         user.bio = null;
+        user.tools = null;
       } else {
         throw updateError;
       }
