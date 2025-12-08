@@ -9684,11 +9684,6 @@ async function renderJobs(reset = false) {
   const stripeContent = document.getElementById("stripeConnectContent");
   const quickStats = document.getElementById("profileQuickStats");
   
-  if (!container) {
-    console.error("Profile container not found");
-    return;
-  }
-  
   // jobsList might not exist if we're on Settings tab, that's OK
   const jobsList = document.getElementById("profileJobsList");
 
@@ -9749,11 +9744,37 @@ async function renderJobs(reset = false) {
     }
   } catch (error) {
     console.error("Error fetching reviews:", error);
+    // Continue with default values if fetch fails
   }
 
   // Render Basic Info Section (View Mode by default)
   if (basicInfoSection) {
-    renderBasicInfoView(user, ratingAvg, ratingCount, basicInfoSection);
+    try {
+      renderBasicInfoView(user, ratingAvg, ratingCount, basicInfoSection);
+    } catch (error) {
+      console.error("Error rendering Basic Info:", error);
+      // Fallback: show basic info even if render fails
+      basicInfoSection.innerHTML = `
+        <div class="card" style="padding: 2rem; margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;">
+          <div style="display: flex; gap: 2rem; align-items: flex-start;">
+            <div style="width: 120px; height: 120px; border-radius: 50%; overflow: hidden; flex-shrink: 0; border: 3px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.1); background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 700; color: var(--primary);">
+              ${(user.name || 'U')[0].toUpperCase()}
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <h2 style="margin: 0; font-size: 1.75rem; font-weight: 700; color: var(--text-main);">${user.name || 'User'}</h2>
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                <span style="font-size: 1.1rem;">⭐</span>
+                <span style="font-weight: 600; color: var(--text-main);">${ratingAvg.toFixed(1)}</span>
+                <span style="color: var(--text-muted); font-size: 0.9rem;">(${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})</span>
+              </div>
+              ${user.bio ? `<div style="color: var(--text-main); line-height: 1.6; margin-top: 0.75rem; font-size: 0.95rem;">${user.bio}</div>` : '<div style="color: var(--text-muted); font-style: italic; margin-top: 0.75rem; font-size: 0.9rem;">No description yet.</div>'}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  } else {
+    console.error("profileBasicInfo element not found in DOM");
   }
   
   // Render Quick Stats (already got quickStats above, but check again)
