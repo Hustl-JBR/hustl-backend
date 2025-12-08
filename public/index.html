@@ -6402,10 +6402,8 @@ async function renderJobs(reset = false) {
         
         contentSection.appendChild(timeSection);
       }
-      
-      modalContent.appendChild(contentSection);
 
-      // Apply Now Button Section (sticky at bottom for hustlers)
+      // Apply Now Button Section (moved here, right after Tools & Equipment)
       // Check if user is logged in (check token first, then get user)
       const token = localStorage.getItem("hustl_token");
       const isLoggedIn = !!token;
@@ -6452,7 +6450,7 @@ async function renderJobs(reset = false) {
         }
         
         const applySection = document.createElement("div");
-        applySection.style.cssText = "padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; background: white; border-radius: 0 0 16px 16px; flex-shrink: 0; position: relative; z-index: 1;";
+        applySection.style.cssText = "margin-top: 1.5rem; margin-bottom: 1.5rem; padding: 1.5rem; background: white; border: 2px solid #e5e7eb; border-radius: 12px;";
         
         // Check job status for hustler
         const jobStatusUpper = (job.status || "OPEN").toUpperCase();
@@ -6690,22 +6688,23 @@ async function renderJobs(reset = false) {
           applySection.appendChild(applyNowBtn);
         }
         
-        modalContent.appendChild(applySection);
+        // Append apply section to contentSection (inside scrollable area, after Tools & Equipment)
+        contentSection.appendChild(applySection);
       } else if (isLoggedIn && !isOpen) {
-        // Job is not open - show message
+        // Job is not open - show message (inside contentSection)
         const closedSection = document.createElement("div");
-        closedSection.style.cssText = "padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; background: white; border-radius: 0 0 16px 16px; flex-shrink: 0;";
+        closedSection.style.cssText = "margin-top: 1.5rem; margin-bottom: 1.5rem; padding: 1.5rem; background: #f3f4f6; border-radius: 12px; border: 1px solid #e5e7eb;";
         const closedMessage = document.createElement("div");
-        closedMessage.style.cssText = "padding: 1rem; background: #f3f4f6; border-radius: 8px; text-align: center; color: var(--text-muted);";
+        closedMessage.style.cssText = "text-align: center; color: var(--text-muted); font-weight: 600;";
         closedMessage.textContent = `This job is ${job.status || 'closed'}. Applications are no longer being accepted.`;
         closedSection.appendChild(closedMessage);
-        modalContent.appendChild(closedSection);
+        contentSection.appendChild(closedSection);
       } else if (!isLoggedIn) {
-        // Not logged in - show login prompt
+        // Not logged in - show login prompt (inside contentSection)
         const loginSection = document.createElement("div");
-        loginSection.style.cssText = "padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; background: white; border-radius: 0 0 16px 16px; flex-shrink: 0;";
+        loginSection.style.cssText = "margin-top: 1.5rem; margin-bottom: 1.5rem; padding: 1.5rem; background: #fef3c7; border-radius: 12px; border: 1px solid #e5e7eb;";
         const loginMessage = document.createElement("div");
-        loginMessage.style.cssText = "padding: 1rem; background: #fef3c7; border-radius: 8px; text-align: center;";
+        loginMessage.style.cssText = "text-align: center;";
         loginMessage.innerHTML = `<div style="margin-bottom: 0.75rem; color: var(--text-main); font-weight: 600;">Log in to apply for this job</div><button class="btn btn-primary" id="loginToApplyBtn" style="width: 100%; padding: 0.75rem;">Log In / Sign Up</button>`;
         loginSection.appendChild(loginMessage);
         const loginBtn = loginMessage.querySelector("#loginToApplyBtn");
@@ -6718,8 +6717,11 @@ async function renderJobs(reset = false) {
             }
           });
         }
-        modalContent.appendChild(loginSection);
+        contentSection.appendChild(loginSection);
       }
+      
+      // Now append contentSection to modalContent (after all content including apply section is added)
+      modalContent.appendChild(contentSection);
 
       // Customer view: Show start code if hustler is accepted but not started
       if (user && user.id === job.postedByUserId && job.hustlerId && job.arrivalCode && !job.arrivalCodeVerified) {
