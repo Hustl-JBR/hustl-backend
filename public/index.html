@@ -6524,14 +6524,38 @@ async function renderJobs(reset = false) {
           charCounter.textContent = "400 characters remaining";
           applySection.appendChild(charCounter);
           
-          // Suggest Different Price (Optional)
+          // Suggest Different Price (Optional) - with checkbox toggle
+          const priceCheckboxContainer = document.createElement("div");
+          priceCheckboxContainer.style.cssText = "margin-bottom: 1rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;";
+          
+          const priceCheckboxLabel = document.createElement("label");
+          priceCheckboxLabel.style.cssText = "display: flex; align-items: center; gap: 0.75rem; cursor: pointer; font-weight: 600; font-size: 0.95rem; color: var(--text-main);";
+          
+          const priceCheckbox = document.createElement("input");
+          priceCheckbox.type = "checkbox";
+          priceCheckbox.id = `suggestPriceCheckbox_${job.id}`;
+          priceCheckbox.style.cssText = "width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);";
+          
+          const priceCheckboxText = document.createElement("span");
+          priceCheckboxText.textContent = "💵 Suggest a different price";
+          
+          priceCheckboxLabel.appendChild(priceCheckbox);
+          priceCheckboxLabel.appendChild(priceCheckboxText);
+          priceCheckboxContainer.appendChild(priceCheckboxLabel);
+          applySection.appendChild(priceCheckboxContainer);
+          
+          // Price negotiation fields (hidden by default)
+          const priceNegotiationSection = document.createElement("div");
+          priceNegotiationSection.id = `priceNegotiationSection_${job.id}`;
+          priceNegotiationSection.style.cssText = "display: none; margin-top: 1rem; padding: 1rem; background: white; border: 2px solid #e5e7eb; border-radius: 8px;";
+          
           const priceLabel = document.createElement("label");
           priceLabel.style.cssText = "display: block; font-weight: 600; font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.5rem;";
-          priceLabel.textContent = "Suggest a Different Price (Optional)";
-          applySection.appendChild(priceLabel);
+          priceLabel.textContent = "Your Proposed Price";
+          priceNegotiationSection.appendChild(priceLabel);
           
           const priceContainer = document.createElement("div");
-          priceContainer.style.cssText = "display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;";
+          priceContainer.style.cssText = "display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;";
           
           const priceInput = document.createElement("input");
           priceInput.type = "number";
@@ -6551,13 +6575,26 @@ async function renderJobs(reset = false) {
           `;
           priceContainer.appendChild(priceTypeSelect);
           
-          applySection.appendChild(priceContainer);
+          priceNegotiationSection.appendChild(priceContainer);
           
           const priceHint = document.createElement("div");
-          priceHint.style.cssText = "font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem; font-style: italic;";
+          priceHint.style.cssText = "font-size: 0.75rem; color: var(--text-muted); font-style: italic;";
           const currentPrice = job.payType === "flat" ? formatMoney(job.flatAmount || job.amount || 0) : formatMoney(job.hourlyRate || 0) + "/hr";
-          priceHint.textContent = `Current price: ${currentPrice}. Leave blank to accept the listed price.`;
-          applySection.appendChild(priceHint);
+          priceHint.textContent = `Current price: ${currentPrice}. Enter your proposed amount above.`;
+          priceNegotiationSection.appendChild(priceHint);
+          
+          applySection.appendChild(priceNegotiationSection);
+          
+          // Toggle price negotiation section when checkbox is clicked
+          priceCheckbox.addEventListener("change", () => {
+            if (priceCheckbox.checked) {
+              priceNegotiationSection.style.display = "block";
+              priceInput.focus();
+            } else {
+              priceNegotiationSection.style.display = "none";
+              priceInput.value = "";
+            }
+          });
           
           // Stripe requirement check - TEMPORARILY DISABLED FOR SANDBOX MODE
           // const stripeCheck = document.createElement("div");
