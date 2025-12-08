@@ -3283,6 +3283,8 @@ heart of Hustl.
   // No Supabase needed - we use Railway backend with Neon PostgreSQL
   // Deploy v2.1 - Fixed button handlers
   
+  console.log("DEBUG: Script execution starting after stubs");
+  
   const STORAGE_KEY = "hustl_state_v3";
     // Get backend URL from config or default
     const BACKEND_URL = (window.HUSTL_CONFIG && window.HUSTL_CONFIG.API_URL) || 
@@ -3523,7 +3525,9 @@ heart of Hustl.
       await renderAll();
     }
     // Expose setView globally immediately after definition
+    console.log("DEBUG: About to expose setView globally");
     window.setView = setView;
+    console.log("DEBUG: setView exposed globally, typeof:", typeof window.setView);
 
     /* ---------- Auth visibility ---------- */
 
