@@ -9717,99 +9717,101 @@ async function renderJobs(reset = false) {
 
   // Create organized profile form with clear sections
   const profileForm = document.createElement("div");
-  profileForm.style.cssText = "display: flex; flex-direction: column; gap: 1.5rem;";
+  profileForm.style.cssText = "display: flex; flex-direction: column; gap: 1.25rem;";
   
-  // Section 1: Profile Picture
+  // Section 1: Profile Picture - Card Style
   const photoSection = document.createElement("div");
-  photoSection.className = "field";
+  photoSection.className = "card";
+  photoSection.style.cssText = "padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;";
   photoSection.innerHTML = `
-    <label style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; display: block;">📷 Profile Picture</label>
-    <p class="muted" style="margin: 0 0 0.75rem 0; font-size: 0.85rem;">A clear profile picture helps build trust with customers and hustlers.</p>
-    <div style="display: flex; align-items: center; gap: 1rem;">
-      <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--bg-light); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
-        ${user.photoUrl ? `<img src="${user.photoUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">` : `<div style="font-size: 2.5rem; color: var(--text-muted);">${(user.name || 'U')[0].toUpperCase()}</div>`}
+    <div style="display: flex; align-items: flex-start; gap: 1.25rem;">
+      <div style="width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%); border: 3px solid var(--border); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        ${user.photoUrl ? `<img src="${user.photoUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">` : `<div style="font-size: 3rem; color: var(--primary); font-weight: 700;">${(user.name || 'U')[0].toUpperCase()}</div>`}
       </div>
       <div style="flex: 1;">
-        <input id='avatarUploadInput' type='file' accept='image/*' style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; cursor: pointer;" />
+        <label style="font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; display: block; font-size: 1rem;">📷 Profile Picture</label>
+        <p class="muted" style="margin: 0 0 1rem 0; font-size: 0.9rem; line-height: 1.5;">A clear profile picture helps build trust with customers and hustlers.</p>
+        <input id='avatarUploadInput' type='file' accept='image/*' style="width: 100%; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.9rem; cursor: pointer; background: white; transition: all 0.2s;" />
         <p class="muted" style="margin: 0.5rem 0 0 0; font-size: 0.8rem;">Click to select a photo. Image will be automatically compressed and saved.</p>
       </div>
     </div>
   `;
   profileForm.appendChild(photoSection);
 
-  // Section 2: Basic Info
+  // Section 2: Basic Info - Card Style
   const nameSection = document.createElement("div");
-  nameSection.className = "field";
+  nameSection.className = "card";
+  nameSection.style.cssText = "padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;";
   const nameValue = user.name || '';
   const nameIsEditable = !nameValue; // Start editable if no name, otherwise start in view mode
   nameSection.innerHTML = `
-    <label for="profileNameInput" style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; display: block;">👤 Name</label>
-    <div style="display: flex; gap: 0.5rem; align-items: center;">
-      <input id="profileNameInput" type="text" placeholder="Your full name" value="${nameValue}" ${nameIsEditable ? '' : 'readonly'} style="flex: 1; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; ${nameIsEditable ? '' : 'background: var(--bg-light); cursor: default;'}" />
-      <button class="btn btn-primary" id="saveNameButton" style="white-space: nowrap;">${nameIsEditable ? 'Save' : 'Edit'}</button>
+    <label for="profileNameInput" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.75rem; display: block; font-size: 1rem;">👤 Name</label>
+    <div style="display: flex; gap: 0.75rem; align-items: center;">
+      <input id="profileNameInput" type="text" placeholder="Your full name" value="${nameValue}" ${nameIsEditable ? '' : 'readonly'} style="flex: 1; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; transition: all 0.2s; ${nameIsEditable ? '' : 'background: #f9fafb; cursor: default;'}" onfocus="if(!this.readOnly) this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(37, 99, 235, 0.1)';" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none';" />
+      <button class="btn btn-primary" id="saveNameButton" style="white-space: nowrap; padding: 0.875rem 1.5rem; font-weight: 600; border-radius: 8px;">${nameIsEditable ? 'Save' : 'Edit'}</button>
     </div>
   `;
   profileForm.appendChild(nameSection);
 
-  // Section 3: Bio/Description
+  // Section 3: Bio/Description - Card Style
   const bioSection = document.createElement("div");
-  bioSection.className = "field";
+  bioSection.className = "card";
+  bioSection.style.cssText = "padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;";
   const bioValue = user.bio || '';
   const bioIsEditable = !bioValue; // Start editable if no bio, otherwise start in view mode
   bioSection.innerHTML = `
-    <label for='profileBioInput' style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; display: block;">📝 About You</label>
-    <p class="muted" style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">Tell people about yourself, your experience, and what jobs you like to do.</p>
-    <textarea id='profileBioInput' placeholder='Example: Experienced mover with a pickup truck. I specialize in moving, yard work, and dump runs. Available weekdays and weekends.' rows="4" ${bioIsEditable ? '' : 'readonly'} style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-family: inherit; resize: vertical; ${bioIsEditable ? '' : 'background: var(--bg-light); cursor: default;'}"></textarea>
-    <button class='btn btn-primary' id='saveBioButton' style='margin-top:0.5rem;'>${bioIsEditable ? 'Save Bio' : 'Edit Bio'}</button>
+    <label for='profileBioInput' style="font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; display: block; font-size: 1rem;">📝 About You</label>
+    <p class="muted" style="margin: 0 0 0.75rem 0; font-size: 0.9rem; line-height: 1.5;">Tell people about yourself, your experience, and what jobs you like to do.</p>
+    <textarea id='profileBioInput' placeholder='Example: Experienced mover with a pickup truck. I specialize in moving, yard work, and dump runs. Available weekdays and weekends.' rows="4" ${bioIsEditable ? '' : 'readonly'} style="width: 100%; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; font-family: inherit; resize: vertical; transition: all 0.2s; ${bioIsEditable ? '' : 'background: #f9fafb; cursor: default;'}" onfocus="if(!this.readOnly) this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(37, 99, 235, 0.1)';" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none';"></textarea>
+    <button class='btn btn-primary' id='saveBioButton' style='margin-top:0.75rem; padding: 0.875rem 1.5rem; font-weight: 600; border-radius: 8px;'>${bioIsEditable ? 'Save Bio' : 'Edit Bio'}</button>
   `;
   bioSection.querySelector('#profileBioInput').value = bioValue;
   profileForm.appendChild(bioSection);
   
-  // Section 4: Tools & Equipment
+  // Section 4: Tools & Equipment - Card Style
   const toolsSection = document.createElement("div");
-  toolsSection.className = "field";
+  toolsSection.className = "card";
+  toolsSection.style.cssText = "padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;";
   const toolsValue = user.tools || '';
   const toolsIsEditable = !toolsValue; // Start editable if no tools, otherwise start in view mode
   toolsSection.innerHTML = `
-    <label for="profileToolsInput" style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; display: block;">🔧 Tools & Equipment</label>
-    <p class="muted" style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">List the tools or equipment you have available</p>
-    <textarea id="profileToolsInput" placeholder="Example: Pickup truck, pressure washer, lawn mower, moving straps, hand tools" rows="3" ${toolsIsEditable ? '' : 'readonly'} style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-family: inherit; resize: vertical; ${toolsIsEditable ? '' : 'background: var(--bg-light); cursor: default;'}"></textarea>
-    <button class="btn btn-primary" id="saveToolsButton" style="margin-top:0.5rem;">${toolsIsEditable ? 'Save Tools' : 'Edit Tools'}</button>
+    <label for="profileToolsInput" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; display: block; font-size: 1rem;">🔧 Tools & Equipment</label>
+    <p class="muted" style="margin: 0 0 0.75rem 0; font-size: 0.9rem; line-height: 1.5;">List the tools or equipment you have available</p>
+    <textarea id="profileToolsInput" placeholder="Example: Pickup truck, pressure washer, lawn mower, moving straps, hand tools" rows="3" ${toolsIsEditable ? '' : 'readonly'} style="width: 100%; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; font-family: inherit; resize: vertical; transition: all 0.2s; ${toolsIsEditable ? '' : 'background: #f9fafb; cursor: default;'}" onfocus="if(!this.readOnly) this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(37, 99, 235, 0.1)';" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none';"></textarea>
+    <button class="btn btn-primary" id="saveToolsButton" style="margin-top:0.75rem; padding: 0.875rem 1.5rem; font-weight: 600; border-radius: 8px;">${toolsIsEditable ? 'Save Tools' : 'Edit Tools'}</button>
   `;
   toolsSection.querySelector('#profileToolsInput').value = toolsValue;
   profileForm.appendChild(toolsSection);
   
-  // Section 5: Gender (optional)
-  const genderSection = document.createElement("div");
-  genderSection.className = "field";
-  genderSection.innerHTML = `
-    <label for="profileGenderInput" style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; display: block;">Gender (Optional)</label>
-    <div style="display: flex; gap: 0.5rem;">
-      <select id="profileGenderInput" style="flex: 1; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: white;">
-        <option value="">Select...</option>
-        <option value="male" ${user.gender === 'male' ? 'selected' : ''}>Male</option>
-        <option value="female" ${user.gender === 'female' ? 'selected' : ''}>Female</option>
-        <option value="other" ${user.gender === 'other' ? 'selected' : ''}>Other</option>
-        <option value="prefer_not_to_say" ${user.gender === 'prefer_not_to_say' ? 'selected' : ''}>Prefer not to say</option>
-      </select>
-      <button class="btn btn-primary" id="saveGenderButton" style="white-space: nowrap;">Save</button>
+  // Section 5: Gender & Location - Combined Card
+  const personalInfoSection = document.createElement("div");
+  personalInfoSection.className = "card";
+  personalInfoSection.style.cssText = "padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;";
+  personalInfoSection.innerHTML = `
+    <div style="margin-bottom: 1.5rem;">
+      <label for="profileGenderInput" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.75rem; display: block; font-size: 1rem;">Gender (Optional)</label>
+      <div style="display: flex; gap: 0.75rem;">
+        <select id="profileGenderInput" style="flex: 1; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; background: white; transition: all 0.2s;" onfocus="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(37, 99, 235, 0.1)';" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none';">
+          <option value="">Select...</option>
+          <option value="male" ${user.gender === 'male' ? 'selected' : ''}>Male</option>
+          <option value="female" ${user.gender === 'female' ? 'selected' : ''}>Female</option>
+          <option value="other" ${user.gender === 'other' ? 'selected' : ''}>Other</option>
+          <option value="prefer_not_to_say" ${user.gender === 'prefer_not_to_say' ? 'selected' : ''}>Prefer not to say</option>
+        </select>
+        <button class="btn btn-primary" id="saveGenderButton" style="white-space: nowrap; padding: 0.875rem 1.5rem; font-weight: 600; border-radius: 8px;">Save</button>
+      </div>
+    </div>
+    <div>
+      <label for="profileCityInput" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; display: block; font-size: 1rem;">📍 Location</label>
+      <p class="muted" style="margin: 0 0 0.75rem 0; font-size: 0.9rem; line-height: 1.5;">Used for location-based job filtering</p>
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+        <input id="profileCityInput" type="text" placeholder="City" value="${user.city || ''}" style="flex: 2; min-width: 150px; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; transition: all 0.2s;" onfocus="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(37, 99, 235, 0.1)';" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none';" />
+        <input id="profileZipInput" type="text" placeholder="ZIP" value="${user.zip || ''}" maxlength="5" style="flex: 1; min-width: 100px; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; transition: all 0.2s;" onfocus="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(37, 99, 235, 0.1)';" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none';" />
+        <button class="btn btn-primary" id="saveLocationButton" style="white-space: nowrap; padding: 0.875rem 1.5rem; font-weight: 600; border-radius: 8px;">Save</button>
+      </div>
     </div>
   `;
-  profileForm.appendChild(genderSection);
-
-  // Section 6: Location
-  const locationSection = document.createElement("div");
-  locationSection.className = "field";
-  locationSection.innerHTML = `
-    <label for="profileCityInput" style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; display: block;">📍 Location</label>
-    <p class="muted" style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">Used for location-based job filtering</p>
-    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-      <input id="profileCityInput" type="text" placeholder="City" value="${user.city || ''}" style="flex: 2; min-width: 150px; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem;" />
-      <input id="profileZipInput" type="text" placeholder="ZIP" value="${user.zip || ''}" maxlength="5" style="flex: 1; min-width: 100px; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem;" />
-      <button class="btn btn-primary" id="saveLocationButton" style="white-space: nowrap;">Save</button>
-    </div>
-  `;
-  profileForm.appendChild(locationSection);
+  profileForm.appendChild(personalInfoSection);
 
   container.appendChild(profileForm);
   
