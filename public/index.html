@@ -6598,11 +6598,12 @@ async function renderJobs(reset = false) {
           applyNowBtn.className = "btn btn-primary";
           applyNowBtn.textContent = "Submit Application";
           applyNowBtn.style.cssText = "width: 100%; padding: 1rem; font-size: 1rem; font-weight: 700; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); border: none; border-radius: 12px; color: white; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;";
-          applyNowBtn.disabled = !hasStripe;
-          if (!hasStripe) {
-            applyNowBtn.style.opacity = "0.5";
-            applyNowBtn.style.cursor = "not-allowed";
-          }
+          // Stripe requirement temporarily disabled for sandbox mode
+          // applyNowBtn.disabled = !hasStripe;
+          // if (!hasStripe) {
+          //   applyNowBtn.style.opacity = "0.5";
+          //   applyNowBtn.style.cursor = "not-allowed";
+          // }
           
           applyNowBtn.addEventListener("mouseenter", () => {
             if (!applyNowBtn.disabled) {
