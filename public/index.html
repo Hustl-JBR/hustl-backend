@@ -9440,8 +9440,16 @@ async function renderJobs(reset = false) {
   if (!user) {
     if (heroCard) heroCard.innerHTML = "";
     if (quickStats) quickStats.innerHTML = "";
-    container.innerHTML = "<div class='muted' style='padding: 2rem; text-align: center;'>Please log in to see your profile.</div>";
+    container.innerHTML = `
+      <div class='muted' style='padding: 2rem; text-align: center;'>
+        <div style="margin-bottom: 1rem; font-size: 1.1rem;">Please log in to see your profile.</div>
+        <button class="btn btn-primary" onclick="if(window.openAuthModal) window.openAuthModal('login'); else setView('auth');" style="padding: 0.75rem 1.5rem;">Log In / Sign Up</button>
+      </div>
+    `;
     jobsList.innerHTML = "";
+    // Hide Edit Profile button when not logged in
+    const editProfileBtn = document.getElementById("editProfileButton");
+    if (editProfileBtn) editProfileBtn.style.display = 'none';
     return;
   }
 
