@@ -10362,31 +10362,40 @@ try {
         desktopAuth.innerHTML = `
           <span style="color: var(--text-main); font-size: 0.85rem; font-weight: 500; margin-right: 0.75rem;">👋 ${firstName}</span>
           <button class="btn-login-header" id="desktopProfileBtn" data-action="profile">Profile</button>
-          <button class="btn-signup-header" id="desktopLogoutBtn" data-action="signout" style="background: #fee2e2; color: #dc2626; border-color: #fca5a5;">Logout</button>
+          <button class="btn-signup-header" id="desktopLogoutBtn" data-action="signout" style="background: #fee2e2; color: #dc2626; border-color: #fca5a5; cursor: pointer;">Logout</button>
         `;
-        // Add event listeners for desktop buttons
-        const desktopProfileBtn = document.getElementById('desktopProfileBtn');
-        const desktopLogoutBtn = document.getElementById('desktopLogoutBtn');
-        if (desktopProfileBtn) {
-          desktopProfileBtn.addEventListener('click', () => {
-            if (typeof window.setView === 'function') {
-              window.setView('profile');
-            }
-          });
-        }
-        if (desktopLogoutBtn) {
-          desktopLogoutBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Desktop logout button clicked');
-            // Call handleSignOut directly - it's always defined
-            if (window.handleSignOut) {
-              window.handleSignOut();
-            } else {
-              console.error('handleSignOut not available');
-            }
-          });
-        }
+        // Add event listeners for desktop buttons - use setTimeout to ensure DOM is ready
+        setTimeout(() => {
+          const desktopProfileBtn = document.getElementById('desktopProfileBtn');
+          const desktopLogoutBtn = document.getElementById('desktopLogoutBtn');
+          if (desktopProfileBtn) {
+            desktopProfileBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Desktop profile button clicked');
+              if (window.setView && typeof window.setView === 'function') {
+                window.setView('profile');
+              }
+            });
+          } else {
+            console.warn('desktopProfileBtn not found');
+          }
+          if (desktopLogoutBtn) {
+            desktopLogoutBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Desktop logout button clicked');
+              // Call handleSignOut directly - it's always defined
+              if (window.handleSignOut) {
+                window.handleSignOut();
+              } else {
+                console.error('handleSignOut not available');
+              }
+            });
+          } else {
+            console.warn('desktopLogoutBtn not found');
+          }
+        }, 50);
       }
       // Update entire mobile menu for logged-in users
       if (mobileMenu) {
@@ -10409,23 +10418,35 @@ try {
           <button class="btn-login-header" id="headerLoginBtn">Log In</button>
           <button class="btn-signup-header" id="headerSignupBtn">Sign Up Free</button>
         `;
-        // Add event listeners for desktop buttons
-        const headerLoginBtn = document.getElementById('headerLoginBtn');
-        const headerSignupBtn = document.getElementById('headerSignupBtn');
-        if (headerLoginBtn) {
-          headerLoginBtn.addEventListener('click', () => {
-            if (typeof window.openAuthModal === 'function') {
-              window.openAuthModal('login');
-            }
-          });
-        }
-        if (headerSignupBtn) {
-          headerSignupBtn.addEventListener('click', () => {
-            if (typeof window.openAuthModal === 'function') {
-              window.openAuthModal('create');
-            }
-          });
-        }
+        // Add event listeners for desktop buttons - use setTimeout to ensure DOM is ready
+        setTimeout(() => {
+          const headerLoginBtn = document.getElementById('headerLoginBtn');
+          const headerSignupBtn = document.getElementById('headerSignupBtn');
+          if (headerLoginBtn) {
+            headerLoginBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Header login button clicked');
+              if (window.openAuthModal && typeof window.openAuthModal === 'function') {
+                window.openAuthModal('login');
+              }
+            });
+          } else {
+            console.warn('headerLoginBtn not found');
+          }
+          if (headerSignupBtn) {
+            headerSignupBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Header signup button clicked');
+              if (window.openAuthModal && typeof window.openAuthModal === 'function') {
+                window.openAuthModal('create');
+              }
+            });
+          } else {
+            console.warn('headerSignupBtn not found');
+          }
+        }, 50);
       }
       // Update entire mobile menu for logged-out users
       if (mobileMenu) {
