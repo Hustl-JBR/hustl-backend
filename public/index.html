@@ -6062,6 +6062,76 @@ async function renderJobs(reset = false) {
       timeRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Posted:</span> <span style="color: var(--text-muted);">${postedTime}</span>`;
       summaryGrid.appendChild(timeRow);
 
+      // Job Date / Scheduled Date
+      if (job.date || job.startTime) {
+        const dateRow = document.createElement("div");
+        dateRow.style.cssText = "display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;";
+        try {
+          const jobDate = job.startTime ? new Date(job.startTime) : new Date(job.date);
+          if (!isNaN(jobDate.getTime())) {
+            const dateStr = jobDate.toLocaleDateString('en-US', { 
+              weekday: 'short',
+              month: 'short', 
+              day: 'numeric',
+              year: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
+            dateRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Date:</span> <span style="color: var(--text-muted);">${dateStr}</span>`;
+            summaryGrid.appendChild(dateRow);
+          }
+        } catch (e) {
+          console.warn("Error formatting job date:", e);
+        }
+      }
+
+      // Deadline / Needed By
+      const deadlineRow = document.createElement("div");
+      deadlineRow.style.cssText = "display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;";
+      try {
+        const requirements = job.requirements || {};
+        const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
+        
+        if (deadlinePreference === "until_completed" || deadlinePreference === "whenever" || deadlinePreference === "flexible") {
+          deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Deadline:</span> <span style="color: #f59e0b; font-weight: 600;">⏰ Flexible - Until completed</span>`;
+        } else if (job.startTime) {
+          const deadlineDate = new Date(job.startTime);
+          if (!isNaN(deadlineDate.getTime())) {
+            const deadlineStr = deadlineDate.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric',
+              year: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
+            deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Needed By:</span> <span style="color: #059669; font-weight: 600;">📅 ${deadlineStr}</span>`;
+          } else {
+            deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Needed By:</span> <span style="color: var(--text-muted);">Not specified</span>`;
+          }
+        } else if (job.date) {
+          const deadlineDate = new Date(job.date);
+          if (!isNaN(deadlineDate.getTime())) {
+            const deadlineStr = deadlineDate.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric',
+              year: 'numeric'
+            });
+            deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Needed By:</span> <span style="color: #059669; font-weight: 600;">📅 ${deadlineStr}</span>`;
+          } else {
+            deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Needed By:</span> <span style="color: var(--text-muted);">Not specified</span>`;
+          }
+        } else {
+          deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Needed By:</span> <span style="color: var(--text-muted);">Not specified</span>`;
+        }
+        summaryGrid.appendChild(deadlineRow);
+      } catch (e) {
+        console.warn("Error formatting deadline:", e);
+        deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Needed By:</span> <span style="color: var(--text-muted);">Not specified</span>`;
+        summaryGrid.appendChild(deadlineRow);
+      }
+
       // Location
       const locationRow = document.createElement("div");
       locationRow.style.cssText = "display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.9rem;";
