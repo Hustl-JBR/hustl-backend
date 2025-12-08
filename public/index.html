@@ -9866,19 +9866,23 @@ meta.textContent =
         tab.parentNode.replaceChild(newTab, tab);
       });
       
-      // Nav tabs - add fresh event listeners using window.setView
+      // Nav tabs - add fresh event listeners using window._realSetView directly
       document.querySelectorAll(".nav-tab").forEach((tab) => {
         tab.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
           const v = tab.dataset.view;
-          // Try to call the real setView function from window
+          // Call the real setView function directly (avoid stub recursion)
           if (v) {
             try {
-              if (typeof window.setView === 'function') {
+              // Use _realSetView to bypass stub and avoid recursion
+              if (window._realSetView && typeof window._realSetView === 'function') {
+                window._realSetView(v);
+              } else if (window.setView && typeof window.setView === 'function') {
+                // Fallback to window.setView if _realSetView not available yet
                 window.setView(v);
               } else {
-                // Fallback: basic view switching
+                // Final fallback: basic view switching
                 document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
                 const target = document.getElementById("view-" + v);
                 if (target) target.style.display = "block";
@@ -9902,7 +9906,10 @@ meta.textContent =
           freshCtaPost.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (typeof window.setView === 'function') {
+            // Use _realSetView to avoid stub recursion
+            if (window._realSetView && typeof window._realSetView === 'function') {
+              window._realSetView("post");
+            } else if (window.setView && typeof window.setView === 'function') {
               window.setView("post");
               setTimeout(() => {
                 const formCard = document.getElementById("jobFormCard");
@@ -9924,7 +9931,10 @@ meta.textContent =
           freshCtaBrowse.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (typeof window.setView === 'function') {
+            // Use _realSetView to avoid stub recursion
+            if (window._realSetView && typeof window._realSetView === 'function') {
+              window._realSetView("jobs");
+            } else if (window.setView && typeof window.setView === 'function') {
               window.setView("jobs");
             }
           });
@@ -10124,7 +10134,10 @@ try {
         const view = item.dataset.view;
         const action = item.dataset.action;
         
-        if (view && typeof window.setView === 'function') {
+        // Use _realSetView to avoid stub recursion
+        if (view && window._realSetView && typeof window._realSetView === 'function') {
+          window._realSetView(view);
+        } else if (view && window.setView && typeof window.setView === 'function') {
           window.setView(view);
           
           // Handle special actions
