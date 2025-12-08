@@ -3070,10 +3070,15 @@
             <div>
               <!-- Edit Profile -->
               <div class="card profile-settings-card">
-                <div class="card-header">
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                   <div class="card-title">✏️ Edit Profile</div>
+                  <button class="btn btn-primary" id="editProfileButton" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Edit Profile</button>
                 </div>
                 <div id="profileContent"></div>
+                <div id="profileSaveCancelButtons" style="display: none; padding: 1rem; border-top: 1px solid var(--border); margin-top: 1rem; gap: 0.75rem; flex-direction: row; justify-content: flex-end;">
+                  <button class="btn btn-ghost" id="cancelProfileEditButton" style="padding: 0.75rem 1.5rem;">Cancel</button>
+                  <button class="btn btn-primary" id="saveProfileButton" style="padding: 0.75rem 1.5rem;">Save Changes</button>
+                </div>
               </div>
               
               <!-- Preferences -->
@@ -9786,13 +9791,9 @@ async function renderJobs(reset = false) {
   nameSection.className = "card";
   nameSection.style.cssText = "padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;";
   const nameValue = user.name || '';
-  const nameIsEditable = !nameValue; // Start editable if no name, otherwise start in view mode
   nameSection.innerHTML = `
     <label for="profileNameInput" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.75rem; display: block; font-size: 1rem;">👤 Name</label>
-    <div style="display: flex; gap: 0.75rem; align-items: center;">
-      <input id="profileNameInput" type="text" placeholder="Your full name" value="${nameValue}" ${nameIsEditable ? '' : 'readonly'} style="flex: 1; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; transition: all 0.2s; ${nameIsEditable ? '' : 'background: #f9fafb; cursor: default;'}" onfocus="if(!this.readOnly) this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(37, 99, 235, 0.1)';" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none';" />
-      <button class="btn btn-primary" id="saveNameButton" style="white-space: nowrap; padding: 0.875rem 1.5rem; font-weight: 600; border-radius: 8px;">${nameIsEditable ? 'Save' : 'Edit'}</button>
-    </div>
+    <input id="profileNameInput" type="text" placeholder="Your full name" value="${nameValue}" readonly style="width: 100%; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; transition: all 0.2s; background: #f9fafb; cursor: default;" onfocus="if(!this.readOnly) this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(37, 99, 235, 0.1)';" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none';" />
   `;
   profileForm.appendChild(nameSection);
 
@@ -9801,12 +9802,10 @@ async function renderJobs(reset = false) {
   bioSection.className = "card";
   bioSection.style.cssText = "padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;";
   const bioValue = user.bio || '';
-  const bioIsEditable = !bioValue; // Start editable if no bio, otherwise start in view mode
   bioSection.innerHTML = `
     <label for='profileBioInput' style="font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; display: block; font-size: 1rem;">📝 About You</label>
     <p class="muted" style="margin: 0 0 0.75rem 0; font-size: 0.9rem; line-height: 1.5;">Tell people about yourself, your experience, and what jobs you like to do.</p>
-    <textarea id='profileBioInput' placeholder='Example: Experienced mover with a pickup truck. I specialize in moving, yard work, and dump runs. Available weekdays and weekends.' rows="4" ${bioIsEditable ? '' : 'readonly'} style="width: 100%; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; font-family: inherit; resize: vertical; transition: all 0.2s; ${bioIsEditable ? '' : 'background: #f9fafb; cursor: default;'}" onfocus="if(!this.readOnly) this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(37, 99, 235, 0.1)';" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none';"></textarea>
-    <button class='btn btn-primary' id='saveBioButton' style='margin-top:0.75rem; padding: 0.875rem 1.5rem; font-weight: 600; border-radius: 8px;'>${bioIsEditable ? 'Save Bio' : 'Edit Bio'}</button>
+    <textarea id='profileBioInput' placeholder='Example: Experienced mover with a pickup truck. I specialize in moving, yard work, and dump runs. Available weekdays and weekends.' rows="4" readonly style="width: 100%; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; font-family: inherit; resize: vertical; transition: all 0.2s; background: #f9fafb; cursor: default;" onfocus="if(!this.readOnly) this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(37, 99, 235, 0.1)';" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none';"></textarea>
   `;
   bioSection.querySelector('#profileBioInput').value = bioValue;
   profileForm.appendChild(bioSection);
@@ -9816,12 +9815,10 @@ async function renderJobs(reset = false) {
   toolsSection.className = "card";
   toolsSection.style.cssText = "padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;";
   const toolsValue = user.tools || '';
-  const toolsIsEditable = !toolsValue; // Start editable if no tools, otherwise start in view mode
   toolsSection.innerHTML = `
     <label for="profileToolsInput" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; display: block; font-size: 1rem;">🔧 Tools & Equipment</label>
     <p class="muted" style="margin: 0 0 0.75rem 0; font-size: 0.9rem; line-height: 1.5;">List the tools or equipment you have available</p>
-    <textarea id="profileToolsInput" placeholder="Example: Pickup truck, pressure washer, lawn mower, moving straps, hand tools" rows="3" ${toolsIsEditable ? '' : 'readonly'} style="width: 100%; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; font-family: inherit; resize: vertical; transition: all 0.2s; ${toolsIsEditable ? '' : 'background: #f9fafb; cursor: default;'}" onfocus="if(!this.readOnly) this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(37, 99, 235, 0.1)';" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none';"></textarea>
-    <button class="btn btn-primary" id="saveToolsButton" style="margin-top:0.75rem; padding: 0.875rem 1.5rem; font-weight: 600; border-radius: 8px;">${toolsIsEditable ? 'Save Tools' : 'Edit Tools'}</button>
+    <textarea id="profileToolsInput" placeholder="Example: Pickup truck, pressure washer, lawn mower, moving straps, hand tools" rows="3" readonly style="width: 100%; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; font-family: inherit; resize: vertical; transition: all 0.2s; background: #f9fafb; cursor: default;" onfocus="if(!this.readOnly) this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(37, 99, 235, 0.1)';" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none';"></textarea>
   `;
   toolsSection.querySelector('#profileToolsInput').value = toolsValue;
   profileForm.appendChild(toolsSection);
@@ -9848,9 +9845,8 @@ async function renderJobs(reset = false) {
       <label for="profileCityInput" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; display: block; font-size: 1rem;">📍 Location</label>
       <p class="muted" style="margin: 0 0 0.75rem 0; font-size: 0.9rem; line-height: 1.5;">Used for location-based job filtering</p>
       <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
-        <input id="profileCityInput" type="text" placeholder="City" value="${user.city || ''}" style="flex: 2; min-width: 150px; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; transition: all 0.2s;" onfocus="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(37, 99, 235, 0.1)';" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none';" />
-        <input id="profileZipInput" type="text" placeholder="ZIP" value="${user.zip || ''}" maxlength="5" style="flex: 1; min-width: 100px; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; transition: all 0.2s;" onfocus="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(37, 99, 235, 0.1)';" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none';" />
-        <button class="btn btn-primary" id="saveLocationButton" style="white-space: nowrap; padding: 0.875rem 1.5rem; font-weight: 600; border-radius: 8px;">Save</button>
+        <input id="profileCityInput" type="text" placeholder="City" value="${user.city || ''}" readonly style="flex: 2; min-width: 150px; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; transition: all 0.2s; background: #f9fafb; cursor: default;" onfocus="if(!this.readOnly) this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(37, 99, 235, 0.1)';" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none';" />
+        <input id="profileZipInput" type="text" placeholder="ZIP" value="${user.zip || ''}" maxlength="5" readonly style="flex: 1; min-width: 100px; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; transition: all 0.2s; background: #f9fafb; cursor: default;" onfocus="if(!this.readOnly) this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(37, 99, 235, 0.1)';" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none';" />
       </div>
     </div>
   `;
@@ -9858,7 +9854,219 @@ async function renderJobs(reset = false) {
 
   container.appendChild(profileForm);
   
-  // Add save/edit handler for name
+  // Store original values for cancel functionality
+  const originalValues = {
+    name: user.name || '',
+    bio: user.bio || '',
+    tools: user.tools || '',
+    gender: user.gender || '',
+    city: user.city || '',
+    zip: user.zip || ''
+  };
+  
+  // Edit Profile button handler - makes all fields editable
+  setTimeout(() => {
+    const editProfileBtn = document.getElementById("editProfileButton");
+    const saveCancelButtons = document.getElementById("profileSaveCancelButtons");
+    const saveProfileBtn = document.getElementById("saveProfileButton");
+    const cancelProfileBtn = document.getElementById("cancelProfileEditButton");
+    
+    if (editProfileBtn) {
+      editProfileBtn.addEventListener("click", () => {
+        // Make all fields editable
+        const nameInput = document.getElementById("profileNameInput");
+        const bioInput = document.getElementById("profileBioInput");
+        const toolsInput = document.getElementById("profileToolsInput");
+        const genderSelect = document.getElementById("profileGenderInput");
+        const cityInput = document.getElementById("profileCityInput");
+        const zipInput = document.getElementById("profileZipInput");
+        
+        if (nameInput) {
+          nameInput.removeAttribute('readonly');
+          nameInput.style.background = 'white';
+          nameInput.style.cursor = 'text';
+        }
+        if (bioInput) {
+          bioInput.removeAttribute('readonly');
+          bioInput.style.background = 'white';
+          bioInput.style.cursor = 'text';
+        }
+        if (toolsInput) {
+          toolsInput.removeAttribute('readonly');
+          toolsInput.style.background = 'white';
+          toolsInput.style.cursor = 'text';
+        }
+        if (genderSelect) {
+          genderSelect.disabled = false;
+          genderSelect.style.background = 'white';
+          genderSelect.style.cursor = 'pointer';
+        }
+        if (cityInput) {
+          cityInput.removeAttribute('readonly');
+          cityInput.style.background = 'white';
+          cityInput.style.cursor = 'text';
+        }
+        if (zipInput) {
+          zipInput.removeAttribute('readonly');
+          zipInput.style.background = 'white';
+          zipInput.style.cursor = 'text';
+        }
+        
+        // Hide Edit Profile button, show Save/Cancel
+        editProfileBtn.style.display = 'none';
+        if (saveCancelButtons) saveCancelButtons.style.display = 'flex';
+      });
+    }
+    
+    // Cancel button handler
+    if (cancelProfileBtn) {
+      cancelProfileBtn.addEventListener("click", () => {
+        // Restore original values
+        const nameInput = document.getElementById("profileNameInput");
+        const bioInput = document.getElementById("profileBioInput");
+        const toolsInput = document.getElementById("profileToolsInput");
+        const genderSelect = document.getElementById("profileGenderInput");
+        const cityInput = document.getElementById("profileCityInput");
+        const zipInput = document.getElementById("profileZipInput");
+        
+        if (nameInput) {
+          nameInput.value = originalValues.name;
+          nameInput.setAttribute('readonly', 'readonly');
+          nameInput.style.background = '#f9fafb';
+          nameInput.style.cursor = 'default';
+        }
+        if (bioInput) {
+          bioInput.value = originalValues.bio;
+          bioInput.setAttribute('readonly', 'readonly');
+          bioInput.style.background = '#f9fafb';
+          bioInput.style.cursor = 'default';
+        }
+        if (toolsInput) {
+          toolsInput.value = originalValues.tools;
+          toolsInput.setAttribute('readonly', 'readonly');
+          toolsInput.style.background = '#f9fafb';
+          toolsInput.style.cursor = 'default';
+        }
+        if (genderSelect) {
+          genderSelect.value = originalValues.gender;
+          genderSelect.disabled = true;
+          genderSelect.style.background = '#f9fafb';
+          genderSelect.style.cursor = 'not-allowed';
+        }
+        if (cityInput) {
+          cityInput.value = originalValues.city;
+          cityInput.setAttribute('readonly', 'readonly');
+          cityInput.style.background = '#f9fafb';
+          cityInput.style.cursor = 'default';
+        }
+        if (zipInput) {
+          zipInput.value = originalValues.zip;
+          zipInput.setAttribute('readonly', 'readonly');
+          zipInput.style.background = '#f9fafb';
+          zipInput.style.cursor = 'default';
+        }
+        
+        // Show Edit Profile button, hide Save/Cancel
+        if (editProfileBtn) editProfileBtn.style.display = 'block';
+        if (saveCancelButtons) saveCancelButtons.style.display = 'none';
+      });
+    }
+    
+    // Save button handler
+    if (saveProfileBtn) {
+      saveProfileBtn.addEventListener("click", async () => {
+        const nameInput = document.getElementById("profileNameInput");
+        const bioInput = document.getElementById("profileBioInput");
+        const toolsInput = document.getElementById("profileToolsInput");
+        const genderSelect = document.getElementById("profileGenderInput");
+        const cityInput = document.getElementById("profileCityInput");
+        const zipInput = document.getElementById("profileZipInput");
+        
+        const updates = {};
+        if (nameInput) updates.name = nameInput.value.trim();
+        if (bioInput) updates.bio = bioInput.value.trim();
+        if (toolsInput) updates.tools = toolsInput.value.trim();
+        if (genderSelect) updates.gender = genderSelect.value;
+        if (cityInput) updates.city = cityInput.value.trim();
+        if (zipInput) updates.zip = zipInput.value.trim();
+        
+        // Validate required fields
+        if (!updates.name) {
+          showToast("Please enter your name.");
+          if (nameInput) nameInput.focus();
+          return;
+        }
+        
+        if (updates.zip && !/^\d{5}$/.test(updates.zip)) {
+          showToast("Please enter a valid 5-digit ZIP code.");
+          if (zipInput) zipInput.focus();
+          return;
+        }
+        
+        saveProfileBtn.disabled = true;
+        saveProfileBtn.textContent = "Saving...";
+        
+        try {
+          await window.hustlAPI.users.updateProfile(updates);
+          
+          // Update local storage
+          const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
+          Object.assign(storedUser, updates);
+          localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+          
+          // Update original values
+          Object.assign(originalValues, updates);
+          
+          // Make all fields readonly again
+          if (nameInput) {
+            nameInput.setAttribute('readonly', 'readonly');
+            nameInput.style.background = '#f9fafb';
+            nameInput.style.cursor = 'default';
+          }
+          if (bioInput) {
+            bioInput.setAttribute('readonly', 'readonly');
+            bioInput.style.background = '#f9fafb';
+            bioInput.style.cursor = 'default';
+          }
+          if (toolsInput) {
+            toolsInput.setAttribute('readonly', 'readonly');
+            toolsInput.style.background = '#f9fafb';
+            toolsInput.style.cursor = 'default';
+          }
+          if (genderSelect) {
+            genderSelect.disabled = true;
+            genderSelect.style.background = '#f9fafb';
+            genderSelect.style.cursor = 'not-allowed';
+          }
+          if (cityInput) {
+            cityInput.setAttribute('readonly', 'readonly');
+            cityInput.style.background = '#f9fafb';
+            cityInput.style.cursor = 'default';
+          }
+          if (zipInput) {
+            zipInput.setAttribute('readonly', 'readonly');
+            zipInput.style.background = '#f9fafb';
+            zipInput.style.cursor = 'default';
+          }
+          
+          // Show Edit Profile button, hide Save/Cancel
+          if (editProfileBtn) editProfileBtn.style.display = 'block';
+          if (saveCancelButtons) saveCancelButtons.style.display = 'none';
+          
+          saveProfileBtn.disabled = false;
+          saveProfileBtn.textContent = "Save Changes";
+          showToast("✅ Profile updated successfully!");
+        } catch (error) {
+          console.error("Error saving profile:", error);
+          saveProfileBtn.disabled = false;
+          saveProfileBtn.textContent = "Save Changes";
+          showToast("Failed to save profile. Please try again.");
+        }
+      });
+    }
+  }, 200);
+  
+  // Add save/edit handler for name (keep for backward compatibility, but Edit Profile button is primary)
   setTimeout(() => {
     const saveNameBtn = document.getElementById("saveNameButton");
     const nameInput = document.getElementById("profileNameInput");
