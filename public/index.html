@@ -10324,15 +10324,17 @@ try {
   // Expose openAuthModal globally immediately after definition
   window.openAuthModal = openAuthModal;
   
-  function closeAuthModal() {
+  // Define and assign closeAuthModal to window immediately
+  window.closeAuthModal = function closeAuthModal() {
     const overlay = document.getElementById('authModalOverlay');
     if (overlay) {
       overlay.classList.remove('open');
       document.body.style.overflow = '';
     }
-  }
-  // Expose closeAuthModal globally immediately after definition
-  window.closeAuthModal = closeAuthModal;
+  };
+  
+  // Function is already assigned above, just log confirmation
+  console.log('✅ closeAuthModal function assigned to window.closeAuthModal');
   
   // Update header when logged in/out - uses API to get current user
   async function updateHeaderAuth() {
