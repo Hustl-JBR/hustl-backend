@@ -9677,10 +9677,12 @@ async function renderJobs(reset = false) {
     }
 
     async function renderProfile() {
+  console.log("renderProfile() called");
   // Use API to get current user
   let user = null;
   try {
     user = await window.hustlAPI.auth.getCurrentUser();
+    console.log("User fetched in renderProfile:", user?.name);
   } catch (error) {
     console.error("Error getting user for profile:", error);
   }
