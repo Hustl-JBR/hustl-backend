@@ -3267,52 +3267,59 @@ heart of Hustl.
   // Define stub functions early so they're available for onclick handlers in HTML
   // These will queue calls until real functions are ready
   let setViewQueue = [];
+  let setViewRealFunction = null; // Store reference to avoid recursion
   window.setView = function(view) {
-    // If real function is ready, use it
-    if (window._realSetView && typeof window._realSetView === 'function') {
-      return window._realSetView(view);
+    // If real function is ready, use it directly (not through window)
+    if (setViewRealFunction && typeof setViewRealFunction === 'function') {
+      return setViewRealFunction(view);
     }
     // Otherwise queue the call
     setViewQueue.push(view);
     // Try to process queue after a delay
     setTimeout(() => {
-      if (window._realSetView && typeof window._realSetView === 'function') {
-        setViewQueue.forEach(v => window._realSetView(v));
+      if (setViewRealFunction && typeof setViewRealFunction === 'function') {
+        const queued = [...setViewQueue];
         setViewQueue = [];
+        queued.forEach(v => setViewRealFunction(v));
       }
     }, 100);
   };
   
   let openAuthModalQueue = [];
+  let openAuthModalRealFunction = null;
   window.openAuthModal = function(mode) {
-    if (window._realOpenAuthModal && typeof window._realOpenAuthModal === 'function') {
-      return window._realOpenAuthModal(mode);
+    if (openAuthModalRealFunction && typeof openAuthModalRealFunction === 'function') {
+      return openAuthModalRealFunction(mode);
     }
     openAuthModalQueue.push(mode);
     setTimeout(() => {
-      if (window._realOpenAuthModal && typeof window._realOpenAuthModal === 'function') {
-        openAuthModalQueue.forEach(m => window._realOpenAuthModal(m));
+      if (openAuthModalRealFunction && typeof openAuthModalRealFunction === 'function') {
+        const queued = [...openAuthModalQueue];
         openAuthModalQueue = [];
+        queued.forEach(m => openAuthModalRealFunction(m));
       }
     }, 100);
   };
   
+  let closeAuthModalRealFunction = null;
   window.closeAuthModal = function() {
-    if (window._realCloseAuthModal && typeof window._realCloseAuthModal === 'function') {
-      return window._realCloseAuthModal();
+    if (closeAuthModalRealFunction && typeof closeAuthModalRealFunction === 'function') {
+      return closeAuthModalRealFunction();
     }
   };
   
   let handleSignOutQueue = [];
+  let handleSignOutRealFunction = null;
   window.handleSignOut = function() {
-    if (window._realHandleSignOut && typeof window._realHandleSignOut === 'function') {
-      return window._realHandleSignOut();
+    if (handleSignOutRealFunction && typeof handleSignOutRealFunction === 'function') {
+      return handleSignOutRealFunction();
     }
     handleSignOutQueue.push(true);
     setTimeout(() => {
-      if (window._realHandleSignOut && typeof window._realHandleSignOut === 'function') {
-        handleSignOutQueue.forEach(() => window._realHandleSignOut());
+      if (handleSignOutRealFunction && typeof handleSignOutRealFunction === 'function') {
+        const queued = [...handleSignOutQueue];
         handleSignOutQueue = [];
+        queued.forEach(() => handleSignOutRealFunction());
       }
     }, 100);
   };
@@ -3540,13 +3547,14 @@ heart of Hustl.
       await renderAll();
     }
     // Expose setView globally immediately after definition
-    window._realSetView = setView;
-    window.setView = setView;
-    // Process any queued calls
+    // Store reference in closure variable to avoid recursion
+    setViewRealFunction = setView;
+    window.setView = setView; // Replace stub with real function
+    // Process any queued calls using the real function directly
     if (typeof setViewQueue !== 'undefined' && setViewQueue.length > 0) {
       const queued = [...setViewQueue];
       setViewQueue = [];
-      queued.forEach(v => window.setView(v));
+      queued.forEach(v => setView(v)); // Call directly, not through window
     }
 
     /* ---------- Auth visibility ---------- */
@@ -10237,13 +10245,13 @@ try {
     }, 50);
   }
   // Expose openAuthModal globally immediately after definition
-  window._realOpenAuthModal = openAuthModal;
+  openAuthModalRealFunction = openAuthModal;
   window.openAuthModal = openAuthModal;
   // Process any queued calls
   if (typeof openAuthModalQueue !== 'undefined' && openAuthModalQueue.length > 0) {
     const queued = [...openAuthModalQueue];
     openAuthModalQueue = [];
-    queued.forEach(m => window.openAuthModal(m));
+    queued.forEach(m => openAuthModal(m));
   }
   
   function closeAuthModal() {
@@ -10254,7 +10262,7 @@ try {
     }
   }
   // Expose closeAuthModal globally immediately after definition
-  window._realCloseAuthModal = closeAuthModal;
+  closeAuthModalRealFunction = closeAuthModal;
   window.closeAuthModal = closeAuthModal;
   
   // Update header when logged in/out - uses API to get current user
@@ -10360,13 +10368,13 @@ try {
       await renderAll();
     }
   }
-  window._realHandleSignOut = handleSignOut;
+  handleSignOutRealFunction = handleSignOut;
   window.handleSignOut = handleSignOut;
   // Process any queued calls
   if (typeof handleSignOutQueue !== 'undefined' && handleSignOutQueue.length > 0) {
     const queued = [...handleSignOutQueue];
     handleSignOutQueue = [];
-    queued.forEach(() => window.handleSignOut());
+    queued.forEach(() => handleSignOut());
   }
   
   // Profile Tabs
