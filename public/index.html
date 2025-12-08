@@ -10563,7 +10563,10 @@ try {
     // Render all (non-blocking)
     renderAll().catch(err => console.error("Render error:", err));
   }
+  
+  // Assign handleSignOut to window IMMEDIATELY after definition
   window.handleSignOut = handleSignOut;
+  console.log('✅ handleSignOut function assigned to window.handleSignOut');
   
   // Profile Tabs
   function initProfileTabs() {
