@@ -6676,6 +6676,34 @@ async function renderJobs(reset = false) {
         }
         
         modalContent.appendChild(applySection);
+      } else if (isLoggedIn && !isOpen) {
+        // Job is not open - show message
+        const closedSection = document.createElement("div");
+        closedSection.style.cssText = "padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; background: white; border-radius: 0 0 16px 16px;";
+        const closedMessage = document.createElement("div");
+        closedMessage.style.cssText = "padding: 1rem; background: #f3f4f6; border-radius: 8px; text-align: center; color: var(--text-muted);";
+        closedMessage.textContent = `This job is ${job.status || 'closed'}. Applications are no longer being accepted.`;
+        closedSection.appendChild(closedMessage);
+        modalContent.appendChild(closedSection);
+      } else if (!isLoggedIn) {
+        // Not logged in - show login prompt
+        const loginSection = document.createElement("div");
+        loginSection.style.cssText = "padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; background: white; border-radius: 0 0 16px 16px;";
+        const loginMessage = document.createElement("div");
+        loginMessage.style.cssText = "padding: 1rem; background: #fef3c7; border-radius: 8px; text-align: center;";
+        loginMessage.innerHTML = `<div style="margin-bottom: 0.75rem; color: var(--text-main); font-weight: 600;">Log in to apply for this job</div><button class="btn btn-primary" id="loginToApplyBtn" style="width: 100%; padding: 0.75rem;">Log In / Sign Up</button>`;
+        loginSection.appendChild(loginMessage);
+        const loginBtn = loginMessage.querySelector("#loginToApplyBtn");
+        if (loginBtn) {
+          loginBtn.addEventListener("click", () => {
+            document.body.removeChild(modalOverlay);
+            document.body.style.overflow = "";
+            if (window.openAuthModal) {
+              window.openAuthModal('login');
+            }
+          });
+        }
+        modalContent.appendChild(loginSection);
       }
 
       // Customer view: Show start code if hustler is accepted but not started
