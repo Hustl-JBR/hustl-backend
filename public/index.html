@@ -9846,30 +9846,28 @@ meta.textContent =
         tab.parentNode.replaceChild(newTab, tab);
       });
       
-      // Nav tabs - add fresh event listeners
+      // Nav tabs - add fresh event listeners using window.setView
       document.querySelectorAll(".nav-tab").forEach((tab) => {
-        tab.addEventListener("click", async (e) => {
+        tab.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
           const v = tab.dataset.view;
+          // Try to call the real setView function from window
           if (v) {
-            // Call the view navigation directly to avoid any scope issues
-            const activeView = v;
-            
-            // Hide all sections
-            document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
-            
-            // Show target section
-            const target = document.getElementById("view-" + v);
-            if (target) {
-              target.style.display = "block";
-              window.scrollTo({ top: 0, behavior: 'instant' });
+            try {
+              if (window.setView && window.setView.toString().indexOf('before initialization') === -1) {
+                window.setView(v);
+              } else {
+                // Fallback: basic view switching
+                document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+                const target = document.getElementById("view-" + v);
+                if (target) target.style.display = "block";
+                document.querySelectorAll(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === v));
+                window.scrollTo({ top: 0, behavior: 'instant' });
+              }
+            } catch(err) {
+              console.error("Nav error:", err);
             }
-            
-            // Update active tab styling
-            document.querySelectorAll(".nav-tab").forEach((t) => {
-              t.classList.toggle("active", t.dataset.view === v);
-            });
           }
         });
       });
