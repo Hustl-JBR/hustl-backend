@@ -6439,7 +6439,7 @@ async function renderJobs(reset = false) {
         }
         
         const applySection = document.createElement("div");
-        applySection.style.cssText = "padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; background: white; position: sticky; bottom: 0; border-radius: 0 0 16px 16px;";
+        applySection.style.cssText = "padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; background: white; border-radius: 0 0 16px 16px;";
         
         // Check job status for hustler
         const jobStatusUpper = (job.status || "OPEN").toUpperCase();
@@ -6548,50 +6548,50 @@ async function renderJobs(reset = false) {
           priceHint.textContent = `Current price: ${currentPrice}. Leave blank to accept the listed price.`;
           applySection.appendChild(priceHint);
           
-          // Stripe requirement check
-          const stripeCheck = document.createElement("div");
-          stripeCheck.style.cssText = "padding: 0.75rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-muted);";
-          
-          let hasStripe = false;
-          try {
-            const token = localStorage.getItem("hustl_token");
-            const userResponse = await fetch(`${API_BASE}/users/me`, {
-              headers: token ? { "Authorization": `Bearer ${token}` } : {}
-            });
-            if (userResponse.ok) {
-              const userData = await userResponse.json();
-              hasStripe = !!(userData.stripeAccountId || userData.stripeConnectAccountId);
-            }
-          } catch (e) {
-            console.error("Error checking Stripe:", e);
-          }
-          
-          if (!hasStripe) {
-            stripeCheck.innerHTML = `
-              <div style="margin-bottom: 0.5rem; color: #dc2626; font-weight: 600;">⚠️ Stripe Account Required</div>
-              <div style="margin-bottom: 0.75rem;">You must have a connected Stripe account to apply for jobs.</div>
-              <button id="connectStripeBtn_${job.id}" class="btn btn-primary" style="width: 100%; padding: 0.6rem; font-size: 0.9rem;">
-                Connect Stripe to Apply
-              </button>
-            `;
-            const connectBtn = stripeCheck.querySelector(`#connectStripeBtn_${job.id}`);
-            if (connectBtn) {
-              connectBtn.addEventListener("click", () => {
-                document.body.removeChild(modalOverlay);
-                document.body.style.overflow = "";
-                setView("profile");
-                setTimeout(() => {
-                  const stripeSection = document.getElementById("stripeConnectSection");
-                  if (stripeSection) {
-                    stripeSection.scrollIntoView({ behavior: "smooth", block: "center" });
-                  }
-                }, 300);
-              });
-            }
-          } else {
-            stripeCheck.innerHTML = `<div style="color: #059669; font-weight: 600;">✅ Stripe account connected</div>`;
-          }
-          applySection.appendChild(stripeCheck);
+          // Stripe requirement check - TEMPORARILY DISABLED FOR SANDBOX MODE
+          // const stripeCheck = document.createElement("div");
+          // stripeCheck.style.cssText = "padding: 0.75rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-muted);";
+          // 
+          // let hasStripe = false;
+          // try {
+          //   const token = localStorage.getItem("hustl_token");
+          //   const userResponse = await fetch(`${API_BASE}/users/me`, {
+          //     headers: token ? { "Authorization": `Bearer ${token}` } : {}
+          //   });
+          //   if (userResponse.ok) {
+          //     const userData = await userResponse.json();
+          //     hasStripe = !!(userData.stripeAccountId || userData.stripeConnectAccountId);
+          //   }
+          // } catch (e) {
+          //   console.error("Error checking Stripe:", e);
+          // }
+          // 
+          // if (!hasStripe) {
+          //   stripeCheck.innerHTML = `
+          //     <div style="margin-bottom: 0.5rem; color: #dc2626; font-weight: 600;">⚠️ Stripe Account Required</div>
+          //     <div style="margin-bottom: 0.75rem;">You must have a connected Stripe account to apply for jobs.</div>
+          //     <button id="connectStripeBtn_${job.id}" class="btn btn-primary" style="width: 100%; padding: 0.6rem; font-size: 0.9rem;">
+          //       Connect Stripe to Apply
+          //     </button>
+          //   `;
+          //   const connectBtn = stripeCheck.querySelector(`#connectStripeBtn_${job.id}`);
+          //   if (connectBtn) {
+          //     connectBtn.addEventListener("click", () => {
+          //       document.body.removeChild(modalOverlay);
+          //       document.body.style.overflow = "";
+          //       setView("profile");
+          //       setTimeout(() => {
+          //         const stripeSection = document.getElementById("stripeConnectSection");
+          //         if (stripeSection) {
+          //           stripeSection.scrollIntoView({ behavior: "smooth", block: "center" });
+          //         }
+          //       }, 300);
+          //     });
+          //   }
+          // } else {
+          //   stripeCheck.innerHTML = `<div style="color: #059669; font-weight: 600;">✅ Stripe account connected</div>`;
+          // }
+          // applySection.appendChild(stripeCheck);
           
           // Apply button
           const applyNowBtn = document.createElement("button");
@@ -6623,10 +6623,11 @@ async function renderJobs(reset = false) {
               return;
             }
             
-            if (!hasStripe) {
-              showToast("Please connect your Stripe account first.");
-              return;
-            }
+            // Stripe requirement temporarily disabled for sandbox mode
+            // if (!hasStripe) {
+            //   showToast("Please connect your Stripe account first.");
+            //   return;
+            // }
             
             try {
               applyNowBtn.disabled = true;
