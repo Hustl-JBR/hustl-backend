@@ -3072,7 +3072,7 @@
               <div class="card profile-settings-card">
                 <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                   <div class="card-title">✏️ Edit Profile</div>
-                  <button class="btn btn-primary" id="editProfileButton" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Edit Profile</button>
+                  <button class="btn btn-primary" id="editProfileButton" style="padding: 0.5rem 1rem; font-size: 0.9rem; display: none;">Edit Profile</button>
                 </div>
                 <div id="profileContent"></div>
                 <div id="profileSaveCancelButtons" style="display: none; padding: 1rem; border-top: 1px solid var(--border); margin-top: 1rem; gap: 0.75rem; flex-direction: row; justify-content: flex-end;">
@@ -9430,12 +9430,17 @@ async function renderJobs(reset = false) {
   }
   
   const container = document.getElementById("profileContent");
-  const jobsList = document.getElementById("profileJobsList");
   const heroCard = document.getElementById("profileHeroCard");
   const stripeContent = document.getElementById("stripeConnectContent");
   const quickStats = document.getElementById("profileQuickStats");
   
-  if (!container || !jobsList) return;
+  if (!container) {
+    console.error("Profile container not found");
+    return;
+  }
+  
+  // jobsList might not exist if we're on Settings tab, that's OK
+  const jobsList = document.getElementById("profileJobsList");
 
   if (!user) {
     if (heroCard) heroCard.innerHTML = "";
@@ -9446,7 +9451,7 @@ async function renderJobs(reset = false) {
         <button class="btn btn-primary" onclick="if(window.openAuthModal) window.openAuthModal('login'); else setView('auth');" style="padding: 0.75rem 1.5rem;">Log In / Sign Up</button>
       </div>
     `;
-    jobsList.innerHTML = "";
+    if (jobsList) jobsList.innerHTML = "";
     // Hide Edit Profile button when not logged in
     const editProfileBtn = document.getElementById("editProfileButton");
     if (editProfileBtn) editProfileBtn.style.display = 'none';
@@ -9863,8 +9868,14 @@ async function renderJobs(reset = false) {
   container.appendChild(profileForm);
   
   // Show Edit Profile button now that we have a logged-in user
-  const editProfileBtn = document.getElementById("editProfileButton");
-  if (editProfileBtn) editProfileBtn.style.display = 'block';
+  // Use setTimeout to ensure the button exists in the DOM
+  setTimeout(() => {
+    const editProfileBtn = document.getElementById("editProfileButton");
+    if (editProfileBtn) {
+      editProfileBtn.style.display = 'block';
+      editProfileBtn.style.visibility = 'visible';
+    }
+  }, 100);
   
   // Store original values for cancel functionality
   const originalValues = {
