@@ -5968,7 +5968,7 @@ async function renderJobs(reset = false) {
       
       const modalContent = document.createElement("div");
       modalContent.className = "modal-content";
-      modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 600px; width: 100%; max-height: 90vh; overflow: hidden; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); margin: auto; display: flex; flex-direction: column;";
+      modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 600px; width: 100%; max-height: 90vh; height: auto; overflow: hidden; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); margin: auto; display: flex; flex-direction: column;";
       
       // Close button (X) - top right
       const closeBtn = document.createElement("button");
@@ -6245,7 +6245,7 @@ async function renderJobs(reset = false) {
 
       // Content Section (scrollable) - CREATE FIRST
       const contentSection = document.createElement("div");
-      contentSection.style.cssText = "padding: 1.5rem 2rem; flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; min-height: 0;";
+      contentSection.style.cssText = "padding: 1.5rem 2rem; flex: 1 1 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; min-height: 0;";
       
       // Additional Details Section
       if (job.requirements) {
@@ -6452,7 +6452,7 @@ async function renderJobs(reset = false) {
         }
         
         const applySection = document.createElement("div");
-        applySection.style.cssText = "padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; background: white; border-radius: 0 0 16px 16px; flex-shrink: 0;";
+        applySection.style.cssText = "padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; background: white; border-radius: 0 0 16px 16px; flex-shrink: 0; position: relative; z-index: 1;";
         
         // Check job status for hustler
         const jobStatusUpper = (job.status || "OPEN").toUpperCase();
@@ -6694,7 +6694,7 @@ async function renderJobs(reset = false) {
       } else if (isLoggedIn && !isOpen) {
         // Job is not open - show message
         const closedSection = document.createElement("div");
-        closedSection.style.cssText = "padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; background: white; border-radius: 0 0 16px 16px;";
+        closedSection.style.cssText = "padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; background: white; border-radius: 0 0 16px 16px; flex-shrink: 0;";
         const closedMessage = document.createElement("div");
         closedMessage.style.cssText = "padding: 1rem; background: #f3f4f6; border-radius: 8px; text-align: center; color: var(--text-muted);";
         closedMessage.textContent = `This job is ${job.status || 'closed'}. Applications are no longer being accepted.`;
@@ -6703,7 +6703,7 @@ async function renderJobs(reset = false) {
       } else if (!isLoggedIn) {
         // Not logged in - show login prompt
         const loginSection = document.createElement("div");
-        loginSection.style.cssText = "padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; background: white; border-radius: 0 0 16px 16px;";
+        loginSection.style.cssText = "padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; background: white; border-radius: 0 0 16px 16px; flex-shrink: 0;";
         const loginMessage = document.createElement("div");
         loginMessage.style.cssText = "padding: 1rem; background: #fef3c7; border-radius: 8px; text-align: center;";
         loginMessage.innerHTML = `<div style="margin-bottom: 0.75rem; color: var(--text-main); font-weight: 600;">Log in to apply for this job</div><button class="btn btn-primary" id="loginToApplyBtn" style="width: 100%; padding: 0.75rem;">Log In / Sign Up</button>`;
@@ -9891,7 +9891,7 @@ async function renderJobs(reset = false) {
           saveLocBtn.textContent = "Saved";
           saveLocBtn.style.background = "#16a34a";
           setTimeout(() => {
-            saveLocBtn.textContent = "Edit";
+            saveLocBtn.textContent = "Save";
             saveLocBtn.style.background = "";
             saveLocBtn.disabled = false;
           }, 2000);
@@ -10173,11 +10173,16 @@ async function renderJobs(reset = false) {
           });
           
           if (!uploadResponse.ok) {
-            throw new Error("Upload failed");
+            const errorData = await uploadResponse.json().catch(() => ({}));
+            throw new Error(errorData.error || `Upload failed: ${uploadResponse.status}`);
           }
           
           const uploadData = await uploadResponse.json();
-          const uploadedUrl = uploadData.url || uploadData.fileUrl || photoUrl;
+          const uploadedUrl = uploadData.publicUrl || uploadData.url || uploadData.fileUrl || photoUrl;
+          
+          if (!uploadedUrl || uploadedUrl === photoUrl) {
+            console.warn("R2 upload did not return a valid URL, using fallback");
+          }
           
           // Save URL to database
           await window.hustlAPI.users.updateProfile({ photoUrl: uploadedUrl });
@@ -10280,7 +10285,7 @@ async function renderJobs(reset = false) {
           saveGenderBtn.textContent = "Saved";
           saveGenderBtn.style.background = "#16a34a";
           setTimeout(() => {
-            saveGenderBtn.textContent = "Edit";
+            saveGenderBtn.textContent = "Save";
             saveGenderBtn.style.background = "";
             saveGenderBtn.disabled = false;
           }, 2000);
