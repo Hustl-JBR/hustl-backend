@@ -9871,20 +9871,19 @@ meta.textContent =
 
     /* ---------- Init ---------- */
 
-    let navInitialized = false;
-    const navTabListeners = new WeakSet(); // Track which elements have listeners
-    
     function initNav() {
-      // Prevent multiple initializations
-      if (navInitialized) {
-        return;
-      }
-      navInitialized = true;
-      
       // Nav tabs - add event listeners using event delegation on parent
       const navContainer = document.querySelector(".nav-tabs");
-      if (navContainer && !navContainer.dataset.listenerAttached) {
+      if (!navContainer) {
+        console.warn("Nav container not found, retrying...");
+        setTimeout(initNav, 100);
+        return;
+      }
+      
+      // Only attach listener if not already attached
+      if (!navContainer.dataset.listenerAttached) {
         navContainer.dataset.listenerAttached = 'true';
+        console.log("Attaching nav event listener");
         navContainer.addEventListener("click", (e) => {
           const tab = e.target.closest(".nav-tab");
           if (!tab) return;
@@ -9892,9 +9891,12 @@ meta.textContent =
           e.preventDefault();
           e.stopPropagation();
           const v = tab.dataset.view;
+          console.log("Nav tab clicked:", v);
           if (v && window.setView && typeof window.setView === 'function') {
+            console.log("Calling window.setView with:", v);
             window.setView(v);
           } else if (v) {
+            console.log("Using fallback view switching for:", v);
             // Fallback: basic view switching
             document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
             const target = document.getElementById("view-" + v);
@@ -9903,6 +9905,7 @@ meta.textContent =
             window.scrollTo({ top: 0, behavior: 'instant' });
           }
         });
+        console.log("Nav event listener attached successfully");
       }
 
       // Home CTA buttons - remove old listeners first
