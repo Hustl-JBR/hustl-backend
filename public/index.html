@@ -2413,10 +2413,10 @@
           
           <!-- CTA Buttons -->
           <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-bottom: 1.5rem;">
-            <button class="btn btn-primary" id="homeCtaPost" onclick="if(typeof window.setView === 'function') window.setView('post')" style="padding: 0.875rem 1.75rem; font-size: 1rem; font-weight: 600; border-radius: 10px; background: var(--primary); border: none; color: white;">
+            <button class="btn btn-primary" id="homeCtaPost" style="padding: 0.875rem 1.75rem; font-size: 1rem; font-weight: 600; border-radius: 10px; background: var(--primary); border: none; color: white;">
               Post a Job
             </button>
-            <button class="btn btn-ghost" id="homeCtaBrowse" onclick="if(typeof window.setView === 'function') window.setView('jobs')" style="padding: 0.875rem 1.75rem; font-size: 1rem; font-weight: 600; border-radius: 10px; background: white; border: 1px solid var(--border); color: var(--text-main);">
+            <button class="btn btn-ghost" id="homeCtaBrowse" style="padding: 0.875rem 1.75rem; font-size: 1rem; font-weight: 600; border-radius: 10px; background: white; border: 1px solid var(--border); color: var(--text-main);">
               Browse Jobs
             </button>
           </div>
@@ -9819,12 +9819,17 @@ meta.textContent =
     function initNav() {
       const navContainer = document.querySelector(".nav-tabs");
       if (!navContainer) {
+        console.log("Nav container not found, retrying in 50ms...");
         setTimeout(initNav, 50);
         return;
       }
       
-      if (navContainer.dataset.listenerAttached) return;
+      if (navContainer.dataset.listenerAttached) {
+        console.log("Nav listener already attached");
+        return;
+      }
       navContainer.dataset.listenerAttached = 'true';
+      console.log("✅ Nav listener attached");
       
       navContainer.addEventListener("click", (e) => {
         const tab = e.target.closest(".nav-tab");
@@ -9832,14 +9837,17 @@ meta.textContent =
         e.preventDefault();
         e.stopPropagation();
         const v = tab.dataset.view;
+        console.log("Nav tab clicked:", v);
         if (v) {
           // Try to call setView - if it's the stub, use fallback
           if (window.setView && typeof window.setView === 'function') {
             // Check if it's the real function (not the stub)
             const funcStr = window.setView.toString();
             if (!funcStr.includes('not ready yet')) {
+              console.log("Calling window.setView with:", v);
               window.setView(v);
             } else {
+              console.log("setView is stub, using fallback");
               // Stub function - use fallback
               document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
               const target = document.getElementById("view-" + v);
@@ -9848,6 +9856,7 @@ meta.textContent =
               window.scrollTo({ top: 0, behavior: 'instant' });
             }
           } else {
+            console.log("setView not available, using fallback");
             // Fallback: basic view switching
             document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
             const target = document.getElementById("view-" + v);
@@ -9862,17 +9871,34 @@ meta.textContent =
       const homeCtaPost = document.getElementById("homeCtaPost");
       if (homeCtaPost && !homeCtaPost.dataset.listenerAttached) {
         homeCtaPost.dataset.listenerAttached = 'true';
+        console.log("✅ CTA Post button listener attached");
         homeCtaPost.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
+          console.log("CTA Post button clicked");
           if (window.setView && typeof window.setView === 'function') {
-            window.setView("post");
-            setTimeout(() => {
-              const formCard = document.getElementById("jobFormCard");
-              if (formCard) {
-                formCard.scrollIntoView({ behavior: "smooth" });
-              }
-            }, 100);
+            const funcStr = window.setView.toString();
+            if (!funcStr.includes('not ready yet')) {
+              window.setView("post");
+              setTimeout(() => {
+                const formCard = document.getElementById("jobFormCard");
+                if (formCard) {
+                  formCard.scrollIntoView({ behavior: "smooth" });
+                }
+              }, 100);
+            } else {
+              console.warn("setView is stub, using fallback");
+              document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+              const target = document.getElementById("view-post");
+              if (target) target.style.display = "block";
+              window.scrollTo({ top: 0, behavior: 'instant' });
+            }
+          } else {
+            console.warn("setView not available, using fallback");
+            document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+            const target = document.getElementById("view-post");
+            if (target) target.style.display = "block";
+            window.scrollTo({ top: 0, behavior: 'instant' });
           }
         });
       }
@@ -9880,11 +9906,28 @@ meta.textContent =
       const homeCtaBrowse = document.getElementById("homeCtaBrowse");
       if (homeCtaBrowse && !homeCtaBrowse.dataset.listenerAttached) {
         homeCtaBrowse.dataset.listenerAttached = 'true';
+        console.log("✅ CTA Browse button listener attached");
         homeCtaBrowse.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
+          console.log("CTA Browse button clicked");
           if (window.setView && typeof window.setView === 'function') {
-            window.setView("jobs");
+            const funcStr = window.setView.toString();
+            if (!funcStr.includes('not ready yet')) {
+              window.setView("jobs");
+            } else {
+              console.warn("setView is stub, using fallback");
+              document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+              const target = document.getElementById("view-jobs");
+              if (target) target.style.display = "block";
+              window.scrollTo({ top: 0, behavior: 'instant' });
+            }
+          } else {
+            console.warn("setView not available, using fallback");
+            document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+            const target = document.getElementById("view-jobs");
+            if (target) target.style.display = "block";
+            window.scrollTo({ top: 0, behavior: 'instant' });
           }
         });
       }
