@@ -3750,9 +3750,27 @@ function showEmailVerification(email) {
     
     try {
       const result = await window.hustlAPI.auth.verifyEmail(email, code);
-      // Update header and show success screen
+      showToast("✅ Email verified successfully!");
+      
+      // Update header immediately
       await updateHeaderAuth();
-      showVerificationSuccess();
+      
+      // Hide auth section
+      const authSection = document.getElementById("authSection");
+      if (authSection) authSection.style.display = 'none';
+      
+      // Close auth modal if open
+      if (window.closeAuthModal && typeof window.closeAuthModal === 'function') {
+        window.closeAuthModal();
+      }
+      
+      // Redirect to profile (logged-in dashboard) - NOT home
+      if (window.setView && typeof window.setView === 'function') {
+        window.setView("profile");
+      } else {
+        setView("profile");
+      }
+      await renderAll();
     } catch (error) {
       showToast("Invalid code. Please try again.");
     }
@@ -4047,9 +4065,18 @@ function showChangePasswordModal() {
         const authSection = document.getElementById("authSection");
         if (authSection) authSection.style.display = 'none';
         
-        // Redirect to home or jobs
-        setView("home");
-        renderAll();
+        // Close auth modal if open
+        if (window.closeAuthModal && typeof window.closeAuthModal === 'function') {
+          window.closeAuthModal();
+        }
+        
+        // Redirect to profile (logged-in dashboard) - NOT home
+        if (window.setView && typeof window.setView === 'function') {
+          window.setView("profile");
+        } else {
+          setView("profile");
+        }
+        await renderAll();
       } catch (error) {
         showToast("Login error: " + (error.message || "Unknown error"));
       }
@@ -10406,24 +10433,9 @@ try {
     }, 100);
   }
   
-  // Handle sign out - COMPLETE logout
+  // Handle sign out - COMPLETE and IMMEDIATE logout
   async function handleSignOut() {
-    try {
-      // Close mobile menu if open
-      const hamburgerBtn = document.getElementById('hamburgerBtn');
-      const mobileMenu = document.getElementById('mobileMenu');
-      if (hamburgerBtn) hamburgerBtn.classList.remove('open');
-      if (mobileMenu) mobileMenu.classList.remove('open');
-      document.body.style.overflow = '';
-      
-      // Call API sign out (clears backend session if any, and all client storage)
-      await window.hustlAPI.auth.signOut();
-    } catch (error) {
-      console.error("Sign out error:", error);
-      // Continue with logout even if API call fails
-    }
-    
-    // ALWAYS clear everything - even if API call failed
+    // IMMEDIATELY clear everything FIRST (don't wait for API)
     // Clear ALL localStorage
     localStorage.removeItem('hustl_token');
     localStorage.removeItem('hustl_user');
@@ -10455,44 +10467,62 @@ try {
       window.optimizedApi.invalidateCache();
     }
     
-    // Update UI
-    await updateHeaderAuth();
+    // Close mobile menu if open
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    if (hamburgerBtn) hamburgerBtn.classList.remove('open');
+    if (mobileMenu) mobileMenu.classList.remove('open');
+    document.body.style.overflow = '';
     
-    // Switch to home view and show auth section
-    if (window.setView && typeof window.setView === 'function') {
-      window.setView('home');
-    } else {
-      // Fallback
-      document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
-      const homeView = document.getElementById("view-home");
-      if (homeView) homeView.style.display = "block";
+    // Call API sign out (non-blocking - don't wait)
+    window.hustlAPI.auth.signOut().catch(err => {
+      console.warn("Backend logout call failed (non-critical):", err);
+    });
+    
+    // IMMEDIATELY redirect to home and show login
+    // Hide all views
+    document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+    const homeView = document.getElementById("view-home");
+    if (homeView) {
+      homeView.style.display = "block";
+      activeView = 'home';
     }
     
-    // Show auth section
+    // Show auth section immediately
     const authSection = document.getElementById("authSection");
     if (authSection) {
       authSection.style.display = 'block';
-      // Scroll to auth section
-      setTimeout(() => {
-        authSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
     }
     
-    // Open login modal automatically
-    setTimeout(() => {
-      if (window.openAuthModal && typeof window.openAuthModal === 'function') {
-        window.openAuthModal('login');
-      }
-    }, 300);
+    // Update UI immediately (don't wait)
+    updateHeaderAuth().then(() => {
+      // Open login modal after UI updates
+      setTimeout(() => {
+        if (window.openAuthModal && typeof window.openAuthModal === 'function') {
+          window.openAuthModal('login');
+        }
+      }, 100);
+    });
+    
+    // Update nav tabs
+    document.querySelectorAll(".nav-tab").forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.view === 'home');
+    });
+    
+    // Update mobile bottom nav
+    if (window.mobileCore && window.mobileCore.bottomNav) {
+      window.mobileCore.bottomNav.updateActiveTab('home');
+    }
     
     showToast("✅ Signed out successfully");
-    await renderAll();
     
-    // Force a page reload to clear any cached state (prevents back button issues)
     // Use replaceState to prevent back button from going to logged-in state
     if (window.history && window.history.replaceState) {
       window.history.replaceState(null, '', window.location.pathname);
     }
+    
+    // Render all (non-blocking)
+    renderAll().catch(err => console.error("Render error:", err));
   }
   window.handleSignOut = handleSignOut;
   
@@ -10529,6 +10559,27 @@ try {
   // - closeAuthModal: line 10237-10238
   // - handleSignOut: line 10363-10364
   // goToStripeSetup, startExploring, closeWelcomeModal are already defined globally above
+
+  // Prevent back button from showing logged-in content
+  window.addEventListener('popstate', async (event) => {
+    // Check if user is actually logged in
+    const user = await window.hustlAPI.auth.getCurrentUser();
+    if (!user) {
+      // Not logged in - redirect to home
+      if (window.setView && typeof window.setView === 'function') {
+        window.setView('home');
+      }
+      // Show login if on protected view
+      const protectedViews = ['profile', 'messages', 'post'];
+      if (protectedViews.includes(activeView)) {
+        setTimeout(() => {
+          if (window.openAuthModal && typeof window.openAuthModal === 'function') {
+            window.openAuthModal('login');
+          }
+        }, 300);
+      }
+    }
+  });
 
   // Boot - initialize when DOM is ready
   function initializeApp() {
