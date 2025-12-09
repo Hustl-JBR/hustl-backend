@@ -914,6 +914,39 @@ router.post('/:id/cancel', authenticate, requireRole('CUSTOMER'), async (req, re
   }
 });
 
+// POST /jobs/:id/close - Close a job (Customer only)
+router.post('/:id/close', authenticate, requireRole('CUSTOMER'), async (req, res) => {
+  try {
+    const job = await prisma.job.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Only allow closing OPEN jobs
+    if (job.status !== 'OPEN') {
+      return res.status(400).json({ error: 'Job can only be closed if it is currently open' });
+    }
+
+    // Update job status to CANCELLED
+    const updated = await prisma.job.update({
+      where: { id: req.params.id },
+      data: { status: 'CANCELLED' },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Close job error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /jobs/:id/repost - Repost a closed/cancelled job (Customer only)
 router.post('/:id/repost', authenticate, requireRole('CUSTOMER'), async (req, res) => {
   try {

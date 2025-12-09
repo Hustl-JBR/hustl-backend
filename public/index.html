@@ -3103,6 +3103,10 @@
               ✅ Completed Jobs
               <span class="tab-indicator" style="position: absolute; bottom: -0.5rem; left: 0; right: 0; height: 3px; background: var(--primary); border-radius: 2px 2px 0 0; display: none;"></span>
             </button>
+            <button class="profile-tab manage-tab" data-manage-tab="applied" style="position: relative; display: none;" id="appliedJobsTab">
+              📝 Applied Jobs
+              <span class="tab-indicator" style="position: absolute; bottom: -0.5rem; left: 0; right: 0; height: 3px; background: var(--primary); border-radius: 2px 2px 0 0; display: none;"></span>
+            </button>
           </div>
           
           <!-- Posted Jobs Tab -->
@@ -3128,6 +3132,17 @@
           <div id="manageTabCompleted" class="profile-tab-content" style="display: none;">
             <div style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem;">All finished jobs. View final pay, rate the worker, view reviews, re-hire, or favorite.</div>
             <div id="manageCompletedJobsList" style="display: grid; gap: 1rem;">
+              <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
+            </div>
+          </div>
+          
+          <!-- Applied Jobs Tab (Hustler only) -->
+          <div id="manageTabApplied" class="profile-tab-content" style="display: none;">
+            <div style="margin-bottom: 1.5rem;">
+              <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 0.5rem 0; color: var(--text-main);">📝 Jobs You Applied To</h2>
+              <div style="color: var(--text-muted); font-size: 0.9rem;">Track your applications and see their status</div>
+            </div>
+            <div id="manageAppliedJobsList" style="display: grid; gap: 1.5rem;">
               <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
             </div>
           </div>
@@ -11691,7 +11706,7 @@ meta.textContent =
             if (indicator) indicator.style.display = 'block';
             
             // Hide all tab content
-            document.querySelectorAll('#manageTabPosted, #manageTabActive, #manageTabCompleted').forEach(content => {
+            document.querySelectorAll('#manageTabPosted, #manageTabActive, #manageTabCompleted, #manageTabApplied').forEach(content => {
               content.style.display = 'none';
               content.classList.remove('active');
             });
@@ -13950,7 +13965,12 @@ meta.textContent =
         });
         
         if (!offerRes.ok) {
-          const error = await offerRes.json();
+          const error = await offerRes.json().catch(() => ({}));
+          if (error.requiresStripe || error.error?.includes('Stripe')) {
+            // Stripe account required
+            showToast("⚠️ This hustler needs to connect their Stripe account before you can accept them. They've been notified via email.");
+            return;
+          }
           if (error.requiresPayment) {
             // Redirect to payment flow
             showToast("Payment required to accept this offer.");
@@ -14194,12 +14214,17 @@ meta.textContent =
           }
         });
         
-        if (!response.ok) throw new Error('Failed to close job');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to close job');
+        }
         
-        showToast("Job closed. It will no longer accept new applicants.");
+        showToast("✅ Job closed. It will no longer accept new applicants.");
+        // Refresh the list
+        loadPostedJobs();
       } catch (error) {
         console.error("Error closing job:", error);
-        showToast("Error closing job. Please try again.");
+        showToast(error.message || "Error closing job. Please try again.");
       }
     }
     

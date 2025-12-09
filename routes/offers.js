@@ -6,6 +6,54 @@ const { createPaymentIntent } = require('../services/stripe');
 
 const router = express.Router();
 
+// GET /offers/user/me - Get all offers for the current user (hustler)
+router.get('/user/me', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const offers = await prisma.offer.findMany({
+      where: { hustlerId: userId },
+      include: {
+        job: {
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                photoUrl: true,
+                ratingAvg: true,
+                ratingCount: true,
+              },
+            },
+            hustler: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                photoUrl: true,
+              },
+            },
+            payment: {
+              select: {
+                id: true,
+                amount: true,
+                status: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    
+    res.json(offers);
+  } catch (error) {
+    console.error('Get user offers error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET /offers/:jobId - List offers for a job
 router.get('/:jobId', authenticate, async (req, res) => {
   try {
