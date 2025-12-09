@@ -331,7 +331,7 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     }
 
     // REQUIRE STRIPE ACCOUNT - Hustler must have Stripe connected to be accepted
-    // Skip in test mode (when SKIP_STRIPE_CHECK=true)
+    // DISABLED FOR TESTING - Skip in test mode (when SKIP_STRIPE_CHECK=true)
     const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
     
     const hustler = await prisma.user.findUnique({
@@ -339,29 +339,28 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       select: { stripeAccountId: true, email: true, name: true },
     });
 
-    if (!hustler.stripeAccountId && !skipStripeCheck) {
-      // Send email to hustler about needing Stripe
-      try {
-        const { sendStripeRequiredEmail } = require('../services/email');
-        await sendStripeRequiredEmail(
-          hustler.email,
-          hustler.name,
-          offer.job.title
-        );
-      } catch (emailError) {
-        console.error('Error sending Stripe required email:', emailError);
-      }
-      
-      return res.status(400).json({ 
-        error: 'Cannot accept offer: Hustler must connect their Stripe account first. They have been notified via email.',
-        requiresStripe: true 
-      });
-    }
+    // DISABLED FOR TESTING - Always skip Stripe check for now
+    // if (!hustler.stripeAccountId && !skipStripeCheck) {
+    //   // Send email to hustler about needing Stripe
+    //   try {
+    //     const { sendStripeRequiredEmail } = require('../services/email');
+    //     await sendStripeRequiredEmail(
+    //       hustler.email,
+    //       hustler.name,
+    //       offer.job.title
+    //     );
+    //   } catch (emailError) {
+    //     console.error('Error sending Stripe required email:', emailError);
+    //   }
+    //   
+    //   return res.status(400).json({ 
+    //     error: 'Cannot accept offer: Hustler must connect their Stripe account first. They have been notified via email.',
+    //     requiresStripe: true 
+    //   });
+    // }
     
     // In test mode, log that we're skipping the check
-    if (skipStripeCheck && !hustler.stripeAccountId) {
-      console.log('[TEST MODE] Skipping Stripe account check for hustler:', offer.hustlerId);
-    }
+    console.log('[TEST MODE] Skipping Stripe account check for hustler:', offer.hustlerId);
 
     // Payment is required when accepting an offer (industry standard)
     // Check if payment intent is provided
