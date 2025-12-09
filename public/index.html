@@ -3446,6 +3446,8 @@ heart of Hustl.
     };
 
     let activeView = "home";
+    // Expose activeView on window for fallback access
+    window.activeView = activeView;
     let activeJobsStatusFilter = "all";
     let activeConversationJobId = null;
     
@@ -3611,6 +3613,8 @@ heart of Hustl.
       }
       
       activeView = view;
+      // Update window.activeView for fallback access
+      window.activeView = view;
       
       // Hide ALL sections first including auth section
       document
@@ -11596,15 +11600,18 @@ meta.textContent =
       renderAuthSectionVisibility();
       renderOwnerView();
 
-      if (activeView === "jobs") {
+      // Use window.activeView as fallback if local activeView isn't set
+      const currentView = activeView || window.activeView || "home";
+      
+      if (currentView === "jobs") {
         renderJobs();
-      } else if (activeView === "messages") {
+      } else if (currentView === "messages") {
         renderMessagesView();
-      } else if (activeView === "profile") {
+      } else if (currentView === "profile") {
         renderProfile();
-      } else if (activeView === "manage-jobs") {
+      } else if (currentView === "manage-jobs") {
         renderManageJobs();
-      } else if (activeView === "owner") {
+      } else if (currentView === "owner") {
         renderOwnerView();
       }
       
@@ -14681,6 +14688,8 @@ meta.textContent =
             } else {
               console.log("setView is stub, using fallback");
               // Stub function - use fallback
+              // CRITICAL: Set activeView so renderAll knows which view to render
+              window.activeView = v;
               document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
               const target = document.getElementById("view-" + v);
               if (target) target.style.display = "block";
@@ -14689,6 +14698,8 @@ meta.textContent =
               // IMPORTANT: Also call renderAll to actually render the content
               setTimeout(async () => {
                 try {
+                  // Ensure activeView is set before calling renderAll
+                  window.activeView = v;
                   if (typeof window.renderAll === 'function') {
                     await window.renderAll();
                   } else if (typeof renderAll === 'function') {
