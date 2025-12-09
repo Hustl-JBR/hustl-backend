@@ -12361,11 +12361,27 @@ meta.textContent =
     
     // Load Applied Jobs (Hustler only)
     async function loadAppliedJobs() {
+      console.log("🔵 loadAppliedJobs called");
       const appliedJobsList = document.getElementById("manageAppliedJobsList");
       if (!appliedJobsList) {
         console.error("❌ manageAppliedJobsList element not found");
+        setTimeout(() => {
+          const retry = document.getElementById("manageAppliedJobsList");
+          if (retry) {
+            console.log("✅ Found on retry, calling loadAppliedJobs again");
+            loadAppliedJobs();
+          } else {
+            console.error("❌ Still not found after retry - DOM may not be ready");
+          }
+        }, 200);
         return;
       }
+      
+      if (appliedJobsList.dataset.loading === 'true') {
+        console.log("⏸️ loadAppliedJobs already in progress, skipping");
+        return;
+      }
+      appliedJobsList.dataset.loading = 'true';
       
       // Show loading state
       appliedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Loading...</div>";
@@ -12374,12 +12390,14 @@ meta.textContent =
         const user = await window.hustlAPI.auth.getCurrentUser();
         if (!user) {
           appliedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Please log in to view your applications.</div>";
+          appliedJobsList.dataset.loading = 'false';
           return;
         }
         
         const token = localStorage.getItem('hustl_token');
         if (!token) {
           appliedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Please log in to view your applications.</div>";
+          appliedJobsList.dataset.loading = 'false';
           return;
         }
         
@@ -12391,7 +12409,9 @@ meta.textContent =
         });
         
         if (!response.ok) {
-          throw new Error(`Failed to fetch applications: ${response.status}`);
+          const errorText = await response.text();
+          console.error("❌ Failed to fetch applied jobs:", response.status, errorText);
+          throw new Error(`Failed to fetch applications: ${response.status} - ${errorText}`);
         }
         
         const offers = await response.json();
