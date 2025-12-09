@@ -4796,9 +4796,26 @@ function showChangePasswordModal() {
               amount = 50; // Placeholder, hustlers will propose their own price
             }
             
+            // Validate required fields
+            if (!title || title.trim().length === 0) {
+              return showToast("❌ Please enter a job title.");
+            }
+            
+            if (!desc || desc.trim().length === 0) {
+              return showToast("❌ Please enter a job description.");
+            }
+            
+            if (!address || address.trim().length === 0) {
+              return showToast("❌ Please enter a job address.");
+            }
+            
+            if (!date) {
+              return showToast("❌ Please select a job date.");
+            }
+            
             // Ensure amount is valid
             if (!amount || amount <= 0 || isNaN(amount)) {
-              return showToast("Please set a valid price amount.");
+              return showToast("❌ Please set a valid price amount.");
             }
             
             // Build job data - only include hourlyRate/estHours if they have values
@@ -4848,10 +4865,19 @@ function showChangePasswordModal() {
               throw error;
             }
 
-            showToast("✅ Job posted successfully!");
-            setView("jobs");
+            showToast("✅ Job posted successfully! You can manage it in the Manage Jobs section.");
+            
+            // Refresh the Manage Jobs view if it's loaded
+            if (activeView === 'manage-jobs') {
+              loadPostedJobs();
+            }
+            
+            // Clear form and navigate
             clearJobForm();
-            renderJobs();
+            setView("manage-jobs");
+            
+            // Also refresh jobs list
+            renderJobs(true);
           } catch (error) {
             console.error("Post job error:", error);
             console.error("Error details:", error.message, error.stack);
@@ -8726,7 +8752,7 @@ async function renderJobs(reset = false) {
           });
           btnRow.appendChild(deleteBtn);
 
-          detail.appendChild(btnRow);
+          contentSection.appendChild(btnRow);
         } else if (
           job.status === "open" &&
           job.paymentStatus !== "paid"
@@ -8745,7 +8771,7 @@ async function renderJobs(reset = false) {
             renderAll();
           });
           deleteRow.appendChild(deleteBtn);
-          detail.appendChild(deleteRow);
+          contentSection.appendChild(deleteRow);
         }
       }
 
@@ -8949,7 +8975,7 @@ async function renderJobs(reset = false) {
             appsBox.appendChild(applicantCard);
           });
         }
-        detail.appendChild(appsBox);
+        contentSection.appendChild(appsBox);
       }
 
 
@@ -9008,7 +9034,7 @@ async function renderJobs(reset = false) {
           applyBox.appendChild(btn);
         }
 
-        detail.appendChild(applyBox);
+        contentSection.appendChild(applyBox);
 
         if (options.focusApply) {
           setTimeout(() => {
@@ -9087,7 +9113,7 @@ async function renderJobs(reset = false) {
       chatRow.appendChild(sendBtn);
       chatBox.appendChild(chatRow);
 
-      detail.appendChild(chatBox);
+      contentSection.appendChild(chatBox);
 
       // Hustler actions around completion
       if (
@@ -9145,7 +9171,7 @@ async function renderJobs(reset = false) {
         }
 
         if (hustlerRow.children.length > 0) {
-          detail.appendChild(hustlerRow);
+          contentSection.appendChild(hustlerRow);
         }
       }
 
@@ -9215,11 +9241,11 @@ async function renderJobs(reset = false) {
         }
 
         if (completeRow.children.length > 0) {
-          detail.appendChild(completeRow);
+          contentSection.appendChild(completeRow);
         }
       }
 
-      modalContent.appendChild(detail);
+      modalContent.appendChild(contentSection);
       modalOverlay.appendChild(modalContent);
     }
     // Demo-only: no real Stripe redirect handling in this prototype
