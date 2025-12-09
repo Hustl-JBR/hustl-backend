@@ -11620,6 +11620,9 @@ meta.textContent =
       } else if (currentView === "owner") {
         console.log("🔵 Rendering owner view");
         renderOwnerView();
+      } else if (currentView === "home") {
+        console.log("🔵 Rendering home view (no special rendering needed)");
+        // Home view doesn't need special rendering - it's the default
       } else {
         console.log("⚠️ renderAll - unknown view:", currentView);
       }
