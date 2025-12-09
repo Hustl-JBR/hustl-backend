@@ -11504,15 +11504,39 @@ meta.textContent =
         return;
       }
       
-      // Initialize tabs
-      const manageTabs = document.querySelectorAll('[data-manage-tab]');
-      manageTabs.forEach(tab => {
-        if (!tab.dataset.listenerAttached) {
-          tab.dataset.listenerAttached = 'true';
-          tab.addEventListener('click', () => {
+      // Initialize tabs - use setTimeout to ensure DOM is ready
+      setTimeout(() => {
+        const manageTabs = document.querySelectorAll('[data-manage-tab]');
+        if (manageTabs.length === 0) {
+          console.warn("Manage tabs not found, retrying...");
+          setTimeout(() => renderManageJobs(), 100);
+          return;
+        }
+        
+        manageTabs.forEach(tab => {
+          // Remove old listener if exists
+          const newTab = tab.cloneNode(true);
+          tab.parentNode.replaceChild(newTab, tab);
+          
+          // Get fresh reference
+          const freshTab = document.querySelector(`[data-manage-tab="${newTab.dataset.manageTab}"]`);
+          if (!freshTab) return;
+          
+          freshTab.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
             // Remove active from all tabs
-            manageTabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
+            document.querySelectorAll('[data-manage-tab]').forEach(t => {
+              t.classList.remove('active');
+              const indicator = t.querySelector('.tab-indicator');
+              if (indicator) indicator.style.display = 'none';
+            });
+            
+            // Add active to clicked tab
+            freshTab.classList.add('active');
+            const indicator = freshTab.querySelector('.tab-indicator');
+            if (indicator) indicator.style.display = 'block';
             
             // Hide all tab content
             document.querySelectorAll('#manageTabPosted, #manageTabActive, #manageTabCompleted').forEach(content => {
@@ -11521,31 +11545,38 @@ meta.textContent =
             });
             
             // Show selected tab content
-            const tabName = tab.dataset.manageTab;
-            const tabContent = document.getElementById(`manageTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+            const tabName = freshTab.dataset.manageTab;
+            let tabContentId = '';
+            if (tabName === 'posted') {
+              tabContentId = 'manageTabPosted';
+            } else if (tabName === 'active') {
+              tabContentId = 'manageTabActive';
+            } else if (tabName === 'completed') {
+              tabContentId = 'manageTabCompleted';
+            }
+            
+            const tabContent = document.getElementById(tabContentId);
             if (tabContent) {
               tabContent.style.display = 'block';
               tabContent.classList.add('active');
-            }
-            
-            // Update tab indicators
-            document.querySelectorAll('.manage-tab .tab-indicator').forEach(ind => ind.style.display = 'none');
-            tab.querySelector('.tab-indicator').style.display = 'block';
-            
-            // Load content for that tab
-            if (tabName === 'posted') {
-              loadPostedJobs();
-            } else if (tabName === 'active') {
-              loadActiveJobs();
-            } else if (tabName === 'completed') {
-              loadCompletedJobs();
+              
+              // Load content for that tab
+              if (tabName === 'posted') {
+                loadPostedJobs();
+              } else if (tabName === 'active') {
+                loadActiveJobs();
+              } else if (tabName === 'completed') {
+                loadCompletedJobs();
+              }
             }
           });
-        }
-      });
+        });
+      }, 100);
       
       // Load initial tab (Posted Jobs)
-      loadPostedJobs();
+      setTimeout(() => {
+        loadPostedJobs();
+      }, 200);
     }
     
     // Load Posted Jobs - Professional Dashboard Cards
@@ -11565,7 +11596,19 @@ meta.textContent =
         const jobs = await response.json();
         
         const user = await window.hustlAPI.auth.getCurrentUser();
-        const postedJobs = jobs.filter(j => j.customerId === user.id && j.status !== 'PAID' && j.status !== 'CANCELLED');
+        if (!user) {
+          postedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Please log in to view your jobs.</div>";
+          return;
+        }
+        
+        // Filter posted jobs - check both customerId and customer.id (API might return either)
+        const postedJobs = jobs.filter(j => {
+          const isCustomer = (j.customerId === user.id) || (j.customer && j.customer.id === user.id);
+          const isNotCompleted = j.status !== 'PAID' && j.status !== 'CANCELLED';
+          return isCustomer && isNotCompleted;
+        });
+        
+        console.log("Posted jobs filter:", { totalJobs: jobs.length, postedJobs: postedJobs.length, userId: user.id, jobs: jobs.map(j => ({ id: j.id, customerId: j.customerId, customer: j.customer?.id, status: j.status })) });
         
         if (postedJobs.length === 0) {
           postedJobsList.innerHTML = `
