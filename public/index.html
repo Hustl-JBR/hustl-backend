@@ -11669,6 +11669,13 @@ meta.textContent =
       
       console.log("✅ User authenticated:", user.id);
       
+      // Show/hide tabs based on user role
+      const hasHustlerRole = user.roles && user.roles.some(r => r.toUpperCase() === 'HUSTLER');
+      const appliedTab = document.getElementById('appliedJobsTab');
+      if (appliedTab) {
+        appliedTab.style.display = hasHustlerRole ? '' : 'none';
+      }
+      
       // Initialize tabs - use setTimeout to ensure DOM is ready
       setTimeout(() => {
         const manageTabs = document.querySelectorAll('[data-manage-tab]');
@@ -14004,7 +14011,12 @@ meta.textContent =
                   </div>
                   <div style="display: flex; gap: 0.75rem;">
                     <button class="btn btn-ghost declineOfferBtn" data-offer-id="${offer.id}" style="padding: 0.75rem 1.5rem; color: #6b7280;">Decline</button>
-                    <button class="btn btn-primary acceptOfferBtn" data-offer-id="${offer.id}" data-job-id="${jobId}" style="padding: 0.75rem 1.5rem;">Accept</button>
+                    <button class="btn btn-primary acceptOfferBtn" data-offer-id="${offer.id}" data-job-id="${jobId}" style="padding: 0.75rem 1.5rem;">
+                      💳 Accept & Pay
+                    </button>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; padding: 0.5rem; background: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">
+                      💰 Payment will be held in escrow until job completion
+                    </div>
                   </div>
                 </div>
               </div>
