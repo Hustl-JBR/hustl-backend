@@ -11366,15 +11366,28 @@ meta.textContent =
               document.querySelectorAll(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === v));
               window.scrollTo({ top: 0, behavior: 'instant' });
               // IMPORTANT: Also call renderAll to actually render the content
+              // renderAll and renderProfile are in the same scope, so they should be accessible
               setTimeout(async () => {
-                if (typeof window.renderAll === 'function') {
-                  await window.renderAll();
-                } else if (typeof renderAll === 'function') {
-                  await renderAll();
-                } else if (v === 'profile' && typeof window.renderProfile === 'function') {
-                  await window.renderProfile();
-                } else if (v === 'profile' && typeof renderProfile === 'function') {
-                  await renderProfile();
+                try {
+                  // Try to call renderAll if it exists in scope
+                  if (typeof renderAll === 'function') {
+                    await renderAll();
+                  } else if (v === 'profile' && typeof renderProfile === 'function') {
+                    await renderProfile();
+                  } else {
+                    // Last resort: manually trigger profile rendering
+                    if (v === 'profile') {
+                      const basicInfoSection = document.getElementById("profileBasicInfo");
+                      if (basicInfoSection && basicInfoSection.innerHTML.trim() === "Loading profile...") {
+                        // Force a page reload or try to call renderProfile via eval (not ideal but works)
+                        console.log("Attempting to trigger profile render...");
+                        // Try dispatching a custom event that renderProfile might listen to
+                        window.dispatchEvent(new CustomEvent('profile-view-shown'));
+                      }
+                    }
+                  }
+                } catch (error) {
+                  console.error("Error in fallback render:", error);
                 }
               }, 100);
             }
