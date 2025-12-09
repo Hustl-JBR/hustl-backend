@@ -14356,11 +14356,16 @@ meta.textContent =
               ` : ''}
               
               <!-- Tools -->
-              ${user.tools && user.tools.length > 0 ? `
+              ${user.tools && (typeof user.tools === 'string' ? user.tools.trim() : (Array.isArray(user.tools) ? user.tools.length > 0 : false)) ? `
               <div style="margin-bottom: 2rem;">
                 <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 0.75rem 0; color: var(--text-main);">🛠 Tools They Have</h3>
                 <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                  ${user.tools.map(tool => `<span style="padding: 0.5rem 1rem; background: var(--primary-soft); color: var(--primary); border-radius: 6px; font-size: 0.9rem; font-weight: 600;">${tool}</span>`).join('')}
+                  ${typeof user.tools === 'string' 
+                    ? user.tools.split(',').filter(t => t.trim()).map(tool => `<span style="padding: 0.5rem 1rem; background: var(--primary-soft); color: var(--primary); border-radius: 6px; font-size: 0.9rem; font-weight: 600;">${tool.trim()}</span>`).join('')
+                    : Array.isArray(user.tools) 
+                      ? user.tools.map(tool => `<span style="padding: 0.5rem 1rem; background: var(--primary-soft); color: var(--primary); border-radius: 6px; font-size: 0.9rem; font-weight: 600;">${tool}</span>`).join('')
+                      : `<span style="padding: 0.5rem 1rem; background: var(--primary-soft); color: var(--primary); border-radius: 6px; font-size: 0.9rem; font-weight: 600;">${user.tools}</span>`
+                  }
                 </div>
               </div>
               ` : ''}
