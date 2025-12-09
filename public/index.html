@@ -3107,8 +3107,11 @@
           
           <!-- Posted Jobs Tab -->
           <div id="manageTabPosted" class="profile-tab-content active">
-            <div style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem;">Jobs YOU created. See who applied, view profiles, accept/decline, negotiate price, repost, edit, or close.</div>
-            <div id="managePostedJobsList" style="display: grid; gap: 1rem;">
+            <div style="margin-bottom: 1.5rem;">
+              <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 0.5rem 0; color: var(--text-main);">📋 Your Posted Jobs</h2>
+              <div style="color: var(--text-muted); font-size: 0.9rem;">Manage your job postings, review applicants, and track activity</div>
+            </div>
+            <div id="managePostedJobsList" style="display: grid; gap: 1.5rem;">
               <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
             </div>
           </div>
@@ -11758,18 +11761,46 @@ meta.textContent =
         console.log("Sample job structure:", jobs[0]);
         
         // Filter posted jobs - jobs where user is the customer (posted by them)
-        // Include all statuses except PAID and CANCELLED (we want to see OPEN, REQUESTED, ASSIGNED, etc.)
+        // CRITICAL: Show ALL jobs posted by customer, regardless of status (except truly completed/paid)
         const postedJobs = jobs.filter(j => {
-          if (!j) return false;
+          if (!j) {
+            console.warn("Null job in filter:", j);
+            return false;
+          }
           
-          // Check if user is the customer - handle both direct ID and nested customer object
-          const customerId = j.customerId || j.customer?.id || j.postedByUserId;
-          const isCustomer = customerId === user.id || String(customerId) === String(user.id);
+          // Check if user is the customer - handle multiple ID field variations
+          const customerId = j.customerId || j.customer?.id || j.postedByUserId || j.customerId;
+          const userId = user.id;
           
-          // Include all active statuses
-          const isNotCompleted = j.status !== 'PAID' && j.status !== 'CANCELLED' && j.status !== 'EXPIRED';
+          // Convert both to strings for comparison (handles number vs string mismatches)
+          const customerIdStr = String(customerId || '');
+          const userIdStr = String(userId || '');
+          const isCustomer = customerIdStr === userIdStr && customerIdStr !== '';
           
-          return isCustomer && isNotCompleted;
+          // Include ALL statuses except fully completed/paid/cancelled
+          // We want to show: OPEN, REQUESTED, ASSIGNED, COMPLETED_BY_HUSTLER, AWAITING_CUSTOMER_CONFIRM
+          const excludedStatuses = ['PAID', 'CANCELLED', 'EXPIRED'];
+          const isNotCompleted = !excludedStatuses.includes(j.status);
+          
+          const shouldInclude = isCustomer && isNotCompleted;
+          
+          // Debug logging for first job
+          if (jobs.indexOf(j) === 0) {
+            console.log("First job filter check:", {
+              jobId: j.id,
+              jobTitle: j.title,
+              customerId: customerId,
+              customerIdStr: customerIdStr,
+              userId: userId,
+              userIdStr: userIdStr,
+              isCustomer: isCustomer,
+              status: j.status,
+              isNotCompleted: isNotCompleted,
+              shouldInclude: shouldInclude
+            });
+          }
+          
+          return shouldInclude;
         });
         
         console.log("Posted jobs filter result:", { 
@@ -11832,9 +11863,17 @@ meta.textContent =
             const postedText = daysAgo === 0 ? 'Posted today' : daysAgo === 1 ? 'Posted 1 day ago' : `Posted ${daysAgo} days ago`;
             
             const jobCard = document.createElement("div");
-            jobCard.style.cssText = "padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.2s; cursor: pointer;";
-            jobCard.onmouseenter = () => { jobCard.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; };
-            jobCard.onmouseleave = () => { jobCard.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)'; };
+            jobCard.style.cssText = "padding: 0; border: 2px solid var(--border); border-radius: 16px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.08); transition: all 0.3s; overflow: hidden;";
+            jobCard.onmouseenter = () => { 
+              jobCard.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+              jobCard.style.transform = 'translateY(-2px)';
+              jobCard.style.borderColor = 'var(--primary)';
+            };
+            jobCard.onmouseleave = () => { 
+              jobCard.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+              jobCard.style.transform = 'translateY(0)';
+              jobCard.style.borderColor = 'var(--border)';
+            };
             
             // Get category icon
             const categoryIcons = {
@@ -11846,53 +11885,127 @@ meta.textContent =
             };
             const categoryIcon = categoryIcons[job.category] || '📋';
             
-            // Status badge
+            // Status badge with better styling
             let statusBadge = '';
+            let statusColor = '#6b7280';
             if (job.status === 'OPEN') {
-              statusBadge = '<span style="padding: 0.25rem 0.75rem; background: #10b98120; color: #10b981; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">Open</span>';
+              statusBadge = 'Open for Applications';
+              statusColor = '#10b981';
             } else if (job.status === 'ASSIGNED' || job.status === 'REQUESTED') {
-              statusBadge = '<span style="padding: 0.25rem 0.75rem; background: #3b82f620; color: #3b82f6; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">Assigned</span>';
+              statusBadge = 'Hustler Assigned';
+              statusColor = '#3b82f6';
+            } else if (job.status === 'COMPLETED_BY_HUSTLER') {
+              statusBadge = 'Awaiting Completion';
+              statusColor = '#f59e0b';
+            }
+            
+            // Calculate hours/minutes since posted for better time display
+            const hoursAgo = Math.floor((Date.now() - postedDate.getTime()) / (1000 * 60 * 60));
+            const minutesAgo = Math.floor((Date.now() - postedDate.getTime()) / (1000 * 60));
+            let timeAgo = '';
+            if (minutesAgo < 60) {
+              timeAgo = minutesAgo < 1 ? 'Just now' : `${minutesAgo} ${minutesAgo === 1 ? 'minute' : 'minutes'} ago`;
+            } else if (hoursAgo < 24) {
+              timeAgo = `${hoursAgo} ${hoursAgo === 1 ? 'hour' : 'hours'} ago`;
+            } else {
+              timeAgo = postedText;
             }
             
             jobCard.innerHTML = `
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-                <div style="flex: 1;">
-                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    <span style="font-size: 1.5rem;">${categoryIcon}</span>
-                    <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
+              <!-- Header Section with Status -->
+              <div style="padding: 1.5rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border-bottom: 2px solid var(--border);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                  <div style="flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                      <span style="font-size: 2rem;">${categoryIcon}</span>
+                      <div style="flex: 1;">
+                        <h3 style="margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main); line-height: 1.2;">${job.title || 'Untitled Job'}</h3>
+                        <div style="margin-top: 0.25rem; font-size: 0.9rem; color: var(--text-muted);">${job.category || 'General'}</div>
+                      </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.9rem;">
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-weight: 700; color: var(--text-main);">💰</span>
+                        <span style="font-weight: 700; color: var(--text-main); font-size: 1.1rem;">${payDisplay}</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📅</span>
+                        <span style="color: var(--text-muted);">${timeAgo}</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📍</span>
+                        <span style="color: var(--text-muted);">${shortLocation}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
-                    <span style="padding: 0.25rem 0.75rem; background: var(--primary-soft); color: var(--primary); border-radius: 6px; font-weight: 600;">${job.category || 'General'}</span>
-                    <span style="font-weight: 600; color: var(--text-main);">💰 ${payDisplay}</span>
-                    ${statusBadge}
-                  </div>
-                  <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
-                    <span>📅 ${postedText}</span>
-                    <span style="margin-left: 1rem;">📍 ${job.address || shortLocation}</span>
+                  <div style="text-align: right;">
+                    <div style="padding: 0.5rem 1rem; background: ${statusColor}20; color: ${statusColor}; border-radius: 8px; font-weight: 700; font-size: 0.85rem; border: 2px solid ${statusColor}40;">
+                      ${statusBadge}
+                    </div>
                   </div>
                 </div>
               </div>
               
-              ${offerCount > 0 ? `
-              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 8px;">
-                <span style="font-weight: 600; color: #059669;">👥 ${offerCount} ${offerCount === 1 ? 'applicant' : 'applicants'}</span>
+              <!-- Metrics Section - Prominent Applicant Count -->
+              <div style="padding: 1.5rem; background: white;">
+                ${offerCount > 0 ? `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; padding: 1.5rem; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 12px; border: 2px solid #10b98140;">
+                  <div style="text-align: center;">
+                    <div style="font-size: 3rem; font-weight: 700; color: #059669; line-height: 1;">${offerCount}</div>
+                    <div style="font-size: 0.9rem; color: #047857; font-weight: 600; margin-top: 0.5rem;">${offerCount === 1 ? 'Applicant' : 'Applicants'}</div>
+                    <div style="font-size: 0.75rem; color: #065f46; margin-top: 0.25rem;">Waiting for review</div>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: center;">
+                    <div style="text-align: center;">
+                      <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">👥</div>
+                      <div style="font-size: 0.85rem; color: #047857; font-weight: 600;">Review & Accept</div>
+                      <div style="font-size: 0.75rem; color: #065f46; margin-top: 0.25rem;">Click below to view</div>
+                    </div>
+                  </div>
+                </div>
+                ` : `
+                <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; border: 2px solid #fbbf2440; margin-bottom: 1.5rem; text-align: center;">
+                  <div style="font-size: 2rem; margin-bottom: 0.5rem;">👤</div>
+                  <div style="font-weight: 600; color: #92400e; margin-bottom: 0.25rem;">No applicants yet</div>
+                  <div style="font-size: 0.85rem; color: #78350f;">Share your job to get more applicants!</div>
+                </div>
+                `}
+                
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                  <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 200px; padding: 1rem; font-size: 1rem; font-weight: 700; border-radius: 10px;">
+                    ${offerCount > 0 ? '👥 View Applicants & Manage' : '🔍 View Job Details'}
+                  </button>
+                  ${job.status === 'OPEN' ? `
+                  <button class="btn btn-ghost editJobBtn" data-job-id="${job.id}" style="padding: 1rem 1.5rem; font-weight: 600; border-radius: 10px;">✏️ Edit</button>
+                  <button class="btn btn-ghost closeJobBtn" data-job-id="${job.id}" style="padding: 1rem 1.5rem; font-weight: 600; border-radius: 10px; color: #dc2626; border-color: #fecaca;">🚫 Close</button>
+                  ` : ''}
+                </div>
               </div>
-              ` : ''}
-              
-              <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.75rem; font-size: 0.95rem; font-weight: 600;">
-                🔍 View Job
-              </button>
             `;
             
-            // Add click handler - opens View Job Modal
+            // Add click handlers
             jobCard.querySelector('.viewJobBtn')?.addEventListener('click', (e) => {
               e.stopPropagation();
               showViewJobModal(job.id, 'customer');
             });
             
-            // Also make entire card clickable
+            jobCard.querySelector('.editJobBtn')?.addEventListener('click', (e) => {
+              e.stopPropagation();
+              showToast("Edit job feature coming soon");
+            });
+            
+            jobCard.querySelector('.closeJobBtn')?.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              if (confirm('Are you sure you want to close this job? It will no longer accept new applicants.')) {
+                await closeJob(job.id);
+                loadPostedJobs();
+              }
+            });
+            
+            // Make card clickable (but not buttons)
             jobCard.addEventListener('click', (e) => {
-              if (!e.target.closest('button')) {
+              if (!e.target.closest('button') && !e.target.closest('.btn')) {
                 showViewJobModal(job.id, 'customer');
               }
             });
