@@ -11301,6 +11301,10 @@ meta.textContent =
       // Unread message count - function not implemented yet
       // countUnreadMessages();
     }
+    
+    // Expose renderAll and renderProfile on window for fallback access
+    window.renderAll = renderAll;
+    window.renderProfile = renderProfile;
 
     /* ---------- Mode Toggle ---------- */
     
