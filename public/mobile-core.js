@@ -374,6 +374,7 @@ class MobileBottomNav {
       { id: 'home', icon: '🏠', label: 'Home', view: 'home' },
       { id: 'jobs', icon: '💼', label: 'Jobs', view: 'jobs' },
       { id: 'create', icon: '➕', label: 'Create', view: 'post' },
+      { id: 'manage', icon: '📋', label: 'Manage', view: 'manage-jobs' },
       { id: 'messages', icon: '💬', label: 'Messages', view: 'messages' },
       { id: 'profile', icon: '👤', label: 'Profile', view: 'profile' },
     ];
