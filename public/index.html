@@ -12371,13 +12371,16 @@ meta.textContent =
                   </div>
                 ` : ''}
                 
-                <!-- End Code Entry -->
-                ${job.startCodeVerified && job.status !== 'COMPLETED_BY_HUSTLER' ? `
+                <!-- Mark Complete Section -->
+                ${job.startCodeVerified && job.status !== 'COMPLETED_BY_HUSTLER' && job.status !== 'PAID' ? `
                   <div style="padding: 1.5rem; background: #dbeafe; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #3b82f6;">
-                    <div style="font-weight: 700; color: #1e40af; margin-bottom: 0.75rem;">✅ Submit End Code / Mark Complete</div>
-                    <div style="font-size: 0.9rem; color: #1e40af; margin-bottom: 1rem;">When you finish the job, enter the completion code provided by the customer.</div>
-                    <input type="text" id="endCodeInput" placeholder="Enter completion code" maxlength="6" style="width: 100%; padding: 0.75rem; border: 2px solid #3b82f6; border-radius: 8px; font-size: 1.25rem; text-align: center; letter-spacing: 0.3em; font-family: 'Courier New', monospace;">
-                    <button class="btn btn-primary submitEndCodeBtn" data-job-id="${job.id}" style="width: 100%; margin-top: 0.75rem; padding: 0.75rem; font-weight: 600;">Submit End Code & Mark Complete</button>
+                    <div style="font-weight: 700; color: #1e40af; margin-bottom: 0.75rem;">✅ Mark Job Complete</div>
+                    <div style="font-size: 0.9rem; color: #1e40af; margin-bottom: 1rem;">When you finish the job, click below to mark it complete. A verification code will be sent to the customer.</div>
+                    <button class="btn btn-primary submitEndCodeBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.75rem; font-weight: 600;">Mark Complete</button>
+                  </div>
+                ` : job.status === 'COMPLETED_BY_HUSTLER' ? `
+                  <div style="padding: 1rem; background: #dcfce7; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <div style="font-weight: 600; color: #166534;">✅ Job marked as complete - Waiting for customer confirmation</div>
                   </div>
                 ` : ''}
                 
@@ -12444,24 +12447,26 @@ meta.textContent =
           });
           
           modalOverlay.querySelector('.verifyStartCodeBtn')?.addEventListener('click', async () => {
-            const code = document.getElementById('startCodeInput')?.value.trim();
-            if (code === job.startCode) {
-              await verifyStartCode(job.id);
+            const verified = await verifyStartCode(job.id);
+            if (verified) {
               document.body.removeChild(modalOverlay);
-              showActiveJobModal(job.id, 'hustler'); // Refresh modal
-            } else {
-              showToast("Invalid start code. Please check and try again.");
+              // Refresh the modal to show updated state
+              setTimeout(() => {
+                showActiveJobModal(job.id, 'hustler');
+              }, 500);
             }
           });
           
           modalOverlay.querySelector('.submitEndCodeBtn')?.addEventListener('click', async () => {
             const code = document.getElementById('endCodeInput')?.value.trim();
-            if (code === job.completionCode) {
-              await submitCompletionCode(job.id);
-              document.body.removeChild(modalOverlay);
-            } else {
-              showToast("Invalid completion code. Please check and try again.");
+            if (!code) {
+              showToast("Please enter the completion code.");
+              return;
             }
+            // Note: The completion code is generated when hustler marks complete, not before
+            // So we just call submitCompletionCode which will generate the code
+            await submitCompletionCode(job.id);
+            document.body.removeChild(modalOverlay);
           });
         }
         
@@ -12475,9 +12480,37 @@ meta.textContent =
     
     // Helper functions for job actions
     async function verifyStartCode(jobId) {
-      // This would call backend API to verify start code
-      // For now, we'll use the complete endpoint which handles verification
-      showToast("Start code verification not yet implemented in backend.");
+      try {
+        const code = document.getElementById('startCodeInput')?.value.trim();
+        if (!code || code.length !== 6) {
+          showToast("Please enter a valid 6-digit start code.");
+          return;
+        }
+        
+        const token = localStorage.getItem('hustl_token');
+        const response = await fetch(`${API_BASE}/verification/job/${jobId}/verify-start`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ code })
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to verify start code');
+        }
+        
+        const data = await response.json();
+        showToast("✅ Start code verified! Job is now active. You can begin work.");
+        loadActiveJobs(); // Refresh list
+        return true;
+      } catch (error) {
+        console.error("Error verifying start code:", error);
+        showToast(error.message || "Error verifying start code. Please check the code and try again.");
+        return false;
+      }
     }
     
     async function submitCompletionCode(jobId) {
