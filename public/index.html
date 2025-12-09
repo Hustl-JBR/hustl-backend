@@ -12324,6 +12324,144 @@ meta.textContent =
       }
     }
     
+    // Load Applied Jobs (Hustler only)
+    async function loadAppliedJobs() {
+      const appliedJobsList = document.getElementById("manageAppliedJobsList");
+      if (!appliedJobsList) {
+        console.error("❌ manageAppliedJobsList element not found");
+        return;
+      }
+      
+      // Show loading state
+      appliedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Loading...</div>";
+      
+      try {
+        const user = await window.hustlAPI.auth.getCurrentUser();
+        if (!user) {
+          appliedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Please log in to view your applications.</div>";
+          return;
+        }
+        
+        const token = localStorage.getItem('hustl_token');
+        if (!token) {
+          appliedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Please log in to view your applications.</div>";
+          return;
+        }
+        
+        console.log("🔵 Loading applied jobs for user:", user.id);
+        
+        // Fetch offers (applications)
+        const response = await fetch(`${API_BASE}/offers/user/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch applications: ${response.status}`);
+        }
+        
+        const offers = await response.json();
+        console.log("🔵 Fetched applied jobs:", offers.length);
+        
+        if (offers.length === 0) {
+          appliedJobsList.innerHTML = `
+            <div style='text-align: center; padding: 3rem; color: var(--text-muted);'>
+              <div style="font-size: 3rem; margin-bottom: 1rem;">📝</div>
+              <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">No applications yet</div>
+              <div>Start browsing jobs and apply to get started!</div>
+            </div>
+          `;
+          return;
+        }
+        
+        appliedJobsList.innerHTML = "";
+        
+        // Render each application as a job card
+        for (const offer of offers) {
+          const job = offer.job;
+          if (!job) continue;
+          
+          const statusBadge = offer.status === 'ACCEPTED' ? '✅ Accepted' : 
+                             offer.status === 'DECLINED' ? '❌ Declined' : 
+                             '⏳ Pending';
+          const statusColor = offer.status === 'ACCEPTED' ? '#10b981' : 
+                            offer.status === 'DECLINED' ? '#dc2626' : 
+                            '#f59e0b';
+          
+          const jobCard = document.createElement('div');
+          jobCard.className = 'job-card';
+          jobCard.style.cssText = `
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+          `;
+          
+          jobCard.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+              <div>
+                <h3 style="font-size: 1.25rem; font-weight: 700; margin: 0 0 0.5rem 0; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
+                <div style="display: flex; gap: 1rem; color: var(--text-muted); font-size: 0.9rem;">
+                  <span>📍 ${job.address || 'Location TBD'}</span>
+                  <span>💰 $${job.amount || '0'}</span>
+                </div>
+              </div>
+              <div style="padding: 0.5rem 1rem; background: ${statusColor}20; color: ${statusColor}; border-radius: 8px; font-weight: 700; font-size: 0.85rem; border: 2px solid ${statusColor}40;">
+                ${statusBadge}
+              </div>
+            </div>
+            ${offer.note ? `
+            <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem;">
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Your Application Note:</div>
+              <div style="color: var(--text-main);">${offer.note}</div>
+            </div>
+            ` : ''}
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem 1.5rem; font-weight: 600; border-radius: 10px;">🔍 View Job Details</button>
+              ${offer.status === 'PENDING' ? `
+              <button class="btn btn-ghost cancelApplicationBtn" data-offer-id="${offer.id}" style="padding: 0.75rem 1.5rem; font-weight: 600; border-radius: 10px;">❌ Cancel Application</button>
+              ` : ''}
+            </div>
+          `;
+          
+          // Add click handlers
+          jobCard.querySelector('.viewJobBtn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showViewJobModal(job.id, 'hustler');
+          });
+          
+          jobCard.querySelector('.cancelApplicationBtn')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (confirm('Are you sure you want to cancel this application?')) {
+              await cancelApplication(offer.id);
+              loadAppliedJobs();
+            }
+          });
+          
+          // Make card clickable
+          jobCard.addEventListener('click', (e) => {
+            if (!e.target.closest('button') && !e.target.closest('.btn')) {
+              showViewJobModal(job.id, 'hustler');
+            }
+          });
+          
+          appliedJobsList.appendChild(jobCard);
+        }
+        
+        console.log("✅ Rendered applied jobs:", offers.length);
+      } catch (error) {
+        console.error("Error loading applied jobs:", error);
+        appliedJobsList.innerHTML = `
+          <div style='text-align: center; padding: 2rem; color: var(--text-muted);'>
+            <div style="margin-bottom: 1rem;">❌ Error loading applications</div>
+            <button class="btn btn-primary" onclick="loadAppliedJobs()" style="padding: 0.75rem 1.5rem;">Retry</button>
+          </div>
+        `;
+      }
+    }
+    
     // Load Completed Jobs
     async function loadCompletedJobs() {
       const completedJobsList = document.getElementById("manageCompletedJobsList");
