@@ -5018,6 +5018,25 @@ async function renderJobs(reset = false) {
     allLoadedJobs = [];
     if (jobsList) jobsList.innerHTML = ""; // Clear existing jobs
   }
+  
+  // Fetch user's applied jobs to show "Applied" indicator
+  let userAppliedJobIds = new Set();
+  try {
+    const token = localStorage.getItem('hustl_token');
+    const user = await window.hustlAPI?.auth?.getCurrentUser();
+    if (token && user) {
+      const offersResponse = await fetch(`${API_BASE}/offers/user/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (offersResponse.ok) {
+        const offers = await offersResponse.json();
+        userAppliedJobIds = new Set(offers.map(offer => offer.jobId).filter(Boolean));
+        console.log("🔵 User has applied to jobs:", Array.from(userAppliedJobIds));
+      }
+    }
+  } catch (e) {
+    console.warn("Could not fetch user's applied jobs:", e);
+  }
 
   try {
     // Get location filters
@@ -5445,8 +5464,9 @@ async function renderJobs(reset = false) {
 
       // Check if current user has applied to this job
       const currentUser = getCurrentUser();
-      let hasApplied = false;
-      if (currentUser && job.offers) {
+      let hasApplied = userAppliedJobIds.has(job.id);
+      // Also check job.offers if available (fallback)
+      if (!hasApplied && currentUser && job.offers) {
         hasApplied = Array.isArray(job.offers) 
           ? job.offers.some(offer => offer.hustlerId === currentUser.id)
           : false;
@@ -5455,10 +5475,11 @@ async function renderJobs(reset = false) {
       // Status badge with proper colors
       const statusUpper = (job.status || "OPEN").toUpperCase();
       if (hasApplied && (statusUpper === "OPEN")) {
-        statusBadge.classList.add("status-assigned");
-        statusBadge.style.backgroundColor = "#3b82f6";
+        statusBadge.classList.add("status-applied");
+        statusBadge.style.backgroundColor = "#10b981";
         statusBadge.style.color = "#ffffff";
-        statusBadge.textContent = "Applied — Pending";
+        statusBadge.style.fontWeight = "700";
+        statusBadge.textContent = "✅ Applied";
       } else if (statusUpper === "OPEN") {
         statusBadge.classList.add("status-open");
         statusBadge.style.backgroundColor = "#dcfce7";
@@ -11670,10 +11691,13 @@ meta.textContent =
       console.log("✅ User authenticated:", user.id);
       
       // Show/hide tabs based on user role
-      const hasHustlerRole = user.roles && user.roles.some(r => r.toUpperCase() === 'HUSTLER');
+      const hasHustlerRole = (user.roles && Array.isArray(user.roles) && user.roles.some(r => r.toUpperCase() === 'HUSTLER')) || 
+                             (user.role && user.role.toUpperCase() === 'HUSTLER') ||
+                             (user.isHustler === true);
       const appliedTab = document.getElementById('appliedJobsTab');
       if (appliedTab) {
         appliedTab.style.display = hasHustlerRole ? '' : 'none';
+        console.log("🔵 Applied tab visibility:", hasHustlerRole ? 'visible' : 'hidden', 'user roles:', user.roles, 'user.role:', user.role, 'user.isHustler:', user.isHustler);
       }
       
       // Initialize tabs - use setTimeout to ensure DOM is ready
@@ -11727,6 +11751,8 @@ meta.textContent =
               tabContentId = 'manageTabActive';
             } else if (tabName === 'completed') {
               tabContentId = 'manageTabCompleted';
+            } else if (tabName === 'applied') {
+              tabContentId = 'manageTabApplied';
             }
             
             const tabContent = document.getElementById(tabContentId);
@@ -11741,6 +11767,8 @@ meta.textContent =
                 loadActiveJobs();
               } else if (tabName === 'completed') {
                 loadCompletedJobs();
+              } else if (tabName === 'applied') {
+                loadAppliedJobs();
               }
             }
           });
@@ -14475,20 +14503,31 @@ meta.textContent =
     async function showApplicantProfileModal(userId) {
       try {
         const token = localStorage.getItem('hustl_token');
+        if (!token) {
+          showToast('Please log in to view profiles');
+          return;
+        }
+        
+        console.log("🔵 Fetching user profile for:", userId);
         const response = await fetch(`${API_BASE}/users/${userId}`, {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         });
         
         if (!response.ok) {
           const errorText = await response.text();
           console.error('Failed to fetch user profile:', response.status, errorText);
-          throw new Error(`Failed to fetch user profile: ${response.status}`);
+          showToast(`Failed to load profile: ${response.status === 401 ? 'Please log in' : response.status === 404 ? 'User not found' : 'Error'}`);
+          return;
         }
         
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
           console.error('Response is not JSON:', contentType);
-          throw new Error('Invalid response format');
+          showToast('Invalid response format');
+          return;
         }
         
         const user = await response.json();
