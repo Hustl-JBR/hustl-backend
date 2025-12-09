@@ -3174,11 +3174,26 @@
         
         <!-- Jobs Tab -->
         <div id="profileTabJobs" class="profile-tab-content" style="display: none;">
+          <!-- Posted Jobs Section (Customer) -->
+          <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="card-header">
+              <div class="card-title">📋 Posted Jobs</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">Manage jobs you've posted</div>
+            </div>
+            <div id="postedJobsList" style="padding: 1rem;">
+              <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
+            </div>
+          </div>
+          
+          <!-- Active Jobs Section (Hustler) -->
           <div class="card">
             <div class="card-header">
-              <div class="card-title">📋 Your Jobs</div>
+              <div class="card-title">💼 Active Jobs</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">Jobs you're working on</div>
             </div>
-            <div class="jobs-list" id="profileJobsList" style="max-height: 500px; overflow-y: auto;"></div>
+            <div id="activeJobsList" style="padding: 1rem;">
+              <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
+            </div>
           </div>
         </div>
         
@@ -9900,45 +9915,176 @@ async function renderJobs(reset = false) {
       });
     }
     
-    // Populate Jobs tab when clicked
+    // Populate Jobs tab when clicked - Professional Posted Jobs Management
     const jobsTab = document.querySelector('.profile-tab[data-tab="jobs"]');
-    if (jobsTab) {
+    if (jobsTab && !jobsTab.dataset.listenerAttached) {
+      jobsTab.dataset.listenerAttached = 'true';
       jobsTab.addEventListener('click', async () => {
-        const jobsList = document.getElementById("profileJobsList");
-        if (jobsList && jobsList.innerHTML.trim() === "") {
-          // Fetch jobs from API
+        const postedJobsList = document.getElementById("postedJobsList");
+        const activeJobsList = document.getElementById("activeJobsList");
+        
+        if (postedJobsList && postedJobsList.innerHTML.includes("Loading")) {
           try {
-            const jobs = await window.hustlAPI.jobs.list({ limit: 50 });
-            // Get jobs posted by user OR jobs user is working on
-            const userJobs = (jobs.jobs || jobs).filter(j => 
-              j.postedByUserId === user.id || j.acceptedHustlerId === user.id
-            );
+            // Fetch user's jobs
+            const token = localStorage.getItem('hustl_token');
+            const response = await fetch(`${API_BASE}/jobs/my-jobs`, {
+              headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
             
-            if (userJobs.length === 0) {
-              jobsList.innerHTML = "<div class='muted' style='padding: 2rem; text-align: center;'>No jobs yet.</div>";
+            if (!response.ok) throw new Error('Failed to fetch jobs');
+            const jobs = await response.json();
+            
+            // Separate posted jobs (as customer) from active jobs (as hustler)
+            const postedJobs = jobs.filter(j => j.customerId === user.id);
+            const activeJobs = jobs.filter(j => j.hustlerId === user.id && j.status !== 'PAID' && j.status !== 'CANCELLED');
+            
+            // Render Posted Jobs
+            if (postedJobs.length === 0) {
+              postedJobsList.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                  <div style="font-size: 2rem; margin-bottom: 0.5rem;">📋</div>
+                  <div>You haven't posted any jobs yet.</div>
+                  <button class="btn btn-primary" onclick="setView('post')" style="margin-top: 1rem; padding: 0.75rem 1.5rem;">Post Your First Job</button>
+                </div>
+              `;
             } else {
-              jobsList.innerHTML = "";
-              userJobs.forEach(job => {
+              postedJobsList.innerHTML = "";
+              for (const job of postedJobs) {
+                // Fetch offer count for this job
+                let offerCount = 0;
+                try {
+                  const offersResponse = await fetch(`${API_BASE}/offers/${job.id}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                  });
+                  if (offersResponse.ok) {
+                    const offers = await offersResponse.json();
+                    offerCount = offers.filter(o => o.status === 'PENDING').length;
+                  }
+                } catch (e) {
+                  console.error("Error fetching offers:", e);
+                }
+                
+                const statusColors = {
+                  'OPEN': '#10b981',
+                  'ASSIGNED': '#3b82f6',
+                  'COMPLETED_BY_HUSTLER': '#f59e0b',
+                  'AWAITING_CUSTOMER_CONFIRM': '#f59e0b',
+                  'PAID': '#6b7280',
+                  'CANCELLED': '#ef4444'
+                };
+                
+                const statusLabels = {
+                  'OPEN': 'Open',
+                  'ASSIGNED': 'In Progress',
+                  'COMPLETED_BY_HUSTLER': 'Awaiting Confirmation',
+                  'AWAITING_CUSTOMER_CONFIRM': 'Awaiting Confirmation',
+                  'PAID': 'Completed',
+                  'CANCELLED': 'Cancelled'
+                };
+                
+                const jobStatus = (job.status || 'OPEN').toUpperCase();
+                const statusColor = statusColors[jobStatus] || '#6b7280';
+                const statusLabel = statusLabels[jobStatus] || jobStatus;
+                
+                const jobCard = document.createElement("div");
+                jobCard.style.cssText = "padding: 1.25rem; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 1rem; background: white; transition: all 0.2s;";
+                jobCard.style.cursor = "default";
+                jobCard.innerHTML = `
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                    <div style="flex: 1;">
+                      <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
+                      <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted);">
+                        <span>📅 ${new Date(job.createdAt).toLocaleDateString()}</span>
+                        <span>💰 $${parseFloat(job.amount || 0).toFixed(2)}</span>
+                        <span style="padding: 0.25rem 0.75rem; background: ${statusColor}20; color: ${statusColor}; border-radius: 6px; font-weight: 600;">${statusLabel}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  ${jobStatus === 'OPEN' ? `
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 8px;">
+                      <span style="font-weight: 600; color: #059669;">👥 ${offerCount} ${offerCount === 1 ? 'applicant' : 'applicants'}</span>
+                    </div>
+                  ` : job.hustlerId ? `
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; padding: 0.75rem; background: #dbeafe; border-radius: 8px;">
+                      <span style="font-weight: 600; color: #1e40af;">✅ Hustler assigned</span>
+                    </div>
+                  ` : ''}
+                  
+                  <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <button class="btn btn-ghost viewJobBtn" data-job-id="${job.id}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">View Details</button>
+                    ${jobStatus === 'OPEN' ? `
+                      <button class="btn btn-primary manageApplicantsBtn" data-job-id="${job.id}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Manage Applicants (${offerCount})</button>
+                      <button class="btn btn-ghost deleteJobBtn" data-job-id="${job.id}" style="padding: 0.5rem 1rem; font-size: 0.9rem; color: #dc2626; border-color: #fecaca;">Delete Job</button>
+                    ` : ''}
+                  </div>
+                `;
+                
+                // Add event listeners
+                jobCard.querySelector('.viewJobBtn')?.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  setView('jobs');
+                  setTimeout(() => {
+                    if (typeof openJobDetails === 'function') {
+                      openJobDetails(job.id);
+                    } else if (typeof renderJobDetail === 'function') {
+                      renderJobDetail(job.id);
+                    }
+                  }, 100);
+                });
+                
+                jobCard.querySelector('.manageApplicantsBtn')?.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  showApplicantsModal(job.id);
+                });
+                
+                jobCard.querySelector('.deleteJobBtn')?.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  deleteJob(job.id, job.title);
+                });
+                
+                postedJobsList.appendChild(jobCard);
+              }
+            }
+            
+            // Render Active Jobs (as Hustler)
+            if (activeJobs.length === 0) {
+              activeJobsList.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                  <div style="font-size: 2rem; margin-bottom: 0.5rem;">💼</div>
+                  <div>No active jobs as a Hustler.</div>
+                </div>
+              `;
+            } else {
+              activeJobsList.innerHTML = "";
+              activeJobs.forEach(job => {
                 const card = document.createElement("div");
                 card.className = "job-card";
                 card.dataset.jobId = job.id;
                 card.innerHTML = `
                   <div class="job-card-top">
                     <div class="job-title">${job.title || 'Untitled'}</div>
-                    <span class="badge">${job.status || 'open'}</span>
+                    <span class="badge">${(job.status || 'open').toLowerCase()}</span>
                   </div>
                   <div class="job-meta">${timeAgo(new Date(job.createdAt).getTime())}</div>
                 `;
                 card.addEventListener("click", () => {
                   setView("jobs");
-                  renderJobDetail(job.id);
+                  setTimeout(() => {
+                    if (typeof openJobDetails === 'function') {
+                      openJobDetails(job.id);
+                    } else if (typeof renderJobDetail === 'function') {
+                      renderJobDetail(job.id);
+                    }
+                  }, 100);
                 });
-                jobsList.appendChild(card);
+                activeJobsList.appendChild(card);
               });
             }
           } catch (error) {
             console.error("Error loading jobs:", error);
-            jobsList.innerHTML = "<div class='muted' style='padding: 2rem; text-align: center;'>Error loading jobs.</div>";
+            if (postedJobsList) postedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Error loading jobs.</div>";
+            if (activeJobsList) activeJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Error loading jobs.</div>";
           }
         }
       });
@@ -11298,6 +11444,264 @@ meta.textContent =
     // Expose renderAll and renderProfile on window for fallback access
     window.renderAll = renderAll;
     window.renderProfile = renderProfile;
+    
+    // Show Applicants Modal - Professional management interface
+    window.showApplicantsModal = async function(jobId) {
+      const token = localStorage.getItem('hustl_token');
+      
+      // Fetch job and offers
+      let job, offers;
+      try {
+        const [jobRes, offersRes] = await Promise.all([
+          fetch(`${API_BASE}/jobs/${jobId}`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          }),
+          fetch(`${API_BASE}/offers/${jobId}`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          })
+        ]);
+        
+        if (!jobRes.ok || !offersRes.ok) throw new Error('Failed to fetch data');
+        job = await jobRes.json();
+        offers = await offersRes.ok ? await offersRes.json() : [];
+      } catch (error) {
+        console.error("Error fetching job/offers:", error);
+        showToast("Error loading applicants. Please try again.");
+        return;
+      }
+      
+      // Filter to only pending offers
+      const pendingOffers = offers.filter(o => o.status === 'PENDING');
+      
+      // Create modal
+      const overlay = document.createElement("div");
+      overlay.style.cssText = "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem;";
+      overlay.id = "applicantsModalOverlay";
+      
+      const modal = document.createElement("div");
+      modal.style.cssText = "background: white; border-radius: 16px; max-width: 700px; width: 100%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);";
+      
+      modal.innerHTML = `
+        <div style="padding: 1.5rem 2rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main);">Manage Applicants</h2>
+            <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; color: var(--text-muted);">${job.title}</p>
+          </div>
+          <button id="closeApplicantsModal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); padding: 0.5rem; line-height: 1;">&times;</button>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding: 1.5rem 2rem;">
+          ${pendingOffers.length === 0 ? `
+            <div style="text-align: center; padding: 3rem 1rem;">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
+              <div style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">No applicants yet</div>
+              <div style="color: var(--text-muted);">Share your job to get more applicants!</div>
+            </div>
+          ` : pendingOffers.map(offer => {
+            const hustler = offer.hustler;
+            const rating = hustler.ratingAvg || 5.0;
+            const reviewCount = hustler.ratingCount || 0;
+            const proposedPrice = offer.proposedAmount ? `$${parseFloat(offer.proposedAmount).toFixed(2)}` : null;
+            const jobPrice = `$${parseFloat(job.amount || 0).toFixed(2)}`;
+            
+            return `
+              <div style="padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 1rem; background: white;">
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                  <div style="width: 60px; height: 60px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; color: var(--primary);">
+                    ${hustler.photoUrl ? `<img src="${hustler.photoUrl}" style="width: 100%; height: 100%; object-fit: cover;">` : (hustler.name || 'H')[0].toUpperCase()}
+                  </div>
+                  <div style="flex: 1;">
+                    <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.25rem;">${hustler.name || 'Hustler'}</div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                      <span>⭐ ${rating.toFixed(1)}</span>
+                      <span>(${reviewCount} ${reviewCount === 1 ? 'review' : 'reviews'})</span>
+                    </div>
+                    ${hustler.bio ? `<div style="font-size: 0.9rem; color: var(--text-main); line-height: 1.5; margin-top: 0.5rem;">${hustler.bio.substring(0, 150)}${hustler.bio.length > 150 ? '...' : ''}</div>` : ''}
+                  </div>
+                </div>
+                
+                ${offer.note ? `
+                  <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem;">
+                    <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Why I'm a good fit:</div>
+                    <div style="color: var(--text-main); line-height: 1.6; font-size: 0.9rem;">${offer.note}</div>
+                  </div>
+                ` : ''}
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid var(--border);">
+                  <div>
+                    ${proposedPrice ? `
+                      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Proposed Price</div>
+                      <div style="font-weight: 700; font-size: 1.1rem; color: var(--primary);">${proposedPrice}</div>
+                      <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Your price: ${jobPrice}</div>
+                    ` : `
+                      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Price</div>
+                      <div style="font-weight: 700; font-size: 1.1rem; color: var(--primary);">${jobPrice}</div>
+                    `}
+                  </div>
+                  <div style="display: flex; gap: 0.75rem;">
+                    <button class="btn btn-ghost declineOfferBtn" data-offer-id="${offer.id}" style="padding: 0.75rem 1.5rem; color: #6b7280;">Decline</button>
+                    <button class="btn btn-primary acceptOfferBtn" data-offer-id="${offer.id}" data-job-id="${jobId}" style="padding: 0.75rem 1.5rem;">Accept</button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+      
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+      
+      // Close button
+      overlay.querySelector('#closeApplicantsModal')?.addEventListener('click', () => {
+        document.body.removeChild(overlay);
+      });
+      
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          document.body.removeChild(overlay);
+        }
+      });
+      
+      // Accept/Decline buttons
+      modal.querySelectorAll('.acceptOfferBtn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const offerId = btn.dataset.offerId;
+          const jobId = btn.dataset.jobId;
+          await acceptOffer(offerId, jobId, overlay);
+        });
+      });
+      
+      modal.querySelectorAll('.declineOfferBtn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const offerId = btn.dataset.offerId;
+          await declineOffer(offerId, overlay);
+        });
+      });
+    };
+    
+    // Delete Job function
+    window.deleteJob = async function(jobId, jobTitle) {
+      if (!confirm(`Are you sure you want to delete "${jobTitle}"? This cannot be undone.`)) {
+        return;
+      }
+      
+      try {
+        const token = localStorage.getItem('hustl_token');
+        const response = await fetch(`${API_BASE}/jobs/${jobId}`, {
+          method: 'DELETE',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to delete job');
+        }
+        
+        showToast("Job deleted successfully.");
+        
+        // Refresh the jobs list
+        const jobsTab = document.querySelector('.profile-tab[data-tab="jobs"]');
+        if (jobsTab) {
+          jobsTab.click();
+        }
+      } catch (error) {
+        console.error("Error deleting job:", error);
+        showToast(error.message || "Error deleting job. Please try again.");
+      }
+    };
+    
+    // Accept Offer helper
+    async function acceptOffer(offerId, jobId, modalOverlay) {
+      try {
+        showToast("Processing...");
+        
+        // First check if payment is needed
+        const token = localStorage.getItem('hustl_token');
+        const offerRes = await fetch(`${API_BASE}/offers/${offerId}/accept`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({})
+        });
+        
+        if (!offerRes.ok) {
+          const error = await offerRes.json();
+          if (error.requiresPayment) {
+            // Redirect to payment flow
+            showToast("Payment required to accept this offer.");
+            document.body.removeChild(modalOverlay);
+            setView('jobs');
+            setTimeout(() => {
+              if (typeof openJobDetails === 'function') {
+                openJobDetails(jobId);
+              }
+            }, 100);
+            return;
+          }
+          throw new Error(error.error || 'Failed to accept offer');
+        }
+        
+        showToast("✅ Hustler accepted! They've been notified.");
+        document.body.removeChild(modalOverlay);
+        
+        // Refresh jobs list
+        const jobsTab = document.querySelector('.profile-tab[data-tab="jobs"]');
+        if (jobsTab) {
+          jobsTab.click();
+        }
+      } catch (error) {
+        console.error("Error accepting offer:", error);
+        showToast(error.message || "Error accepting offer. Please try again.");
+      }
+    }
+    
+    // Decline Offer helper
+    async function declineOffer(offerId, modalOverlay) {
+      try {
+        const token = localStorage.getItem('hustl_token');
+        const response = await fetch(`${API_BASE}/offers/${offerId}/decline`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to decline offer');
+        }
+        
+        showToast("Applicant declined.");
+        
+        // Remove the offer from the modal
+        const offerCard = document.querySelector(`[data-offer-id="${offerId}"]`)?.closest('div[style*="border: 1px solid"]');
+        if (offerCard) {
+          offerCard.style.transition = 'opacity 0.3s';
+          offerCard.style.opacity = '0';
+          setTimeout(() => {
+            offerCard.remove();
+            // If no more offers, show empty state
+            const offersContainer = modalOverlay.querySelector('div[style*="flex: 1"]');
+            if (offersContainer && offersContainer.querySelectorAll('div[style*="border: 1px solid"]').length === 0) {
+              offersContainer.innerHTML = `
+                <div style="text-align: center; padding: 3rem 1rem;">
+                  <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
+                  <div style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">No applicants</div>
+                  <div style="color: var(--text-muted);">All applicants have been reviewed.</div>
+                </div>
+              `;
+            }
+          }, 300);
+        }
+      } catch (error) {
+        console.error("Error declining offer:", error);
+        showToast("Error declining offer. Please try again.");
+      }
+    }
 
     /* ---------- Mode Toggle ---------- */
     
