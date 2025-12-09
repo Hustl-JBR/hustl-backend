@@ -11729,11 +11729,25 @@ meta.textContent =
     
     // Load Posted Jobs - Professional Dashboard Cards
     async function loadPostedJobs() {
+      console.log("🔵 loadPostedJobs called");
+      
       const postedJobsList = document.getElementById("managePostedJobsList");
       if (!postedJobsList) {
-        console.error("managePostedJobsList element not found");
+        console.error("❌ managePostedJobsList element not found in DOM");
+        // Try to find it again
+        setTimeout(() => {
+          const retry = document.getElementById("managePostedJobsList");
+          if (retry) {
+            console.log("✅ Found on retry, calling loadPostedJobs again");
+            loadPostedJobs();
+          } else {
+            console.error("❌ Still not found after retry - DOM may not be ready");
+          }
+        }, 100);
         return;
       }
+      
+      console.log("✅ managePostedJobsList element found");
       
       // Show loading state
       postedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Loading...</div>";
@@ -11742,44 +11756,52 @@ meta.textContent =
       try {
         const user = await window.hustlAPI.auth.getCurrentUser();
         if (!user) {
+          console.warn("No user found");
           postedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Please log in to view your jobs.</div>";
           return;
         }
         
         const token = localStorage.getItem('hustl_token');
         if (!token) {
+          console.warn("No token found");
           postedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Please log in to view your jobs.</div>";
           return;
         }
         
-        console.log("Loading posted jobs for user:", user.id);
+        console.log("🔵 Loading posted jobs for user:", user.id);
+        console.log("🔵 API_BASE:", API_BASE);
+        console.log("🔵 Endpoint:", `${API_BASE}/jobs/user-posted`);
         
         // Use the dedicated endpoint for posted jobs
         const response = await fetch(`${API_BASE}/jobs/user-posted`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
+        console.log("🔵 Response status:", response.status, response.statusText);
+        
         if (!response.ok) {
           const errorText = await response.text();
-          console.error("Failed to fetch jobs:", response.status, errorText);
-          throw new Error(`Failed to fetch jobs: ${response.status}`);
+          console.error("❌ Failed to fetch jobs:", response.status, errorText);
+          throw new Error(`Failed to fetch jobs: ${response.status} - ${errorText}`);
         }
         
         const jobs = await response.json();
+        console.log("🔵 Raw response:", jobs);
         
         // Ensure jobs is an array
         if (!Array.isArray(jobs)) {
-          console.error("Jobs is not an array:", typeof jobs, jobs);
+          console.error("❌ Jobs is not an array:", typeof jobs, jobs);
           throw new Error("Invalid response format from server");
         }
         
         console.log("✅ Fetched posted jobs:", jobs.length, "jobs");
         if (jobs.length > 0) {
-          console.log("Sample job:", {
+          console.log("✅ Sample job:", {
             id: jobs[0].id,
             title: jobs[0].title,
             customerId: jobs[0].customerId,
-            status: jobs[0].status
+            status: jobs[0].status,
+            category: jobs[0].category
           });
         }
         
@@ -11998,7 +12020,10 @@ meta.textContent =
             });
             
             postedJobsList.appendChild(jobCard);
+            console.log("✅ Added job card for:", job.title || job.id);
           }
+          
+          console.log("✅ Total job cards rendered:", postedJobs.length);
           postedJobsList.dataset.loaded = 'true';
         }
       } catch (error) {
