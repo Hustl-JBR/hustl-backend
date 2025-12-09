@@ -354,84 +354,9 @@ router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), a
     const base = origin.replace(/\/+$/, '');
 
     // Create Stripe checkout session - Skip in test mode
-    let session;
-    if (skipStripeCheck) {
-      // In test mode, accept the offer first, then return fake success URL
-      console.log('[TEST MODE] Skipping Stripe checkout - accepting offer directly');
-      
-      // Accept the offer (same logic as /offers/:id/accept)
-      await prisma.offer.update({
-        where: { id: offerId },
-        data: { status: 'ACCEPTED' },
-      });
-
-      // Decline other offers
-      await prisma.offer.updateMany({
-        where: {
-          jobId: offer.job.id,
-          id: { not: offerId },
-          status: 'PENDING',
-        },
-        data: { status: 'DECLINED' },
-      });
-
-      // Generate verification codes (Uber-style safety)
-      const generateCode = () => String(Math.floor(1000 + Math.random() * 9000));
-      
-      // Update job with hustler and verification codes
-      const updatedJob = await prisma.job.update({
-        where: { id: offer.job.id },
-        data: {
-          status: 'ASSIGNED',
-          hustlerId: offer.hustlerId,
-          arrivalCode: generateCode(),
-          completionCode: generateCode(),
-        },
-      });
-      
-      console.log(`[TEST MODE] Job ${updatedJob.id} updated: status=ASSIGNED, hustlerId=${updatedJob.hustlerId}, codes generated`);
-
-      // Create fake payment record
-      const fakePaymentIntent = {
-        id: `pi_test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        client_secret: `pi_test_${Date.now()}_secret`,
-        status: 'requires_capture',
-        amount: Math.round(total * 100),
-      };
-
-      await prisma.payment.create({
-        data: {
-          jobId: offer.job.id,
-          customerId: req.user.id,
-          hustlerId: offer.hustlerId,
-          amount: jobAmount,
-          tip: tipAmount,
-          feeCustomer: customerFee,
-          feeHustler: 0,
-          status: 'PREAUTHORIZED',
-          providerId: fakePaymentIntent.id,
-          provider: 'STRIPE',
-        },
-      });
-
-      // Create thread for messaging
-      await prisma.thread.upsert({
-        where: {
-          jobId: offer.job.id,
-        },
-        update: {},
-        create: {
-          jobId: offer.job.id,
-          userAId: req.user.id,
-          userBId: offer.hustlerId,
-        },
-      });
-
-      console.log('[TEST MODE] Offer accepted and payment pre-authorized (fake)');
-      const fakeUrl = `${base}/?payment=success&offerId=${offerId}&jobId=${offer.job.id}&test_mode=true`;
-      return res.json({ url: fakeUrl });
-    } else {
-      session = await stripe.checkout.sessions.create({
+    // Always use Stripe checkout - works with test cards (4242 4242 4242 4242) if using test keys
+    console.log('[PAYMENT] Creating Stripe checkout session for offer:', offerId);
+    const session = await stripe.checkout.sessions.create({
         mode: 'payment',
         payment_method_types: ['card'],
         line_items: [
