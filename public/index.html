@@ -3073,52 +3073,46 @@
 
       <!-- MANAGE JOBS VIEW -->
       <section id="view-manage-jobs" style="display:none;">
-        <div style="padding: 1rem;">
+        <div style="padding: 1rem; max-width: 1200px; margin: 0 auto;">
           <h1 style="font-size: 1.75rem; font-weight: 700; margin: 0 0 1.5rem 0; color: var(--text-main);">📋 Manage Jobs</h1>
           
-          <!-- Tabs -->
-          <div class="profile-tabs" style="margin-bottom: 1.5rem;">
-            <button class="profile-tab active" data-manage-tab="posted">Posted Jobs</button>
-            <button class="profile-tab" data-manage-tab="active">Active Jobs</button>
-            <button class="profile-tab" data-manage-tab="completed">Completed</button>
+          <!-- Tabs with blue highlighting -->
+          <div class="profile-tabs" style="margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">
+            <button class="profile-tab active manage-tab" data-manage-tab="posted" style="position: relative;">
+              📋 Posted Jobs
+              <span class="tab-indicator" style="position: absolute; bottom: -0.5rem; left: 0; right: 0; height: 3px; background: var(--primary); border-radius: 2px 2px 0 0; display: block;"></span>
+            </button>
+            <button class="profile-tab manage-tab" data-manage-tab="active" style="position: relative;">
+              🟡 Active Jobs
+              <span class="tab-indicator" style="position: absolute; bottom: -0.5rem; left: 0; right: 0; height: 3px; background: var(--primary); border-radius: 2px 2px 0 0; display: none;"></span>
+            </button>
+            <button class="profile-tab manage-tab" data-manage-tab="completed" style="position: relative;">
+              ✅ Completed Jobs
+              <span class="tab-indicator" style="position: absolute; bottom: -0.5rem; left: 0; right: 0; height: 3px; background: var(--primary); border-radius: 2px 2px 0 0; display: none;"></span>
+            </button>
           </div>
           
           <!-- Posted Jobs Tab -->
           <div id="manageTabPosted" class="profile-tab-content active">
-            <div class="card">
-              <div class="card-header">
-                <div class="card-title">📋 Posted Jobs</div>
-                <div style="font-size: 0.85rem; color: var(--text-muted);">Manage jobs you've posted</div>
-              </div>
-              <div id="managePostedJobsList" style="padding: 1rem;">
-                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
-              </div>
+            <div style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem;">Manage jobs you've posted.</div>
+            <div id="managePostedJobsList" style="display: grid; gap: 1rem;">
+              <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
             </div>
           </div>
           
           <!-- Active Jobs Tab -->
           <div id="manageTabActive" class="profile-tab-content" style="display: none;">
-            <div class="card">
-              <div class="card-header">
-                <div class="card-title">💼 Active Jobs</div>
-                <div style="font-size: 0.85rem; color: var(--text-muted);">Jobs you're working on</div>
-              </div>
-              <div id="manageActiveJobsList" style="padding: 1rem;">
-                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
-              </div>
+            <div style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem;">Jobs currently in progress.</div>
+            <div id="manageActiveJobsList" style="display: grid; gap: 1rem;">
+              <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
             </div>
           </div>
           
           <!-- Completed Jobs Tab -->
           <div id="manageTabCompleted" class="profile-tab-content" style="display: none;">
-            <div class="card">
-              <div class="card-header">
-                <div class="card-title">✅ Completed Jobs</div>
-                <div style="font-size: 0.85rem; color: var(--text-muted);">Your completed jobs</div>
-              </div>
-              <div id="manageCompletedJobsList" style="padding: 1rem;">
-                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
-              </div>
+            <div style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem;">Your completed jobs.</div>
+            <div id="manageCompletedJobsList" style="display: grid; gap: 1rem;">
+              <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
             </div>
           </div>
         </div>
@@ -11534,6 +11528,10 @@ meta.textContent =
               tabContent.classList.add('active');
             }
             
+            // Update tab indicators
+            document.querySelectorAll('.manage-tab .tab-indicator').forEach(ind => ind.style.display = 'none');
+            tab.querySelector('.tab-indicator').style.display = 'block';
+            
             // Load content for that tab
             if (tabName === 'posted') {
               loadPostedJobs();
@@ -11550,12 +11548,12 @@ meta.textContent =
       loadPostedJobs();
     }
     
-    // Load Posted Jobs
+    // Load Posted Jobs - Professional Dashboard Cards
     async function loadPostedJobs() {
       const postedJobsList = document.getElementById("managePostedJobsList");
       if (!postedJobsList) return;
       
-      if (postedJobsList.dataset.loaded === 'true') return; // Already loaded
+      postedJobsList.dataset.loaded = 'false'; // Always reload to get fresh data
       
       try {
         const token = localStorage.getItem('hustl_token');
@@ -11567,7 +11565,7 @@ meta.textContent =
         const jobs = await response.json();
         
         const user = await window.hustlAPI.auth.getCurrentUser();
-        const postedJobs = jobs.filter(j => j.customerId === user.id);
+        const postedJobs = jobs.filter(j => j.customerId === user.id && j.status !== 'PAID' && j.status !== 'CANCELLED');
         
         if (postedJobs.length === 0) {
           postedJobsList.innerHTML = `
@@ -11583,94 +11581,76 @@ meta.textContent =
           for (const job of postedJobs) {
             // Fetch offer count
             let offerCount = 0;
+            let pendingOffers = [];
             try {
               const offersResponse = await fetch(`${API_BASE}/offers/${job.id}`, {
                 headers: token ? { 'Authorization': `Bearer ${token}` } : {}
               });
               if (offersResponse.ok) {
                 const offers = await offersResponse.json();
-                offerCount = offers.filter(o => o.status === 'PENDING').length;
+                pendingOffers = offers.filter(o => o.status === 'PENDING');
+                offerCount = pendingOffers.length;
               }
             } catch (e) {
               console.error("Error fetching offers:", e);
             }
             
-            const statusColors = {
-              'OPEN': '#10b981',
-              'ASSIGNED': '#3b82f6',
-              'COMPLETED_BY_HUSTLER': '#f59e0b',
-              'AWAITING_CUSTOMER_CONFIRM': '#f59e0b',
-              'PAID': '#6b7280',
-              'CANCELLED': '#ef4444'
-            };
+            // Format location (shortened)
+            const location = job.address || 'Location not specified';
+            const shortLocation = location.length > 40 ? location.substring(0, 40) + '...' : location;
             
-            const statusLabels = {
-              'OPEN': 'Open',
-              'ASSIGNED': 'In Progress',
-              'COMPLETED_BY_HUSTLER': 'Awaiting Confirmation',
-              'AWAITING_CUSTOMER_CONFIRM': 'Awaiting Confirmation',
-              'PAID': 'Completed',
-              'CANCELLED': 'Cancelled'
-            };
+            // Format pay
+            const payType = job.payType || 'flat';
+            const payDisplay = payType === 'hourly' 
+              ? `$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hr` 
+              : `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
             
-            const jobStatus = (job.status || 'OPEN').toUpperCase();
-            const statusColor = statusColors[jobStatus] || '#6b7280';
-            const statusLabel = statusLabels[jobStatus] || jobStatus;
+            // Posted date
+            const postedDate = new Date(job.createdAt);
+            const daysAgo = Math.floor((Date.now() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
+            const postedText = daysAgo === 0 ? 'Posted today' : daysAgo === 1 ? 'Posted 1 day ago' : `Posted ${daysAgo} days ago`;
             
             const jobCard = document.createElement("div");
-            jobCard.style.cssText = "padding: 1.25rem; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 1rem; background: white; transition: all 0.2s;";
+            jobCard.style.cssText = "padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.2s; cursor: pointer;";
+            jobCard.onmouseenter = () => { jobCard.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; };
+            jobCard.onmouseleave = () => { jobCard.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)'; };
+            
             jobCard.innerHTML = `
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
                 <div style="flex: 1;">
-                  <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
-                  <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted);">
-                    <span>📅 ${new Date(job.createdAt).toLocaleDateString()}</span>
-                    <span>💰 $${parseFloat(job.amount || 0).toFixed(2)}</span>
-                    <span style="padding: 0.25rem 0.75rem; background: ${statusColor}20; color: ${statusColor}; border-radius: 6px; font-weight: 600;">${statusLabel}</span>
+                  <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
+                  <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                    <span style="padding: 0.25rem 0.75rem; background: var(--primary-soft); color: var(--primary); border-radius: 6px; font-weight: 600;">${job.category || 'General'}</span>
+                    <span>💰 ${payDisplay}</span>
+                    <span style="padding: 0.25rem 0.75rem; background: #10b98120; color: #10b981; border-radius: 6px; font-weight: 600;">Open</span>
+                  </div>
+                  <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                    <span>📅 ${postedText}</span>
+                    <span style="margin-left: 1rem;">📍 ${shortLocation}</span>
                   </div>
                 </div>
               </div>
               
-              ${jobStatus === 'OPEN' ? `
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 8px;">
-                  <span style="font-weight: 600; color: #059669;">👥 ${offerCount} ${offerCount === 1 ? 'applicant' : 'applicants'}</span>
-                </div>
-              ` : job.hustlerId ? `
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; padding: 0.75rem; background: #dbeafe; border-radius: 8px;">
-                  <span style="font-weight: 600; color: #1e40af;">✅ Hustler assigned</span>
-                </div>
-              ` : ''}
-              
-              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                <button class="btn btn-ghost viewJobBtn" data-job-id="${job.id}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">View Details</button>
-                ${jobStatus === 'OPEN' ? `
-                  <button class="btn btn-primary manageApplicantsBtn" data-job-id="${job.id}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Manage Applicants (${offerCount})</button>
-                  <button class="btn btn-ghost deleteJobBtn" data-job-id="${job.id}" style="padding: 0.5rem 1rem; font-size: 0.9rem; color: #dc2626; border-color: #fecaca;">Delete Job</button>
-                ` : ''}
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 8px;">
+                <span style="font-weight: 600; color: #059669;">👥 ${offerCount} ${offerCount === 1 ? 'person applied' : 'people applied'}</span>
               </div>
+              
+              <button class="btn btn-primary manageJobBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.75rem; font-size: 0.95rem; font-weight: 600;">
+                ${offerCount > 0 ? 'View Applicants / Manage' : 'View Details'}
+              </button>
             `;
             
-            // Add event listeners
-            jobCard.querySelector('.viewJobBtn')?.addEventListener('click', (e) => {
+            // Add click handler - opens Job Management Modal
+            jobCard.querySelector('.manageJobBtn')?.addEventListener('click', (e) => {
               e.stopPropagation();
-              setView('jobs');
-              setTimeout(() => {
-                if (typeof openJobDetails === 'function') {
-                  openJobDetails(job.id);
-                } else if (typeof renderJobDetail === 'function') {
-                  renderJobDetail(job.id);
-                }
-              }, 100);
+              showJobManagementModal(job.id);
             });
             
-            jobCard.querySelector('.manageApplicantsBtn')?.addEventListener('click', (e) => {
-              e.stopPropagation();
-              showApplicantsModal(job.id);
-            });
-            
-            jobCard.querySelector('.deleteJobBtn')?.addEventListener('click', (e) => {
-              e.stopPropagation();
-              deleteJob(job.id, job.title);
+            // Also make entire card clickable
+            jobCard.addEventListener('click', (e) => {
+              if (!e.target.closest('button')) {
+                showJobManagementModal(job.id);
+              }
             });
             
             postedJobsList.appendChild(jobCard);
@@ -11679,16 +11659,16 @@ meta.textContent =
         }
       } catch (error) {
         console.error("Error loading posted jobs:", error);
-        postedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Error loading jobs.</div>";
+        postedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Error loading jobs. Please refresh.</div>";
       }
     }
     
-    // Load Active Jobs
+    // Load Active Jobs - Role-based (Customer vs Hustler)
     async function loadActiveJobs() {
       const activeJobsList = document.getElementById("manageActiveJobsList");
       if (!activeJobsList) return;
       
-      if (activeJobsList.dataset.loaded === 'true') return;
+      activeJobsList.dataset.loaded = 'false'; // Always reload
       
       try {
         const token = localStorage.getItem('hustl_token');
@@ -11700,41 +11680,134 @@ meta.textContent =
         const jobs = await response.json();
         
         const user = await window.hustlAPI.auth.getCurrentUser();
-        const activeJobs = jobs.filter(j => j.hustlerId === user.id && j.status !== 'PAID' && j.status !== 'CANCELLED');
+        
+        // Active jobs: either assigned to user as hustler OR posted by user as customer with a hustler assigned
+        const activeJobs = jobs.filter(j => {
+          const isActive = j.status !== 'PAID' && j.status !== 'CANCELLED' && j.status !== 'OPEN';
+          const isHustler = j.hustlerId === user.id;
+          const isCustomer = j.customerId === user.id && j.hustlerId; // Customer with assigned hustler
+          return isActive && (isHustler || isCustomer);
+        });
         
         if (activeJobs.length === 0) {
           activeJobsList.innerHTML = `
             <div style="text-align: center; padding: 3rem 1rem;">
-              <div style="font-size: 3rem; margin-bottom: 1rem;">💼</div>
+              <div style="font-size: 3rem; margin-bottom: 1rem;">🟡</div>
               <div style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">No active jobs</div>
               <div style="color: var(--text-muted);">You're not working on any jobs right now.</div>
             </div>
           `;
         } else {
           activeJobsList.innerHTML = "";
-          activeJobs.forEach(job => {
+          for (const job of activeJobs) {
+            const isCustomer = job.customerId === user.id;
+            const isHustler = job.hustlerId === user.id;
+            
+            // Format pay
+            const payType = job.payType || 'flat';
+            const payDisplay = payType === 'hourly' 
+              ? `$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hr` 
+              : `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
+            
+            // Format scheduled time
+            const jobDate = new Date(job.date);
+            const dateStr = jobDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const timeStr = jobDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            
             const card = document.createElement("div");
-            card.className = "job-card";
-            card.dataset.jobId = job.id;
-            card.innerHTML = `
-              <div class="job-card-top">
-                <div class="job-title">${job.title || 'Untitled'}</div>
-                <span class="badge">${(job.status || 'open').toLowerCase()}</span>
-              </div>
-              <div class="job-meta">${timeAgo(new Date(job.createdAt).getTime())}</div>
-            `;
-            card.addEventListener("click", () => {
-              setView("jobs");
-              setTimeout(() => {
-                if (typeof openJobDetails === 'function') {
-                  openJobDetails(job.id);
-                } else if (typeof renderJobDetail === 'function') {
-                  renderJobDetail(job.id);
-                }
-              }, 100);
+            card.style.cssText = "padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.2s; cursor: pointer;";
+            card.onmouseenter = () => { card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; };
+            card.onmouseleave = () => { card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)'; };
+            
+            if (isCustomer) {
+              // Customer View: Shows hired hustler
+              const hustler = job.hustler || {};
+              card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                  <div style="flex: 1;">
+                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                      ${hustler.photoUrl ? `<img src="${hustler.photoUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary);">${(hustler.name || 'H')[0].toUpperCase()}</div>`}
+                      <div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">Hustler accepted</div>
+                        <div style="font-weight: 600; color: var(--text-main);">${hustler.name || 'Unknown'}</div>
+                      </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted);">
+                      <span>💰 ${payDisplay}</span>
+                      <span>📅 ${dateStr} at ${timeStr}</span>
+                      <span style="padding: 0.25rem 0.75rem; background: #3b82f620; color: #3b82f6; border-radius: 6px; font-weight: 600;">In Progress</span>
+                    </div>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                  <button class="btn btn-primary messageBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">💬 Message Hustler</button>
+                  <button class="btn btn-ghost viewDetailsBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem;">View Details</button>
+                  ${job.status === 'ASSIGNED' && !job.startCodeVerified ? `<button class="btn btn-ghost cancelBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; color: #dc2626; border-color: #fecaca;">Cancel Job</button>` : ''}
+                </div>
+              `;
+            } else if (isHustler) {
+              // Hustler View: Shows customer who hired them
+              const customer = job.customer || {};
+              card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                  <div style="flex: 1;">
+                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                      ${customer.photoUrl ? `<img src="${customer.photoUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary);">${(customer.name || 'C')[0].toUpperCase()}</div>`}
+                      <div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">Customer</div>
+                        <div style="font-weight: 600; color: var(--text-main);">${customer.name || 'Unknown'}</div>
+                      </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted);">
+                      <span>💰 ${payDisplay}</span>
+                      <span>📅 ${dateStr} at ${timeStr}</span>
+                      <span style="padding: 0.25rem 0.75rem; background: #3b82f620; color: #3b82f6; border-radius: 6px; font-weight: 600;">In Progress</span>
+                    </div>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                  <button class="btn btn-primary messageBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">💬 Message Customer</button>
+                  <button class="btn btn-ghost viewDetailsBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem;">View Job Details</button>
+                  ${job.status === 'COMPLETED_BY_HUSTLER' ? `<button class="btn btn-primary completeBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-weight: 600; background: #10b981;">✅ Mark Complete</button>` : ''}
+                </div>
+              `;
+            }
+            
+            // Event listeners
+            card.querySelector('.messageBtn')?.addEventListener('click', (e) => {
+              e.stopPropagation();
+              setView('messages');
+              // Could navigate to specific thread if we have job.threadId
             });
+            
+            card.querySelector('.viewDetailsBtn')?.addEventListener('click', (e) => {
+              e.stopPropagation();
+              showActiveJobModal(job.id, isCustomer ? 'customer' : 'hustler');
+            });
+            
+            card.querySelector('.cancelBtn')?.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              if (confirm('Are you sure you want to cancel this job?')) {
+                await cancelJob(job.id);
+              }
+            });
+            
+            card.querySelector('.completeBtn')?.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              await submitCompletionCode(job.id);
+            });
+            
+            // Make entire card clickable
+            card.addEventListener('click', (e) => {
+              if (!e.target.closest('button')) {
+                showActiveJobModal(job.id, isCustomer ? 'customer' : 'hustler');
+              }
+            });
+            
             activeJobsList.appendChild(card);
-          });
+          }
           activeJobsList.dataset.loaded = 'true';
         }
       } catch (error) {
@@ -11748,11 +11821,11 @@ meta.textContent =
       const completedJobsList = document.getElementById("manageCompletedJobsList");
       if (!completedJobsList) return;
       
-      if (completedJobsList.dataset.loaded === 'true') return;
+      completedJobsList.dataset.loaded = 'false'; // Always reload
       
       try {
         const token = localStorage.getItem('hustl_token');
-        const response = await fetch(`${API_BASE}/jobs/my-jobs?status=PAID`, {
+        const response = await fetch(`${API_BASE}/jobs/my-jobs`, {
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         
@@ -11776,17 +11849,38 @@ meta.textContent =
         } else {
           completedJobsList.innerHTML = "";
           completedJobs.forEach(job => {
+            const isCustomer = job.customerId === user.id;
+            const role = isCustomer ? 'Customer' : 'Hustler';
+            const otherUser = isCustomer ? job.hustler : job.customer;
+            
+            // Format pay
+            const payType = job.payType || 'flat';
+            const payDisplay = payType === 'hourly' 
+              ? `$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hr` 
+              : `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
+            
             const card = document.createElement("div");
-            card.className = "job-card";
-            card.dataset.jobId = job.id;
-            const role = job.customerId === user.id ? 'Customer' : 'Hustler';
+            card.style.cssText = "padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.2s; cursor: pointer;";
+            card.onmouseenter = () => { card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; };
+            card.onmouseleave = () => { card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)'; };
+            
             card.innerHTML = `
-              <div class="job-card-top">
-                <div class="job-title">${job.title || 'Untitled'}</div>
-                <span class="badge">completed</span>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                <div style="flex: 1;">
+                  <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
+                  <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted);">
+                    <span>As ${role}</span>
+                    <span>💰 ${payDisplay}</span>
+                    <span>📅 ${new Date(job.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  ${otherUser ? `<div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text-muted);">
+                    ${isCustomer ? 'With' : 'For'} ${otherUser.name || 'Unknown'}
+                  </div>` : ''}
+                </div>
+                <span style="padding: 0.25rem 0.75rem; background: #10b98120; color: #10b981; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">Completed</span>
               </div>
-              <div class="job-meta">As ${role} · ${new Date(job.createdAt).toLocaleDateString()}</div>
             `;
+            
             card.addEventListener("click", () => {
               setView("jobs");
               setTimeout(() => {
@@ -11797,6 +11891,7 @@ meta.textContent =
                 }
               }, 100);
             });
+            
             completedJobsList.appendChild(card);
           });
           completedJobsList.dataset.loaded = 'true';
@@ -11808,6 +11903,656 @@ meta.textContent =
     }
     
     window.renderManageJobs = renderManageJobs;
+    
+    // Job Management Modal - Shows full job details + applicants
+    async function showJobManagementModal(jobId) {
+      try {
+        const token = localStorage.getItem('hustl_token');
+        
+        // Fetch full job details
+        const jobResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (!jobResponse.ok) throw new Error('Failed to fetch job');
+        const job = await jobResponse.json();
+        
+        // Fetch applicants
+        const offersResponse = await fetch(`${API_BASE}/offers/${jobId}`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        const offers = offersResponse.ok ? await offersResponse.json() : [];
+        const pendingOffers = offers.filter(o => o.status === 'PENDING');
+        
+        // Create modal overlay
+        const modalOverlay = document.createElement('div');
+        modalOverlay.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1rem;
+          overflow-y: auto;
+        `;
+        
+        // Format pay
+        const payType = job.payType || 'flat';
+        const payDisplay = payType === 'hourly' 
+          ? `$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hr (est. ${job.estHours || 0} hrs)` 
+          : `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
+        
+        // Format date/time
+        const jobDate = new Date(job.date);
+        const dateStr = jobDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+        const timeStr = jobDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        
+        modalOverlay.innerHTML = `
+          <div style="
+            background: white;
+            border-radius: 16px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+          ">
+            <!-- Close Button -->
+            <button class="closeModalBtn" style="
+              position: absolute;
+              top: 1rem;
+              right: 1rem;
+              width: 36px;
+              height: 36px;
+              border-radius: 50%;
+              border: none;
+              background: #f3f4f6;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 1.25rem;
+              z-index: 1;
+              transition: all 0.2s;
+            ">×</button>
+            
+            <!-- Modal Content -->
+            <div style="padding: 2rem;">
+              <!-- Job Info Section -->
+              <div style="margin-bottom: 2rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">${job.title || 'Untitled Job'}</h2>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                  <div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Category</div>
+                    <div style="font-weight: 600; color: var(--text-main);">${job.category || 'General'}</div>
+                  </div>
+                  <div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Pay</div>
+                    <div style="font-weight: 600; color: var(--text-main);">${payDisplay}</div>
+                  </div>
+                  <div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Status</div>
+                    <div style="font-weight: 600; color: #10b981;">Open</div>
+                  </div>
+                </div>
+                
+                <div style="margin-bottom: 1.5rem;">
+                  <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Description</div>
+                  <div style="color: var(--text-main); line-height: 1.6; white-space: pre-wrap;">${job.description || 'No description provided.'}</div>
+                </div>
+                
+                <div style="margin-bottom: 1.5rem;">
+                  <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">📍 Address</div>
+                  <a href="https://maps.google.com/?q=${encodeURIComponent(job.address)}" target="_blank" style="
+                    color: var(--primary);
+                    text-decoration: none;
+                    font-weight: 500;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                  ">
+                    ${job.address || 'Address not specified'}
+                    <span>🔗</span>
+                  </a>
+                </div>
+                
+                <div style="margin-bottom: 1.5rem;">
+                  <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">📅 Scheduled</div>
+                  <div style="color: var(--text-main); font-weight: 500;">${dateStr} at ${timeStr}</div>
+                </div>
+                
+                <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; display: flex; align-items: center; gap: 0.75rem;">
+                  ${job.customer?.photoUrl ? `<img src="${job.customer.photoUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` : '<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary);">' + (job.customer?.name?.[0] || 'U') + '</div>'}
+                  <div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">Posted by</div>
+                    <div style="font-weight: 600; color: var(--text-main); cursor: pointer;" class="viewCustomerProfile" data-user-id="${job.customerId}">${job.customer?.name || 'Unknown'}</div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Applicants Section -->
+              <div style="border-top: 2px solid var(--border); padding-top: 2rem;">
+                <h3 style="font-size: 1.25rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">
+                  👥 Applicants (${pendingOffers.length})
+                </h3>
+                
+                <div id="applicantsList" style="display: flex; flex-direction: column; gap: 1rem;">
+                  ${pendingOffers.length === 0 ? `
+                    <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+                      <div style="font-size: 2rem; margin-bottom: 0.5rem;">👤</div>
+                      <div>No applicants yet. Share your job to get more applicants!</div>
+                    </div>
+                  ` : pendingOffers.map(offer => {
+                    const hustler = offer.hustler || {};
+                    const rating = hustler.ratingAvg || 0;
+                    const ratingCount = hustler.ratingCount || 0;
+                    const proposedPrice = offer.proposedAmount ? `$${parseFloat(offer.proposedAmount).toFixed(2)}` : null;
+                    const appliedDate = new Date(offer.createdAt);
+                    
+                    return `
+                      <div data-offer-id="${offer.id}" style="
+                        padding: 1.5rem;
+                        border: 1px solid var(--border);
+                        border-radius: 12px;
+                        background: white;
+                      ">
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                          ${hustler.photoUrl ? `<img src="${hustler.photoUrl}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; flex-shrink: 0;">` : `<div style="width: 60px; height: 60px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); font-size: 1.5rem; flex-shrink: 0;">${(hustler.name || 'U')[0].toUpperCase()}</div>`}
+                          <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                              <div style="font-weight: 700; color: var(--text-main); font-size: 1.1rem; cursor: pointer;" class="viewHustlerProfile" data-user-id="${hustler.id}">${hustler.name || 'Unknown'}</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                              <span style="font-size: 1rem;">${'⭐'.repeat(Math.floor(rating))}${rating % 1 >= 0.5 ? '⭐' : ''}</span>
+                              <span style="color: var(--text-muted); font-size: 0.85rem;">${rating.toFixed(1)} (${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})</span>
+                            </div>
+                            ${hustler.bio ? `<div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem; line-height: 1.5;">${hustler.bio}</div>` : ''}
+                            ${offer.note ? `<div style="padding: 0.75rem; background: #f0fdf4; border-radius: 8px; margin-bottom: 0.5rem;">
+                              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Why I'm a good fit:</div>
+                              <div style="color: var(--text-main); line-height: 1.5;">${offer.note}</div>
+                            </div>` : ''}
+                            ${proposedPrice ? `<div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                              💵 Suggested price: <span style="font-weight: 600; color: var(--primary);">${proposedPrice}</span>
+                            </div>` : ''}
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">Applied ${appliedDate.toLocaleDateString()}</div>
+                          </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                          <button class="btn btn-primary acceptOfferBtn" data-offer-id="${offer.id}" style="flex: 1; min-width: 120px; padding: 0.75rem; font-weight: 600;">✅ Accept</button>
+                          <button class="btn btn-ghost declineOfferBtn" data-offer-id="${offer.id}" style="flex: 1; min-width: 120px; padding: 0.75rem; color: #dc2626; border-color: #fecaca;">❌ Reject</button>
+                          <button class="btn btn-ghost viewProfileBtn" data-user-id="${hustler.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">View Profile</button>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(modalOverlay);
+        
+        // Close button
+        modalOverlay.querySelector('.closeModalBtn').addEventListener('click', () => {
+          document.body.removeChild(modalOverlay);
+        });
+        
+        // Click outside to close
+        modalOverlay.addEventListener('click', (e) => {
+          if (e.target === modalOverlay) {
+            document.body.removeChild(modalOverlay);
+          }
+        });
+        
+        // Accept/Decline buttons
+        modalOverlay.querySelectorAll('.acceptOfferBtn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const offerId = btn.dataset.offerId;
+            await acceptOffer(offerId, modalOverlay);
+          });
+        });
+        
+        modalOverlay.querySelectorAll('.declineOfferBtn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const offerId = btn.dataset.offerId;
+            await declineOffer(offerId, modalOverlay);
+          });
+        });
+        
+        // View profile buttons
+        modalOverlay.querySelectorAll('.viewHustlerProfile, .viewCustomerProfile, .viewProfileBtn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const userId = btn.dataset.userId;
+            // Open profile popup (reuse existing function if available)
+            if (typeof showUserProfile === 'function') {
+              showUserProfile(userId);
+            } else {
+              setView('profile');
+              // Could navigate to user profile if we have that view
+            }
+          });
+        });
+        
+      } catch (error) {
+        console.error("Error showing job management modal:", error);
+        showToast("Error loading job details. Please try again.");
+      }
+    }
+    
+    window.showJobManagementModal = showJobManagementModal;
+    
+    // Active Job Modal - Role-based (Customer vs Hustler)
+    async function showActiveJobModal(jobId, role) {
+      try {
+        const token = localStorage.getItem('hustl_token');
+        const user = await window.hustlAPI.auth.getCurrentUser();
+        
+        // Fetch full job details
+        const jobResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (!jobResponse.ok) throw new Error('Failed to fetch job');
+        const job = await jobResponse.json();
+        
+        // Create modal overlay
+        const modalOverlay = document.createElement('div');
+        modalOverlay.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1rem;
+          overflow-y: auto;
+        `;
+        
+        // Format pay
+        const payType = job.payType || 'flat';
+        const payDisplay = payType === 'hourly' 
+          ? `$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hr (est. ${job.estHours || 0} hrs)` 
+          : `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
+        
+        // Format date/time
+        const jobDate = new Date(job.date);
+        const dateStr = jobDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+        const timeStr = jobDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        
+        if (role === 'customer') {
+          // Customer View Modal
+          const hustler = job.hustler || {};
+          const rating = hustler.ratingAvg || 0;
+          const ratingCount = hustler.ratingCount || 0;
+          
+          modalOverlay.innerHTML = `
+            <div style="
+              background: white;
+              border-radius: 16px;
+              max-width: 800px;
+              width: 100%;
+              max-height: 90vh;
+              overflow-y: auto;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+              position: relative;
+            ">
+              <button class="closeModalBtn" style="
+                position: absolute;
+                top: 1rem;
+                right: 1rem;
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                border: none;
+                background: #f3f4f6;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.25rem;
+                z-index: 1;
+              ">×</button>
+              
+              <div style="padding: 2rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 1.5rem 0; color: var(--text-main);">${job.title || 'Untitled Job'}</h2>
+                
+                <!-- Accepted Hustler Section -->
+                <div style="padding: 1.5rem; background: #f0fdf4; border-radius: 12px; margin-bottom: 2rem; border: 2px solid #10b981;">
+                  <div style="font-size: 0.85rem; color: #059669; margin-bottom: 0.75rem; font-weight: 600;">✅ HUSTLER ACCEPTED</div>
+                  <div style="display: flex; gap: 1rem; align-items: center;">
+                    ${hustler.photoUrl ? `<img src="${hustler.photoUrl}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 60px; height: 60px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); font-size: 1.5rem;">${(hustler.name || 'H')[0].toUpperCase()}</div>`}
+                    <div style="flex: 1;">
+                      <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.25rem;">${hustler.name || 'Unknown'}</div>
+                      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <span>${'⭐'.repeat(Math.floor(rating))}</span>
+                        <span style="color: var(--text-muted); font-size: 0.9rem;">${rating.toFixed(1)} (${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})</span>
+                      </div>
+                      ${hustler.bio ? `<div style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5;">${hustler.bio}</div>` : ''}
+                    </div>
+                    <button class="btn btn-primary messageHustlerBtn" data-job-id="${job.id}" style="padding: 0.75rem 1.5rem; font-weight: 600;">💬 Message</button>
+                  </div>
+                </div>
+                
+                <!-- Job Details -->
+                <div style="margin-bottom: 2rem;">
+                  <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">Job Details</h3>
+                  <div style="display: grid; gap: 1rem;">
+                    <div><strong>Category:</strong> ${job.category || 'General'}</div>
+                    <div><strong>Pay:</strong> ${payDisplay}</div>
+                    <div><strong>Scheduled:</strong> ${dateStr} at ${timeStr}</div>
+                    <div><strong>Status:</strong> <span style="color: #3b82f6; font-weight: 600;">In Progress</span></div>
+                    <div><strong>Description:</strong><br><div style="margin-top: 0.5rem; line-height: 1.6; white-space: pre-wrap;">${job.description || 'No description provided.'}</div></div>
+                    <div><strong>📍 Address:</strong><br><a href="https://maps.google.com/?q=${encodeURIComponent(job.address)}" target="_blank" style="color: var(--primary); text-decoration: none; margin-top: 0.5rem; display: inline-block;">${job.address || 'Address not specified'} 🔗</a></div>
+                  </div>
+                </div>
+                
+                <!-- Verification Codes Section -->
+                ${job.startCode ? `
+                  <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
+                    <div style="font-weight: 700; color: #92400e; margin-bottom: 0.75rem;">🔐 Start Code</div>
+                    <div style="font-size: 2rem; font-weight: 700; letter-spacing: 0.3em; color: #92400e; text-align: center; padding: 1rem; background: white; border-radius: 8px; font-family: 'Courier New', monospace; margin-bottom: 0.75rem;">${job.startCode}</div>
+                    <div style="font-size: 0.85rem; color: #92400e;">${job.startCodeVerified ? '✅ Verified by hustler' : '⏳ Waiting for hustler to verify'}</div>
+                  </div>
+                ` : ''}
+                
+                ${job.completionCode ? `
+                  <div style="padding: 1.5rem; background: #dbeafe; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #3b82f6;">
+                    <div style="font-weight: 700; color: #1e40af; margin-bottom: 0.75rem;">✅ Completion Code</div>
+                    <div style="font-size: 2rem; font-weight: 700; letter-spacing: 0.3em; color: #1e40af; text-align: center; padding: 1rem; background: white; border-radius: 8px; font-family: 'Courier New', monospace; margin-bottom: 0.75rem;">${job.completionCode}</div>
+                    <div style="font-size: 0.85rem; color: #1e40af;">${job.completionCodeVerified ? '✅ Verified' : '⏳ Enter this code to confirm completion'}</div>
+                    ${!job.completionCodeVerified ? `
+                      <input type="text" id="completionCodeInput" placeholder="Enter code" maxlength="6" style="width: 100%; padding: 0.75rem; margin-top: 0.75rem; border: 2px solid #3b82f6; border-radius: 8px; font-size: 1.25rem; text-align: center; letter-spacing: 0.3em; font-family: 'Courier New', monospace;">
+                      <button class="btn btn-primary verifyCompletionBtn" data-job-id="${job.id}" style="width: 100%; margin-top: 0.75rem; padding: 0.75rem; font-weight: 600;">Verify & Mark Complete</button>
+                    ` : ''}
+                  </div>
+                ` : ''}
+                
+                <!-- Payment Status -->
+                ${job.payment ? `
+                  <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <div style="font-weight: 600; margin-bottom: 0.5rem;">Payment Status</div>
+                    <div style="color: var(--text-muted);">${job.payment.status || 'Pending'}</div>
+                  </div>
+                ` : ''}
+                
+                <!-- Actions -->
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                  <button class="btn btn-primary messageHustlerBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem; font-weight: 600;">💬 Message Hustler</button>
+                  ${job.status === 'ASSIGNED' && !job.startCodeVerified ? `<button class="btn btn-ghost cancelJobBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; color: #dc2626; border-color: #fecaca;">Cancel Job</button>` : ''}
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          // Hustler View Modal
+          const customer = job.customer || {};
+          
+          modalOverlay.innerHTML = `
+            <div style="
+              background: white;
+              border-radius: 16px;
+              max-width: 800px;
+              width: 100%;
+              max-height: 90vh;
+              overflow-y: auto;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+              position: relative;
+            ">
+              <button class="closeModalBtn" style="
+                position: absolute;
+                top: 1rem;
+                right: 1rem;
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                border: none;
+                background: #f3f4f6;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.25rem;
+                z-index: 1;
+              ">×</button>
+              
+              <div style="padding: 2rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 1.5rem 0; color: var(--text-main);">${job.title || 'Untitled Job'}</h2>
+                
+                <!-- Customer Info -->
+                <div style="padding: 1.5rem; background: #f9fafb; border-radius: 12px; margin-bottom: 2rem;">
+                  <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; font-weight: 600;">CUSTOMER</div>
+                  <div style="display: flex; gap: 1rem; align-items: center;">
+                    ${customer.photoUrl ? `<img src="${customer.photoUrl}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 60px; height: 60px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); font-size: 1.5rem;">${(customer.name || 'C')[0].toUpperCase()}</div>`}
+                    <div style="flex: 1;">
+                      <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.25rem;">${customer.name || 'Unknown'}</div>
+                    </div>
+                    <button class="btn btn-primary messageCustomerBtn" data-job-id="${job.id}" style="padding: 0.75rem 1.5rem; font-weight: 600;">💬 Message</button>
+                  </div>
+                </div>
+                
+                <!-- Job Details -->
+                <div style="margin-bottom: 2rem;">
+                  <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">Job Details</h3>
+                  <div style="display: grid; gap: 1rem;">
+                    <div><strong>Category:</strong> ${job.category || 'General'}</div>
+                    <div><strong>Pay:</strong> ${payDisplay}</div>
+                    <div><strong>Scheduled:</strong> ${dateStr} at ${timeStr}</div>
+                    <div><strong>Status:</strong> <span style="color: #3b82f6; font-weight: 600;">In Progress</span></div>
+                    <div><strong>Description:</strong><br><div style="margin-top: 0.5rem; line-height: 1.6; white-space: pre-wrap;">${job.description || 'No description provided.'}</div></div>
+                    <div><strong>📍 Address:</strong><br><a href="https://maps.google.com/?q=${encodeURIComponent(job.address)}" target="_blank" style="color: var(--primary); text-decoration: none; margin-top: 0.5rem; display: inline-block;">${job.address || 'Address not specified'} 🔗</a></div>
+                  </div>
+                </div>
+                
+                <!-- Start Code Entry -->
+                ${job.startCode && !job.startCodeVerified ? `
+                  <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
+                    <div style="font-weight: 700; color: #92400e; margin-bottom: 0.75rem;">🔐 Enter Start Code</div>
+                    <div style="font-size: 0.9rem; color: #92400e; margin-bottom: 1rem;">Ask the customer for the start code to begin the job.</div>
+                    <input type="text" id="startCodeInput" placeholder="Enter 6-digit code" maxlength="6" style="width: 100%; padding: 0.75rem; border: 2px solid #fbbf24; border-radius: 8px; font-size: 1.25rem; text-align: center; letter-spacing: 0.3em; font-family: 'Courier New', monospace;">
+                    <button class="btn btn-primary verifyStartCodeBtn" data-job-id="${job.id}" style="width: 100%; margin-top: 0.75rem; padding: 0.75rem; font-weight: 600; background: #f59e0b;">Verify Start Code</button>
+                  </div>
+                ` : job.startCodeVerified ? `
+                  <div style="padding: 1rem; background: #dcfce7; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <div style="font-weight: 600; color: #166534;">✅ Start code verified - Job in progress</div>
+                  </div>
+                ` : ''}
+                
+                <!-- End Code Entry -->
+                ${job.startCodeVerified && job.status !== 'COMPLETED_BY_HUSTLER' ? `
+                  <div style="padding: 1.5rem; background: #dbeafe; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #3b82f6;">
+                    <div style="font-weight: 700; color: #1e40af; margin-bottom: 0.75rem;">✅ Submit End Code / Mark Complete</div>
+                    <div style="font-size: 0.9rem; color: #1e40af; margin-bottom: 1rem;">When you finish the job, enter the completion code provided by the customer.</div>
+                    <input type="text" id="endCodeInput" placeholder="Enter completion code" maxlength="6" style="width: 100%; padding: 0.75rem; border: 2px solid #3b82f6; border-radius: 8px; font-size: 1.25rem; text-align: center; letter-spacing: 0.3em; font-family: 'Courier New', monospace;">
+                    <button class="btn btn-primary submitEndCodeBtn" data-job-id="${job.id}" style="width: 100%; margin-top: 0.75rem; padding: 0.75rem; font-weight: 600;">Submit End Code & Mark Complete</button>
+                  </div>
+                ` : ''}
+                
+                <!-- Payment Overview -->
+                <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1.5rem;">
+                  <div style="font-weight: 600; margin-bottom: 0.5rem;">Payment Overview</div>
+                  <div style="color: var(--text-muted);">You'll receive ${payDisplay} upon completion.</div>
+                </div>
+                
+                <!-- Actions -->
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                  <button class="btn btn-primary messageCustomerBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem; font-weight: 600;">💬 Message Customer</button>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+        
+        document.body.appendChild(modalOverlay);
+        
+        // Close button
+        modalOverlay.querySelector('.closeModalBtn').addEventListener('click', () => {
+          document.body.removeChild(modalOverlay);
+        });
+        
+        // Click outside to close
+        modalOverlay.addEventListener('click', (e) => {
+          if (e.target === modalOverlay) {
+            document.body.removeChild(modalOverlay);
+          }
+        });
+        
+        // Event listeners based on role
+        if (role === 'customer') {
+          modalOverlay.querySelectorAll('.messageHustlerBtn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              setView('messages');
+              document.body.removeChild(modalOverlay);
+            });
+          });
+          
+          modalOverlay.querySelector('.verifyCompletionBtn')?.addEventListener('click', async () => {
+            const code = document.getElementById('completionCodeInput')?.value.trim();
+            if (code === job.completionCode) {
+              await confirmJobComplete(job.id);
+              document.body.removeChild(modalOverlay);
+            } else {
+              showToast("Invalid completion code. Please check and try again.");
+            }
+          });
+          
+          modalOverlay.querySelector('.cancelJobBtn')?.addEventListener('click', async () => {
+            if (confirm('Are you sure you want to cancel this job?')) {
+              await cancelJob(job.id);
+              document.body.removeChild(modalOverlay);
+            }
+          });
+        } else {
+          modalOverlay.querySelectorAll('.messageCustomerBtn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              setView('messages');
+              document.body.removeChild(modalOverlay);
+            });
+          });
+          
+          modalOverlay.querySelector('.verifyStartCodeBtn')?.addEventListener('click', async () => {
+            const code = document.getElementById('startCodeInput')?.value.trim();
+            if (code === job.startCode) {
+              await verifyStartCode(job.id);
+              document.body.removeChild(modalOverlay);
+              showActiveJobModal(job.id, 'hustler'); // Refresh modal
+            } else {
+              showToast("Invalid start code. Please check and try again.");
+            }
+          });
+          
+          modalOverlay.querySelector('.submitEndCodeBtn')?.addEventListener('click', async () => {
+            const code = document.getElementById('endCodeInput')?.value.trim();
+            if (code === job.completionCode) {
+              await submitCompletionCode(job.id);
+              document.body.removeChild(modalOverlay);
+            } else {
+              showToast("Invalid completion code. Please check and try again.");
+            }
+          });
+        }
+        
+      } catch (error) {
+        console.error("Error showing active job modal:", error);
+        showToast("Error loading job details. Please try again.");
+      }
+    }
+    
+    window.showActiveJobModal = showActiveJobModal;
+    
+    // Helper functions for job actions
+    async function verifyStartCode(jobId) {
+      // This would call backend API to verify start code
+      // For now, we'll use the complete endpoint which handles verification
+      showToast("Start code verification not yet implemented in backend.");
+    }
+    
+    async function submitCompletionCode(jobId) {
+      try {
+        const token = localStorage.getItem('hustl_token');
+        const response = await fetch(`${API_BASE}/jobs/${jobId}/complete`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to complete job');
+        }
+        
+        showToast("✅ Job marked as complete! Waiting for customer confirmation.");
+        loadActiveJobs(); // Refresh list
+      } catch (error) {
+        console.error("Error completing job:", error);
+        showToast(error.message || "Error completing job. Please try again.");
+      }
+    }
+    
+    async function confirmJobComplete(jobId) {
+      try {
+        const token = localStorage.getItem('hustl_token');
+        const response = await fetch(`${API_BASE}/jobs/${jobId}/confirm-complete`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to confirm completion');
+        }
+        
+        showToast("✅ Job confirmed complete! Payment will be processed.");
+        loadActiveJobs(); // Refresh list
+        loadCompletedJobs(); // Refresh completed list
+      } catch (error) {
+        console.error("Error confirming completion:", error);
+        showToast(error.message || "Error confirming completion. Please try again.");
+      }
+    }
+    
+    async function cancelJob(jobId) {
+      try {
+        const token = localStorage.getItem('hustl_token');
+        const response = await fetch(`${API_BASE}/jobs/${jobId}/cancel`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to cancel job');
+        }
+        
+        showToast("Job cancelled successfully.");
+        loadActiveJobs(); // Refresh list
+        loadPostedJobs(); // Refresh posted list
+      } catch (error) {
+        console.error("Error cancelling job:", error);
+        showToast(error.message || "Error cancelling job. Please try again.");
+      }
+    }
     
     // Show Applicants Modal - Professional management interface
     window.showApplicantsModal = async function(jobId) {
@@ -12027,6 +12772,12 @@ meta.textContent =
           if (postedJobsList) {
             postedJobsList.dataset.loaded = 'false'; // Force reload
             loadPostedJobs();
+          }
+          // Also refresh active jobs since job moved there
+          const activeJobsList = document.getElementById("manageActiveJobsList");
+          if (activeJobsList) {
+            activeJobsList.dataset.loaded = 'false';
+            loadActiveJobs();
           }
         } else {
           // Otherwise refresh profile jobs tab
