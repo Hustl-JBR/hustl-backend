@@ -11365,6 +11365,12 @@ meta.textContent =
               if (target) target.style.display = "block";
               document.querySelectorAll(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === v));
               window.scrollTo({ top: 0, behavior: 'instant' });
+              // IMPORTANT: Also call renderAll to actually render the content
+              if (typeof renderAll === 'function') {
+                renderAll();
+              } else if (v === 'profile' && typeof renderProfile === 'function') {
+                renderProfile();
+              }
             }
           } else {
             console.log("setView not available, using fallback");
