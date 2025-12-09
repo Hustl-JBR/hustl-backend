@@ -14267,7 +14267,18 @@ meta.textContent =
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         
-        if (!response.ok) throw new Error('Failed to fetch user profile');
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Failed to fetch user profile:', response.status, errorText);
+          throw new Error(`Failed to fetch user profile: ${response.status}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('Response is not JSON:', contentType);
+          throw new Error('Invalid response format');
+        }
+        
         const user = await response.json();
         
         // Fetch user's jobs and reviews

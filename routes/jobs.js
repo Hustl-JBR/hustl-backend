@@ -268,10 +268,17 @@ router.get('/completed', authenticate, async (req, res) => {
           },
           select: {
             id: true,
-            rating: true,
-            comment: true,
+            stars: true,
+            text: true,
             createdAt: true,
             reviewer: {
+              select: {
+                id: true,
+                name: true,
+                photoUrl: true,
+              }
+            },
+            reviewee: {
               select: {
                 id: true,
                 name: true,
@@ -284,10 +291,21 @@ router.get('/completed', authenticate, async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
     
-    res.json(jobs);
+    // Transform reviews to match frontend expectations (stars -> rating, text -> comment)
+    const transformedJobs = jobs.map(job => ({
+      ...job,
+      reviews: job.reviews ? job.reviews.map(review => ({
+        ...review,
+        rating: review.stars,
+        comment: review.text
+      })) : []
+    }));
+    
+    res.json(transformedJobs);
   } catch (error) {
     console.error('Get completed jobs error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error details:', error.message, error.stack);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
@@ -923,6 +941,60 @@ router.post('/:id/cancel', authenticate, requireRole('CUSTOMER'), async (req, re
     res.json(updated);
   } catch (error) {
     console.error('Cancel job error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /jobs/:id/repost - Repost a closed/cancelled job (Customer only)
+router.post('/:id/repost', authenticate, requireRole('CUSTOMER'), async (req, res) => {
+  try {
+    const job = await prisma.job.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Only allow reposting if job is CANCELLED or EXPIRED
+    if (job.status !== 'CANCELLED' && job.status !== 'EXPIRED') {
+      return res.status(400).json({ error: 'Job can only be reposted if it was cancelled or expired' });
+    }
+
+    // Create a new job with the same details
+    const repostedJob = await prisma.job.create({
+      data: {
+        customerId: job.customerId,
+        title: job.title,
+        category: job.category,
+        description: job.description,
+        photos: job.photos,
+        address: job.address,
+        lat: job.lat,
+        lng: job.lng,
+        date: job.date,
+        startTime: job.startTime,
+        endTime: job.endTime,
+        payType: job.payType,
+        amount: job.amount,
+        hourlyRate: job.hourlyRate,
+        estHours: job.estHours,
+        teamSize: job.teamSize,
+        requirements: job.requirements,
+        status: 'OPEN',
+      },
+      include: {
+        customer: { select: { id: true, name: true, username: true, photoUrl: true } },
+      },
+    });
+
+    res.json(repostedJob);
+  } catch (error) {
+    console.error('Repost job error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
