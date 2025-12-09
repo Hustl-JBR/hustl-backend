@@ -11366,11 +11366,17 @@ meta.textContent =
               document.querySelectorAll(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === v));
               window.scrollTo({ top: 0, behavior: 'instant' });
               // IMPORTANT: Also call renderAll to actually render the content
-              if (typeof renderAll === 'function') {
-                renderAll();
-              } else if (v === 'profile' && typeof renderProfile === 'function') {
-                renderProfile();
-              }
+              setTimeout(async () => {
+                if (typeof window.renderAll === 'function') {
+                  await window.renderAll();
+                } else if (typeof renderAll === 'function') {
+                  await renderAll();
+                } else if (v === 'profile' && typeof window.renderProfile === 'function') {
+                  await window.renderProfile();
+                } else if (v === 'profile' && typeof renderProfile === 'function') {
+                  await renderProfile();
+                }
+              }, 100);
             }
           } else {
             console.log("setView not available, using fallback");
