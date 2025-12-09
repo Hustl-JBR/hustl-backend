@@ -41,24 +41,56 @@ router.get('/:jobId', authenticate, async (req, res) => {
       }
     }
 
-    const offers = await prisma.offer.findMany({
-      where: { jobId },
-      include: {
-        hustler: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            ratingAvg: true,
-            ratingCount: true,
-            photoUrl: true,
-            bio: true,
-            tools: true,
+    let offers;
+    try {
+      offers = await prisma.offer.findMany({
+        where: { jobId },
+        include: {
+          hustler: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              ratingAvg: true,
+              ratingCount: true,
+              photoUrl: true,
+              bio: true,
+              tools: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+      });
+    } catch (toolsError) {
+      // If tools column doesn't exist, query without it
+      if (toolsError.message && toolsError.message.includes('tools')) {
+        offers = await prisma.offer.findMany({
+          where: { jobId },
+          include: {
+            hustler: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                ratingAvg: true,
+                ratingCount: true,
+                photoUrl: true,
+                bio: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+        // Add null tools to each hustler
+        offers.forEach(offer => {
+          if (offer.hustler) {
+            offer.hustler.tools = null;
+          }
+        });
+      } else {
+        throw toolsError;
+      }
+    }
 
     res.json(offers);
   } catch (error) {
