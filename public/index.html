@@ -2267,6 +2267,7 @@
         <button class="nav-tab active" data-view="home">Home</button>
         <button class="nav-tab" data-view="jobs">Browse Jobs</button>
         <button class="nav-tab" data-view="post">Post a Job</button>
+        <button class="nav-tab" data-view="manage-jobs" id="manageJobsTab">📋 Manage Jobs</button>
         <button class="nav-tab" data-view="messages">Messages</button>
         <button class="nav-tab" data-view="profile">Profile</button>
         <button class="nav-tab" data-view="owner" id="ownerTab" style="display:none;">Owner</button>
@@ -3065,6 +3066,59 @@
                 <span>Send</span>
                 <span style="margin-left: 0.25rem;">→</span>
               </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MANAGE JOBS VIEW -->
+      <section id="view-manage-jobs" style="display:none;">
+        <div style="padding: 1rem;">
+          <h1 style="font-size: 1.75rem; font-weight: 700; margin: 0 0 1.5rem 0; color: var(--text-main);">📋 Manage Jobs</h1>
+          
+          <!-- Tabs -->
+          <div class="profile-tabs" style="margin-bottom: 1.5rem;">
+            <button class="profile-tab active" data-manage-tab="posted">Posted Jobs</button>
+            <button class="profile-tab" data-manage-tab="active">Active Jobs</button>
+            <button class="profile-tab" data-manage-tab="completed">Completed</button>
+          </div>
+          
+          <!-- Posted Jobs Tab -->
+          <div id="manageTabPosted" class="profile-tab-content active">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">📋 Posted Jobs</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">Manage jobs you've posted</div>
+              </div>
+              <div id="managePostedJobsList" style="padding: 1rem;">
+                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Active Jobs Tab -->
+          <div id="manageTabActive" class="profile-tab-content" style="display: none;">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">💼 Active Jobs</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">Jobs you're working on</div>
+              </div>
+              <div id="manageActiveJobsList" style="padding: 1rem;">
+                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Completed Jobs Tab -->
+          <div id="manageTabCompleted" class="profile-tab-content" style="display: none;">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">✅ Completed Jobs</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">Your completed jobs</div>
+              </div>
+              <div id="manageCompletedJobsList" style="padding: 1rem;">
+                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
+              </div>
             </div>
           </div>
         </div>
@@ -9915,7 +9969,7 @@ async function renderJobs(reset = false) {
       });
     }
     
-    // Populate Jobs tab when clicked - Professional Posted Jobs Management
+    // Populate Jobs tab when clicked - Simple list (full management moved to Manage Jobs view)
     const jobsTab = document.querySelector('.profile-tab[data-tab="jobs"]');
     if (jobsTab && !jobsTab.dataset.listenerAttached) {
       jobsTab.dataset.listenerAttached = 'true';
@@ -11433,6 +11487,8 @@ meta.textContent =
         renderMessagesView();
       } else if (activeView === "profile") {
         renderProfile();
+      } else if (activeView === "manage-jobs") {
+        renderManageJobs();
       } else if (activeView === "owner") {
         renderOwnerView();
       }
@@ -11444,6 +11500,314 @@ meta.textContent =
     // Expose renderAll and renderProfile on window for fallback access
     window.renderAll = renderAll;
     window.renderProfile = renderProfile;
+    
+    // Render Manage Jobs View - Professional job management interface
+    async function renderManageJobs() {
+      const user = await window.hustlAPI.auth.getCurrentUser();
+      if (!user) {
+        showToast("Please log in to manage jobs.");
+        setView('home');
+        return;
+      }
+      
+      // Initialize tabs
+      const manageTabs = document.querySelectorAll('[data-manage-tab]');
+      manageTabs.forEach(tab => {
+        if (!tab.dataset.listenerAttached) {
+          tab.dataset.listenerAttached = 'true';
+          tab.addEventListener('click', () => {
+            // Remove active from all tabs
+            manageTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            // Hide all tab content
+            document.querySelectorAll('#manageTabPosted, #manageTabActive, #manageTabCompleted').forEach(content => {
+              content.style.display = 'none';
+              content.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            const tabName = tab.dataset.manageTab;
+            const tabContent = document.getElementById(`manageTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+            if (tabContent) {
+              tabContent.style.display = 'block';
+              tabContent.classList.add('active');
+            }
+            
+            // Load content for that tab
+            if (tabName === 'posted') {
+              loadPostedJobs();
+            } else if (tabName === 'active') {
+              loadActiveJobs();
+            } else if (tabName === 'completed') {
+              loadCompletedJobs();
+            }
+          });
+        }
+      });
+      
+      // Load initial tab (Posted Jobs)
+      loadPostedJobs();
+    }
+    
+    // Load Posted Jobs
+    async function loadPostedJobs() {
+      const postedJobsList = document.getElementById("managePostedJobsList");
+      if (!postedJobsList) return;
+      
+      if (postedJobsList.dataset.loaded === 'true') return; // Already loaded
+      
+      try {
+        const token = localStorage.getItem('hustl_token');
+        const response = await fetch(`${API_BASE}/jobs/my-jobs`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch jobs');
+        const jobs = await response.json();
+        
+        const user = await window.hustlAPI.auth.getCurrentUser();
+        const postedJobs = jobs.filter(j => j.customerId === user.id);
+        
+        if (postedJobs.length === 0) {
+          postedJobsList.innerHTML = `
+            <div style="text-align: center; padding: 3rem 1rem;">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+              <div style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">No posted jobs yet</div>
+              <div style="color: var(--text-muted); margin-bottom: 1.5rem;">Post your first job to get started!</div>
+              <button class="btn btn-primary" onclick="setView('post')" style="padding: 0.75rem 1.5rem;">Post Your First Job</button>
+            </div>
+          `;
+        } else {
+          postedJobsList.innerHTML = "";
+          for (const job of postedJobs) {
+            // Fetch offer count
+            let offerCount = 0;
+            try {
+              const offersResponse = await fetch(`${API_BASE}/offers/${job.id}`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+              });
+              if (offersResponse.ok) {
+                const offers = await offersResponse.json();
+                offerCount = offers.filter(o => o.status === 'PENDING').length;
+              }
+            } catch (e) {
+              console.error("Error fetching offers:", e);
+            }
+            
+            const statusColors = {
+              'OPEN': '#10b981',
+              'ASSIGNED': '#3b82f6',
+              'COMPLETED_BY_HUSTLER': '#f59e0b',
+              'AWAITING_CUSTOMER_CONFIRM': '#f59e0b',
+              'PAID': '#6b7280',
+              'CANCELLED': '#ef4444'
+            };
+            
+            const statusLabels = {
+              'OPEN': 'Open',
+              'ASSIGNED': 'In Progress',
+              'COMPLETED_BY_HUSTLER': 'Awaiting Confirmation',
+              'AWAITING_CUSTOMER_CONFIRM': 'Awaiting Confirmation',
+              'PAID': 'Completed',
+              'CANCELLED': 'Cancelled'
+            };
+            
+            const jobStatus = (job.status || 'OPEN').toUpperCase();
+            const statusColor = statusColors[jobStatus] || '#6b7280';
+            const statusLabel = statusLabels[jobStatus] || jobStatus;
+            
+            const jobCard = document.createElement("div");
+            jobCard.style.cssText = "padding: 1.25rem; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 1rem; background: white; transition: all 0.2s;";
+            jobCard.innerHTML = `
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                <div style="flex: 1;">
+                  <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
+                  <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted);">
+                    <span>📅 ${new Date(job.createdAt).toLocaleDateString()}</span>
+                    <span>💰 $${parseFloat(job.amount || 0).toFixed(2)}</span>
+                    <span style="padding: 0.25rem 0.75rem; background: ${statusColor}20; color: ${statusColor}; border-radius: 6px; font-weight: 600;">${statusLabel}</span>
+                  </div>
+                </div>
+              </div>
+              
+              ${jobStatus === 'OPEN' ? `
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 8px;">
+                  <span style="font-weight: 600; color: #059669;">👥 ${offerCount} ${offerCount === 1 ? 'applicant' : 'applicants'}</span>
+                </div>
+              ` : job.hustlerId ? `
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; padding: 0.75rem; background: #dbeafe; border-radius: 8px;">
+                  <span style="font-weight: 600; color: #1e40af;">✅ Hustler assigned</span>
+                </div>
+              ` : ''}
+              
+              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <button class="btn btn-ghost viewJobBtn" data-job-id="${job.id}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">View Details</button>
+                ${jobStatus === 'OPEN' ? `
+                  <button class="btn btn-primary manageApplicantsBtn" data-job-id="${job.id}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Manage Applicants (${offerCount})</button>
+                  <button class="btn btn-ghost deleteJobBtn" data-job-id="${job.id}" style="padding: 0.5rem 1rem; font-size: 0.9rem; color: #dc2626; border-color: #fecaca;">Delete Job</button>
+                ` : ''}
+              </div>
+            `;
+            
+            // Add event listeners
+            jobCard.querySelector('.viewJobBtn')?.addEventListener('click', (e) => {
+              e.stopPropagation();
+              setView('jobs');
+              setTimeout(() => {
+                if (typeof openJobDetails === 'function') {
+                  openJobDetails(job.id);
+                } else if (typeof renderJobDetail === 'function') {
+                  renderJobDetail(job.id);
+                }
+              }, 100);
+            });
+            
+            jobCard.querySelector('.manageApplicantsBtn')?.addEventListener('click', (e) => {
+              e.stopPropagation();
+              showApplicantsModal(job.id);
+            });
+            
+            jobCard.querySelector('.deleteJobBtn')?.addEventListener('click', (e) => {
+              e.stopPropagation();
+              deleteJob(job.id, job.title);
+            });
+            
+            postedJobsList.appendChild(jobCard);
+          }
+          postedJobsList.dataset.loaded = 'true';
+        }
+      } catch (error) {
+        console.error("Error loading posted jobs:", error);
+        postedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Error loading jobs.</div>";
+      }
+    }
+    
+    // Load Active Jobs
+    async function loadActiveJobs() {
+      const activeJobsList = document.getElementById("manageActiveJobsList");
+      if (!activeJobsList) return;
+      
+      if (activeJobsList.dataset.loaded === 'true') return;
+      
+      try {
+        const token = localStorage.getItem('hustl_token');
+        const response = await fetch(`${API_BASE}/jobs/my-jobs`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch jobs');
+        const jobs = await response.json();
+        
+        const user = await window.hustlAPI.auth.getCurrentUser();
+        const activeJobs = jobs.filter(j => j.hustlerId === user.id && j.status !== 'PAID' && j.status !== 'CANCELLED');
+        
+        if (activeJobs.length === 0) {
+          activeJobsList.innerHTML = `
+            <div style="text-align: center; padding: 3rem 1rem;">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">💼</div>
+              <div style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">No active jobs</div>
+              <div style="color: var(--text-muted);">You're not working on any jobs right now.</div>
+            </div>
+          `;
+        } else {
+          activeJobsList.innerHTML = "";
+          activeJobs.forEach(job => {
+            const card = document.createElement("div");
+            card.className = "job-card";
+            card.dataset.jobId = job.id;
+            card.innerHTML = `
+              <div class="job-card-top">
+                <div class="job-title">${job.title || 'Untitled'}</div>
+                <span class="badge">${(job.status || 'open').toLowerCase()}</span>
+              </div>
+              <div class="job-meta">${timeAgo(new Date(job.createdAt).getTime())}</div>
+            `;
+            card.addEventListener("click", () => {
+              setView("jobs");
+              setTimeout(() => {
+                if (typeof openJobDetails === 'function') {
+                  openJobDetails(job.id);
+                } else if (typeof renderJobDetail === 'function') {
+                  renderJobDetail(job.id);
+                }
+              }, 100);
+            });
+            activeJobsList.appendChild(card);
+          });
+          activeJobsList.dataset.loaded = 'true';
+        }
+      } catch (error) {
+        console.error("Error loading active jobs:", error);
+        activeJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Error loading jobs.</div>";
+      }
+    }
+    
+    // Load Completed Jobs
+    async function loadCompletedJobs() {
+      const completedJobsList = document.getElementById("manageCompletedJobsList");
+      if (!completedJobsList) return;
+      
+      if (completedJobsList.dataset.loaded === 'true') return;
+      
+      try {
+        const token = localStorage.getItem('hustl_token');
+        const response = await fetch(`${API_BASE}/jobs/my-jobs?status=PAID`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch jobs');
+        const jobs = await response.json();
+        
+        const user = await window.hustlAPI.auth.getCurrentUser();
+        const completedJobs = jobs.filter(j => 
+          (j.customerId === user.id || j.hustlerId === user.id) && 
+          (j.status === 'PAID' || j.status === 'COMPLETED_BY_HUSTLER')
+        );
+        
+        if (completedJobs.length === 0) {
+          completedJobsList.innerHTML = `
+            <div style="text-align: center; padding: 3rem 1rem;">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+              <div style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">No completed jobs</div>
+              <div style="color: var(--text-muted);">Completed jobs will appear here.</div>
+            </div>
+          `;
+        } else {
+          completedJobsList.innerHTML = "";
+          completedJobs.forEach(job => {
+            const card = document.createElement("div");
+            card.className = "job-card";
+            card.dataset.jobId = job.id;
+            const role = job.customerId === user.id ? 'Customer' : 'Hustler';
+            card.innerHTML = `
+              <div class="job-card-top">
+                <div class="job-title">${job.title || 'Untitled'}</div>
+                <span class="badge">completed</span>
+              </div>
+              <div class="job-meta">As ${role} · ${new Date(job.createdAt).toLocaleDateString()}</div>
+            `;
+            card.addEventListener("click", () => {
+              setView("jobs");
+              setTimeout(() => {
+                if (typeof openJobDetails === 'function') {
+                  openJobDetails(job.id);
+                } else if (typeof renderJobDetail === 'function') {
+                  renderJobDetail(job.id);
+                }
+              }, 100);
+            });
+            completedJobsList.appendChild(card);
+          });
+          completedJobsList.dataset.loaded = 'true';
+        }
+      } catch (error) {
+        console.error("Error loading completed jobs:", error);
+        completedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Error loading jobs.</div>";
+      }
+    }
+    
+    window.renderManageJobs = renderManageJobs;
     
     // Show Applicants Modal - Professional management interface
     window.showApplicantsModal = async function(jobId) {
@@ -11601,10 +11965,19 @@ meta.textContent =
         
         showToast("Job deleted successfully.");
         
-        // Refresh the jobs list
-        const jobsTab = document.querySelector('.profile-tab[data-tab="jobs"]');
-        if (jobsTab) {
-          jobsTab.click();
+        // Refresh the manage jobs view if we're on it
+        if (activeView === 'manage-jobs') {
+          const postedJobsList = document.getElementById("managePostedJobsList");
+          if (postedJobsList) {
+            postedJobsList.dataset.loaded = 'false'; // Force reload
+            loadPostedJobs();
+          }
+        } else {
+          // Otherwise refresh profile jobs tab
+          const jobsTab = document.querySelector('.profile-tab[data-tab="jobs"]');
+          if (jobsTab) {
+            jobsTab.click();
+          }
         }
       } catch (error) {
         console.error("Error deleting job:", error);
@@ -11648,10 +12021,19 @@ meta.textContent =
         showToast("✅ Hustler accepted! They've been notified.");
         document.body.removeChild(modalOverlay);
         
-        // Refresh jobs list
-        const jobsTab = document.querySelector('.profile-tab[data-tab="jobs"]');
-        if (jobsTab) {
-          jobsTab.click();
+        // Refresh the manage jobs view if we're on it
+        if (activeView === 'manage-jobs') {
+          const postedJobsList = document.getElementById("managePostedJobsList");
+          if (postedJobsList) {
+            postedJobsList.dataset.loaded = 'false'; // Force reload
+            loadPostedJobs();
+          }
+        } else {
+          // Otherwise refresh profile jobs tab
+          const jobsTab = document.querySelector('.profile-tab[data-tab="jobs"]');
+          if (jobsTab) {
+            jobsTab.click();
+          }
         }
       } catch (error) {
         console.error("Error accepting offer:", error);
@@ -12245,8 +12627,14 @@ try {
     // Add/remove logged-in class on body
     if (user) {
       document.body.classList.add('logged-in');
+      // Show Manage Jobs tab when logged in
+      const manageJobsTab = document.getElementById('manageJobsTab');
+      if (manageJobsTab) manageJobsTab.style.display = 'block';
     } else {
       document.body.classList.remove('logged-in');
+      // Hide Manage Jobs tab when logged out
+      const manageJobsTab = document.getElementById('manageJobsTab');
+      if (manageJobsTab) manageJobsTab.style.display = 'none';
     }
     
     const mobileMenu = document.getElementById('mobileMenu');
@@ -12299,6 +12687,7 @@ try {
           <button class="mobile-menu-item active" data-view="home">🏠 Home</button>
           <button class="mobile-menu-item" data-view="jobs">💼 Browse Jobs</button>
           <button class="mobile-menu-item" data-view="post">➕ Post a Job</button>
+          <button class="mobile-menu-item" data-view="manage-jobs">📋 Manage Jobs</button>
           <button class="mobile-menu-item" data-view="messages">💬 Messages</button>
           <button class="mobile-menu-item" data-view="profile">👤 Profile</button>
           <div class="header-auth" id="mobileMenuAuth">
