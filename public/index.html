@@ -12269,15 +12269,22 @@ meta.textContent =
                   </div>
                 ` : ''}
                 
-                ${job.completionCode ? `
+                ${job.completionCode && job.status === 'COMPLETED_BY_HUSTLER' ? `
                   <div style="padding: 1.5rem; background: #dbeafe; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #3b82f6;">
-                    <div style="font-weight: 700; color: #1e40af; margin-bottom: 0.75rem;">✅ Completion Code</div>
-                    <div style="font-size: 2rem; font-weight: 700; letter-spacing: 0.3em; color: #1e40af; text-align: center; padding: 1rem; background: white; border-radius: 8px; font-family: 'Courier New', monospace; margin-bottom: 0.75rem;">${job.completionCode}</div>
-                    <div style="font-size: 0.85rem; color: #1e40af;">${job.completionCodeVerified ? '✅ Verified' : '⏳ Enter this code to confirm completion'}</div>
+                    <div style="font-weight: 700; color: #1e40af; margin-bottom: 0.75rem;">✅ Completion Code (from Hustler)</div>
+                    <div style="font-size: 0.9rem; color: #1e40af; margin-bottom: 1rem;">The hustler should have provided you with a completion code. Enter it below to release payment.</div>
                     ${!job.completionCodeVerified ? `
-                      <input type="text" id="completionCodeInput" placeholder="Enter code" maxlength="6" style="width: 100%; padding: 0.75rem; margin-top: 0.75rem; border: 2px solid #3b82f6; border-radius: 8px; font-size: 1.25rem; text-align: center; letter-spacing: 0.3em; font-family: 'Courier New', monospace;">
-                      <button class="btn btn-primary verifyCompletionBtn" data-job-id="${job.id}" style="width: 100%; margin-top: 0.75rem; padding: 0.75rem; font-weight: 600;">Verify & Mark Complete</button>
-                    ` : ''}
+                      <input type="text" id="completionCodeInput" placeholder="Enter 6-digit code" maxlength="6" style="width: 100%; padding: 0.75rem; border: 2px solid #3b82f6; border-radius: 8px; font-size: 1.25rem; text-align: center; letter-spacing: 0.3em; font-family: 'Courier New', monospace;">
+                      <button class="btn btn-primary verifyCompletionBtn" data-job-id="${job.id}" style="width: 100%; margin-top: 0.75rem; padding: 0.75rem; font-weight: 600;">Verify & Release Payment</button>
+                    ` : `
+                      <div style="padding: 1rem; background: #dcfce7; border-radius: 8px;">
+                        <div style="font-weight: 600; color: #166534;">✅ Completion verified - Payment released</div>
+                      </div>
+                    `}
+                  </div>
+                ` : job.status === 'COMPLETED_BY_HUSTLER' && !job.completionCode ? `
+                  <div style="padding: 1rem; background: #fef3c7; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <div style="font-weight: 600; color: #92400e;">⏳ Waiting for completion code from hustler</div>
                   </div>
                 ` : ''}
                 
@@ -12424,11 +12431,34 @@ meta.textContent =
           
           modalOverlay.querySelector('.verifyCompletionBtn')?.addEventListener('click', async () => {
             const code = document.getElementById('completionCodeInput')?.value.trim();
-            if (code === job.completionCode) {
-              await confirmJobComplete(job.id);
+            if (!code || code.length !== 6) {
+              showToast("Please enter a valid 6-digit completion code.");
+              return;
+            }
+            
+            try {
+              const token = localStorage.getItem('hustl_token');
+              const response = await fetch(`${API_BASE}/verification/job/${job.id}/verify-completion`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ code })
+              });
+              
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to verify completion code');
+              }
+              
+              showToast("✅ Completion verified! Payment will be processed.");
               document.body.removeChild(modalOverlay);
-            } else {
-              showToast("Invalid completion code. Please check and try again.");
+              loadActiveJobs(); // Refresh list
+              loadCompletedJobs(); // Refresh completed list
+            } catch (error) {
+              console.error("Error verifying completion:", error);
+              showToast(error.message || "Invalid completion code. Please check and try again.");
             }
           });
           
