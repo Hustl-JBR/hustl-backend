@@ -11618,16 +11618,23 @@ meta.textContent =
     
     // Render Manage Jobs View - Professional job management interface
     async function renderManageJobs() {
+      console.log("🔵 renderManageJobs called");
+      
       const user = await window.hustlAPI.auth.getCurrentUser();
       if (!user) {
+        console.warn("No user found in renderManageJobs");
         showToast("Please log in to manage jobs.");
         setView('home');
         return;
       }
       
+      console.log("✅ User authenticated:", user.id);
+      
       // Initialize tabs - use setTimeout to ensure DOM is ready
       setTimeout(() => {
         const manageTabs = document.querySelectorAll('[data-manage-tab]');
+        console.log("Found manage tabs:", manageTabs.length);
+        
         if (manageTabs.length === 0) {
           console.warn("Manage tabs not found, retrying...");
           setTimeout(() => renderManageJobs(), 100);
@@ -11696,7 +11703,27 @@ meta.textContent =
       
       // Load initial tab (Posted Jobs)
       setTimeout(() => {
-        loadPostedJobs();
+        console.log("🔵 Loading initial tab (Posted Jobs)");
+        const postedTab = document.getElementById('manageTabPosted');
+        const postedList = document.getElementById('managePostedJobsList');
+        console.log("Posted tab element:", postedTab ? "found" : "NOT FOUND");
+        console.log("Posted list element:", postedList ? "found" : "NOT FOUND");
+        
+        if (postedList) {
+          loadPostedJobs();
+        } else {
+          console.error("❌ managePostedJobsList element not found in DOM");
+          // Retry after a bit more time
+          setTimeout(() => {
+            const retryList = document.getElementById('managePostedJobsList');
+            if (retryList) {
+              console.log("✅ Found on retry, loading...");
+              loadPostedJobs();
+            } else {
+              console.error("❌ Still not found after retry");
+            }
+          }, 500);
+        }
       }, 200);
     }
     
@@ -11727,7 +11754,8 @@ meta.textContent =
         
         console.log("Loading posted jobs for user:", user.id);
         
-        const response = await fetch(`${API_BASE}/jobs/my-jobs`, {
+        // Use the dedicated endpoint for posted jobs
+        const response = await fetch(`${API_BASE}/jobs/user-posted`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -11737,86 +11765,26 @@ meta.textContent =
           throw new Error(`Failed to fetch jobs: ${response.status}`);
         }
         
-        let jobs = await response.json();
-        
-        // Handle case where API returns object with jobs array
-        if (jobs && typeof jobs === 'object' && !Array.isArray(jobs)) {
-          if (jobs.jobs && Array.isArray(jobs.jobs)) {
-            jobs = jobs.jobs;
-          } else if (jobs.data && Array.isArray(jobs.data)) {
-            jobs = jobs.data;
-          } else {
-            console.warn("Unexpected API response format:", jobs);
-            jobs = [];
-          }
-        }
+        const jobs = await response.json();
         
         // Ensure jobs is an array
         if (!Array.isArray(jobs)) {
           console.error("Jobs is not an array:", typeof jobs, jobs);
-          jobs = [];
+          throw new Error("Invalid response format from server");
         }
         
-        console.log("Fetched jobs:", jobs.length, "jobs");
-        console.log("Sample job structure:", jobs[0]);
+        console.log("✅ Fetched posted jobs:", jobs.length, "jobs");
+        if (jobs.length > 0) {
+          console.log("Sample job:", {
+            id: jobs[0].id,
+            title: jobs[0].title,
+            customerId: jobs[0].customerId,
+            status: jobs[0].status
+          });
+        }
         
-        // Filter posted jobs - jobs where user is the customer (posted by them)
-        // CRITICAL: Show ALL jobs posted by customer, regardless of status (except truly completed/paid)
-        const postedJobs = jobs.filter(j => {
-          if (!j) {
-            console.warn("Null job in filter:", j);
-            return false;
-          }
-          
-          // Check if user is the customer - handle multiple ID field variations
-          const customerId = j.customerId || j.customer?.id || j.postedByUserId || j.customerId;
-          const userId = user.id;
-          
-          // Convert both to strings for comparison (handles number vs string mismatches)
-          const customerIdStr = String(customerId || '');
-          const userIdStr = String(userId || '');
-          const isCustomer = customerIdStr === userIdStr && customerIdStr !== '';
-          
-          // Include ALL statuses except fully completed/paid/cancelled
-          // We want to show: OPEN, REQUESTED, ASSIGNED, COMPLETED_BY_HUSTLER, AWAITING_CUSTOMER_CONFIRM
-          const excludedStatuses = ['PAID', 'CANCELLED', 'EXPIRED'];
-          const isNotCompleted = !excludedStatuses.includes(j.status);
-          
-          const shouldInclude = isCustomer && isNotCompleted;
-          
-          // Debug logging for first job
-          if (jobs.indexOf(j) === 0) {
-            console.log("First job filter check:", {
-              jobId: j.id,
-              jobTitle: j.title,
-              customerId: customerId,
-              customerIdStr: customerIdStr,
-              userId: userId,
-              userIdStr: userIdStr,
-              isCustomer: isCustomer,
-              status: j.status,
-              isNotCompleted: isNotCompleted,
-              shouldInclude: shouldInclude
-            });
-          }
-          
-          return shouldInclude;
-        });
-        
-        console.log("Posted jobs filter result:", { 
-          totalJobs: jobs.length, 
-          postedJobs: postedJobs.length, 
-          userId: user.id,
-          userType: typeof user.id,
-          postedJobsDetails: postedJobs.map(j => ({ 
-            id: j.id, 
-            title: j.title,
-            customerId: j.customerId || j.customer?.id || j.postedByUserId,
-            customer: j.customer?.id, 
-            status: j.status,
-            hustlerId: j.hustlerId
-          })) 
-        });
+        // The API endpoint already filters for customer's posted jobs, so use directly
+        const postedJobs = jobs;
         
         if (postedJobs.length === 0) {
           postedJobsList.innerHTML = `
@@ -11875,15 +11843,34 @@ meta.textContent =
               jobCard.style.borderColor = 'var(--border)';
             };
             
-            // Get category icon
-            const categoryIcons = {
+            // Get category icon - handle both display names and API values
+            const categoryMap = {
               'Moving / Hauling': '🚚',
+              'moving': '🚚',
               'Yard work / Outdoor': '🌿',
+              'yard-work': '🌿',
+              'yard': '🌿',
               'Cleaning / Organizing': '🧹',
+              'cleaning': '🧹',
               'Furniture / Assembly': '🛠',
-              'Other': '⭐'
+              'furniture-assembly': '🛠',
+              'furniture': '🛠',
+              'Other': '⭐',
+              'other': '⭐'
             };
-            const categoryIcon = categoryIcons[job.category] || '📋';
+            const categoryIcon = categoryMap[job.category] || '📋';
+            
+            // Normalize category name for display
+            const categoryDisplayNames = {
+              'moving': 'Moving / Hauling',
+              'yard-work': 'Yard work / Outdoor',
+              'yard': 'Yard work / Outdoor',
+              'cleaning': 'Cleaning / Organizing',
+              'furniture-assembly': 'Furniture / Assembly',
+              'furniture': 'Furniture / Assembly',
+              'other': 'Other'
+            };
+            const categoryDisplay = categoryDisplayNames[job.category] || job.category || 'General';
             
             // Status badge with better styling
             let statusBadge = '';
@@ -11920,7 +11907,7 @@ meta.textContent =
                       <span style="font-size: 2rem;">${categoryIcon}</span>
                       <div style="flex: 1;">
                         <h3 style="margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main); line-height: 1.2;">${job.title || 'Untitled Job'}</h3>
-                        <div style="margin-top: 0.25rem; font-size: 0.9rem; color: var(--text-muted);">${job.category || 'General'}</div>
+                        <div style="margin-top: 0.25rem; font-size: 0.9rem; color: var(--text-muted);">${categoryDisplay}</div>
                       </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.9rem;">
@@ -12036,22 +12023,35 @@ meta.textContent =
       
       try {
         const token = localStorage.getItem('hustl_token');
-        const response = await fetch(`${API_BASE}/jobs/my-jobs`, {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        const user = await window.hustlAPI.auth.getCurrentUser();
+        if (!user || !token) {
+          activeJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Please log in to view active jobs.</div>";
+          return;
+        }
+        
+        // Use the dedicated endpoint for active jobs
+        const response = await fetch(`${API_BASE}/jobs/active`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        if (!response.ok) throw new Error('Failed to fetch jobs');
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Failed to fetch active jobs:", response.status, errorText);
+          throw new Error(`Failed to fetch active jobs: ${response.status}`);
+        }
+        
         const jobs = await response.json();
         
-        const user = await window.hustlAPI.auth.getCurrentUser();
+        // Ensure jobs is an array
+        if (!Array.isArray(jobs)) {
+          console.error("Active jobs is not an array:", typeof jobs, jobs);
+          throw new Error("Invalid response format from server");
+        }
         
-        // Active jobs: either assigned to user as hustler OR posted by user as customer with a hustler assigned
-        const activeJobs = jobs.filter(j => {
-          const isActive = j.status !== 'PAID' && j.status !== 'CANCELLED' && j.status !== 'OPEN';
-          const isHustler = j.hustlerId === user.id;
-          const isCustomer = j.customerId === user.id && j.hustlerId; // Customer with assigned hustler
-          return isActive && (isHustler || isCustomer);
-        });
+        console.log("✅ Fetched active jobs:", jobs.length, "jobs");
+        
+        // The API endpoint already filters for active jobs, so use directly
+        const activeJobs = jobs;
         
         if (activeJobs.length === 0) {
           activeJobsList.innerHTML = `
@@ -12254,18 +12254,35 @@ meta.textContent =
       
       try {
         const token = localStorage.getItem('hustl_token');
-        const response = await fetch(`${API_BASE}/jobs/my-jobs`, {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        const user = await window.hustlAPI.auth.getCurrentUser();
+        if (!user || !token) {
+          completedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Please log in to view completed jobs.</div>";
+          return;
+        }
+        
+        // Use the dedicated endpoint for completed jobs
+        const response = await fetch(`${API_BASE}/jobs/completed`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        if (!response.ok) throw new Error('Failed to fetch jobs');
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Failed to fetch completed jobs:", response.status, errorText);
+          throw new Error(`Failed to fetch completed jobs: ${response.status}`);
+        }
+        
         const jobs = await response.json();
         
-        const user = await window.hustlAPI.auth.getCurrentUser();
-        const completedJobs = jobs.filter(j => 
-          (j.customerId === user.id || j.hustlerId === user.id) && 
-          (j.status === 'PAID' || j.status === 'COMPLETED_BY_HUSTLER')
-        );
+        // Ensure jobs is an array
+        if (!Array.isArray(jobs)) {
+          console.error("Completed jobs is not an array:", typeof jobs, jobs);
+          throw new Error("Invalid response format from server");
+        }
+        
+        console.log("✅ Fetched completed jobs:", jobs.length, "jobs");
+        
+        // The API endpoint already filters for completed jobs, so use directly
+        const completedJobs = jobs;
         
         if (completedJobs.length === 0) {
           completedJobsList.innerHTML = `

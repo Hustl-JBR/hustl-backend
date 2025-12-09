@@ -108,6 +108,189 @@ router.get('/my-jobs', authenticate, async (req, res) => {
   }
 });
 
+// GET /jobs/user-posted - Get jobs posted by the current user (Customer only)
+router.get('/user-posted', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const jobs = await prisma.job.findMany({
+      where: {
+        customerId: userId,
+        status: {
+          notIn: ['PAID', 'CANCELLED', 'EXPIRED']
+        }
+      },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+          },
+        },
+        hustler: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+            ratingAvg: true,
+            ratingCount: true,
+          },
+        },
+        payment: {
+          select: {
+            id: true,
+            amount: true,
+            status: true,
+          },
+        },
+        _count: {
+          select: {
+            offers: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    
+    res.json(jobs);
+  } catch (error) {
+    console.error('Get user posted jobs error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /jobs/active - Get active jobs for the current user (both customer and hustler)
+router.get('/active', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const jobs = await prisma.job.findMany({
+      where: {
+        OR: [
+          { customerId: userId },
+          { hustlerId: userId }
+        ],
+        status: {
+          in: ['ASSIGNED', 'REQUESTED', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM']
+        }
+      },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+            ratingAvg: true,
+            ratingCount: true,
+          },
+        },
+        hustler: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+            ratingAvg: true,
+            ratingCount: true,
+          },
+        },
+        payment: {
+          select: {
+            id: true,
+            amount: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    
+    res.json(jobs);
+  } catch (error) {
+    console.error('Get active jobs error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /jobs/completed - Get completed jobs for the current user
+router.get('/completed', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const jobs = await prisma.job.findMany({
+      where: {
+        OR: [
+          { customerId: userId },
+          { hustlerId: userId }
+        ],
+        status: {
+          in: ['PAID', 'COMPLETED_BY_HUSTLER']
+        }
+      },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+            ratingAvg: true,
+            ratingCount: true,
+          },
+        },
+        hustler: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+            ratingAvg: true,
+            ratingCount: true,
+          },
+        },
+        payment: {
+          select: {
+            id: true,
+            amount: true,
+            status: true,
+          },
+        },
+        reviews: {
+          where: {
+            OR: [
+              { reviewerId: userId },
+              { revieweeId: userId }
+            ]
+          },
+          select: {
+            id: true,
+            rating: true,
+            comment: true,
+            createdAt: true,
+            reviewer: {
+              select: {
+                id: true,
+                name: true,
+                photoUrl: true,
+              }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    
+    res.json(jobs);
+  } catch (error) {
+    console.error('Get completed jobs error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /jobs - Create a job (Customer only)
 router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) => {
   // Check email verification before allowing job posting (controlled by env var)
