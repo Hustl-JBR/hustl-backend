@@ -2826,7 +2826,7 @@
               <option value="5">5 people</option>
               <option value="6">6 people</option>
               <option value="custom">Custom</option>
-              <option value="my_team">My own team (I'll provide the workers)</option>
+              <option value="my_team">Company/Team (I'll provide the workers)</option>
             </select>
           </div>
           
@@ -4676,7 +4676,7 @@ function showChangePasswordModal() {
             const customCount = Number(document.getElementById("customWorkersCount")?.value || 1);
             workersNeeded = Math.max(1, Math.min(20, customCount));
           } else if (workersNeededValue === "my_team") {
-            workersNeeded = 0; // Special value for "my own team"
+            workersNeeded = 0; // Special value for "Company/Team"
           } else {
             workersNeeded = Number(workersNeededValue) || 1;
           }

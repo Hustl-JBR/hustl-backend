@@ -167,6 +167,10 @@ router.get('/active', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
     
+    // Active jobs are:
+    // 1. ASSIGNED - Hustler accepted, can message, job in progress
+    // 2. COMPLETED_BY_HUSTLER - Hustler marked as done, waiting for customer confirmation
+    // 3. AWAITING_CUSTOMER_CONFIRM - Customer needs to verify completion and release escrow
     const jobs = await prisma.job.findMany({
       where: {
         OR: [
@@ -174,7 +178,7 @@ router.get('/active', authenticate, async (req, res) => {
           { hustlerId: userId }
         ],
         status: {
-          in: ['ASSIGNED', 'REQUESTED', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM']
+          in: ['ASSIGNED', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM']
         }
       },
       include: {
@@ -221,15 +225,20 @@ router.get('/completed', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
     
-    // Simplified query - remove reviews for now to avoid relation issues
+    // Only show jobs that are truly completed:
+    // 1. Status is PAID (escrow released)
+    // 2. Payment status is CAPTURED (escrow released)
+    // 3. completionCodeVerified is true (2nd code submitted)
     const jobs = await prisma.job.findMany({
       where: {
         OR: [
           { customerId: userId },
           { hustlerId: userId }
         ],
-        status: {
-          in: ['PAID', 'CANCELLED', 'EXPIRED'] // Include all completed statuses
+        status: 'PAID', // Only PAID jobs are truly completed
+        completionCodeVerified: true, // Must have submitted completion code
+        payment: {
+          status: 'CAPTURED' // Escrow must be released
         }
       },
       include: {
