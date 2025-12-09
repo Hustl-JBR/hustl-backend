@@ -5782,7 +5782,7 @@ async function renderJobs(reset = false) {
       proposedPriceInput.min = "1";
       proposedPriceInput.step = "0.01";
       proposedPriceInput.placeholder = job.payType === "hourly" ? "Enter hourly rate" : "Enter total amount";
-      proposedPriceInput.style.cssText = "width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.9rem;";
+      proposedPriceInput.style.cssText = "width: 100%; padding: 1.25rem; border: 2px solid var(--primary); border-radius: 10px; font-size: 1.25rem; font-weight: 600; text-align: center; background: #f0fdf4; min-height: 50px; box-sizing: border-box;";
       proposedPriceContainer.appendChild(proposedPriceInput);
 
       const priceTypeLabel = document.createElement("div");
@@ -14291,7 +14291,9 @@ meta.textContent =
           
           <div style="margin-bottom: 1.5rem;">
             <label style="display: block; font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.75rem;">💰 Proposed Price ($)</label>
-            <input type="number" id="negotiatePriceInput" placeholder="Enter your proposed price" step="0.01" min="0" value="${offer?.proposedAmount || ''}" style="width: 100%; padding: 1.25rem; border: 3px solid var(--primary); border-radius: 12px; font-size: 1.5rem; font-weight: 700; text-align: center; background: #f0fdf4; color: var(--text-main);">
+            <label for="negotiatePriceInput" style="display: block; font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">💰 Proposed Price ($)</label>
+            <input type="number" id="negotiatePriceInput" placeholder="Enter your proposed price" step="0.01" min="0" value="${offer?.proposedAmount || ''}" style="width: 100%; padding: 1.5rem; border: 3px solid var(--primary); border-radius: 12px; font-size: 2rem; font-weight: 700; text-align: center; background: #f0fdf4; color: var(--text-main); min-height: 60px; box-sizing: border-box;">
+            <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted); text-align: center;">Enter the amount you'd like to propose</div>
             <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted); text-align: center;">Enter the amount you'd like to propose</div>
           </div>
           
