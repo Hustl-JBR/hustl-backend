@@ -2567,6 +2567,19 @@
 
       <!-- POST JOB VIEW (separate page) -->
       <section id="view-post" style="display:none;">
+        <!-- Job Stats Section (shown after job is posted) -->
+        <div id="jobStatsCard" class="card" style="display: none; margin-bottom: 1.5rem; padding: 2rem;">
+          <div class="card-header">
+            <div class="card-title">📊 Job Stats</div>
+          </div>
+          <div id="jobStatsContent" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+            <!-- Stats will be populated here -->
+          </div>
+          <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+            <button class="btn btn-primary" onclick="setView('manage-jobs')" style="width: 100%; padding: 0.75rem; font-weight: 600;">📋 Manage This Job</button>
+          </div>
+        </div>
+        
         <div class="card" id="jobFormCard" style="padding: 2.5rem;">
           <div class="card-header">
             <div class="card-title">Post a job</div>
@@ -4855,8 +4868,9 @@ function showChangePasswordModal() {
             }
 
             console.log("Posting job with data:", JSON.stringify(jobData, null, 2));
+            let result;
             try {
-              const result = await window.hustlAPI.jobs.create(jobData);
+              result = await window.hustlAPI.jobs.create(jobData);
               console.log("Job posted successfully:", result);
             } catch (error) {
               console.error("Full error object:", error);
@@ -4865,16 +4879,21 @@ function showChangePasswordModal() {
               throw error;
             }
 
-            showToast("✅ Job posted successfully! You can manage it in the Manage Jobs section.");
+            showToast("✅ Job posted successfully! View stats below.");
+            
+            // Show job stats on the post page
+            if (result && result.id) {
+              await showJobStats(result.id);
+            }
             
             // Refresh the Manage Jobs view if it's loaded
             if (activeView === 'manage-jobs') {
               loadPostedJobs();
             }
             
-            // Clear form and navigate
-            clearJobForm();
-            setView("manage-jobs");
+            // Don't clear form or navigate - keep user on post page to see stats
+            // clearJobForm();
+            // setView("manage-jobs");
             
             // Also refresh jobs list
             renderJobs(true);
@@ -11642,14 +11661,41 @@ meta.textContent =
           throw new Error(`Failed to fetch jobs: ${response.status}`);
         }
         
-        const jobs = await response.json();
-        console.log("Fetched jobs:", jobs.length, "jobs", jobs);
+        let jobs = await response.json();
+        
+        // Handle case where API returns object with jobs array
+        if (jobs && typeof jobs === 'object' && !Array.isArray(jobs)) {
+          if (jobs.jobs && Array.isArray(jobs.jobs)) {
+            jobs = jobs.jobs;
+          } else if (jobs.data && Array.isArray(jobs.data)) {
+            jobs = jobs.data;
+          } else {
+            console.warn("Unexpected API response format:", jobs);
+            jobs = [];
+          }
+        }
+        
+        // Ensure jobs is an array
+        if (!Array.isArray(jobs)) {
+          console.error("Jobs is not an array:", typeof jobs, jobs);
+          jobs = [];
+        }
+        
+        console.log("Fetched jobs:", jobs.length, "jobs");
+        console.log("Sample job structure:", jobs[0]);
         
         // Filter posted jobs - jobs where user is the customer (posted by them)
         // Include all statuses except PAID and CANCELLED (we want to see OPEN, REQUESTED, ASSIGNED, etc.)
         const postedJobs = jobs.filter(j => {
-          const isCustomer = j.customerId === user.id || (j.customer && j.customer.id === user.id);
+          if (!j) return false;
+          
+          // Check if user is the customer - handle both direct ID and nested customer object
+          const customerId = j.customerId || j.customer?.id || j.postedByUserId;
+          const isCustomer = customerId === user.id || String(customerId) === String(user.id);
+          
+          // Include all active statuses
           const isNotCompleted = j.status !== 'PAID' && j.status !== 'CANCELLED' && j.status !== 'EXPIRED';
+          
           return isCustomer && isNotCompleted;
         });
         
@@ -11657,10 +11703,11 @@ meta.textContent =
           totalJobs: jobs.length, 
           postedJobs: postedJobs.length, 
           userId: user.id,
+          userType: typeof user.id,
           postedJobsDetails: postedJobs.map(j => ({ 
             id: j.id, 
             title: j.title,
-            customerId: j.customerId, 
+            customerId: j.customerId || j.customer?.id || j.postedByUserId,
             customer: j.customer?.id, 
             status: j.status,
             hustlerId: j.hustlerId
@@ -13151,8 +13198,9 @@ meta.textContent =
                         <span style="font-size: 0.9rem;">Price is negotiable</span>
                       </label>
                     </div>
-                    <div id="proposedPriceContainer" style="display: none;">
-                      <input type="number" id="proposedPriceInput" placeholder="Propose your price ($)" step="0.01" min="0" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem;">
+                    <div id="proposedPriceContainer" style="display: none; margin-top: 1rem;">
+                      <label style="display: block; font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">💰 Proposed Price ($)</label>
+                      <input type="number" id="proposedPriceInput" placeholder="Enter your proposed price" step="0.01" min="0" style="width: 100%; padding: 1rem; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.25rem; font-weight: 600; text-align: center; background: #f0fdf4;">
                     </div>
                   </div>
                   
@@ -13267,6 +13315,13 @@ meta.textContent =
           if (negotiateCheck && priceContainer) {
             negotiateCheck.addEventListener('change', (e) => {
               priceContainer.style.display = e.target.checked ? 'block' : 'none';
+              if (e.target.checked) {
+                // Focus the input when shown
+                setTimeout(() => {
+                  const input = priceContainer.querySelector('#proposedPriceInput');
+                  if (input) input.focus();
+                }, 100);
+              }
             });
           }
           
@@ -13776,8 +13831,9 @@ meta.textContent =
           <h3 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">💰 Negotiate Price</h3>
           
           <div style="margin-bottom: 1.5rem;">
-            <label style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">Proposed Price ($)</label>
-            <input type="number" id="negotiatePriceInput" placeholder="Enter new price" step="0.01" min="0" value="${offer?.proposedAmount || ''}" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem;">
+            <label style="display: block; font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.75rem;">💰 Proposed Price ($)</label>
+            <input type="number" id="negotiatePriceInput" placeholder="Enter your proposed price" step="0.01" min="0" value="${offer?.proposedAmount || ''}" style="width: 100%; padding: 1.25rem; border: 3px solid var(--primary); border-radius: 12px; font-size: 1.5rem; font-weight: 700; text-align: center; background: #f0fdf4; color: var(--text-main);">
+            <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted); text-align: center;">Enter the amount you'd like to propose</div>
           </div>
           
           <div style="display: flex; gap: 0.75rem;">
