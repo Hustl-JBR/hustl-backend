@@ -11601,8 +11601,13 @@ meta.textContent =
       renderAuthSectionVisibility();
       renderOwnerView();
 
-      // Use window.activeView as fallback if local activeView isn't set
-      const currentView = activeView || window.activeView || "home";
+      // CRITICAL: Use window.activeView if it's set (from fallback), otherwise use local activeView
+      // This ensures fallback code can properly set the view
+      const currentView = window.activeView || activeView || "home";
+      // Also update local activeView to keep them in sync
+      if (window.activeView && window.activeView !== activeView) {
+        activeView = window.activeView;
+      }
       console.log("🔵 renderAll - activeView:", activeView, "window.activeView:", window.activeView, "currentView:", currentView);
       
       if (currentView === "jobs") {
