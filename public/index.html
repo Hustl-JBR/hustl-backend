@@ -9434,9 +9434,7 @@ async function renderJobs(reset = false) {
 
     // Render Basic Info Section - View Mode
     function renderBasicInfoView(user, ratingAvg, ratingCount, container) {
-      console.log("renderBasicInfoView called with user:", user?.name, "container:", container);
       if (!container) {
-        console.error("Container is null in renderBasicInfoView");
         return;
       }
       const avatarContent = user.photoUrl 
@@ -9679,12 +9677,10 @@ async function renderJobs(reset = false) {
     }
 
     async function renderProfile() {
-  console.log("renderProfile() called");
   // Use API to get current user
   let user = null;
   try {
     user = await window.hustlAPI.auth.getCurrentUser();
-    console.log("User fetched in renderProfile:", user?.name);
   } catch (error) {
     console.error("Error getting user for profile:", error);
   }
@@ -9757,12 +9753,9 @@ async function renderJobs(reset = false) {
   }
 
   // Render Basic Info Section (View Mode by default)
-  console.log("Rendering Basic Info section. basicInfoSection exists:", !!basicInfoSection, "User:", user?.name);
   if (basicInfoSection) {
     try {
-      console.log("Calling renderBasicInfoView with rating:", ratingAvg, "count:", ratingCount);
       renderBasicInfoView(user, ratingAvg, ratingCount, basicInfoSection);
-      console.log("Basic Info rendered successfully");
     } catch (error) {
       console.error("Error rendering Basic Info:", error);
       // Fallback: show basic info even if render fails
