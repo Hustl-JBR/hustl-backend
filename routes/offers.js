@@ -505,9 +505,11 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       },
     });
 
-    // Create thread for messaging
-    await prisma.thread.create({
-      data: {
+    // Create thread for messaging (use upsert to avoid duplicate errors)
+    await prisma.thread.upsert({
+      where: { jobId: offer.job.id },
+      update: {}, // If exists, don't update
+      create: {
         jobId: offer.job.id,
         userAId: req.user.id,
         userBId: offer.hustlerId,
