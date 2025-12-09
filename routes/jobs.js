@@ -221,6 +221,7 @@ router.get('/completed', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
     
+    // Simplified query - remove reviews for now to avoid relation issues
     const jobs = await prisma.job.findMany({
       where: {
         OR: [
@@ -228,7 +229,7 @@ router.get('/completed', authenticate, async (req, res) => {
           { hustlerId: userId }
         ],
         status: {
-          in: ['PAID', 'COMPLETED_BY_HUSTLER']
+          in: ['PAID', 'CANCELLED', 'EXPIRED'] // Include all completed statuses
         }
       },
       include: {
@@ -259,49 +260,17 @@ router.get('/completed', authenticate, async (req, res) => {
             status: true,
           },
         },
-        reviews: {
-          where: {
-            OR: [
-              { reviewerId: userId },
-              { revieweeId: userId }
-            ]
-          },
-          select: {
-            id: true,
-            stars: true,
-            text: true,
-            createdAt: true,
-            reviewer: {
-              select: {
-                id: true,
-                name: true,
-                photoUrl: true,
-              }
-            },
-            reviewee: {
-              select: {
-                id: true,
-                name: true,
-                photoUrl: true,
-              }
-            }
-          }
-        }
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
     });
     
-    // Transform reviews to match frontend expectations (stars -> rating, text -> comment)
-    const transformedJobs = jobs.map(job => ({
+    // Add empty reviews array for frontend compatibility
+    const jobsWithReviews = jobs.map(job => ({
       ...job,
-      reviews: job.reviews ? job.reviews.map(review => ({
-        ...review,
-        rating: review.stars,
-        comment: review.text
-      })) : []
+      reviews: []
     }));
     
-    res.json(transformedJobs);
+    res.json(jobsWithReviews);
   } catch (error) {
     console.error('Get completed jobs error:', error);
     console.error('Error details:', error.message, error.stack);

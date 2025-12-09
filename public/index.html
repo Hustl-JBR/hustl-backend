@@ -11756,6 +11756,16 @@ meta.textContent =
       console.log("🔵 loadPostedJobs called");
       
       const postedJobsList = document.getElementById("managePostedJobsList");
+      
+      // Prevent duplicate calls
+      if (postedJobsList && postedJobsList.dataset.loading === 'true') {
+        console.log("⏸️ loadPostedJobs already in progress, skipping");
+        return;
+      }
+      
+      if (postedJobsList) {
+        postedJobsList.dataset.loading = 'true';
+      }
       if (!postedJobsList) {
         console.error("❌ managePostedJobsList element not found in DOM");
         // Try to find it again
