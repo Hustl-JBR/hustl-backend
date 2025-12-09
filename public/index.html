@@ -12070,6 +12070,11 @@ meta.textContent =
           </div>
         `;
         postedJobsList.dataset.loaded = 'true';
+      } finally {
+        // Always clear loading flag
+        if (postedJobsList) {
+          postedJobsList.dataset.loading = 'false';
+        }
       }
     }
     
