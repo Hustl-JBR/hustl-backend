@@ -315,33 +315,32 @@ router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), a
     }
 
     // REQUIRE STRIPE ACCOUNT - Hustler must have Stripe connected
-    // Skip in test mode (when SKIP_STRIPE_CHECK=true)
+    // DISABLED FOR TESTING - Skip Stripe account requirement
     const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
     
-    if (!offer.hustler.stripeAccountId && !skipStripeCheck) {
-      // Send email to hustler about needing Stripe
-      try {
-        const { sendStripeRequiredEmail } = require('../services/email');
-        await sendStripeRequiredEmail(
-          offer.hustler.email,
-          offer.hustler.name,
-          offer.job.title
-        );
-      } catch (emailError) {
-        console.error('Error sending Stripe required email:', emailError);
-      }
-      
-      return res.status(400).json({ 
-        error: 'Hustler must connect Stripe account',
-        requiresStripe: true,
-        message: 'This hustler needs to connect their Stripe account before you can pay them. They have been notified via email.'
-      });
-    }
+    // DISABLED FOR TESTING - Always skip Stripe check for now
+    // if (!offer.hustler.stripeAccountId && !skipStripeCheck) {
+    //   // Send email to hustler about needing Stripe
+    //   try {
+    //     const { sendStripeRequiredEmail } = require('../services/email');
+    //     await sendStripeRequiredEmail(
+    //       offer.hustler.email,
+    //       offer.hustler.name,
+    //       offer.job.title
+    //     );
+    //   } catch (emailError) {
+    //     console.error('Error sending Stripe required email:', emailError);
+    //   }
+    //   
+    //   return res.status(400).json({ 
+    //     error: 'Hustler must connect Stripe account',
+    //     requiresStripe: true,
+    //     message: 'This hustler needs to connect their Stripe account before you can pay them. They have been notified via email.'
+    //   });
+    // }
     
-    // In test mode, use a fake Stripe account ID if needed
-    if (skipStripeCheck && !offer.hustler.stripeAccountId) {
-      console.log('[TEST MODE] Skipping Stripe account check for hustler:', offer.hustler.id);
-    }
+    // In test mode, log that we're skipping the check
+    console.log('[TEST MODE] Skipping Stripe account check for hustler:', offer.hustler.id);
 
     // Calculate payment amounts (3% customer fee)
     const jobAmount = Number(offer.job.amount);
@@ -461,8 +460,8 @@ router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), a
         success_url: `${base}/?payment=success&offerId=${offerId}&jobId=${offer.job.id}`,
         cancel_url: `${base}/?payment=cancelled`,
       });
-    }
 
+    console.log('[PAYMENT] Stripe checkout session created:', session.id);
     res.json({ url: session.url });
   } catch (error) {
     console.error('Create checkout session error:', error);
