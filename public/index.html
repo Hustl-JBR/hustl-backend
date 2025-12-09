@@ -11593,6 +11593,7 @@ meta.textContent =
     /* ---------- Main render ---------- */
 
     async function renderAll() {
+      console.log("🔵 renderAll called");
       // Update header auth state first
       await updateHeaderAuth();
       
@@ -11602,17 +11603,25 @@ meta.textContent =
 
       // Use window.activeView as fallback if local activeView isn't set
       const currentView = activeView || window.activeView || "home";
+      console.log("🔵 renderAll - activeView:", activeView, "window.activeView:", window.activeView, "currentView:", currentView);
       
       if (currentView === "jobs") {
+        console.log("🔵 Rendering jobs view");
         renderJobs();
       } else if (currentView === "messages") {
+        console.log("🔵 Rendering messages view");
         renderMessagesView();
       } else if (currentView === "profile") {
+        console.log("🔵 Rendering profile view");
         renderProfile();
       } else if (currentView === "manage-jobs") {
+        console.log("🔵 Rendering manage-jobs view - calling renderManageJobs");
         renderManageJobs();
       } else if (currentView === "owner") {
+        console.log("🔵 Rendering owner view");
         renderOwnerView();
+      } else {
+        console.log("⚠️ renderAll - unknown view:", currentView);
       }
       
       // Unread message count - function not implemented yet
@@ -14670,7 +14679,7 @@ meta.textContent =
       navContainer.dataset.listenerAttached = 'true';
       console.log("✅ Nav listener attached");
       
-      navContainer.addEventListener("click", (e) => {
+      navContainer.addEventListener("click", async (e) => {
         const tab = e.target.closest(".nav-tab");
         if (!tab) return;
         e.preventDefault();
@@ -14681,44 +14690,51 @@ meta.textContent =
           // Try to call setView - if it's the stub, use fallback
           if (window.setView && typeof window.setView === 'function') {
             // Check if it's the real function (not the stub)
+            // Real setView is async, stub is not. Also check for 'not ready yet' string
             const funcStr = window.setView.toString();
-            if (!funcStr.includes('not ready yet')) {
-              console.log("Calling window.setView with:", v);
-              window.setView(v);
+            const isAsync = funcStr.includes('async') || window.setView.constructor.name === 'AsyncFunction';
+            const isStub = funcStr.includes('not ready yet');
+            
+            if (isAsync && !isStub) {
+              console.log("✅ Calling real window.setView with:", v);
+              try {
+                await window.setView(v);
+                return; // Success - exit early
+              } catch (error) {
+                console.error("Error calling setView:", error);
+                // Fall through to fallback
+              }
             } else {
-              console.log("setView is stub, using fallback");
-              // Stub function - use fallback
-              // CRITICAL: Set activeView so renderAll knows which view to render
-              window.activeView = v;
-              document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
-              const target = document.getElementById("view-" + v);
-              if (target) target.style.display = "block";
-              document.querySelectorAll(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === v));
-              window.scrollTo({ top: 0, behavior: 'instant' });
-              // IMPORTANT: Also call renderAll to actually render the content
-              setTimeout(async () => {
-                try {
-                  // Ensure activeView is set before calling renderAll
-                  window.activeView = v;
-                  if (typeof window.renderAll === 'function') {
-                    await window.renderAll();
-                  } else if (typeof renderAll === 'function') {
-                    await renderAll();
-                  }
-                } catch (error) {
-                  console.error("Error in fallback render:", error);
-                }
-              }, 100);
+              console.log("⚠️ setView is stub (isAsync:", isAsync, "isStub:", isStub, "), using fallback");
             }
-          } else {
-            console.log("setView not available, using fallback");
-            // Fallback: basic view switching
-            document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
-            const target = document.getElementById("view-" + v);
-            if (target) target.style.display = "block";
-            document.querySelectorAll(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === v));
-            window.scrollTo({ top: 0, behavior: 'instant' });
           }
+          
+          // Fallback: manual view switching
+          console.log("Using fallback view switching for:", v);
+          // CRITICAL: Set activeView so renderAll knows which view to render
+          window.activeView = v;
+          document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+          const target = document.getElementById("view-" + v);
+          if (target) target.style.display = "block";
+          document.querySelectorAll(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === v));
+          window.scrollTo({ top: 0, behavior: 'instant' });
+          // IMPORTANT: Also call renderAll to actually render the content
+          setTimeout(async () => {
+            try {
+              // Ensure activeView is set before calling renderAll
+              window.activeView = v;
+              console.log("🔵 Calling renderAll with activeView:", window.activeView);
+              if (typeof window.renderAll === 'function') {
+                await window.renderAll();
+              } else if (typeof renderAll === 'function') {
+                await renderAll();
+              } else {
+                console.error("❌ renderAll function not found!");
+              }
+            } catch (error) {
+              console.error("Error in fallback render:", error);
+            }
+          }, 100);
         }
       });
       
