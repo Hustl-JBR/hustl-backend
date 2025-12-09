@@ -14103,8 +14103,9 @@ meta.textContent =
       try {
         showToast("Processing...");
         
-        // First check if payment is needed
         const token = localStorage.getItem('hustl_token');
+        
+        // Check if payment is needed by trying to accept first
         const offerRes = await fetch(`${API_BASE}/offers/${offerId}/accept`, {
           method: 'POST',
           headers: {
@@ -14122,22 +14123,43 @@ meta.textContent =
             return;
           }
           if (error.requiresPayment) {
-            // Redirect to payment flow
-            showToast("Payment required to accept this offer.");
-            document.body.removeChild(modalOverlay);
-            setView('jobs');
-            setTimeout(() => {
-              if (typeof openJobDetails === 'function') {
-                openJobDetails(jobId);
+            // Redirect to Stripe checkout
+            showToast("💳 Redirecting to secure payment...");
+            if (modalOverlay && modalOverlay.parentNode) {
+              document.body.removeChild(modalOverlay);
+            }
+            
+            // Create Stripe checkout session
+            const checkoutRes = await fetch(`${API_BASE}/payments/checkout/offer/${offerId}`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
               }
-            }, 100);
+            });
+            
+            if (!checkoutRes.ok) {
+              const checkoutError = await checkoutRes.json().catch(() => ({}));
+              throw new Error(checkoutError.error || 'Failed to create payment session');
+            }
+            
+            const { url } = await checkoutRes.json();
+            if (url) {
+              // Redirect to Stripe checkout
+              window.location.href = url;
+            } else {
+              throw new Error('No checkout URL received');
+            }
             return;
           }
           throw new Error(error.error || 'Failed to accept offer');
         }
         
-        showToast("✅ Hustler accepted! They've been notified.");
-        document.body.removeChild(modalOverlay);
+        // Payment not required (test mode) or already paid
+        showToast("✅ Hustler accepted! Payment is held in escrow until job completion.");
+        if (modalOverlay && modalOverlay.parentNode) {
+          document.body.removeChild(modalOverlay);
+        }
         
         // Refresh the manage jobs view if we're on it
         if (activeView === 'manage-jobs') {
