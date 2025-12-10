@@ -13868,16 +13868,50 @@ meta.textContent =
                   // Monitor popup for completion
                   showToast("💳 Payment window opened. Complete payment to continue.");
                   
-                  // Check if popup is closed (payment completed/cancelled)
+                  // Listen for payment completion via postMessage from popup
+                  const handlePaymentComplete = (event) => {
+                    // Only accept messages from Stripe checkout
+                    if (event.data && event.data.type === 'stripe-checkout-success') {
+                      window.removeEventListener('message', handlePaymentComplete);
+                      clearInterval(checkClosed);
+                      popup.close();
+                      
+                      showToast("✅ Payment successful! Hustler accepted.");
+                      
+                      // Close modal and refresh
+                      if (modalOverlay && modalOverlay.parentNode) {
+                        document.body.removeChild(modalOverlay);
+                      }
+                      
+                      // Refresh job lists
+                      if (activeView === 'manage-jobs') {
+                        loadPostedJobs();
+                        loadActiveJobs();
+                      }
+                    }
+                  };
+                  
+                  window.addEventListener('message', handlePaymentComplete);
+                  
+                  // Also check if popup is closed (user closed manually or completed)
                   const checkClosed = setInterval(() => {
                     if (popup.closed) {
                       clearInterval(checkClosed);
-                      // Refresh the page after a short delay to check payment status
+                      window.removeEventListener('message', handlePaymentComplete);
+                      
+                      // Check URL for payment success (popup redirected back)
                       setTimeout(() => {
                         showToast("🔄 Checking payment status...");
-                        // Reload the job view
+                        
+                        // Close modal and refresh
+                        if (modalOverlay && modalOverlay.parentNode) {
+                          document.body.removeChild(modalOverlay);
+                        }
+                        
+                        // Refresh job lists
                         if (activeView === 'manage-jobs') {
                           loadPostedJobs();
+                          loadActiveJobs();
                         }
                       }, 1000);
                     }

@@ -435,7 +435,7 @@ router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), a
     try {
       const session = await stripe.checkout.sessions.create({
         mode: 'payment',
-        payment_method_types: ['card'],
+        payment_method_types: ['card', 'link'], // Enable Apple Pay, Google Pay via card and Link
         line_items: [
           {
             price_data: {
@@ -459,8 +459,10 @@ router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), a
           tip: tipAmount.toString(),
           customerFee: customerFee.toString(),
         },
-        success_url: `${base}/?payment=success&offerId=${offerId}&jobId=${offer.job.id}`,
-        cancel_url: `${base}/?payment=cancelled`,
+        success_url: `${base}/?payment=success&session_id={CHECKOUT_SESSION_ID}&offerId=${offerId}&jobId=${offer.job.id}`,
+        cancel_url: `${base}/?payment=cancelled&offerId=${offerId}`,
+        // Enable automatic tax calculation if needed
+        // automatic_tax: { enabled: false },
       });
 
       console.log('[PAYMENT] Stripe checkout session created:', session.id);

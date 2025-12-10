@@ -119,6 +119,9 @@ async function handleCheckoutSessionCompleted(session) {
 
     // Generate verification codes (Uber-style safety)
     const generateCode = () => String(Math.floor(1000 + Math.random() * 9000));
+    const startCode = generateCode();
+    const completionCode = generateCode();
+    const startCodeExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
     
     // Update job with hustler and verification codes
     await prisma.job.update({
@@ -126,8 +129,10 @@ async function handleCheckoutSessionCompleted(session) {
       data: {
         status: 'ASSIGNED',
         hustlerId: offer.hustlerId,
-        arrivalCode: generateCode(),
-        completionCode: generateCode(),
+        startCode: startCode,
+        startCodeExpiresAt: startCodeExpiresAt,
+        completionCode: completionCode,
+        completionCodeVerified: false,
       },
     });
 
