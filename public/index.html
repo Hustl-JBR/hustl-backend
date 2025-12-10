@@ -10430,6 +10430,17 @@ async function renderJobs(reset = false) {
 
   // Old profile form code removed - now using Basic Info section at top
   
+  // Get or create profile form container
+  const profileSettingsContent = document.getElementById("profilePreferences");
+  if (!profileSettingsContent) {
+    console.error("profilePreferences element not found");
+    return;
+  }
+  
+  // Create profile form container
+  const profileForm = document.createElement("div");
+  profileForm.style.cssText = "display: flex; flex-direction: column; gap: 1.5rem;";
+  
   // Section 1: Profile Picture - Card Style
   const photoSection = document.createElement("div");
   photoSection.className = "card";
@@ -10515,7 +10526,9 @@ async function renderJobs(reset = false) {
   `;
   profileForm.appendChild(personalInfoSection);
 
-  container.appendChild(profileForm);
+  // Clear and append profile form to settings content
+  profileSettingsContent.innerHTML = '';
+  profileSettingsContent.appendChild(profileForm);
   
   // Show Edit Profile button now that we have a logged-in user
   // Use setTimeout to ensure the button exists in the DOM
@@ -11090,7 +11103,7 @@ async function renderJobs(reset = false) {
           formData.append('file', blob, `avatar-${Date.now()}.jpg`);
           
           const token = localStorage.getItem("hustl_token");
-          const uploadResponse = await fetch(`${BACKEND_URL}/api/r2/upload`, {
+          const uploadResponse = await fetch(`${API_BASE}/r2/upload`, {
             method: 'POST',
             headers: token ? { "Authorization": `Bearer ${token}` } : {},
             body: formData

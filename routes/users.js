@@ -153,15 +153,18 @@ router.patch('/me', [
     }
     if (photoUrl !== undefined) updateData.photoUrl = photoUrl;
     
-    // Handle bio, gender, and tools - only include if columns exist
-    try {
-      // Try to update with bio, gender, and tools
-      if (bio !== undefined) updateData.bio = bio;
-      if (gender !== undefined) updateData.gender = gender;
-      if (tools !== undefined) updateData.tools = tools;
-    } catch (e) {
-      // If columns don't exist, skip them
-      console.warn('Bio/gender/tools columns may not exist:', e.message);
+    // Handle bio, gender, and tools - allow empty strings to clear values
+    if (bio !== undefined) {
+      // Allow empty string to clear bio
+      updateData.bio = bio === '' ? null : bio;
+    }
+    if (gender !== undefined) {
+      // Allow empty string to clear gender
+      updateData.gender = gender === '' ? null : gender;
+    }
+    if (tools !== undefined) {
+      // Allow empty string to clear tools
+      updateData.tools = tools === '' ? null : tools;
     }
 
     let user;
