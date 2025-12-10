@@ -9763,27 +9763,68 @@ async function renderJobs(reset = false) {
     function initConversationInput() {
       const sendBtn = document.getElementById("conversationSendButton");
       const input = document.getElementById("conversationInput");
-      sendBtn.addEventListener("click", () => {
+      if (!sendBtn || !input) return;
+      
+      // Remove existing listeners to avoid duplicates
+      const newSendBtn = sendBtn.cloneNode(true);
+      sendBtn.parentNode.replaceChild(newSendBtn, sendBtn);
+      const newInput = input.cloneNode(true);
+      input.parentNode.replaceChild(newInput, input);
+      
+      newSendBtn.addEventListener("click", async () => {
         const user = getCurrentUser();
         if (!user) {
           showToast("Log in to send messages.");
           return;
         }
-        const job = state.jobs.find((j) => j.id === activeConversationJobId);
-        if (!job) return;
-        const text = input.value.trim();
+        if (!activeConversationThreadId) {
+          showToast("Please select a conversation first.");
+          return;
+        }
+        const text = newInput.value.trim();
         if (!text) return;
-        job.chatMessages = job.chatMessages || [];
-        job.chatMessages.push({
-          id: generateId("m"),
-          jobId: job.id,
-          fromUserId: user.id,
-          text,
-          createdAt: Date.now(),
-        });
-        input.value = "";
-        saveState();
-        renderConversation();      });
+        
+        // Disable input while sending
+        newSendBtn.disabled = true;
+        newInput.disabled = true;
+        
+        try {
+          const token = localStorage.getItem('hustl_token');
+          if (!token) {
+            throw new Error('No authentication token');
+          }
+
+          const response = await fetch(`${API_BASE}/threads/${activeConversationThreadId}/messages`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ body: text })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to send message');
+          }
+
+          // Clear input and reload messages
+          newInput.value = '';
+          await renderConversation();
+        } catch (error) {
+          console.error("Error sending message:", error);
+          showToast(error.message || "Failed to send message. Please try again.");
+        } finally {
+          newSendBtn.disabled = false;
+          newInput.disabled = false;
+        }
+      });
+      
+      newInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          newSendBtn.click();
+        }
+      });
     }
 
     /* ---------- Profile ---------- */
