@@ -141,7 +141,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
 router.use(authenticate);
 
 // PATCH /users/me
-router.patch('/me', [
+router.patch('/me', authenticate, [
   body('name').optional().trim().notEmpty(),
   body('city').optional().trim().notEmpty(),
   body('bio').optional().trim(),

@@ -669,32 +669,54 @@ router.get('/config', authenticate, async (req, res) => {
   try {
     let publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
     
+    console.log('[PAYMENT CONFIG] Checking for STRIPE_PUBLISHABLE_KEY...');
+    
     if (!publishableKey) {
-      console.error('[PAYMENT CONFIG] STRIPE_PUBLISHABLE_KEY is not set');
+      console.error('[PAYMENT CONFIG] STRIPE_PUBLISHABLE_KEY is not set in environment variables');
       return res.status(500).json({ 
         error: 'Stripe publishable key not configured',
-        message: 'Please set STRIPE_PUBLISHABLE_KEY in your environment variables'
+        message: 'Please set STRIPE_PUBLISHABLE_KEY in your environment variables (Railway)',
+        hint: 'Get your publishable key from https://dashboard.stripe.com/apikeys'
       });
     }
     
+    console.log('[PAYMENT CONFIG] Key found, length:', publishableKey.length);
+    
     // Clean up the key (remove quotes, trim whitespace)
+    const originalKey = publishableKey;
     publishableKey = publishableKey.trim().replace(/^["']|["']$/g, '');
     
+    if (originalKey !== publishableKey) {
+      console.log('[PAYMENT CONFIG] Key had quotes/whitespace removed');
+    }
+    
+    if (!publishableKey || publishableKey.length < 10) {
+      console.error('[PAYMENT CONFIG] Key is too short after cleanup');
+      return res.status(500).json({ 
+        error: 'Invalid Stripe publishable key',
+        message: 'The publishable key appears to be empty or too short after cleanup',
+        hint: 'Check your STRIPE_PUBLISHABLE_KEY in Railway environment variables'
+      });
+    }
+    
     if (!publishableKey.startsWith('pk_')) {
-      console.error('[PAYMENT CONFIG] Invalid publishable key format:', publishableKey.substring(0, 10) + '...');
+      console.error('[PAYMENT CONFIG] Invalid publishable key format. First 15 chars:', publishableKey.substring(0, 15));
       return res.status(500).json({ 
         error: 'Invalid Stripe publishable key format',
         message: 'Publishable keys must start with "pk_test_" (test) or "pk_live_" (live)',
-        hint: 'Get your key from https://dashboard.stripe.com/apikeys'
+        hint: 'Get your key from https://dashboard.stripe.com/apikeys. Make sure you\'re using the publishable key, not the secret key.'
       });
     }
     
+    console.log('[PAYMENT CONFIG] Key validated successfully');
     res.json({ publishableKey });
   } catch (error) {
-    console.error('Get Stripe config error:', error);
+    console.error('[PAYMENT CONFIG] Unexpected error:', error);
+    console.error('[PAYMENT CONFIG] Error stack:', error.stack);
     res.status(500).json({ 
       error: 'Internal server error',
-      message: error.message 
+      message: error.message || 'Failed to get Stripe configuration',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });

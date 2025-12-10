@@ -35,8 +35,19 @@ router.post('/create-account', async (req, res) => {
       accountId = `acct_test_${user.id.substring(0, 24)}`;
       console.log('[TEST MODE] Creating fake Stripe account:', accountId);
     } else {
-      const account = await createConnectedAccount(user.email);
-      accountId = account.id;
+      try {
+        const account = await createConnectedAccount(user.email);
+        accountId = account.id;
+      } catch (stripeError) {
+        console.error('[STRIPE CONNECT] Error creating connected account:', stripeError);
+        if (stripeError.type === 'StripeAuthenticationError' || stripeError.code === 'invalid_api_key') {
+          return res.status(500).json({ 
+            error: 'Stripe configuration error',
+            message: 'Invalid or missing Stripe API key. Please check STRIPE_SECRET_KEY in Railway.'
+          });
+        }
+        throw stripeError;
+      }
     }
 
     await prisma.user.update({
