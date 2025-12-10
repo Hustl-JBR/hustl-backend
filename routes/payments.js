@@ -293,7 +293,114 @@ router.get('/jobs/:jobId', async (req, res) => {
   }
 });
 
-// POST /payments/checkout/offer/:offerId - Create Stripe checkout for offer acceptance
+// POST /payments/create-intent/offer/:offerId - Create payment intent for embedded payment
+router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER'), async (req, res) => {
+  try {
+    const { offerId } = req.params;
+    console.log(`[PAYMENT INTENT] User ${req.user.id} creating payment intent for offer ${offerId}`);
+    
+    // Get offer with job details
+    const offer = await prisma.offer.findUnique({
+      where: { id: offerId },
+      include: {
+        job: {
+          include: {
+            customer: {
+              select: { id: true, email: true, name: true },
+            },
+          },
+        },
+        hustler: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!offer) {
+      return res.status(404).json({ error: 'Offer not found' });
+    }
+
+    if (!offer.job) {
+      return res.status(500).json({ error: 'Offer has no associated job' });
+    }
+
+    if (offer.job.customerId !== req.user.id) {
+      return res.status(403).json({ 
+        error: 'Forbidden',
+        message: 'You can only pay for offers on your own jobs'
+      });
+    }
+
+    if (offer.status !== 'PENDING') {
+      return res.status(400).json({ 
+        error: 'Offer is not pending',
+        message: `Offer status is ${offer.status}, must be PENDING`
+      });
+    }
+
+    // Calculate payment amounts
+    const jobAmount = Number(offer.job.amount);
+    const tipPercent = Math.min(parseFloat(req.body.tipPercent || 0), 25);
+    const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50);
+    const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10);
+    const total = jobAmount + tipAmount + customerFee;
+
+    // Validate Stripe key
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return res.status(500).json({ 
+        error: 'Payment system not configured',
+        message: 'Stripe secret key is missing'
+      });
+    }
+
+    const secretKey = process.env.STRIPE_SECRET_KEY.trim().replace(/^["']|["']$/g, '');
+    
+    try {
+      // Create Payment Intent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(total * 100), // Convert to cents
+        currency: 'usd',
+        automatic_payment_methods: {
+          enabled: true, // Enable Apple Pay, Google Pay, etc.
+        },
+        metadata: {
+          offerId: offer.id,
+          jobId: offer.job.id,
+          customerId: req.user.id,
+          hustlerId: offer.hustlerId,
+          amount: jobAmount.toString(),
+          tip: tipAmount.toString(),
+          customerFee: customerFee.toString(),
+        },
+      });
+
+      console.log('[PAYMENT INTENT] Created:', paymentIntent.id);
+      res.json({ 
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id
+      });
+    } catch (stripeError) {
+      console.error('[PAYMENT INTENT] Stripe API error:', stripeError);
+      return res.status(500).json({ 
+        error: 'Payment processing error',
+        message: stripeError.message || 'Failed to create payment intent',
+        type: stripeError.type
+      });
+    }
+  } catch (error) {
+    console.error('Create payment intent error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// POST /payments/checkout/offer/:offerId - Create Stripe checkout for offer acceptance (legacy - redirect method)
 router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), async (req, res) => {
   try {
     const { offerId } = req.params;
@@ -519,6 +626,132 @@ router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), a
       error: errorMessage,
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
+  }
+});
+
+// POST /payments/confirm-payment - Confirm payment and accept offer
+router.post('/confirm-payment', authenticate, requireRole('CUSTOMER'), async (req, res) => {
+  try {
+    const { paymentIntentId, offerId } = req.body;
+    
+    if (!paymentIntentId || !offerId) {
+      return res.status(400).json({ error: 'Missing paymentIntentId or offerId' });
+    }
+
+    // Verify payment intent
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    
+    if (paymentIntent.status !== 'succeeded') {
+      return res.status(400).json({ 
+        error: 'Payment not completed',
+        status: paymentIntent.status 
+      });
+    }
+
+    // Get offer
+    const offer = await prisma.offer.findUnique({
+      where: { id: offerId },
+      include: {
+        job: true,
+        hustler: { select: { id: true, email: true, name: true } },
+      },
+    });
+
+    if (!offer || offer.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Offer not found or already processed' });
+    }
+
+    if (offer.job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Create payment record
+    const jobAmount = Number(paymentIntent.metadata.amount || offer.job.amount);
+    const tipAmount = Number(paymentIntent.metadata.tip || 0);
+    const customerFee = Number(paymentIntent.metadata.customerFee || 0);
+    const total = jobAmount + tipAmount + customerFee;
+
+    const payment = await prisma.payment.create({
+      data: {
+        jobId: offer.job.id,
+        customerId: offer.job.customerId,
+        hustlerId: offer.hustlerId,
+        amount: jobAmount,
+        tip: tipAmount,
+        feeCustomer: customerFee,
+        feeHustler: 0,
+        total,
+        status: 'CAPTURED',
+        providerId: paymentIntentId,
+      },
+    });
+
+    // Accept the offer (call the accept endpoint logic)
+    const generateCode = () => String(Math.floor(1000 + Math.random() * 9000));
+    const startCode = generateCode();
+    const completionCode = generateCode();
+    const startCodeExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    // Update offer status
+    await prisma.offer.update({
+      where: { id: offerId },
+      data: { status: 'ACCEPTED' },
+    });
+
+    // Decline other offers
+    await prisma.offer.updateMany({
+      where: {
+        jobId: offer.job.id,
+        id: { not: offerId },
+        status: 'PENDING',
+      },
+      data: { status: 'DECLINED' },
+    });
+
+    // Update job
+    const jobRequirements = offer.job.requirements || {};
+    const shouldAutoClose = jobRequirements.keepOpenUntilAccepted === true;
+
+    await prisma.job.update({
+      where: { id: offer.job.id },
+      data: {
+        status: 'ASSIGNED',
+        hustlerId: offer.hustlerId,
+        startCode: startCode,
+        startCodeExpiresAt: startCodeExpiresAt,
+        completionCode: completionCode,
+        completionCodeVerified: false,
+        ...(shouldAutoClose ? {
+          requirements: {
+            ...jobRequirements,
+            keepOpenUntilAccepted: false,
+          }
+        } : {}),
+      },
+    });
+
+    // Create thread for messaging
+    await prisma.thread.upsert({
+      where: {
+        userAId_userBId_jobId: {
+          userAId: offer.job.customerId,
+          userBId: offer.hustlerId,
+          jobId: offer.job.id,
+        },
+      },
+      create: {
+        jobId: offer.job.id,
+        userAId: offer.job.customerId,
+        userBId: offer.hustlerId,
+      },
+      update: {},
+    });
+
+    console.log('[PAYMENT CONFIRM] Offer accepted via payment:', offerId);
+    res.json({ success: true, jobId: offer.job.id, offerId: offer.id });
+  } catch (error) {
+    console.error('Confirm payment error:', error);
+    res.status(500).json({ error: 'Internal server error', message: error.message });
   }
 });
 
