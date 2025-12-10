@@ -258,7 +258,24 @@ router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER
     const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10);
     const total = jobAmount + tipAmount + customerFee;
 
-    // Validate Stripe key
+    // Check if we're in test mode (skip Stripe entirely)
+    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+    
+    if (skipStripeCheck) {
+      // Test mode - create fake payment intent without calling Stripe
+      console.log('[PAYMENT INTENT] Test mode - creating fake payment intent');
+      const fakePaymentIntentId = `pi_test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const fakeClientSecret = `${fakePaymentIntentId}_secret_${Math.random().toString(36).substr(2, 9)}`;
+      
+      res.json({ 
+        clientSecret: fakeClientSecret,
+        paymentIntentId: fakePaymentIntentId,
+        isTestMode: true
+      });
+      return;
+    }
+
+    // Real Stripe mode - validate key and create payment intent
     if (!process.env.STRIPE_SECRET_KEY) {
       return res.status(500).json({ 
         error: 'Payment system not configured',
@@ -289,9 +306,7 @@ router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER
 
       console.log('[PAYMENT INTENT] Created:', paymentIntent.id);
       
-      // Check if we're in test mode
-      const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
-      const isTestMode = skipStripeCheck || secretKey.startsWith('sk_test_');
+      const isTestMode = secretKey.startsWith('sk_test_');
       
       res.json({ 
         clientSecret: paymentIntent.client_secret,
@@ -553,7 +568,7 @@ router.post('/confirm-payment', authenticate, requireRole('CUSTOMER'), async (re
       return res.status(400).json({ error: 'Missing paymentIntentId or offerId' });
     }
 
-    // Check if we're in test mode
+    // Check if we're in test mode (skip Stripe entirely)
     const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
     const isTestMode = skipStripeCheck || paymentIntentId.startsWith('pi_test_');
     
@@ -561,7 +576,7 @@ router.post('/confirm-payment', authenticate, requireRole('CUSTOMER'), async (re
     let jobAmount, tipAmount, customerFee;
     
     if (isTestMode) {
-      console.log('[PAYMENT CONFIRM] Test mode - skipping Stripe verification');
+      console.log('[PAYMENT CONFIRM] Test mode - skipping Stripe verification completely');
       // In test mode, get amounts from the offer/job instead
       const testOffer = await prisma.offer.findUnique({
         where: { id: offerId },
@@ -576,7 +591,7 @@ router.post('/confirm-payment', authenticate, requireRole('CUSTOMER'), async (re
       tipAmount = 0;
       customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10);
       
-      // Create fake payment intent object
+      // Create fake payment intent object - always succeeded in test mode
       paymentIntent = {
         id: paymentIntentId,
         status: 'succeeded',
@@ -586,8 +601,9 @@ router.post('/confirm-payment', authenticate, requireRole('CUSTOMER'), async (re
           customerFee: customerFee.toString(),
         }
       };
+      console.log('[PAYMENT CONFIRM] Test mode - payment automatically succeeded');
     } else {
-      // Verify payment intent with Stripe
+      // Real Stripe mode - verify payment intent with Stripe
       try {
         paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
       } catch (stripeError) {
