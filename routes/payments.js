@@ -422,8 +422,41 @@ router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), a
         cancel_url: `${base}/?payment=cancelled`,
       });
 
-    console.log('[PAYMENT] Stripe checkout session created:', session.id);
-    res.json({ url: session.url });
+      console.log('[PAYMENT] Stripe checkout session created:', session.id);
+      res.json({ url: session.url });
+    } catch (stripeError) {
+      console.error('[PAYMENT] Stripe API error:', stripeError);
+      console.error('[PAYMENT] Error type:', stripeError.type);
+      console.error('[PAYMENT] Error message:', stripeError.message);
+      console.error('[PAYMENT] Error code:', stripeError.code);
+      
+      // Provide helpful error messages
+      if (stripeError.type === 'StripeAuthenticationError' || stripeError.code === 'api_key_expired' || stripeError.code === 'invalid_api_key') {
+        return res.status(401).json({ 
+          error: 'Stripe authentication failed',
+          message: 'Invalid or expired Stripe API key.',
+          details: 'The Stripe secret key may be incorrect, expired, or from the wrong environment (test vs live).',
+          hint: 'Please check your STRIPE_SECRET_KEY in Railway environment variables. For test mode, use a key starting with "sk_test_".',
+          testMode: 'For testing, use test keys from https://dashboard.stripe.com/test/apikeys'
+        });
+      }
+      
+      if (stripeError.type === 'StripeInvalidRequestError') {
+        return res.status(400).json({ 
+          error: 'Invalid payment request',
+          message: stripeError.message || 'Invalid request to Stripe',
+          details: stripeError.raw?.message
+        });
+      }
+      
+      // Generic Stripe error
+      return res.status(500).json({ 
+        error: 'Payment processing error',
+        message: stripeError.message || 'Failed to create payment session',
+        type: stripeError.type,
+        code: stripeError.code
+      });
+    }
   } catch (error) {
     console.error('Create checkout session error:', error);
     console.error('Error stack:', error.stack);
