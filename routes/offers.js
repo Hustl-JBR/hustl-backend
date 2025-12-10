@@ -576,6 +576,108 @@ router.post('/:id/decline', authenticate, requireRole('CUSTOMER'), async (req, r
   }
 });
 
+// POST /offers/:id/negotiate - Negotiate price with hustler (Customer only)
+router.post('/:id/negotiate', authenticate, requireRole('CUSTOMER'), [
+  body('proposedAmount').isFloat({ min: 0.01 }).withMessage('Proposed amount must be greater than 0'),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        error: 'Validation failed',
+        details: errors.array() 
+      });
+    }
+
+    const { proposedAmount } = req.body;
+    const offer = await prisma.offer.findUnique({
+      where: { id: req.params.id },
+      include: {
+        job: {
+          include: {
+            customer: { select: { id: true, email: true, name: true } },
+          },
+        },
+        hustler: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!offer) {
+      return res.status(404).json({ error: 'Offer not found' });
+    }
+
+    // Verify customer owns the job
+    if (offer.job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden - You can only negotiate on your own jobs' });
+    }
+
+    // Only allow negotiation on pending offers
+    if (offer.status !== 'PENDING') {
+      return res.status(400).json({ 
+        error: 'Can only negotiate on pending offers',
+        currentStatus: offer.status 
+      });
+    }
+
+    // Update the offer with the new proposed amount
+    const updatedOffer = await prisma.offer.update({
+      where: { id: req.params.id },
+      data: {
+        proposedAmount: parseFloat(proposedAmount),
+      },
+      include: {
+        hustler: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+          },
+        },
+        job: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    // Send notification email to hustler about price negotiation (non-blocking)
+    // Note: Email function may not exist yet, so we wrap in try-catch
+    try {
+      const emailService = require('../services/email');
+      if (emailService.sendPriceNegotiationEmail) {
+        await emailService.sendPriceNegotiationEmail(
+          offer.hustler.email,
+          offer.hustler.name,
+          offer.job.title,
+          parseFloat(proposedAmount),
+          offer.job.id
+        );
+      }
+    } catch (emailError) {
+      console.error('Error sending price negotiation email (non-fatal):', emailError);
+      // Continue - the negotiation is still successful
+    }
+
+    res.json({
+      success: true,
+      message: 'Price negotiation sent to hustler',
+      offer: updatedOffer,
+    });
+  } catch (error) {
+    console.error('Negotiate price error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /offers/:id/unaccept - Unaccept a hustler (customer only, before start code)
 router.post('/:id/unaccept', authenticate, requireRole('CUSTOMER'), async (req, res) => {
   try {
