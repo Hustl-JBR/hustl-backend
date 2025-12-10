@@ -717,19 +717,13 @@ router.post('/confirm-payment', authenticate, requireRole('CUSTOMER'), async (re
         select: { email: true, name: true },
       });
       
-      // Get customer info for email
-      const customer = await prisma.user.findUnique({
-        where: { id: offer.job.customerId },
-        select: { email: true, name: true },
-      });
-      
       // Send email to hustler about job assignment
       await sendJobAssignedEmail(
         offer.hustler.email,
         offer.hustler.name,
         offer.job.title,
         offer.job.id,
-        customer.name || 'Customer'
+        customer?.name || 'Customer'
       );
       
       console.log('[PAYMENT CONFIRM] Email sent to hustler:', offer.hustler.email);
