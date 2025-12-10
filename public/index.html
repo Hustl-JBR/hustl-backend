@@ -10463,7 +10463,9 @@ async function renderJobs(reset = false) {
   // All profile editing is handled through renderBasicInfoEdit function
 
   // ----- RIGHT SIDE: JOBS -----
-  jobsList.innerHTML = "";
+  // jobsList might not exist if we're on Settings tab, that's OK
+  if (jobsList) {
+    jobsList.innerHTML = "";
 
   // A) Jobs you posted
   const postedHeader = document.createElement("div");
