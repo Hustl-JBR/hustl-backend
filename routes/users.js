@@ -75,10 +75,13 @@ router.get('/:id', optionalAuth, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    console.log(`[GET /users/:id] Fetching profile for user ID: ${req.params.id}`);
+    const requestedUserId = req.params.id;
+
     let user;
     try {
       user = await prisma.user.findUnique({
-        where: { id: req.params.id },
+        where: { id: requestedUserId },
         select: {
           id: true,
           name: true,
@@ -99,7 +102,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
       // If gender/bio/tools columns don't exist, query without them
       if (genderError.message && (genderError.message.includes('gender') || genderError.message.includes('tools'))) {
         user = await prisma.user.findUnique({
-          where: { id: req.params.id },
+          where: { id: requestedUserId },
           select: {
             id: true,
             name: true,
@@ -122,9 +125,11 @@ router.get('/:id', optionalAuth, async (req, res) => {
     }
 
     if (!user) {
+      console.log(`[GET /users/:id] User not found for ID: ${requestedUserId}`);
       return res.status(404).json({ error: 'User not found' });
     }
 
+    console.log(`[GET /users/:id] Returning profile for: ${user.name} (ID: ${user.id})`);
     res.json(user);
   } catch (error) {
     console.error('Get user error:', error);

@@ -14027,7 +14027,8 @@ meta.textContent =
           return;
         }
         
-        console.log("🔵 Fetching user profile for:", userId);
+        console.log("🔵 Fetching user profile for applicant ID:", userId);
+        console.log("🔵 API URL:", `${API_BASE}/users/${userId}`);
         const response = await fetch(`${API_BASE}/users/${userId}`, {
           headers: { 
             'Authorization': `Bearer ${token}`,
@@ -14050,6 +14051,7 @@ meta.textContent =
         }
         
         const user = await response.json();
+        console.log("✅ Fetched user profile:", user);
         
         // Fetch user's jobs and reviews
         const jobsResponse = await fetch(`${API_BASE}/jobs/my-jobs`, {
@@ -14057,11 +14059,13 @@ meta.textContent =
         });
         const allJobs = jobsResponse.ok ? await jobsResponse.json() : [];
         const userJobs = allJobs.filter(j => j.hustlerId === user.id && j.status === 'PAID');
+        console.log("✅ User jobs:", userJobs.length);
         
         const reviewsResponse = await fetch(`${API_BASE}/reviews?userId=${userId}`, {
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         const reviews = reviewsResponse.ok ? await reviewsResponse.json() : [];
+        console.log("✅ User reviews:", reviews.length);
         
         const modalOverlay = document.createElement('div');
         modalOverlay.style.cssText = `
@@ -14115,6 +14119,7 @@ meta.textContent =
                   <span style="color: var(--text-muted); font-size: 0.9rem;">(${user.ratingCount || 0} ${(user.ratingCount || 0) === 1 ? 'review' : 'reviews'})</span>
                 </div>
                 ${user.city || user.zip ? `<div style="color: var(--text-muted); font-size: 0.9rem;">📍 ${user.city || ''} ${user.zip || ''}</div>` : ''}
+                ${user.gender ? `<div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem;">${user.gender === 'male' ? '👨' : user.gender === 'female' ? '👩' : '👤'} ${user.gender.charAt(0).toUpperCase() + user.gender.slice(1)}</div>` : ''}
               </div>
               
               <!-- Bio -->
@@ -14157,11 +14162,12 @@ meta.textContent =
                   ${reviews.slice(0, 5).map(review => `
                     <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; border: 1px solid var(--border);">
                       <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                        <span>${'⭐'.repeat(review.rating)}</span>
-                        <span style="font-weight: 600; color: var(--text-main);">${review.rating}/5</span>
+                        <span>${'⭐'.repeat(review.stars || 0)}</span>
+                        <span style="font-weight: 600; color: var(--text-main);">${(review.stars || 0)}/5</span>
                         <span style="color: var(--text-muted); font-size: 0.85rem;">${new Date(review.createdAt).toLocaleDateString()}</span>
+                        ${review.reviewer ? `<span style="color: var(--text-muted); font-size: 0.85rem; margin-left: auto;">- ${review.reviewer.name || 'Anonymous'}</span>` : ''}
                       </div>
-                      ${review.comment ? `<div style="color: var(--text-main); line-height: 1.5;">${review.comment}</div>` : ''}
+                      ${review.text ? `<div style="color: var(--text-main); line-height: 1.5;">${review.text}</div>` : ''}
                     </div>
                   `).join('')}
                 </div>
