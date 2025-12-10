@@ -288,9 +288,15 @@ router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER
       });
 
       console.log('[PAYMENT INTENT] Created:', paymentIntent.id);
+      
+      // Check if we're in test mode
+      const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+      const isTestMode = skipStripeCheck || secretKey.startsWith('sk_test_');
+      
       res.json({ 
         clientSecret: paymentIntent.client_secret,
-        paymentIntentId: paymentIntent.id
+        paymentIntentId: paymentIntent.id,
+        isTestMode: isTestMode
       });
     } catch (stripeError) {
       console.error('[PAYMENT INTENT] Stripe API error:', stripeError);
@@ -1055,4 +1061,5 @@ router.get('/receipts', async (req, res) => {
 });
 
 module.exports = router;
+
 
