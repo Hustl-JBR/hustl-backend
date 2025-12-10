@@ -7,14 +7,37 @@ const Stripe = require('stripe');
 
 // Initialize Stripe with validation
 let stripe;
+let stripeKeyStatus = 'unknown';
+
 if (process.env.STRIPE_SECRET_KEY) {
-  const key = process.env.STRIPE_SECRET_KEY.trim();
+  // Trim and remove quotes that might have been added accidentally
+  const key = process.env.STRIPE_SECRET_KEY.trim().replace(/^["']|["']$/g, '');
+  
+  // Log key info (first 10 chars only for security)
+  console.log('[STRIPE] Key detected. Length:', key.length, 'Starts with:', key.substring(0, 10));
+  
   if (!key.startsWith('sk_test_') && !key.startsWith('sk_live_')) {
-    console.error('[STRIPE] WARNING: STRIPE_SECRET_KEY does not start with sk_test_ or sk_live_. Key starts with:', key.substring(0, 10));
+    console.error('[STRIPE] WARNING: STRIPE_SECRET_KEY does not start with sk_test_ or sk_live_.');
+    console.error('[STRIPE] Key preview (first 15 chars):', key.substring(0, 15));
+    console.error('[STRIPE] This may cause authentication errors. Please check your Railway environment variables.');
+    stripeKeyStatus = 'invalid_format';
+  } else {
+    stripeKeyStatus = key.startsWith('sk_test_') ? 'test' : 'live';
+    console.log('[STRIPE] Key format looks valid. Mode:', stripeKeyStatus.toUpperCase());
   }
-  stripe = new Stripe(key);
+  
+  try {
+    stripe = new Stripe(key);
+    console.log('[STRIPE] Stripe client initialized successfully');
+  } catch (error) {
+    console.error('[STRIPE] Error initializing Stripe:', error.message);
+    stripeKeyStatus = 'initialization_failed';
+    // Still create instance - will fail on API calls
+    stripe = new Stripe(key);
+  }
 } else {
   console.error('[STRIPE] ERROR: STRIPE_SECRET_KEY is not set in environment variables');
+  stripeKeyStatus = 'missing';
   // Create a dummy instance to prevent crashes, but it will fail on API calls
   stripe = new Stripe('sk_test_missing_key_please_set_in_environment');
 }
@@ -379,17 +402,26 @@ router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), a
       });
     }
     
+    // Trim the key to remove any whitespace or quotes
+    const secretKey = process.env.STRIPE_SECRET_KEY.trim().replace(/^["']|["']$/g, '');
+    
     // Check if key looks valid (starts with sk_test_ or sk_live_)
-    const keyPrefix = process.env.STRIPE_SECRET_KEY.substring(0, 7);
-    if (!keyPrefix.startsWith('sk_')) {
-      console.error('[PAYMENT] STRIPE_SECRET_KEY format appears invalid (should start with sk_test_ or sk_live_)');
+    if (!secretKey.startsWith('sk_')) {
+      console.error('[PAYMENT] STRIPE_SECRET_KEY format appears invalid');
+      console.error('[PAYMENT] Key preview (first 15 chars):', secretKey.substring(0, 15));
+      console.error('[PAYMENT] Key length:', secretKey.length);
+      console.error('[PAYMENT] Original key had quotes or spaces?', process.env.STRIPE_SECRET_KEY !== secretKey);
       return res.status(500).json({ 
         error: 'Invalid Stripe configuration',
-        message: 'Stripe secret key format is invalid. Please check your environment variables.'
+        message: 'Stripe secret key format is invalid. Secret keys must start with "sk_test_" (test mode) or "sk_live_" (live mode).',
+        hint: 'Please check your STRIPE_SECRET_KEY in Railway environment variables. Make sure there are no extra spaces or quotes around the key.',
+        testMode: 'For testing, get keys from https://dashboard.stripe.com/test/apikeys'
       });
     }
     
-    console.log('[PAYMENT] Using Stripe key type:', keyPrefix === 'sk_test_' ? 'TEST' : 'LIVE');
+    const isTestMode = secretKey.startsWith('sk_test_');
+    console.log('[PAYMENT] Using Stripe key type:', isTestMode ? 'TEST MODE' : 'LIVE MODE');
+    console.log('[PAYMENT] Key length:', secretKey.length, '(expected: 32-40 characters)');
     
     try {
       const session = await stripe.checkout.sessions.create({
