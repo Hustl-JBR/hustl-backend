@@ -56,6 +56,7 @@ router.get('/', async (req, res) => {
       orderBy: { lastMessageAt: 'desc' },
     });
 
+    res.json(threads);
   } catch (error) {
     console.error('List threads error:', error);
     res.status(500).json({ error: 'Internal server error' });
