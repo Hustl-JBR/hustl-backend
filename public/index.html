@@ -3465,6 +3465,7 @@ heart of Hustl.
     window.activeView = activeView;
     let activeJobsStatusFilter = "all";
     let activeConversationJobId = null;
+    let activeConversationThreadId = null;
     
     // Pagination state
     let currentJobsPage = 1;
@@ -9458,8 +9459,9 @@ async function renderJobs(reset = false) {
    
     /* ---------- Messages view ---------- */
 
-    function renderMessagesView() {
-      const user = getCurrentUser();      const convList = document.getElementById("conversationList");
+    async function renderMessagesView() {
+      const user = getCurrentUser();
+      const convList = document.getElementById("conversationList");
       const convTitle = document.getElementById("conversationTitle");
       const convSummary = document.getElementById("conversationJobSummary");
       const convMessages = document.getElementById("conversationMessages");
@@ -9473,45 +9475,59 @@ async function renderJobs(reset = false) {
         convSummary.textContent = "";
         convMessages.innerHTML = "";
         activeConversationJobId = null;
+        activeConversationThreadId = null;
         return;
       }
 
-      // Jobs that involve this user in ANY way
-      const myJobs = state.jobs.filter(
-        (j) =>
-          j.postedByUserId === user.id ||
-          j.acceptedHustlerId === user.id ||
-          (j.applicants || []).some((a) => a.userId === user.id)
-      );
-      convList.innerHTML = "";
+      // Fetch threads from API (only for ASSIGNED jobs)
+      convList.innerHTML = "<div class='muted'>Loading conversations...</div>";
+      
+      try {
+        const token = localStorage.getItem('hustl_token');
+        if (!token) {
+          throw new Error('No authentication token');
+        }
 
-      if (myJobs.length === 0) {
-        convList.innerHTML =
-          "<div class='muted'>No jobs yet. Post or apply to a job to start messaging.</div>";
-        convTitle.textContent = "Select a conversation";
-        convSummary.textContent = "";
-        convMessages.innerHTML = "";
-        activeConversationJobId = null;
-        return;
-      }
+        const response = await fetch(`${API_BASE}/threads`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
 
-      // If nothing is selected yet, auto-open the first job
-      if (!activeConversationJobId) {
-        activeConversationJobId = myJobs[0].id;
-      }
+        if (!response.ok) {
+          throw new Error('Failed to load conversations');
+        }
 
-      myJobs.forEach((job) => {
-        const otherId =
-          user.id === job.postedByUserId
-            ? job.acceptedHustlerId
-            : job.postedByUserId;
-        const otherUser =
-          otherId && state.users.find((u) => u.id === otherId);
+        const threads = await response.json();
+        convList.innerHTML = "";
+
+        if (threads.length === 0) {
+          convList.innerHTML =
+            "<div class='muted' style='padding: 2rem; text-align: center;'>No conversations yet.<br>Messages will appear here once you have an assigned job.</div>";
+          convTitle.textContent = "Select a conversation";
+          convSummary.textContent = "";
+          convMessages.innerHTML = "";
+          activeConversationJobId = null;
+          activeConversationThreadId = null;
+          return;
+        }
+
+        // If nothing is selected yet, auto-open the first thread
+        if (!activeConversationJobId && threads.length > 0) {
+          activeConversationJobId = threads[0].job.id;
+          activeConversationThreadId = threads[0].id;
+        }
+
+        threads.forEach((thread) => {
+          const otherUser = user.id === thread.userAId ? thread.userB : thread.userA;
+          const job = thread.job;
 
         const item = document.createElement("div");
         item.className = "job-card";
         item.style.cursor = "pointer";
         item.dataset.jobId = job.id;
+        item.dataset.threadId = thread.id;
 
         // Highlight the active conversation
         if (job.id === activeConversationJobId) {
@@ -9623,6 +9639,7 @@ async function renderJobs(reset = false) {
 
         item.addEventListener("click", () => {
           activeConversationJobId = job.id;
+          activeConversationThreadId = thread.id;
           // Re-render list (to update highlight) + right-hand chat
           renderMessagesView();
         });
@@ -9631,68 +9648,117 @@ async function renderJobs(reset = false) {
       });
 
       // Finally, render the messages for the active conversation
-      renderConversation();
+      await renderConversation();
+      
+      // Initialize message input handler
+      if (typeof initConversationInput === 'function') {
+        initConversationInput();
+      }
+      } catch (error) {
+        console.error("Error loading conversations:", error);
+        convList.innerHTML = "<div class='muted' style='padding: 2rem; text-align: center;'>Error loading conversations. Please try again.</div>";
+        convTitle.textContent = "Select a conversation";
+        convSummary.textContent = "";
+        convMessages.innerHTML = "";
+      }
     }
 
 
 
-    function renderConversation() {
+    async function renderConversation() {
       const user = getCurrentUser();
-      const job = state.jobs.find((j) => j.id === activeConversationJobId);
       const convTitle = document.getElementById("conversationTitle");
       const convSummary = document.getElementById("conversationJobSummary");
       const convMessages = document.getElementById("conversationMessages");
-      if (!job || !user) {
+      
+      if (!activeConversationThreadId || !user) {
         convTitle.textContent = "Select a conversation";
         convSummary.textContent = "";
-        convMessages.innerHTML = "";
+        convMessages.innerHTML = "<div class='empty-chat' style='text-align: center; padding: 3rem; color: var(--text-muted);'><div style='font-size: 3rem; margin-bottom: 1rem;'>💬</div><div style='font-weight: 600; margin-bottom: 0.5rem;'>No conversation selected</div><div style='font-size: 0.9rem;'>Pick a job from the list to start chatting</div></div>";
         return;
       }
 
-      convTitle.textContent = job.title;
-      convSummary.textContent =
-        (job.category === "moving"
-          ? "🚚 moving / hauling · "
-          : job.category === "yard"
-          ? "🌿 yard · "
-          : job.category === "cleaning"
-          ? "🧹 cleaning · "
-          : job.category === "furniture"
-          ? "🛠 furniture · "
-          : "⭐ other · ") +
-        (job.paymentType === "flat"
-          ? formatMoney(job.flatAmount || 0) + " flat"
-          : formatMoney(job.hourlyRate || 0) +
-            "/hr · max " +
-            (job.maxHours || 0) +
-            "h");
-      convMessages.innerHTML = "";
-      job.chatMessages = job.chatMessages || [];
-      job.chatMessages.forEach((m) => {
-        const bubble = document.createElement("div");
-        bubble.className =
-          "chat-msg " + (m.fromUserId === user.id ? "me" : "them");
-        bubble.textContent = m.text;
-        convMessages.appendChild(bubble);
-        const meta = document.createElement("div");
-        meta.className = "chat-meta";
-
-        const sender = state.users.find((u) => u.id === m.fromUserId);
-        meta.innerHTML = "";
-        if (sender) {
-          const link = document.createElement("span");
-          link.className = "linkish";
-          link.textContent = sender.name || "Unknown";
-          link.addEventListener("click", () => openUserProfile(sender.id));
-          meta.appendChild(link);
-        } else {
-          meta.append("Unknown");
+      // Fetch messages from API
+      convMessages.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Loading messages...</div>";
+      
+      try {
+        const token = localStorage.getItem('hustl_token');
+        if (!token) {
+          throw new Error('No authentication token');
         }
-        meta.append(" · " + timeAgo(m.createdAt));
 
-        convMessages.appendChild(meta);
-      });
-      convMessages.scrollTop = convMessages.scrollHeight;    }
+        const response = await fetch(`${API_BASE}/threads/${activeConversationThreadId}/messages`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to load messages');
+        }
+
+        const messages = await response.json();
+        
+        // Also fetch thread details for job info
+        const threadResponse = await fetch(`${API_BASE}/threads`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const threads = threadResponse.ok ? await threadResponse.json() : [];
+        const thread = threads.find(t => t.id === activeConversationThreadId);
+        
+        if (thread) {
+          convTitle.textContent = thread.job.title;
+          convSummary.textContent = `Job ID: ${thread.job.id} · Status: ${thread.job.status}`;
+        }
+
+        convMessages.innerHTML = "";
+        
+        if (messages.length === 0) {
+          convMessages.innerHTML = "<div style='text-align: center; padding: 3rem; color: var(--text-muted);'><div style='font-size: 2rem; margin-bottom: 1rem;'>💬</div><div>No messages yet. Start the conversation!</div></div>";
+          convMessages.scrollTop = convMessages.scrollHeight;
+          return;
+        }
+
+        messages.forEach((m) => {
+          const bubble = document.createElement("div");
+          bubble.className = "chat-msg " + (m.senderId === user.id ? "me" : "them");
+          bubble.textContent = m.body;
+          convMessages.appendChild(bubble);
+          
+          const meta = document.createElement("div");
+          meta.className = "chat-meta";
+          meta.innerHTML = "";
+          
+          if (m.sender) {
+            const link = document.createElement("span");
+            link.className = "linkish";
+            link.textContent = m.sender.name || "Unknown";
+            link.style.cursor = "pointer";
+            link.addEventListener("click", () => {
+              if (typeof showApplicantProfileModal === 'function') {
+                showApplicantProfileModal(m.senderId);
+              }
+            });
+            meta.appendChild(link);
+          } else {
+            meta.append("Unknown");
+          }
+          meta.append(" · " + timeAgo(m.createdAt));
+
+          convMessages.appendChild(meta);
+        });
+        
+        convMessages.scrollTop = convMessages.scrollHeight;
+      } catch (error) {
+        console.error("Error loading messages:", error);
+        convMessages.innerHTML = "<div style='text-align: center; padding: 2rem; color: #dc2626;'>Error loading messages. Please try again.</div>";
+      }
+    }
 
     function initConversationInput() {
       const sendBtn = document.getElementById("conversationSendButton");

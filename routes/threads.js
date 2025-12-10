@@ -8,14 +8,23 @@ const router = express.Router();
 // All routes require authentication
 router.use(authenticate);
 
-// GET /threads - List user's threads
+// GET /threads - List user's threads (only for ASSIGNED jobs)
 router.get('/', async (req, res) => {
   try {
     const threads = await prisma.thread.findMany({
       where: {
+        AND: [
+          {
         OR: [
           { userAId: req.user.id },
           { userBId: req.user.id },
+            ],
+          },
+          {
+            job: {
+              status: 'ASSIGNED', // Only show messages for assigned jobs
+            },
+          },
         ],
       },
       include: {
