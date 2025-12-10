@@ -11558,7 +11558,7 @@ meta.textContent =
                   </button>
                   ${job.status === 'OPEN' ? `
                   <button class="btn btn-ghost editJobBtn" data-job-id="${job.id}" style="padding: 1rem 1.5rem; font-weight: 600; border-radius: 10px;">✏️ Edit</button>
-                  <button class="btn btn-ghost closeJobBtn" data-job-id="${job.id}" style="padding: 1rem 1.5rem; font-weight: 600; border-radius: 10px; color: #dc2626; border-color: #fecaca;">🚫 Close</button>
+                  <button class="btn btn-ghost cancelJobBtn" data-job-id="${job.id}" style="padding: 1rem 1.5rem; font-weight: 600; border-radius: 10px; color: #dc2626; border-color: #fecaca;">🚫 Cancel</button>
                   ` : ''}
                 </div>
               </div>
@@ -11575,10 +11575,10 @@ meta.textContent =
               showToast("Edit job feature coming soon");
             });
             
-            jobCard.querySelector('.closeJobBtn')?.addEventListener('click', async (e) => {
+            jobCard.querySelector('.cancelJobBtn')?.addEventListener('click', async (e) => {
               e.stopPropagation();
-              if (confirm('Are you sure you want to close this job? It will no longer accept new applicants.')) {
-                await closeJob(job.id);
+              if (confirm('Are you sure you want to cancel this job? It will no longer accept new applicants.')) {
+                await cancelJob(job.id);
                 loadPostedJobs();
               }
             });
@@ -12399,7 +12399,7 @@ meta.textContent =
           btn.addEventListener('click', async (e) => {
             e.stopPropagation();
             const offerId = btn.dataset.offerId;
-            await declineOffer(offerId, modalOverlay);
+            await declineOffer(offerId, jobId, modalOverlay);
           });
         });
         
@@ -13068,7 +13068,7 @@ meta.textContent =
                           
                           <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
                             <button class="btn btn-primary acceptApplicantBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">✅ Accept</button>
-                            <button class="btn btn-ghost declineApplicantBtn" data-offer-id="${offer.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; color: #dc2626; border-color: #fecaca;">❌ Decline</button>
+                            <button class="btn btn-ghost declineApplicantBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; color: #dc2626; border-color: #fecaca;">❌ Decline</button>
                             <button class="btn btn-ghost negotiatePriceBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem; ${hasNegotiation ? 'border: 2px solid var(--primary); background: var(--primary-soft);' : ''}">${hasNegotiation ? '💰 Edit Negotiation' : '💰 Negotiate Price'}</button>
                             <button class="btn btn-ghost viewApplicantProfileBtn" data-user-id="${hustler.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">👤 View Profile</button>
                           </div>
@@ -13082,7 +13082,16 @@ meta.textContent =
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 2rem; padding-top: 2rem; border-top: 2px solid var(--border);">
                   ${job.status === 'OPEN' ? `
                   <button class="btn btn-ghost editJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">✏️ Edit Job</button>
-                  <button class="btn btn-ghost closeJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; color: #dc2626; border-color: #fecaca; font-weight: 600;">🚫 Close Job</button>
+                  <button class="btn btn-ghost cancelJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; color: #dc2626; border-color: #fecaca; font-weight: 600;">🚫 Cancel Job</button>
+                  <div style="width: 100%; margin-top: 1rem; padding: 1rem; background: #f9fafb; border-radius: 8px;">
+                    <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+                      <input type="checkbox" id="keepOpenUntilAccepted" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+                      <span style="font-size: 0.95rem; color: var(--text-main); font-weight: 600;">✓ Keep open until accepted hustler</span>
+                    </label>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; margin-left: 2rem;">
+                      Job will automatically close once you accept an applicant
+                    </div>
+                  </div>
                   ` : ''}
                   ${pendingOffers.length === 0 && job.status === 'OPEN' ? `
                   <button class="btn btn-primary repostJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">🔄 Repost Job</button>
@@ -13221,7 +13230,9 @@ meta.textContent =
                 ${isHustler ? `
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 2rem;">
                   <button class="btn btn-primary messageCustomerBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">💬 Message Customer</button>
-                  ${job.status === 'ASSIGNED' && !job.startCodeVerified ? `<button class="btn btn-ghost cancelApplicationBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; color: #dc2626; border-color: #fecaca;">Cancel Application</button>` : ''}
+                  ${job.status === 'ASSIGNED' && !job.startCodeVerified ? `
+                  <button class="btn btn-ghost cancelApplicationBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; color: #dc2626; border-color: #fecaca; font-weight: 600;">🚫 Cancel - Can't Do Job</button>
+                  ` : ''}
                 </div>
                 ` : ''}
               </div>
@@ -13259,7 +13270,10 @@ meta.textContent =
             btn.addEventListener('click', async (e) => {
               e.stopPropagation();
               const offerId = btn.dataset.offerId;
-              await declineOffer(offerId, modalOverlay);
+              const jobId = btn.dataset.jobId || job.id;
+              if (confirm('Are you sure you want to decline this applicant? They will be removed from the applicants list.')) {
+                await declineOffer(offerId, jobId, modalOverlay);
+              }
             });
           });
           
@@ -13290,10 +13304,11 @@ meta.textContent =
             showToast("Edit job feature coming soon");
           });
           
-          modalOverlay.querySelector('.closeJobBtn')?.addEventListener('click', async (e) => {
+          modalOverlay.querySelector('.cancelJobBtn')?.addEventListener('click', async (e) => {
             e.stopPropagation();
-            if (confirm('Are you sure you want to close this job? It will no longer accept new applicants.')) {
-              await closeJob(job.id);
+            const keepOpenUntilAccepted = modalOverlay.querySelector('#keepOpenUntilAccepted')?.checked || false;
+            if (confirm(`Are you sure you want to cancel this job?${keepOpenUntilAccepted ? ' (Job will stay open until a hustler is accepted)' : ''}`)) {
+              await cancelJob(job.id, keepOpenUntilAccepted);
               document.body.removeChild(modalOverlay);
               loadPostedJobs();
             }
@@ -13345,7 +13360,7 @@ meta.textContent =
           // Cancel application
           modalOverlay.querySelector('.cancelApplicationBtn')?.addEventListener('click', async (e) => {
             e.stopPropagation();
-            if (confirm('Are you sure you want to cancel your application? This cannot be undone.')) {
+            if (confirm('Are you sure you want to cancel this job? You cannot do it anymore. The customer will be notified and the job will be reopened for other applicants. This action cannot be undone.')) {
               await cancelApplication(job.id);
               document.body.removeChild(modalOverlay);
               loadActiveJobs();
@@ -13626,7 +13641,7 @@ meta.textContent =
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
           const offerId = btn.dataset.offerId;
-          await declineOffer(offerId, overlay);
+          await declineOffer(offerId, jobId, overlay);
         });
       });
     };
@@ -13761,7 +13776,7 @@ meta.textContent =
     }
     
     // Decline Offer helper
-    async function declineOffer(offerId, modalOverlay) {
+    async function declineOffer(offerId, jobId, modalOverlay) {
       try {
         const token = localStorage.getItem('hustl_token');
         const response = await fetch(`${API_BASE}/offers/${offerId}/decline`, {
@@ -13776,7 +13791,13 @@ meta.textContent =
           throw new Error('Failed to decline offer');
         }
         
-        showToast("Applicant declined.");
+        showToast("✅ Applicant declined and removed from view.");
+        
+        // Refresh the modal to remove the declined offer
+        if (modalOverlay && jobId) {
+          document.body.removeChild(modalOverlay);
+          showViewJobModal(jobId, 'customer');
+        }
         
         // Remove the offer from the modal
         const offerCard = document.querySelector(`[data-offer-id="${offerId}"]`)?.closest('div[style*="border: 1px solid"]');
@@ -13956,29 +13977,34 @@ meta.textContent =
       }
     }
     
-    // Close Job
-    async function closeJob(jobId) {
+    // Cancel Job
+    async function cancelJob(jobId, keepOpenUntilAccepted = false) {
       try {
         const token = localStorage.getItem('hustl_token');
-        const response = await fetch(`${API_BASE}/jobs/${jobId}/close`, {
+        const response = await fetch(`${API_BASE}/jobs/${jobId}/cancel`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify({ keepOpenUntilAccepted })
         });
         
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Failed to close job');
+          throw new Error(errorData.error || 'Failed to cancel job');
         }
         
-        showToast("✅ Job closed. It will no longer accept new applicants.");
+        if (keepOpenUntilAccepted) {
+          showToast("✅ Job settings updated. Job will close automatically when you accept an applicant.");
+        } else {
+          showToast("✅ Job cancelled. It will no longer accept new applicants.");
+        }
         // Refresh the list
         loadPostedJobs();
       } catch (error) {
-        console.error("Error closing job:", error);
-        showToast(error.message || "Error closing job. Please try again.");
+        console.error("Error cancelling job:", error);
+        showToast(error.message || "Error cancelling job. Please try again.");
       }
     }
     
@@ -14016,27 +14042,36 @@ meta.textContent =
       }
     }
     
-    // Cancel Application (Hustler)
-    async function cancelApplication(jobId) {
+    // Cancel Application (Hustler) - For accepted hustlers to cancel after being assigned
+    async function cancelApplication(offerIdOrJobId, isOfferId = false) {
       try {
         const token = localStorage.getItem('hustl_token');
-        // First find the offer for this job
-        const offersResponse = await fetch(`${API_BASE}/offers/${jobId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
         
-        if (!offersResponse.ok) throw new Error('Failed to fetch offers');
-        const offers = await offersResponse.json();
-        const user = await window.hustlAPI.auth.getCurrentUser();
-        const myOffer = offers.find(o => o.hustlerId === user.id && o.status === 'ACCEPTED');
+        let offerId = offerIdOrJobId;
         
-        if (!myOffer) {
-          showToast("No active application found for this job.");
-          return;
+        // If jobId was passed, find the offer
+        if (!isOfferId) {
+          const jobId = offerIdOrJobId;
+          // First find the offer for this job
+          const offersResponse = await fetch(`${API_BASE}/offers/${jobId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (!offersResponse.ok) throw new Error('Failed to fetch offers');
+          const offers = await offersResponse.json();
+          const user = await window.hustlAPI.auth.getCurrentUser();
+          const myOffer = offers.find(o => o.hustlerId === user.id && o.status === 'ACCEPTED');
+          
+          if (!myOffer) {
+            showToast("No active application found for this job.");
+            return;
+          }
+          
+          offerId = myOffer.id;
         }
         
-        // Unaccept the offer (which will cancel the application)
-        const response = await fetch(`${API_BASE}/offers/${myOffer.id}/unaccept`, {
+        // Use the new hustler-cancel endpoint
+        const response = await fetch(`${API_BASE}/offers/${offerId}/hustler-cancel`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -14044,12 +14079,21 @@ meta.textContent =
           }
         });
         
-        if (!response.ok) throw new Error('Failed to cancel application');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to cancel application');
+        }
         
-        showToast("Application cancelled. The job is now open again.");
+        const result = await response.json();
+        showToast("✅ You have cancelled this job. The customer has been notified and the job is now open for other applicants.");
+        
+        // Refresh the view
+        if (activeView === 'manage-jobs') {
+          loadActiveJobs();
+        }
       } catch (error) {
         console.error("Error cancelling application:", error);
-        showToast("Error cancelling application. Please try again.");
+        showToast(error.message || "Error cancelling application. Please try again.");
       }
     }
     

@@ -766,6 +766,8 @@ router.get('/:id', optionalAuth, async (req, res) => {
 // POST /jobs/:id/cancel
 router.post('/:id/cancel', authenticate, requireRole('CUSTOMER'), async (req, res) => {
   try {
+    const { keepOpenUntilAccepted } = req.body || {};
+    
     const job = await prisma.job.findUnique({
       where: { id: req.params.id },
       include: { 
@@ -789,6 +791,26 @@ router.post('/:id/cancel', authenticate, requireRole('CUSTOMER'), async (req, re
 
     if (job.status === 'CANCELLED') {
       return res.status(400).json({ error: 'Job already cancelled' });
+    }
+
+    // If keepOpenUntilAccepted is true, just update the job requirements to store this preference
+    // Don't actually cancel - job will auto-close when accepted
+    if (keepOpenUntilAccepted === true) {
+      const requirements = job.requirements || {};
+      requirements.keepOpenUntilAccepted = true;
+      
+      const updated = await prisma.job.update({
+        where: { id: req.params.id },
+        data: {
+          requirements: requirements,
+        },
+      });
+      
+      return res.json({
+        ...updated,
+        keepOpenUntilAccepted: true,
+        message: 'Job will automatically close when you accept an applicant',
+      });
     }
 
     // Protection: Can't cancel after job date has passed (prevents last-minute cancellations)

@@ -476,6 +476,10 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     const startCodeExpiresAt = new Date();
     startCodeExpiresAt.setHours(startCodeExpiresAt.getHours() + 78);
 
+    // Check if job has keepOpenUntilAccepted setting - if so, close it now that we accepted
+    const jobRequirements = offer.job.requirements || {};
+    const shouldAutoClose = jobRequirements.keepOpenUntilAccepted === true;
+    
     // Update job with hustler and verification codes
     const job = await prisma.job.update({
       where: { id: offer.job.id },
@@ -485,7 +489,13 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
         startCode,
         startCodeExpiresAt,
         completionCode,
-        // Update payment with hustler info
+        // If keepOpenUntilAccepted was set, job auto-closes now (status stays ASSIGNED, but we clear the flag)
+        ...(shouldAutoClose ? {
+          requirements: {
+            ...jobRequirements,
+            keepOpenUntilAccepted: false, // Clear the flag
+          }
+        } : {}),
       },
     });
 
@@ -674,6 +684,107 @@ router.post('/:id/negotiate', authenticate, requireRole('CUSTOMER'), [
     });
   } catch (error) {
     console.error('Negotiate price error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /offers/:id/hustler-cancel - Hustler cancels after being accepted (HUSTLER only)
+router.post('/:id/hustler-cancel', authenticate, requireRole('HUSTLER'), async (req, res) => {
+  try {
+    const offer = await prisma.offer.findUnique({
+      where: { id: req.params.id },
+      include: {
+        job: {
+          include: {
+            customer: { select: { id: true, email: true, name: true } },
+            payment: true,
+          },
+        },
+        hustler: { select: { id: true, email: true, name: true } },
+      },
+    });
+
+    if (!offer) {
+      return res.status(404).json({ error: 'Offer not found' });
+    }
+
+    // Verify hustler owns this offer
+    if (offer.hustlerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden - You can only cancel your own offers' });
+    }
+
+    // Only allow cancellation if offer is ACCEPTED and job is ASSIGNED
+    if (offer.status !== 'ACCEPTED') {
+      return res.status(400).json({ 
+        error: 'Can only cancel accepted offers',
+        currentStatus: offer.status 
+      });
+    }
+
+    if (offer.job.status !== 'ASSIGNED') {
+      return res.status(400).json({ 
+        error: 'Can only cancel if job is assigned to you',
+        jobStatus: offer.job.status 
+      });
+    }
+
+    // Check if start code has been used - cannot cancel if job has started
+    if (offer.job.startCodeVerified) {
+      return res.status(400).json({ 
+        error: 'Cannot cancel: Job has already started. Please contact support if you need to cancel an active job.',
+        jobStarted: true
+      });
+    }
+
+    // Update offer status to DECLINED
+    await prisma.offer.update({
+      where: { id: req.params.id },
+      data: { status: 'DECLINED' }
+    });
+
+    // Reset job back to OPEN status, clear hustler assignment
+    const updatedJob = await prisma.job.update({
+      where: { id: offer.job.id },
+      data: {
+        status: 'OPEN',
+        hustlerId: null,
+        startCode: null,
+        startCodeExpiresAt: null,
+        completionCode: null,
+        startCodeVerified: false,
+        completionCodeVerified: false,
+      },
+    });
+
+    // Payment stays in hold (customer can accept another hustler)
+
+    // Send notification email to customer (non-blocking)
+    try {
+      const emailService = require('../services/email');
+      if (emailService.sendHustlerCancelledEmail) {
+        await emailService.sendHustlerCancelledEmail(
+          offer.job.customer.email,
+          offer.job.customer.name,
+          offer.job.title,
+          offer.hustler.name,
+          offer.job.id
+        );
+      }
+    } catch (emailError) {
+      console.error('Error sending cancellation email (non-fatal):', emailError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Job cancelled successfully. The job is now open for other applicants.',
+      job: updatedJob,
+      offer: {
+        id: offer.id,
+        status: 'DECLINED',
+      },
+    });
+  } catch (error) {
+    console.error('Hustler cancel error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
