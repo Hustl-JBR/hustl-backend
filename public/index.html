@@ -9917,10 +9917,10 @@ async function renderJobs(reset = false) {
             // Upload photo if new one selected
             if (newPhotoFile) {
               const formData = new FormData();
-              formData.append('file', newPhotoFile);
+              formData.append('photo', newPhotoFile);
               
               const token = localStorage.getItem('hustl_token');
-              const uploadResponse = await fetch(`${API_BASE}/r2/upload`, {
+              const uploadResponse = await fetch(`${API_BASE}/users/me/photo`, {
                 method: 'POST',
                 headers: token ? { 'Authorization': `Bearer ${token}` } : {},
                 body: formData
@@ -9928,9 +9928,10 @@ async function renderJobs(reset = false) {
               
               if (uploadResponse.ok) {
                 const uploadData = await uploadResponse.json();
-                updates.photoUrl = uploadData.publicUrl || uploadData.url;
+                updates.photoUrl = uploadData.photoUrl || uploadData.user?.photoUrl;
               } else {
-                throw new Error("Failed to upload photo");
+                const errorData = await uploadResponse.json().catch(() => ({}));
+                throw new Error(errorData.error || "Failed to upload photo");
               }
             }
             
@@ -14072,8 +14073,8 @@ meta.textContent =
     
     async function initializePaymentModal(publishableKey, offerId, jobId, parentModal, token) {
       try {
-        // Initialize Stripe
-        const stripe = Stripe(publishableKey);
+        // Check if we're in test mode (no Stripe key or SKIP_STRIPE_CHECK)
+        const isTestMode = !publishableKey || publishableKey.includes('test') || publishableKey.length < 10;
         
         // Create payment intent
         const intentRes = await fetch(`${API_BASE}/payments/create-intent/offer/${offerId}`, {
@@ -14089,7 +14090,8 @@ meta.textContent =
           throw new Error(error.message || error.error || 'Failed to create payment');
         }
         
-        const { clientSecret, paymentIntentId } = await intentRes.json();
+        const { clientSecret, paymentIntentId, isTestMode: backendTestMode } = await intentRes.json();
+        const useTestMode = isTestMode || backendTestMode || !clientSecret || clientSecret.includes('test');
         
         // Create payment modal
         const paymentModal = document.createElement('div');
@@ -14134,16 +14136,29 @@ meta.textContent =
             
             <div style="padding: 2rem;">
               <h3 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">💳 Complete Payment</h3>
+              ${useTestMode ? `
+              <div style="margin-bottom: 1.5rem; padding: 1.5rem; background: #fef3c7; border: 2px solid #fbbf24; border-radius: 12px;">
+                <div style="font-weight: 700; color: #92400e; margin-bottom: 0.5rem;">🧪 TEST MODE</div>
+                <div style="color: #78350f; font-size: 0.9rem; line-height: 1.6;">
+                  This is a test payment. Click "Simulate Payment" below to see how the payment flow works without actually processing a payment.
+                </div>
+              </div>
+              <div id="payment-element" style="margin-bottom: 1.5rem; padding: 2rem; background: #f9fafb; border: 2px dashed #d1d5db; border-radius: 12px; text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">💳</div>
+                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">Stripe Payment Form</div>
+                <div style="color: var(--text-muted); font-size: 0.9rem;">In production, this would show the Stripe payment form with card, Apple Pay, and Google Pay options.</div>
+              </div>
+              ` : `
               <div style="margin-bottom: 1.5rem; color: var(--text-muted); font-size: 0.9rem;">
                 Secure payment powered by Stripe. Supports card, Apple Pay, and Google Pay.
               </div>
-              
               <div id="payment-element" style="margin-bottom: 1.5rem;">
                 <!-- Stripe Payment Element will be inserted here -->
               </div>
+              `}
               
               <button id="submit-payment" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1rem; font-weight: 600;">
-                Pay Now
+                ${useTestMode ? '✅ Simulate Payment' : 'Pay Now'}
               </button>
               
               <div id="payment-error" style="margin-top: 1rem; color: #dc2626; font-size: 0.9rem; display: none;"></div>
@@ -14164,12 +14179,16 @@ meta.textContent =
           }
         });
         
-        // Initialize Payment Element
-        const elements = stripe.elements({ clientSecret });
-        const paymentElement = elements.create('payment', {
-          layout: 'tabs'
-        });
-        paymentElement.mount('#payment-element');
+        // Initialize Payment Element (only if not in test mode)
+        let elements, paymentElement;
+        if (!useTestMode && publishableKey && typeof Stripe !== 'undefined') {
+          const stripe = Stripe(publishableKey);
+          elements = stripe.elements({ clientSecret });
+          paymentElement = elements.create('payment', {
+            layout: 'tabs'
+          });
+          paymentElement.mount('#payment-element');
+        }
         
         // Handle form submission
         const submitButton = paymentModal.querySelector('#submit-payment');
@@ -14182,62 +14201,71 @@ meta.textContent =
           
           isProcessing = true;
           submitButton.disabled = true;
-          submitButton.textContent = 'Processing...';
+          submitButton.textContent = useTestMode ? 'Simulating...' : 'Processing...';
           errorDiv.style.display = 'none';
           
           try {
-            const { error: confirmError } = await stripe.confirmPayment({
-              elements,
-              confirmParams: {
-                return_url: `${window.location.origin}${window.location.pathname}?payment=success&offerId=${offerId}&jobId=${jobId}`,
-              },
-              redirect: 'if_required'
-            });
-            
-            if (confirmError) {
-              errorDiv.textContent = confirmError.message || 'Payment failed. Please try again.';
-              errorDiv.style.display = 'block';
-              submitButton.disabled = false;
-              submitButton.textContent = 'Pay Now';
-              isProcessing = false;
-            } else {
-              // Payment succeeded (no redirect needed)
-              submitButton.textContent = 'Processing payment...';
+            if (useTestMode) {
+              // Test mode - simulate payment with a delay
+              await new Promise(resolve => setTimeout(resolve, 1500));
               
-              // Confirm payment on backend
-              const confirmRes = await fetch(`${API_BASE}/payments/confirm-payment`, {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
+              // Confirm payment on backend (will use test mode)
+              submitButton.textContent = 'Processing payment...';
+            } else {
+              // Real payment - confirm with Stripe
+              const { error: confirmError } = await stripe.confirmPayment({
+                elements,
+                confirmParams: {
+                  return_url: `${window.location.origin}${window.location.pathname}?payment=success&offerId=${offerId}&jobId=${jobId}`,
                 },
-                body: JSON.stringify({ paymentIntentId, offerId })
+                redirect: 'if_required'
               });
               
-              if (!confirmRes.ok) {
-                throw new Error('Failed to confirm payment');
+              if (confirmError) {
+                errorDiv.textContent = confirmError.message || 'Payment failed. Please try again.';
+                errorDiv.style.display = 'block';
+                submitButton.disabled = false;
+                submitButton.textContent = 'Pay Now';
+                isProcessing = false;
+                return;
               }
               
-              showToast("✅ Payment successful! Hustler accepted.");
-              
-              // Close modals
-              document.body.removeChild(paymentModal);
-              if (parentModal && parentModal.parentNode) {
-                document.body.removeChild(parentModal);
-              }
-              
-              // Refresh job lists
-              if (activeView === 'manage-jobs') {
-                loadPostedJobs();
-                loadActiveJobs();
-              }
+              submitButton.textContent = 'Processing payment...';
+            }
+            
+            // Confirm payment on backend
+            const confirmRes = await fetch(`${API_BASE}/payments/confirm-payment`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ paymentIntentId, offerId })
+            });
+            
+            if (!confirmRes.ok) {
+              throw new Error('Failed to confirm payment');
+            }
+            
+            showToast("✅ Payment successful! Hustler accepted.");
+            
+            // Close modals
+            document.body.removeChild(paymentModal);
+            if (parentModal && parentModal.parentNode) {
+              document.body.removeChild(parentModal);
+            }
+            
+            // Refresh job lists
+            if (activeView === 'manage-jobs') {
+              loadPostedJobs();
+              loadActiveJobs();
             }
           } catch (error) {
             console.error("Payment error:", error);
             errorDiv.textContent = error.message || 'Payment failed. Please try again.';
             errorDiv.style.display = 'block';
             submitButton.disabled = false;
-            submitButton.textContent = 'Pay Now';
+            submitButton.textContent = useTestMode ? '✅ Simulate Payment' : 'Pay Now';
             isProcessing = false;
           }
         });
@@ -14278,7 +14306,7 @@ meta.textContent =
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ keepOpenUntilAccepted })
+          body: JSON.stringify({ keepOpenUntilAccepted, justUpdatingSetting })
         });
         
         if (!response.ok) {

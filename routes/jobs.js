@@ -793,7 +793,38 @@ router.post('/:id/cancel', authenticate, requireRole('CUSTOMER'), async (req, re
       return res.status(400).json({ error: 'Job already cancelled' });
     }
 
-    // If keepOpenUntilAccepted is true, just update the job requirements to store this preference
+    // Check if this is just updating the setting (not actually canceling)
+    const justUpdatingSetting = req.body.justUpdatingSetting === true;
+    
+    // If justUpdatingSetting is true, update the requirements without canceling
+    if (justUpdatingSetting) {
+      const requirements = job.requirements || {};
+      
+      if (keepOpenUntilAccepted === true) {
+        // Setting it to true
+        requirements.keepOpenUntilAccepted = true;
+      } else {
+        // Setting it to false - remove the setting
+        delete requirements.keepOpenUntilAccepted;
+      }
+      
+      const updated = await prisma.job.update({
+        where: { id: req.params.id },
+        data: {
+          requirements: requirements,
+        },
+      });
+      
+      return res.json({
+        ...updated,
+        keepOpenUntilAccepted: keepOpenUntilAccepted === true,
+        message: keepOpenUntilAccepted 
+          ? 'Job will automatically close when you assign a hustler'
+          : 'Setting removed. Job will stay open until manually cancelled.',
+      });
+    }
+    
+    // If keepOpenUntilAccepted is true (but not justUpdatingSetting), just update the job requirements
     // Don't actually cancel - job will auto-close when hustler is assigned
     if (keepOpenUntilAccepted === true) {
       const requirements = job.requirements || {};
