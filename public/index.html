@@ -5021,6 +5021,7 @@ async function renderJobs(reset = false) {
   
   // Fetch user's applied jobs to show "Applied" indicator
   let userAppliedJobIds = new Set();
+  let userAppliedOffers = new Map(); // jobId -> offer object (for status checking)
   try {
     const token = localStorage.getItem('hustl_token');
     const user = await window.hustlAPI?.auth?.getCurrentUser();
@@ -5030,8 +5031,19 @@ async function renderJobs(reset = false) {
       });
       if (offersResponse.ok) {
         const offers = await offersResponse.json();
-        userAppliedJobIds = new Set(offers.map(offer => offer.jobId).filter(Boolean));
-        console.log("🔵 User has applied to jobs:", Array.from(userAppliedJobIds));
+        // Filter out DECLINED offers - only track PENDING and ACCEPTED
+        const relevantOffers = offers.filter(offer => 
+          offer.status === 'PENDING' || 
+          (offer.status === 'ACCEPTED' && offer.job && offer.job.status === 'ASSIGNED' && !offer.job.startCodeVerified)
+        );
+        userAppliedJobIds = new Set(relevantOffers.map(offer => offer.jobId).filter(Boolean));
+        // Store offer details for status checking
+        relevantOffers.forEach(offer => {
+          if (offer.jobId) {
+            userAppliedOffers.set(offer.jobId, offer);
+          }
+        });
+        console.log("🔵 User has applied to jobs:", Array.from(userAppliedJobIds), "Total offers:", relevantOffers.length);
       }
     }
   } catch (e) {
@@ -5161,18 +5173,45 @@ async function renderJobs(reset = false) {
         if (!currentUser) return j.status === "OPEN" || j.status === "open";
         // Show jobs user posted, applied to, accepted, or completed
         const isPoster = j.postedByUserId === currentUser.id;
-        const hasApplied = j.offers && Array.isArray(j.offers) && j.offers.some(offer => offer.hustlerId === currentUser.id);
+        // Check if user has applied (using fetched offers or job.offers)
+        const hasApplied = userAppliedJobIds.has(j.id) || 
+                          (j.offers && Array.isArray(j.offers) && j.offers.some(offer => 
+                            offer.hustlerId === currentUser.id && 
+                            (offer.status === "PENDING" || offer.status === "ACCEPTED")
+                          ));
         const isAssigned = j.hustlerId === currentUser.id;
         return isPoster || hasApplied || isAssigned || j.status === "OPEN" || j.status === "open";
       }) : [];
     } else if (activeJobsStatusFilter === "applied") {
-      // Applied: Shows only jobs the hustler has applied for (still waiting on customer)
+      // Applied: Shows only jobs the hustler has applied for (still waiting on customer or accepted but not started)
       filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => {
         if (!currentUser) return false;
-        // Must have applied AND not be accepted yet
-        const hasApplied = j.offers && Array.isArray(j.offers) && j.offers.some(offer => offer.hustlerId === currentUser.id && offer.status === "PENDING");
-        const isAccepted = j.hustlerId === currentUser.id;
-        return hasApplied && !isAccepted && (j.status === "OPEN" || j.status === "open");
+        
+        // Check if user has applied using the offers we fetched
+        const hasAppliedOffer = userAppliedJobIds.has(j.id);
+        if (!hasAppliedOffer) {
+          // Fallback: check job.offers if available
+          const hasApplied = j.offers && Array.isArray(j.offers) && j.offers.some(offer => 
+            offer.hustlerId === currentUser.id && 
+            (offer.status === "PENDING" || offer.status === "ACCEPTED")
+          );
+          if (!hasApplied) return false;
+        }
+        
+        // Get offer status if available
+        const offer = userAppliedOffers.get(j.id) || (j.offers && Array.isArray(j.offers) ? j.offers.find(o => o.hustlerId === currentUser.id) : null);
+        
+        // Show PENDING offers (waiting for customer)
+        if (offer && offer.status === 'PENDING') {
+          return j.status === "OPEN" || j.status === "open";
+        }
+        
+        // Show ACCEPTED offers that haven't started yet (can still cancel)
+        if (offer && offer.status === 'ACCEPTED' && j.status === 'ASSIGNED' && !j.startCodeVerified) {
+          return true;
+        }
+        
+        return false;
       }) : [];
     } else if (activeJobsStatusFilter === "in_progress") {
       // In Progress: Shows jobs where start code has been used (actively being worked on)
@@ -11914,32 +11953,44 @@ meta.textContent =
           throw new Error(`Failed to fetch applications: ${response.status} - ${errorText}`);
         }
         
-        const offers = await response.json();
-        console.log("🔵 Fetched applied jobs:", offers.length);
+        const allOffers = await response.json();
+        console.log("🔵 Fetched all offers:", allOffers.length);
         
-        if (offers.length === 0) {
+        // Filter to show only PENDING and ACCEPTED offers (not DECLINED)
+        // Only show ACCEPTED if job hasn't started yet (for hustler cancellation)
+        const relevantOffers = allOffers.filter(offer => {
+          // Always show PENDING offers
+          if (offer.status === 'PENDING') return true;
+          // Show ACCEPTED offers only if job is ASSIGNED but start code not verified (can still cancel)
+          if (offer.status === 'ACCEPTED' && offer.job && offer.job.status === 'ASSIGNED' && !offer.job.startCodeVerified) return true;
+          // Don't show DECLINED offers
+          return false;
+        });
+        
+        console.log("🔵 Filtered to relevant applied jobs:", relevantOffers.length);
+        
+        if (relevantOffers.length === 0) {
           appliedJobsList.innerHTML = `
             <div style='text-align: center; padding: 3rem; color: var(--text-muted);'>
               <div style="font-size: 3rem; margin-bottom: 1rem;">📝</div>
-              <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">No applications yet</div>
+              <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">No active applications</div>
               <div>Start browsing jobs and apply to get started!</div>
             </div>
           `;
+          appliedJobsList.dataset.loading = 'false';
           return;
         }
         
         appliedJobsList.innerHTML = "";
         
         // Render each application as a job card
-        for (const offer of offers) {
+        for (const offer of relevantOffers) {
           const job = offer.job;
           if (!job) continue;
           
-          const statusBadge = offer.status === 'ACCEPTED' ? '✅ Accepted' : 
-                             offer.status === 'DECLINED' ? '❌ Declined' : 
-                             '⏳ Pending';
+          const statusBadge = offer.status === 'ACCEPTED' ? '✅ Accepted - Waiting to Start' : 
+                             '⏳ Pending Review';
           const statusColor = offer.status === 'ACCEPTED' ? '#10b981' : 
-                            offer.status === 'DECLINED' ? '#dc2626' : 
                             '#f59e0b';
           
           const jobCard = document.createElement('div');
@@ -11977,6 +12028,8 @@ meta.textContent =
               <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem 1.5rem; font-weight: 600; border-radius: 10px;">🔍 View Job Details</button>
               ${offer.status === 'PENDING' ? `
               <button class="btn btn-ghost cancelApplicationBtn" data-offer-id="${offer.id}" style="padding: 0.75rem 1.5rem; font-weight: 600; border-radius: 10px;">❌ Cancel Application</button>
+              ` : offer.status === 'ACCEPTED' && job.status === 'ASSIGNED' && !job.startCodeVerified ? `
+              <button class="btn btn-ghost cancelApplicationBtn" data-job-id="${job.id}" style="padding: 0.75rem 1.5rem; font-weight: 600; border-radius: 10px; color: #dc2626; border-color: #fecaca;">🚫 Cancel - Can't Do Job</button>
               ` : ''}
             </div>
           `;
@@ -12005,7 +12058,8 @@ meta.textContent =
           appliedJobsList.appendChild(jobCard);
         }
         
-        console.log("✅ Rendered applied jobs:", offers.length);
+        appliedJobsList.dataset.loading = 'false';
+        console.log("✅ Rendered applied jobs:", relevantOffers.length);
       } catch (error) {
         console.error("Error loading applied jobs:", error);
         appliedJobsList.innerHTML = `
