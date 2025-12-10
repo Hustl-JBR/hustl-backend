@@ -406,22 +406,31 @@ router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), a
     const secretKey = process.env.STRIPE_SECRET_KEY.trim().replace(/^["']|["']$/g, '');
     
     // Check if key looks valid (starts with sk_test_ or sk_live_)
+    // But be lenient - let Stripe API validate it if it's close
+    if (!secretKey || secretKey.length < 10) {
+      console.error('[PAYMENT] STRIPE_SECRET_KEY appears to be missing or too short');
+      console.error('[PAYMENT] Key length:', secretKey.length);
+      return res.status(500).json({ 
+        error: 'Invalid Stripe configuration',
+        message: 'Stripe secret key is missing or too short. Please set STRIPE_SECRET_KEY in Railway.',
+        hint: 'Get your test key from https://dashboard.stripe.com/test/apikeys',
+        diagnosticUrl: '/api/payments/check-key'
+      });
+    }
+    
     if (!secretKey.startsWith('sk_')) {
       console.error('[PAYMENT] STRIPE_SECRET_KEY format appears invalid');
       console.error('[PAYMENT] Key preview (first 15 chars):', secretKey.substring(0, 15));
       console.error('[PAYMENT] Key length:', secretKey.length);
       console.error('[PAYMENT] Original key had quotes or spaces?', process.env.STRIPE_SECRET_KEY !== secretKey);
-      return res.status(500).json({ 
-        error: 'Invalid Stripe configuration',
-        message: 'Stripe secret key format is invalid. Secret keys must start with "sk_test_" (test mode) or "sk_live_" (live mode).',
-        hint: 'Please check your STRIPE_SECRET_KEY in Railway environment variables. Make sure there are no extra spaces or quotes around the key.',
-        testMode: 'For testing, get keys from https://dashboard.stripe.com/test/apikeys'
-      });
+      console.error('[PAYMENT] Full original key (first 20 chars):', process.env.STRIPE_SECRET_KEY.substring(0, 20));
+      
+      // Still try to use it - let Stripe validate
+      console.warn('[PAYMENT] Key format looks wrong but attempting to use it anyway. Stripe will validate.');
     }
     
     const isTestMode = secretKey.startsWith('sk_test_');
-    console.log('[PAYMENT] Using Stripe key type:', isTestMode ? 'TEST MODE' : 'LIVE MODE');
-    console.log('[PAYMENT] Key length:', secretKey.length, '(expected: 32-40 characters)');
+    console.log('[PAYMENT] Using Stripe key. Length:', secretKey.length, 'Type:', isTestMode ? 'TEST MODE' : (secretKey.startsWith('sk_live_') ? 'LIVE MODE' : 'UNKNOWN'));
     
     try {
       const session = await stripe.checkout.sessions.create({
@@ -464,12 +473,22 @@ router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), a
       
       // Provide helpful error messages
       if (stripeError.type === 'StripeAuthenticationError' || stripeError.code === 'api_key_expired' || stripeError.code === 'invalid_api_key') {
+        const secretKey = process.env.STRIPE_SECRET_KEY?.trim().replace(/^["']|["']$/g, '') || 'NOT SET';
+        const keyPreview = secretKey !== 'NOT SET' ? secretKey.substring(0, 15) + '...' : 'NOT SET';
+        
         return res.status(401).json({ 
           error: 'Stripe authentication failed',
           message: 'Invalid or expired Stripe API key.',
           details: 'The Stripe secret key may be incorrect, expired, or from the wrong environment (test vs live).',
-          hint: 'Please check your STRIPE_SECRET_KEY in Railway environment variables. For test mode, use a key starting with "sk_test_".',
-          testMode: 'For testing, use test keys from https://dashboard.stripe.com/test/apikeys'
+          hint: `Please check your STRIPE_SECRET_KEY in Railway environment variables.\nCurrent key preview: ${keyPreview}\nKey length: ${secretKey.length}\nExpected: Starts with "sk_test_" (test) or "sk_live_" (live), length ~32-40 chars`,
+          testMode: 'For testing, use test keys from https://dashboard.stripe.com/test/apikeys',
+          diagnosticEndpoint: '/api/payments/check-key',
+          commonIssues: [
+            'Key wrapped in quotes: Remove quotes around the key value',
+            'Extra spaces: Make sure no spaces before/after the key',
+            'Wrong key type: Use Secret key (sk_test_...) not Publishable key (pk_test_...)',
+            'Wrong environment: Test keys start with sk_test_, live keys start with sk_live_'
+          ]
         });
       }
       
@@ -513,6 +532,37 @@ router.get('/config', authenticate, async (req, res) => {
     res.json({ publishableKey });
   } catch (error) {
     console.error('Get Stripe config error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /payments/check-key - Diagnostic endpoint to check Stripe key status (admin only)
+router.get('/check-key', authenticate, async (req, res) => {
+  try {
+    // Only allow admins or in development
+    if (process.env.NODE_ENV === 'production' && !req.user.roles?.includes('ADMIN')) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
+    
+    const diagnostics = {
+      secretKeyConfigured: !!secretKey,
+      publishableKeyConfigured: !!publishableKey,
+      secretKeyLength: secretKey ? secretKey.trim().replace(/^["']|["']$/g, '').length : 0,
+      publishableKeyLength: publishableKey ? publishableKey.trim().replace(/^["']|["']$/g, '').length : 0,
+      secretKeyPreview: secretKey ? secretKey.trim().replace(/^["']|["']$/g, '').substring(0, 10) + '...' : 'NOT SET',
+      publishableKeyPreview: publishableKey ? publishableKey.trim().replace(/^["']|["']$/g, '').substring(0, 10) + '...' : 'NOT SET',
+      secretKeyHasQuotes: secretKey ? (secretKey.trim().startsWith('"') || secretKey.trim().startsWith("'")) : false,
+      publishableKeyHasQuotes: publishableKey ? (publishableKey.trim().startsWith('"') || publishableKey.trim().startsWith("'")) : false,
+      secretKeyStartsWithCorrectPrefix: secretKey ? secretKey.trim().replace(/^["']|["']$/g, '').startsWith('sk_') : false,
+      publishableKeyStartsWithCorrectPrefix: publishableKey ? publishableKey.trim().replace(/^["']|["']$/g, '').startsWith('pk_') : false,
+    };
+    
+    res.json(diagnostics);
+  } catch (error) {
+    console.error('Check Stripe key error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
