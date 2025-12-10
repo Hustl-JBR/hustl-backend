@@ -667,16 +667,35 @@ router.post('/confirm-payment', authenticate, requireRole('CUSTOMER'), async (re
 // GET /payments/config - Get Stripe publishable key for Payment Element
 router.get('/config', authenticate, async (req, res) => {
   try {
-    const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
+    let publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
     
     if (!publishableKey) {
-      return res.status(500).json({ error: 'Stripe publishable key not configured' });
+      console.error('[PAYMENT CONFIG] STRIPE_PUBLISHABLE_KEY is not set');
+      return res.status(500).json({ 
+        error: 'Stripe publishable key not configured',
+        message: 'Please set STRIPE_PUBLISHABLE_KEY in your environment variables'
+      });
+    }
+    
+    // Clean up the key (remove quotes, trim whitespace)
+    publishableKey = publishableKey.trim().replace(/^["']|["']$/g, '');
+    
+    if (!publishableKey.startsWith('pk_')) {
+      console.error('[PAYMENT CONFIG] Invalid publishable key format:', publishableKey.substring(0, 10) + '...');
+      return res.status(500).json({ 
+        error: 'Invalid Stripe publishable key format',
+        message: 'Publishable keys must start with "pk_test_" (test) or "pk_live_" (live)',
+        hint: 'Get your key from https://dashboard.stripe.com/apikeys'
+      });
     }
     
     res.json({ publishableKey });
   } catch (error) {
     console.error('Get Stripe config error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message 
+    });
   }
 });
 

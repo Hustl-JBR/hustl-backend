@@ -813,30 +813,24 @@ router.post('/:id/cancel', authenticate, requireRole('CUSTOMER'), async (req, re
       });
     }
 
-    // Protection: Can't cancel after job date has passed (prevents last-minute cancellations)
-    const now = new Date();
-    const jobDate = new Date(job.date);
-    if (jobDate <= now) {
+    // BUSINESS RULE: Customer cannot cancel after Hustler is assigned (ASSIGNED or in progress)
+    // Allow cancellation for OPEN/REQUESTED jobs regardless of date
+    if (job.status === 'ASSIGNED' || job.status === 'COMPLETED_BY_HUSTLER' || job.status === 'AWAITING_CUSTOMER_CONFIRM') {
       return res.status(400).json({ 
-        error: 'Cannot cancel job after the scheduled date. Please contact support if there is an issue.' 
-      });
-    }
-
-    // BUSINESS RULE: Customer cannot delete after Hustler is assigned (ASSIGNED)
-    if (job.status === 'ASSIGNED') {
-      return res.status(400).json({ 
-        error: 'Cannot cancel job that is in progress. The hustler is already on the way or working. Please contact support if there is an emergency.' 
+        error: 'Cannot cancel job that is in progress. The hustler is already assigned or working. Please contact support if there is an emergency.' 
       });
     }
     
-    // Protection: Can't cancel if hustler has already started (within 2 hours of start time)
-    const startTime = new Date(job.startTime);
-    const twoHoursBeforeStart = new Date(startTime.getTime() - 2 * 60 * 60 * 1000);
-    if (now >= twoHoursBeforeStart && job.hustlerId && job.status === 'ASSIGNED') {
-      return res.status(400).json({ 
-        error: 'Cannot cancel job within 2 hours of start time when hustler is assigned. Please contact support if there is an emergency.' 
-      });
+    // For OPEN jobs, allow cancellation but warn if job date has passed
+    const now = new Date();
+    const jobDate = new Date(job.date);
+    if (job.status === 'OPEN' && jobDate <= now) {
+      // Still allow cancellation for OPEN jobs, just log it
+      console.warn(`[JOB CANCEL] Job ${job.id} cancelled after scheduled date by customer ${req.user.id}`);
     }
+    
+    // Protection: Can't cancel if hustler has already started (within 2 hours of start time)
+    // This is only relevant if status is ASSIGNED, which we already check above
 
     // Handle refunds based on payment status
     if (job.payment) {
