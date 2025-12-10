@@ -15621,6 +15621,52 @@ try {
     // DOM is already ready
     initializeApp();
   }
+  
+  // Check for payment success/cancel in URL (run after initialization)
+  setTimeout(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    const sessionId = urlParams.get('session_id');
+    const offerId = urlParams.get('offerId');
+    const jobId = urlParams.get('jobId');
+    
+    if (paymentStatus === 'success' && sessionId) {
+      // Payment completed - show success and refresh
+      if (typeof showToast === 'function') {
+        showToast('✅ Payment successful! Hustler accepted and job activated.');
+      }
+      
+      // Clean URL
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+      
+      // Refresh job lists if on manage-jobs view
+      setTimeout(() => {
+        if (typeof activeView !== 'undefined' && activeView === 'manage-jobs') {
+          if (typeof loadPostedJobs === 'function') loadPostedJobs();
+          if (typeof loadActiveJobs === 'function') loadActiveJobs();
+        }
+        
+        // Also refresh if we have jobId
+        if (jobId && typeof showViewJobModal === 'function') {
+          // Refresh the job modal if it's open
+        }
+      }, 1000);
+      
+      if (offerId) {
+        console.log('Payment completed for offer:', offerId);
+      }
+    } else if (paymentStatus === 'cancelled') {
+      // Payment cancelled
+      if (typeof showToast === 'function') {
+        showToast('Payment cancelled. You can try again when ready.');
+      }
+      
+      // Clean URL
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  }, 1000);
   </script>
   
   <!-- Performance-optimized script loading -->
