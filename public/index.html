@@ -11519,8 +11519,19 @@ meta.textContent =
                     </div>
                   </div>
                   <div style="text-align: right;">
-                    <div style="padding: 0.5rem 1rem; background: ${statusColor}20; color: ${statusColor}; border-radius: 8px; font-weight: 700; font-size: 0.85rem; border: 2px solid ${statusColor}40;">
-                      ${statusBadge}
+                    <div style="text-align: right;">
+                      <div style="padding: 0.5rem 1rem; background: ${statusColor}20; color: ${statusColor}; border-radius: 8px; font-weight: 700; font-size: 0.85rem; border: 2px solid ${statusColor}40; margin-bottom: 0.5rem;">
+                        ${statusBadge}
+                      </div>
+                      ${(() => {
+                        const requirements = job.requirements || {};
+                        if (requirements.keepOpenUntilAccepted === true) {
+                          return `<div style="padding: 0.35rem 0.75rem; background: #dbeafe; color: #1e40af; border-radius: 6px; font-weight: 600; font-size: 0.75rem; border: 1px solid #3b82f6; margin-top: 0.25rem;">
+                            ✓ Auto-close when accepted
+                          </div>`;
+                        }
+                        return '';
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -11577,8 +11588,10 @@ meta.textContent =
             
             jobCard.querySelector('.cancelJobBtn')?.addEventListener('click', async (e) => {
               e.stopPropagation();
-              if (confirm('Are you sure you want to cancel this job? It will no longer accept new applicants.')) {
-                await cancelJob(job.id);
+              const requirements = job.requirements || {};
+              const keepOpenEnabled = requirements.keepOpenUntilAccepted === true;
+              if (confirm(`Are you sure you want to cancel this job?${keepOpenEnabled ? ' (Note: Auto-close setting is active)' : ' It will no longer accept new applicants.'}`)) {
+                await cancelJob(job.id, false);
                 loadPostedJobs();
               }
             });
@@ -13083,15 +13096,28 @@ meta.textContent =
                   ${job.status === 'OPEN' ? `
                   <button class="btn btn-ghost editJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">✏️ Edit Job</button>
                   <button class="btn btn-ghost cancelJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; color: #dc2626; border-color: #fecaca; font-weight: 600;">🚫 Cancel Job</button>
-                  <div style="width: 100%; margin-top: 1rem; padding: 1rem; background: #f9fafb; border-radius: 8px;">
+                  ${(() => {
+                    const requirements = job.requirements || {};
+                    const isKeepOpenEnabled = requirements.keepOpenUntilAccepted === true;
+                    return `
+                  <div style="width: 100%; margin-top: 1rem; padding: 1rem; background: ${isKeepOpenEnabled ? '#dbeafe' : '#f9fafb'}; border: 2px solid ${isKeepOpenEnabled ? '#3b82f6' : '#e5e7eb'}; border-radius: 8px;">
+                    ${isKeepOpenEnabled ? `
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; padding: 0.5rem; background: #3b82f6; color: white; border-radius: 6px; font-weight: 700; font-size: 0.9rem;">
+                      <span>✅</span>
+                      <span>Setting Active: Job will stay open until you accept a hustler</span>
+                    </div>
+                    ` : ''}
                     <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
-                      <input type="checkbox" id="keepOpenUntilAccepted" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+                      <input type="checkbox" id="keepOpenUntilAccepted" ${isKeepOpenEnabled ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
                       <span style="font-size: 0.95rem; color: var(--text-main); font-weight: 600;">✓ Keep open until accepted hustler</span>
                     </label>
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; margin-left: 2rem;">
-                      Job will automatically close once you accept an applicant
+                      ${isKeepOpenEnabled ? '✅ Active - Job will automatically close once you accept an applicant' : 'Job will automatically close once you accept an applicant'}
                     </div>
+                    <button class="btn btn-primary saveKeepOpenSettingBtn" data-job-id="${job.id}" style="margin-top: 0.75rem; padding: 0.5rem 1rem; font-size: 0.9rem; font-weight: 600;">💾 Save Setting</button>
                   </div>
+                  `;
+                  })()}
                   ` : ''}
                   ${pendingOffers.length === 0 && job.status === 'OPEN' ? `
                   <button class="btn btn-primary repostJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">🔄 Repost Job</button>
@@ -13302,6 +13328,13 @@ meta.textContent =
             document.body.removeChild(modalOverlay);
             // Navigate to edit job (could be a separate view or modal)
             showToast("Edit job feature coming soon");
+          });
+          
+          // Save keep open setting button
+          modalOverlay.querySelector('.saveKeepOpenSettingBtn')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const keepOpenUntilAccepted = modalOverlay.querySelector('#keepOpenUntilAccepted')?.checked || false;
+            await cancelJob(job.id, keepOpenUntilAccepted, true); // true = just updating setting, not canceling
           });
           
           modalOverlay.querySelector('.cancelJobBtn')?.addEventListener('click', async (e) => {
@@ -13977,8 +14010,8 @@ meta.textContent =
       }
     }
     
-    // Cancel Job
-    async function cancelJob(jobId, keepOpenUntilAccepted = false) {
+    // Cancel Job (or update keep open setting)
+    async function cancelJob(jobId, keepOpenUntilAccepted = false, justUpdatingSetting = false) {
       try {
         const token = localStorage.getItem('hustl_token');
         const response = await fetch(`${API_BASE}/jobs/${jobId}/cancel`, {
@@ -13992,10 +14025,20 @@ meta.textContent =
         
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Failed to cancel job');
+          throw new Error(errorData.error || 'Failed to update job');
         }
         
-        if (keepOpenUntilAccepted) {
+        if (justUpdatingSetting) {
+          showToast(`✅ Setting saved! ${keepOpenUntilAccepted ? 'Job will stay open until you accept a hustler.' : 'Setting removed. You can manually cancel the job.'}`);
+          // Refresh the modal to show updated state
+          if (activeView === 'manage-jobs') {
+            const modal = document.getElementById('viewJobModal');
+            if (modal && modal.querySelector(`[data-job-id="${jobId}"]`)) {
+              document.body.removeChild(modal);
+              showViewJobModal(jobId, 'customer');
+            }
+          }
+        } else if (keepOpenUntilAccepted) {
           showToast("✅ Job settings updated. Job will close automatically when you accept an applicant.");
         } else {
           showToast("✅ Job cancelled. It will no longer accept new applicants.");
@@ -14003,8 +14046,8 @@ meta.textContent =
         // Refresh the list
         loadPostedJobs();
       } catch (error) {
-        console.error("Error cancelling job:", error);
-        showToast(error.message || "Error cancelling job. Please try again.");
+        console.error("Error updating job:", error);
+        showToast(error.message || "Error updating job. Please try again.");
       }
     }
     
