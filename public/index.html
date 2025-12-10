@@ -14038,6 +14038,215 @@ meta.textContent =
       });
     }
     
+    // Show Payment Modal with embedded Stripe Payment Element
+    async function showPaymentModal(offerId, jobId, parentModal) {
+      try {
+        const token = localStorage.getItem('hustl_token');
+        
+        // Get Stripe publishable key
+        const configRes = await fetch(`${API_BASE}/payments/config`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!configRes.ok) {
+          throw new Error('Failed to get Stripe configuration');
+        }
+        const { publishableKey } = await configRes.json();
+        
+        // Check if Stripe.js is loaded
+        if (typeof Stripe === 'undefined') {
+          // Load Stripe.js if not loaded
+          const script = document.createElement('script');
+          script.src = 'https://js.stripe.com/v3/';
+          script.onload = () => {
+            initializePaymentModal(publishableKey, offerId, jobId, parentModal, token);
+          };
+          document.head.appendChild(script);
+        } else {
+          await initializePaymentModal(publishableKey, offerId, jobId, parentModal, token);
+        }
+      } catch (error) {
+        console.error("Error showing payment modal:", error);
+        showToast(error.message || "Failed to load payment form. Please try again.");
+      }
+    }
+    
+    async function initializePaymentModal(publishableKey, offerId, jobId, parentModal, token) {
+      try {
+        // Initialize Stripe
+        const stripe = Stripe(publishableKey);
+        
+        // Create payment intent
+        const intentRes = await fetch(`${API_BASE}/payments/create-intent/offer/${offerId}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!intentRes.ok) {
+          const error = await intentRes.json().catch(() => ({}));
+          throw new Error(error.message || error.error || 'Failed to create payment');
+        }
+        
+        const { clientSecret, paymentIntentId } = await intentRes.json();
+        
+        // Create payment modal
+        const paymentModal = document.createElement('div');
+        paymentModal.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.7);
+          z-index: 10002;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1rem;
+        `;
+        
+        paymentModal.innerHTML = `
+          <div style="
+            background: white;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+          ">
+            <button class="closePaymentModal" style="
+              position: absolute;
+              top: 1rem;
+              right: 1rem;
+              width: 36px;
+              height: 36px;
+              border-radius: 50%;
+              border: none;
+              background: #f3f4f6;
+              cursor: pointer;
+              font-size: 1.5rem;
+              z-index: 10;
+            ">×</button>
+            
+            <div style="padding: 2rem;">
+              <h3 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">💳 Complete Payment</h3>
+              <div style="margin-bottom: 1.5rem; color: var(--text-muted); font-size: 0.9rem;">
+                Secure payment powered by Stripe. Supports card, Apple Pay, and Google Pay.
+              </div>
+              
+              <div id="payment-element" style="margin-bottom: 1.5rem;">
+                <!-- Stripe Payment Element will be inserted here -->
+              </div>
+              
+              <button id="submit-payment" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1rem; font-weight: 600;">
+                Pay Now
+              </button>
+              
+              <div id="payment-error" style="margin-top: 1rem; color: #dc2626; font-size: 0.9rem; display: none;"></div>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(paymentModal);
+        
+        // Close button
+        paymentModal.querySelector('.closePaymentModal')?.addEventListener('click', () => {
+          document.body.removeChild(paymentModal);
+        });
+        
+        paymentModal.addEventListener('click', (e) => {
+          if (e.target === paymentModal) {
+            document.body.removeChild(paymentModal);
+          }
+        });
+        
+        // Initialize Payment Element
+        const elements = stripe.elements({ clientSecret });
+        const paymentElement = elements.create('payment', {
+          layout: 'tabs'
+        });
+        paymentElement.mount('#payment-element');
+        
+        // Handle form submission
+        const submitButton = paymentModal.querySelector('#submit-payment');
+        const errorDiv = paymentModal.querySelector('#payment-error');
+        let isProcessing = false;
+        
+        submitButton.addEventListener('click', async (e) => {
+          e.preventDefault();
+          if (isProcessing) return;
+          
+          isProcessing = true;
+          submitButton.disabled = true;
+          submitButton.textContent = 'Processing...';
+          errorDiv.style.display = 'none';
+          
+          try {
+            const { error: confirmError } = await stripe.confirmPayment({
+              elements,
+              confirmParams: {
+                return_url: `${window.location.origin}${window.location.pathname}?payment=success&offerId=${offerId}&jobId=${jobId}`,
+              },
+              redirect: 'if_required'
+            });
+            
+            if (confirmError) {
+              errorDiv.textContent = confirmError.message || 'Payment failed. Please try again.';
+              errorDiv.style.display = 'block';
+              submitButton.disabled = false;
+              submitButton.textContent = 'Pay Now';
+              isProcessing = false;
+            } else {
+              // Payment succeeded (no redirect needed)
+              submitButton.textContent = 'Processing payment...';
+              
+              // Confirm payment on backend
+              const confirmRes = await fetch(`${API_BASE}/payments/confirm-payment`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ paymentIntentId, offerId })
+              });
+              
+              if (!confirmRes.ok) {
+                throw new Error('Failed to confirm payment');
+              }
+              
+              showToast("✅ Payment successful! Hustler accepted.");
+              
+              // Close modals
+              document.body.removeChild(paymentModal);
+              if (parentModal && parentModal.parentNode) {
+                document.body.removeChild(parentModal);
+              }
+              
+              // Refresh job lists
+              if (activeView === 'manage-jobs') {
+                loadPostedJobs();
+                loadActiveJobs();
+              }
+            }
+          } catch (error) {
+            console.error("Payment error:", error);
+            errorDiv.textContent = error.message || 'Payment failed. Please try again.';
+            errorDiv.style.display = 'block';
+            submitButton.disabled = false;
+            submitButton.textContent = 'Pay Now';
+            isProcessing = false;
+          }
+        });
+      } catch (error) {
+        console.error("Error initializing payment modal:", error);
+        showToast(error.message || "Failed to load payment form. Please try again.");
+      }
+    }
+    
     // Repost Job
     async function repostJob(jobId) {
       try {
