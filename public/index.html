@@ -9928,12 +9928,43 @@ async function renderJobs(reset = false) {
     }
 
     async function renderProfile() {
-  // Use API to get current user
+  // Use API to get current user - always fetch fresh data
   let user = null;
   try {
-    user = await window.hustlAPI.auth.getCurrentUser();
+    // Force fresh fetch by calling the API directly (bypass cache)
+    const token = localStorage.getItem('hustl_token') || sessionStorage.getItem('hustl_token');
+    if (token) {
+      const response = await fetch(`${API_BASE}/users/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        user = await response.json();
+        // Update cache with fresh data
+        localStorage.setItem('hustl_user', JSON.stringify(user));
+        if (window.hustlAPI && window.hustlAPI.auth) {
+          window.hustlAPI.auth.currentUser = user;
+        }
+      } else {
+        // Fallback to cached method
+        user = await window.hustlAPI.auth.getCurrentUser();
+      }
+    } else {
+      user = await window.hustlAPI.auth.getCurrentUser();
+    }
   } catch (error) {
     console.error("Error getting user for profile:", error);
+    // Try to use cached user as fallback
+    try {
+      const cached = localStorage.getItem('hustl_user');
+      if (cached) user = JSON.parse(cached);
+    } catch (e) {
+      console.error("Error parsing cached user:", e);
+    }
+  }
+  
+  if (!user) {
+    console.warn("No user data available for profile render");
+    return;
   }
   
   const basicInfoSection = document.getElementById("profileBasicInfo");
@@ -11177,12 +11208,16 @@ async function renderJobs(reset = false) {
       saveBioBtn.textContent = "Saving...";
       try {
         // Save to database
-        await window.hustlAPI.users.updateProfile({ bio });
+        const updatedUser = await window.hustlAPI.users.updateProfile({ bio });
         
-        // Update local storage
-        const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
-        storedUser.bio = bio;
-        localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+        // Update local storage with fresh data from server
+        if (updatedUser) {
+          localStorage.setItem('hustl_user', JSON.stringify(updatedUser));
+        } else {
+          const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
+          storedUser.bio = bio;
+          localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+        }
         
         // Make field read-only and change button to "Edit Bio"
         bioInput.setAttribute('readonly', 'readonly');
@@ -11196,6 +11231,11 @@ async function renderJobs(reset = false) {
           saveBioBtn.disabled = false;
         }, 2000);
         showToast("✅ Bio saved!");
+        
+        // Refresh the Basic Info view at the top - force fresh data fetch
+        setTimeout(async () => {
+          await renderProfile();
+        }, 300);
       } catch (error) {
         console.error("Error saving profile:", error);
         saveBioBtn.textContent = "Save Bio";
@@ -11215,10 +11255,17 @@ async function renderJobs(reset = false) {
         saveGenderBtn.disabled = true;
         saveGenderBtn.textContent = "Saving...";
         try {
-          await window.hustlAPI.users.updateProfile({ gender });
-          const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
-          storedUser.gender = gender;
-          localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+          const updatedUser = await window.hustlAPI.users.updateProfile({ gender });
+          
+          // Update local storage with fresh data from server
+          if (updatedUser) {
+            localStorage.setItem('hustl_user', JSON.stringify(updatedUser));
+          } else {
+            const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
+            storedUser.gender = gender;
+            localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+          }
+          
           saveGenderBtn.textContent = "Saved";
           saveGenderBtn.style.background = "#16a34a";
           setTimeout(() => {
@@ -11227,7 +11274,13 @@ async function renderJobs(reset = false) {
             saveGenderBtn.disabled = false;
           }, 2000);
           showToast("✅ Gender updated!");
+          
+          // Refresh the Basic Info view at the top - force fresh data fetch
+          setTimeout(async () => {
+            await renderProfile();
+          }, 300);
         } catch (error) {
+          console.error("Error saving gender:", error);
           saveGenderBtn.textContent = originalText;
           saveGenderBtn.disabled = false;
           showToast("Failed to save gender.");
