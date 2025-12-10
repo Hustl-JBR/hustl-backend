@@ -1,15 +1,13 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const prisma = require('../db');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
-// All routes require authentication
-router.use(authenticate);
-
-// GET /users/me
-router.get('/me', async (req, res) => {
+// GET /users/me - Get current user's profile (requires auth)
+// Must be defined BEFORE /:id to avoid route conflicts
+router.get('/me', authenticate, async (req, res) => {
   try {
     let user;
     try {
@@ -68,9 +66,15 @@ router.get('/me', async (req, res) => {
   }
 });
 
-// GET /users/:id - Get public user profile
-router.get('/:id', async (req, res) => {
+// GET /users/:id - Get public user profile (optional auth)
+// This route must be defined AFTER /me to avoid route conflicts
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
+    // Don't allow accessing /me via this route
+    if (req.params.id === 'me') {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     let user;
     try {
       user = await prisma.user.findUnique({
@@ -127,6 +131,9 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// All routes below require authentication
+router.use(authenticate);
 
 // PATCH /users/me
 router.patch('/me', [
@@ -249,7 +256,7 @@ const upload = multer({
   },
 });
 
-router.post('/me/photo', upload.single('photo'), async (req, res) => {
+router.post('/me/photo', authenticate, upload.single('photo'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No photo file provided' });
@@ -297,7 +304,7 @@ router.post('/me/photo', upload.single('photo'), async (req, res) => {
 });
 
 // GET /users/me/photo - Get profile photo URL
-router.get('/me/photo', async (req, res) => {
+router.get('/me/photo', authenticate, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },

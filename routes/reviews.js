@@ -1,9 +1,56 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const prisma = require('../db');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
+
+// GET /reviews - Get reviews with optional userId query parameter
+router.get('/', optionalAuth, async (req, res) => {
+  try {
+    const { userId } = req.query;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'userId query parameter is required' });
+    }
+
+    const { limit = 50, offset = 0 } = req.query;
+
+    const reviews = await prisma.review.findMany({
+      where: {
+        revieweeId: userId,
+        isHidden: false,
+      },
+      include: {
+        reviewer: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+          },
+        },
+        job: {
+          select: {
+            id: true,
+            title: true,
+            category: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: parseInt(limit),
+      skip: parseInt(offset),
+    });
+
+    res.json(reviews);
+  } catch (error) {
+    console.error('Get reviews error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // POST /reviews - Create a review (after job is paid)
 router.post('/', authenticate, [
@@ -130,8 +177,55 @@ router.post('/', authenticate, [
   }
 });
 
-// GET /reviews/user/:userId - Get all reviews for a user
-router.get('/user/:userId', async (req, res) => {
+// GET /reviews - Get reviews with optional userId query parameter
+router.get('/', async (req, res) => {
+  try {
+    const { userId } = req.query;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'userId query parameter is required' });
+    }
+
+    const { limit = 50, offset = 0 } = req.query;
+
+    const reviews = await prisma.review.findMany({
+      where: {
+        revieweeId: userId,
+        isHidden: false,
+      },
+      include: {
+        reviewer: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+          },
+        },
+        job: {
+          select: {
+            id: true,
+            title: true,
+            category: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: parseInt(limit),
+      skip: parseInt(offset),
+    });
+
+    res.json(reviews);
+  } catch (error) {
+    console.error('Get reviews error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /reviews/user/:userId - Get all reviews for a user (alternative route)
+router.get('/user/:userId', optionalAuth, async (req, res) => {
   try {
     const { userId } = req.params;
     const { limit = 50, offset = 0 } = req.query;
@@ -173,7 +267,7 @@ router.get('/user/:userId', async (req, res) => {
 });
 
 // GET /reviews/job/:jobId - Get reviews for a specific job
-router.get('/job/:jobId', async (req, res) => {
+router.get('/job/:jobId', optionalAuth, async (req, res) => {
   try {
     const { jobId } = req.params;
 
