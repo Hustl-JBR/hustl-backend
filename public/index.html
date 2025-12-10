@@ -12042,8 +12042,19 @@ meta.textContent =
           
           jobCard.querySelector('.cancelApplicationBtn')?.addEventListener('click', async (e) => {
             e.stopPropagation();
-            if (confirm('Are you sure you want to cancel this application?')) {
-              await cancelApplication(offer.id);
+            const offerId = e.target.dataset.offerId;
+            const jobId = e.target.dataset.jobId;
+            const isAccepted = offer.status === 'ACCEPTED';
+            const confirmMessage = isAccepted 
+              ? 'Are you sure you want to cancel this job? You cannot do it anymore. The customer will be notified and the job will be reopened for other applicants. This action cannot be undone.'
+              : 'Are you sure you want to cancel this application?';
+            
+            if (confirm(confirmMessage)) {
+              if (offerId) {
+                await cancelApplication(offerId, true); // true = isOfferId
+              } else if (jobId) {
+                await cancelApplication(jobId, false); // false = isJobId
+              }
               loadAppliedJobs();
             }
           });
