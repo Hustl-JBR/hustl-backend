@@ -13006,7 +13006,16 @@ meta.textContent =
                       const hustler = offer.hustler || {};
                       const rating = hustler.ratingAvg || 0;
                       const ratingCount = hustler.ratingCount || 0;
-                      const proposedPrice = offer.proposedAmount ? `$${parseFloat(offer.proposedAmount).toFixed(2)}` : null;
+                      const jobAmount = parseFloat(job.amount || 0);
+                      const proposedAmount = offer.proposedAmount ? parseFloat(offer.proposedAmount) : null;
+                      const proposedPrice = proposedAmount ? `$${proposedAmount.toFixed(2)}` : null;
+                      
+                      // Check if customer negotiated (proposedAmount exists and differs from job amount)
+                      // Also check if this was recently negotiated (within last hour) by checking localStorage
+                      const negotiationKey = `negotiated_${offer.id}`;
+                      const wasRecentlyNegotiated = localStorage.getItem(negotiationKey) === 'true';
+                      const hasNegotiation = proposedAmount && Math.abs(proposedAmount - jobAmount) > 0.01;
+                      
                       const appliedDate = new Date(offer.createdAt);
                       const appliedText = daysAgo === 0 ? 'Applied today' : daysAgo === 1 ? 'Applied 1 day ago' : `Applied ${daysAgo} days ago`;
                       
@@ -13033,9 +13042,26 @@ meta.textContent =
                                 <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem; font-weight: 600;">Why I'm a good fit:</div>
                                 <div style="color: var(--text-main); line-height: 1.5;">${offer.note}</div>
                               </div>` : ''}
-                              ${proposedPrice ? `<div style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 0.5rem;">
-                                💵 Suggested price: <span style="font-weight: 700; color: var(--primary); font-size: 1.1rem;">${proposedPrice}</span>
-                              </div>` : ''}
+                              ${hasNegotiation ? `
+                                <div style="padding: 1rem; background: ${wasRecentlyNegotiated ? '#dbeafe' : '#f0fdf4'}; border: 2px solid ${wasRecentlyNegotiated ? '#3b82f6' : '#86efac'}; border-radius: 8px; margin-bottom: 0.75rem;">
+                                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <span style="font-size: 1.2rem;">${wasRecentlyNegotiated ? '💬' : '💰'}</span>
+                                    <div style="font-size: 0.9rem; font-weight: 700; color: ${wasRecentlyNegotiated ? '#1e40af' : '#166534'};">
+                                      ${wasRecentlyNegotiated ? 'You sent a price negotiation!' : 'Negotiated Price'}
+                                    </div>
+                                  </div>
+                                  <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">
+                                    Your offer: <span style="color: var(--primary);">${proposedPrice}</span>
+                                  </div>
+                                  ${jobAmount > 0 ? `<div style="font-size: 0.85rem; color: var(--text-muted);">
+                                    Original job price: $${jobAmount.toFixed(2)}
+                                  </div>` : ''}
+                                </div>
+                              ` : proposedPrice ? `
+                                <div style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                                  💵 Hustler's suggested price: <span style="font-weight: 700; color: var(--primary); font-size: 1.1rem;">${proposedPrice}</span>
+                                </div>
+                              ` : ''}
                               <div style="font-size: 0.85rem; color: var(--text-muted);">${appliedText}</div>
                             </div>
                           </div>
@@ -13043,7 +13069,7 @@ meta.textContent =
                           <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
                             <button class="btn btn-primary acceptApplicantBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">✅ Accept</button>
                             <button class="btn btn-ghost declineApplicantBtn" data-offer-id="${offer.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; color: #dc2626; border-color: #fecaca;">❌ Decline</button>
-                            <button class="btn btn-ghost negotiatePriceBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">💰 Negotiate Price</button>
+                            <button class="btn btn-ghost negotiatePriceBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem; ${hasNegotiation ? 'border: 2px solid var(--primary); background: var(--primary-soft);' : ''}">${hasNegotiation ? '💰 Edit Negotiation' : '💰 Negotiate Price'}</button>
                             <button class="btn btn-ghost viewApplicantProfileBtn" data-user-id="${hustler.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">👤 View Profile</button>
                           </div>
                         </div>
@@ -13878,7 +13904,16 @@ meta.textContent =
           
           if (!response.ok) throw new Error('Failed to negotiate price');
           
-          showToast("Price negotiation sent to applicant!");
+          // Mark this offer as recently negotiated in localStorage
+          const negotiationKey = `negotiated_${offerId}`;
+          localStorage.setItem(negotiationKey, 'true');
+          
+          // Remove the flag after 1 hour (3600000 ms)
+          setTimeout(() => {
+            localStorage.removeItem(negotiationKey);
+          }, 3600000);
+          
+          showToast("✅ Price negotiation sent to applicant!");
           document.body.removeChild(modalOverlay);
           // Refresh the parent modal
           if (parentModal) {
