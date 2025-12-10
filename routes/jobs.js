@@ -794,7 +794,7 @@ router.post('/:id/cancel', authenticate, requireRole('CUSTOMER'), async (req, re
     }
 
     // If keepOpenUntilAccepted is true, just update the job requirements to store this preference
-    // Don't actually cancel - job will auto-close when accepted
+    // Don't actually cancel - job will auto-close when hustler is assigned
     if (keepOpenUntilAccepted === true) {
       const requirements = job.requirements || {};
       requirements.keepOpenUntilAccepted = true;
@@ -809,7 +809,7 @@ router.post('/:id/cancel', authenticate, requireRole('CUSTOMER'), async (req, re
       return res.json({
         ...updated,
         keepOpenUntilAccepted: true,
-        message: 'Job will automatically close when you accept an applicant',
+        message: 'Job will automatically close when you assign a hustler',
       });
     }
 
