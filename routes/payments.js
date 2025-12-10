@@ -4,7 +4,20 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const { capturePaymentIntent } = require('../services/stripe');
 const { sendPaymentReceiptEmail } = require('../services/email');
 const Stripe = require('stripe');
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Initialize Stripe with validation
+let stripe;
+if (process.env.STRIPE_SECRET_KEY) {
+  const key = process.env.STRIPE_SECRET_KEY.trim();
+  if (!key.startsWith('sk_test_') && !key.startsWith('sk_live_')) {
+    console.error('[STRIPE] WARNING: STRIPE_SECRET_KEY does not start with sk_test_ or sk_live_. Key starts with:', key.substring(0, 10));
+  }
+  stripe = new Stripe(key);
+} else {
+  console.error('[STRIPE] ERROR: STRIPE_SECRET_KEY is not set in environment variables');
+  // Create a dummy instance to prevent crashes, but it will fail on API calls
+  stripe = new Stripe('sk_test_missing_key_please_set_in_environment');
+}
 
 const router = express.Router();
 
@@ -356,7 +369,30 @@ router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), a
     // Create Stripe checkout session - Skip in test mode
     // Always use Stripe checkout - works with test cards (4242 4242 4242 4242) if using test keys
     console.log('[PAYMENT] Creating Stripe checkout session for offer:', offerId);
-    const session = await stripe.checkout.sessions.create({
+    
+    // Validate Stripe key is configured
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('[PAYMENT] STRIPE_SECRET_KEY is not set in environment variables');
+      return res.status(500).json({ 
+        error: 'Payment system not configured',
+        message: 'Stripe secret key is missing. Please contact support.'
+      });
+    }
+    
+    // Check if key looks valid (starts with sk_test_ or sk_live_)
+    const keyPrefix = process.env.STRIPE_SECRET_KEY.substring(0, 7);
+    if (!keyPrefix.startsWith('sk_')) {
+      console.error('[PAYMENT] STRIPE_SECRET_KEY format appears invalid (should start with sk_test_ or sk_live_)');
+      return res.status(500).json({ 
+        error: 'Invalid Stripe configuration',
+        message: 'Stripe secret key format is invalid. Please check your environment variables.'
+      });
+    }
+    
+    console.log('[PAYMENT] Using Stripe key type:', keyPrefix === 'sk_test_' ? 'TEST' : 'LIVE');
+    
+    try {
+      const session = await stripe.checkout.sessions.create({
         mode: 'payment',
         payment_method_types: ['card'],
         line_items: [
