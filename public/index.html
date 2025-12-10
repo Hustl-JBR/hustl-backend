@@ -6791,37 +6791,64 @@ async function renderJobs(reset = false) {
           priceNegotiationSection.style.cssText = "display: none; margin-top: 1rem; padding: 1rem; background: white; border: 2px solid #e5e7eb; border-radius: 8px;";
           
           const priceLabel = document.createElement("label");
-          priceLabel.style.cssText = "display: block; font-weight: 600; font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.5rem;";
+          priceLabel.style.cssText = "display: block; font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.75rem;";
           priceLabel.textContent = "Your Proposed Price";
           priceNegotiationSection.appendChild(priceLabel);
           
-          const priceContainer = document.createElement("div");
-          priceContainer.style.cssText = "display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;";
+          // Show current price
+          const currentPriceDisplay = document.createElement("div");
+          currentPriceDisplay.style.cssText = "padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 2px solid var(--border);";
+          const currentPrice = job.payType === "flat" ? formatMoney(job.flatAmount || job.amount || 0) : formatMoney(job.hourlyRate || 0) + "/hr";
+          const priceTypeLabel = job.payType === "flat" ? "Flat Rate" : "Hourly Rate";
+          currentPriceDisplay.innerHTML = `
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Current ${priceTypeLabel}:</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">${currentPrice}</div>
+          `;
+          priceNegotiationSection.appendChild(currentPriceDisplay);
+          
+          // Price input container with dollar sign
+          const priceInputWrapper = document.createElement("div");
+          priceInputWrapper.style.cssText = "position: relative; margin-bottom: 1rem;";
+          
+          const dollarSign = document.createElement("span");
+          dollarSign.style.cssText = "position: absolute; left: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 2.5rem; font-weight: 700; color: var(--primary); z-index: 1;";
+          dollarSign.textContent = "$";
+          priceInputWrapper.appendChild(dollarSign);
           
           const priceInput = document.createElement("input");
           priceInput.type = "number";
           priceInput.id = `proposedPrice_${job.id}`;
-          priceInput.placeholder = "0.00";
+          priceInput.placeholder = job.payType === "flat" ? "e.g., 150.00" : "e.g., 25.00";
           priceInput.min = "0";
           priceInput.step = "0.01";
-          priceInput.style.cssText = "flex: 1; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 0.9rem; font-family: inherit;";
-          priceContainer.appendChild(priceInput);
+          priceInput.style.cssText = "width: 100%; padding: 2rem 1.5rem 2rem 4rem; border: 4px solid var(--primary); border-radius: 16px; font-size: 2.5rem; font-weight: 700; text-align: left; background: #f0fdf4; color: var(--text-main); min-height: 85px; box-sizing: border-box; transition: all 0.2s; font-family: inherit;";
+          priceInputWrapper.appendChild(priceInput);
           
+          // Add /hr suffix for hourly rates
+          if (job.payType === "hourly") {
+            const hrSuffix = document.createElement("span");
+            hrSuffix.style.cssText = "position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 1.75rem; font-weight: 600; color: var(--text-muted); z-index: 1;";
+            hrSuffix.textContent = "/hr";
+            priceInputWrapper.appendChild(hrSuffix);
+          }
+          
+          priceNegotiationSection.appendChild(priceInputWrapper);
+          
+          // Price type selector (if needed - but usually matches job type)
           const priceTypeSelect = document.createElement("select");
           priceTypeSelect.id = `proposedPriceType_${job.id}`;
-          priceTypeSelect.style.cssText = "padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 0.9rem; font-family: inherit; background: white;";
+          priceTypeSelect.style.cssText = "width: 100%; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; font-weight: 600; font-family: inherit; background: white; margin-bottom: 0.75rem;";
           priceTypeSelect.innerHTML = `
             <option value="flat">Flat Rate</option>
             <option value="hourly">Per Hour</option>
           `;
-          priceContainer.appendChild(priceTypeSelect);
-          
-          priceNegotiationSection.appendChild(priceContainer);
+          // Set default to match job pay type
+          priceTypeSelect.value = job.payType || "flat";
+          priceNegotiationSection.appendChild(priceTypeSelect);
           
           const priceHint = document.createElement("div");
-          priceHint.style.cssText = "font-size: 0.75rem; color: var(--text-muted); font-style: italic;";
-          const currentPrice = job.payType === "flat" ? formatMoney(job.flatAmount || job.amount || 0) : formatMoney(job.hourlyRate || 0) + "/hr";
-          priceHint.textContent = `Current price: ${currentPrice}. Enter your proposed amount above.`;
+          priceHint.style.cssText = "padding: 0.75rem; background: #dbeafe; border-radius: 8px; font-size: 0.85rem; color: #1e40af;";
+          priceHint.textContent = `💡 Customer will see your proposed ${priceTypeLabel.toLowerCase()} when reviewing your application`;
           priceNegotiationSection.appendChild(priceHint);
           
           applySection.appendChild(priceNegotiationSection);
