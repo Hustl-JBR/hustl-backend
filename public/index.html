@@ -14244,8 +14244,14 @@ meta.textContent =
             });
             
             if (!confirmRes.ok) {
-              throw new Error('Failed to confirm payment');
+              const errorData = await confirmRes.json().catch(() => ({}));
+              const errorMessage = errorData.message || errorData.error || 'Failed to confirm payment';
+              console.error('[PAYMENT] Confirm payment error:', errorData);
+              throw new Error(errorMessage);
             }
+            
+            const confirmData = await confirmRes.json();
+            console.log('[PAYMENT] Payment confirmed successfully:', confirmData);
             
             showToast("✅ Payment successful! Hustler accepted.");
             

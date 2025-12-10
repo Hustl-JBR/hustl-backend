@@ -707,11 +707,50 @@ router.post('/confirm-payment', authenticate, requireRole('CUSTOMER'), async (re
       update: {},
     });
 
+    // Send email notifications
+    try {
+      const { sendJobAssignedEmail } = require('../services/email');
+      
+      // Get customer info for email
+      const customer = await prisma.user.findUnique({
+        where: { id: offer.job.customerId },
+        select: { email: true, name: true },
+      });
+      
+      // Send email to hustler about job assignment
+      await sendJobAssignedEmail(
+        offer.hustler.email,
+        offer.hustler.name,
+        offer.job.title,
+        offer.job.id,
+        startCode,
+        offer.job.address || 'Location provided in job details',
+        offer.job.date ? new Date(offer.job.date) : null
+      );
+      
+      console.log('[PAYMENT CONFIRM] Email sent to hustler:', offer.hustler.email);
+    } catch (emailError) {
+      // Don't fail the payment if email fails
+      console.error('[PAYMENT CONFIRM] Error sending email:', emailError);
+    }
+
     console.log('[PAYMENT CONFIRM] Offer accepted via payment:', offerId);
-    res.json({ success: true, jobId: offer.job.id, offerId: offer.id });
+    console.log('[PAYMENT CONFIRM] Job assigned - Start Code:', startCode, 'Completion Code:', completionCode);
+    res.json({ 
+      success: true, 
+      jobId: offer.job.id, 
+      offerId: offer.id,
+      startCode: startCode,
+      completionCode: completionCode
+    });
   } catch (error) {
-    console.error('Confirm payment error:', error);
-    res.status(500).json({ error: 'Internal server error', message: error.message });
+    console.error('[PAYMENT CONFIRM] Error:', error);
+    console.error('[PAYMENT CONFIRM] Error stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
