@@ -2967,7 +2967,7 @@
 
             <div class="field-inline" id="hourlyFields" style="display:none;">
               <div class="field">
-                <label for="hourlyRate">Hourly rate ($/hr per person)</label>
+                <label for="hourlyRate">Total hourly rate ($/hr total for all workers)</label>
                 <input id="hourlyRate" type="number" min="0" step="1" value="20" />
               </div>
               <div class="field">
@@ -2978,7 +2978,11 @@
             <div id="hourlyRateCalculation" style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: #eff6ff; border-radius: 8px; border-left: 3px solid var(--primary);">
               <div style="font-size: 0.9rem; font-weight: 600; color: var(--primary); margin-bottom: 0.25rem;">💰 Total Hourly Rate</div>
               <div style="font-size: 0.85rem; color: var(--text-muted);">
-                <span id="hourlyRateDisplay">$20</span>/hr per person × <span id="workersCountDisplay">1</span> worker(s) = <strong style="color: var(--primary);"><span id="totalHourlyRateDisplay">$20</span>/hr total</strong>
+                <span id="totalHourlyRateDisplay">$20</span>/hr total
+                <span id="perPersonBreakdown" style="display: none;"> = <span id="hourlyRateDisplay">$20</span>/hr per person × <span id="workersCountDisplay">1</span> worker(s)</span>
+                <div style="font-size: 0.8rem; color: #6b7280; margin-top: 0.25rem; font-style: italic;">
+                  Each worker will earn their share (before platform fees)
+                </div>
               </div>
             </div>
           </div>
@@ -4453,13 +4457,23 @@ function showChangePasswordModal() {
           }
         }
         if (workersCount > 0 && hourlyRate > 0) {
-          const totalRate = hourlyRate * workersCount;
+          // hourlyRate is now the TOTAL rate, not per person
+          const totalRate = hourlyRate; // Total rate entered by user
+          const perPersonRate = totalRate / workersCount; // Calculate per person
           const hourlyRateDisplay = document.getElementById("hourlyRateDisplay");
           const workersCountDisplay = document.getElementById("workersCountDisplay");
           const totalHourlyRateDisplay = document.getElementById("totalHourlyRateDisplay");
-          if (hourlyRateDisplay) hourlyRateDisplay.textContent = `$${hourlyRate}`;
-          if (workersCountDisplay) workersCountDisplay.textContent = workersCount;
-          if (totalHourlyRateDisplay) totalHourlyRateDisplay.textContent = `$${totalRate}`;
+          const perPersonBreakdown = document.getElementById("perPersonBreakdown");
+          
+          if (totalHourlyRateDisplay) totalHourlyRateDisplay.textContent = `$${totalRate.toFixed(0)}`;
+          if (workersCount > 1) {
+            // Show breakdown only if multiple workers
+            if (hourlyRateDisplay) hourlyRateDisplay.textContent = `$${perPersonRate.toFixed(0)}`;
+            if (workersCountDisplay) workersCountDisplay.textContent = workersCount;
+            if (perPersonBreakdown) perPersonBreakdown.style.display = "inline";
+          } else {
+            if (perPersonBreakdown) perPersonBreakdown.style.display = "none";
+          }
           hourlyRateCalculation.style.display = "block";
         } else {
           hourlyRateCalculation.style.display = "none";
@@ -5571,7 +5585,13 @@ async function renderJobs(reset = false) {
       } else if (job.payType === "hourly") {
         const hr = Number(job.hourlyRate) || 0;
         const maxHrs = job.estHours || "";
-        pay.textContent = `💰 $${hr.toFixed(0)}/hr${maxHrs ? ` (max ${maxHrs} hrs)` : ""}`;
+        const teamSize = job.teamSize || 1;
+        if (teamSize > 1) {
+          const perPerson = hr / teamSize;
+          pay.textContent = `💰 $${hr.toFixed(0)}/hr total ($${perPerson.toFixed(0)}/hr per person)${maxHrs ? ` · max ${maxHrs} hrs` : ""}`;
+        } else {
+          pay.textContent = `💰 $${hr.toFixed(0)}/hr total${maxHrs ? ` (max ${maxHrs} hrs)` : ""}`;
+        }
       } else {
         const total = Number(job.amount) || 0;
         pay.textContent = `💰 $${total.toFixed(0)}`;
@@ -7313,26 +7333,49 @@ async function renderJobs(reset = false) {
           priceInput.style.cssText = "width: 100%; padding: 2rem 1.5rem 2rem 4rem; border: 4px solid var(--primary); border-radius: 16px; font-size: 2.5rem; font-weight: 700; text-align: left; background: #f0fdf4; color: var(--text-main); min-height: 85px; box-sizing: border-box; transition: all 0.2s; font-family: inherit;";
           priceInputWrapper.appendChild(priceInput);
           
-          // Add /hr suffix for hourly rates
+          // Add /hr suffix for hourly rates (initial state)
           if (job.payType === "hourly") {
             const hrSuffix = document.createElement("span");
+            hrSuffix.className = "hr-suffix";
             hrSuffix.style.cssText = "position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 1.75rem; font-weight: 600; color: var(--text-muted); z-index: 1;";
             hrSuffix.textContent = "/hr";
             priceInputWrapper.appendChild(hrSuffix);
+            priceInput.placeholder = "e.g., 60.00 (total for all workers)";
           }
           
           priceNegotiationSection.appendChild(priceInputWrapper);
           
-          // Price type selector (if needed - but usually matches job type)
+          // Price type selector - always visible, allows switching between flat and hourly
           const priceTypeSelect = document.createElement("select");
           priceTypeSelect.id = `proposedPriceType_${job.id}`;
           priceTypeSelect.style.cssText = "width: 100%; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; font-weight: 600; font-family: inherit; background: white; margin-bottom: 0.75rem;";
           priceTypeSelect.innerHTML = `
-            <option value="flat">Flat Rate</option>
-            <option value="hourly">Per Hour</option>
+            <option value="flat">Flat Rate (one-time payment)</option>
+            <option value="hourly">Per Hour (total hourly rate)</option>
           `;
           // Set default to match job pay type
           priceTypeSelect.value = job.payType || "flat";
+          
+          // Update input placeholder and /hr suffix when type changes
+          priceTypeSelect.addEventListener("change", () => {
+            const existingHrSuffix = priceInputWrapper.querySelector('.hr-suffix');
+            if (priceTypeSelect.value === "hourly") {
+              priceInput.placeholder = "e.g., 60.00 (total for all workers)";
+              // Show /hr suffix if not already there
+              if (!existingHrSuffix) {
+                const hrSuffix = document.createElement("span");
+                hrSuffix.className = "hr-suffix";
+                hrSuffix.style.cssText = "position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 1.75rem; font-weight: 600; color: var(--text-muted); z-index: 1;";
+                hrSuffix.textContent = "/hr";
+                priceInputWrapper.appendChild(hrSuffix);
+              }
+            } else {
+              priceInput.placeholder = "e.g., 150.00";
+              // Remove /hr suffix
+              if (existingHrSuffix) existingHrSuffix.remove();
+            }
+          });
+          
           priceNegotiationSection.appendChild(priceTypeSelect);
           
           const priceHint = document.createElement("div");
@@ -12677,7 +12720,13 @@ meta.textContent =
             if (pricingOption === 'hustlers_quote') {
               payDisplay = 'Hustler suggests price';
             } else if (payType === 'hourly') {
-              payDisplay = `$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hr${job.estHours ? ` (max ${job.estHours} hrs)` : ''}`;
+              const hourlyRate = parseFloat(job.hourlyRate || 0);
+              if (teamSize > 1) {
+                const perPersonRate = hourlyRate / teamSize;
+                payDisplay = `$${hourlyRate.toFixed(0)}/hr total ($${perPersonRate.toFixed(0)}/hr per person)${job.estHours ? ` · max ${job.estHours} hrs` : ''}`;
+              } else {
+                payDisplay = `$${hourlyRate.toFixed(2)}/hr total${job.estHours ? ` (max ${job.estHours} hrs)` : ''}`;
+              }
             } else {
               payDisplay = `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
             }
@@ -13038,7 +13087,13 @@ meta.textContent =
             if (pricingOption === 'hustlers_quote') {
               payDisplay = 'Hustler suggests price';
             } else if (payType === 'hourly') {
-              payDisplay = `$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hr${job.estHours ? ` (max ${job.estHours} hrs)` : ''}`;
+              const hourlyRate = parseFloat(job.hourlyRate || 0);
+              if (teamSize > 1) {
+                const perPersonRate = hourlyRate / teamSize;
+                payDisplay = `$${hourlyRate.toFixed(0)}/hr total ($${perPersonRate.toFixed(0)}/hr per person)${job.estHours ? ` · max ${job.estHours} hrs` : ''}`;
+              } else {
+                payDisplay = `$${hourlyRate.toFixed(2)}/hr total${job.estHours ? ` (max ${job.estHours} hrs)` : ''}`;
+              }
             } else {
               payDisplay = `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
             }
