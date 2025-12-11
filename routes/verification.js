@@ -110,8 +110,10 @@ router.post('/job/:jobId/verify-start', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Only the assigned hustler can verify start code' });
     }
 
-    if (job.status !== 'ASSIGNED') {
-      return res.status(400).json({ error: 'Job must be in ASSIGNED status to verify start code' });
+    // Job must be SCHEDULED (hustler accepted, waiting for Start Code) to verify start code
+    // Also allow ASSIGNED for backwards compatibility during migration
+    if (job.status !== 'SCHEDULED' && job.status !== 'ASSIGNED') {
+      return res.status(400).json({ error: 'Job must be in SCHEDULED status to verify start code' });
     }
 
     // Check if code has expired (78 hours)

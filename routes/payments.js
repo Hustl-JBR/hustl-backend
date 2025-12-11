@@ -691,7 +691,7 @@ router.post('/confirm-payment', authenticate, requireRole('CUSTOMER'), async (re
     await prisma.job.update({
       where: { id: offer.job.id },
       data: {
-        status: 'ASSIGNED',
+        status: 'SCHEDULED', // Scheduled, not active yet - waiting for Start Code
         hustlerId: offer.hustlerId,
         startCode: startCode,
         startCodeExpiresAt: startCodeExpiresAt,

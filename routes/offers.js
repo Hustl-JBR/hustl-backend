@@ -311,13 +311,12 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     }
 
     // CHECK ACTIVE JOBS LIMIT - Hustlers can only have 2 active jobs at once
-    // Active = ASSIGNED, IN_PROGRESS, COMPLETED_BY_HUSTLER, or AWAITING_CUSTOMER_CONFIRM
+    // Active = IN_PROGRESS only (jobs where Start Code has been entered)
+    // SCHEDULED jobs (hustler accepted, waiting for Start Code) do NOT count as active
     const activeJobsCount = await prisma.job.count({
       where: {
         hustlerId: offer.hustlerId,
-        status: {
-          in: ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM']
-        }
+        status: 'IN_PROGRESS' // Only started jobs count toward the limit
       }
     });
     
@@ -481,10 +480,12 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     const shouldAutoClose = jobRequirements.keepOpenUntilAccepted === true;
     
     // Update job with hustler and verification codes
+    // Set status to SCHEDULED (not ASSIGNED) - job is scheduled but not started yet
+    // Job only becomes active (IN_PROGRESS) when Start Code is entered
     const job = await prisma.job.update({
       where: { id: offer.job.id },
       data: {
-        status: 'ASSIGNED',
+        status: 'SCHEDULED', // Scheduled, not active yet - waiting for Start Code
         hustlerId: offer.hustlerId,
         startCode,
         startCodeExpiresAt,

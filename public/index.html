@@ -5103,7 +5103,7 @@ async function renderJobs(reset = false) {
         // Filter out DECLINED offers - only track PENDING and ACCEPTED
         const relevantOffers = offers.filter(offer => 
           offer.status === 'PENDING' || 
-          (offer.status === 'ACCEPTED' && offer.job && offer.job.status === 'ASSIGNED' && !offer.job.startCodeVerified)
+          (offer.status === 'ACCEPTED' && offer.job && (offer.job.status === 'SCHEDULED' || offer.job.status === 'ASSIGNED') && !offer.job.startCodeVerified)
         );
         userAppliedJobIds = new Set(relevantOffers.map(offer => offer.jobId).filter(Boolean));
         // Store offer details for status checking
@@ -5276,7 +5276,7 @@ async function renderJobs(reset = false) {
         }
         
         // Show ACCEPTED offers that haven't started yet (can still cancel)
-        if (offer && offer.status === 'ACCEPTED' && j.status === 'ASSIGNED' && !j.startCodeVerified) {
+        if (offer && offer.status === 'ACCEPTED' && (j.status === 'SCHEDULED' || j.status === 'ASSIGNED') && !j.startCodeVerified) {
           return true;
         }
         
@@ -5593,12 +5593,12 @@ async function renderJobs(reset = false) {
         statusBadge.style.backgroundColor = "#dcfce7";
         statusBadge.style.color = "#059669";
         statusBadge.textContent = "Open";
-      } else if (statusUpper === "ASSIGNED" || statusUpper === "PENDING_START") {
+      } else if (statusUpper === "SCHEDULED" || statusUpper === "ASSIGNED" || statusUpper === "PENDING_START") {
         statusBadge.classList.add("status-assigned");
         statusBadge.style.backgroundColor = "#fef3c7";
         statusBadge.style.color = "#d97706";
-        statusBadge.textContent = "Pending Start";
-      } else if (statusUpper === "PAID" || statusUpper === "IN_PROGRESS") {
+        statusBadge.textContent = statusUpper === "SCHEDULED" ? "Scheduled" : "Pending Start";
+      } else if (statusUpper === "IN_PROGRESS") {
         statusBadge.classList.add("status-assigned");
         statusBadge.style.backgroundColor = "#dbeafe";
         statusBadge.style.color = "#2563eb";
@@ -7141,7 +7141,7 @@ async function renderJobs(reset = false) {
       modalContent.appendChild(contentSection);
 
       // Customer view: Show start code if hustler is accepted but not started (NOT for completed jobs)
-      if (user && user.id === job.postedByUserId && job.hustlerId && job.startCode && !job.startCodeVerified && job.status === 'ASSIGNED' && job.status !== 'PAID') {
+      if (user && user.id === job.postedByUserId && job.hustlerId && job.startCode && !job.startCodeVerified && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && job.status !== 'PAID') {
         const startCodeSection = document.createElement("div");
         startCodeSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #fef3c7; border-radius: 12px; border: 2px solid #fbbf24;";
         
@@ -7258,7 +7258,7 @@ async function renderJobs(reset = false) {
       }
       
       // Hustler view: Show start code input if accepted but not started (NOT for completed jobs)
-      if (user && user.id === job.hustlerId && job.startCode && !job.startCodeVerified && job.status === 'ASSIGNED' && job.status !== 'PAID') {
+      if (user && user.id === job.hustlerId && job.startCode && !job.startCodeVerified && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && job.status !== 'PAID') {
         const startCodeInputSection = document.createElement("div");
         startCodeInputSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #dbeafe; border-radius: 12px; border: 2px solid #3b82f6;";
         
@@ -8675,9 +8675,9 @@ async function renderJobs(reset = false) {
           const statusUpper = (job.status || "").toUpperCase();
           let statusText = "";
           // Simplified status messages with verification flow
-          if (statusUpper === "ASSIGNED") {
-            if (!job.arrivalCodeVerified) {
-              statusText = "Give the arrival code to the hustler when they arrive.";
+          if (statusUpper === "SCHEDULED" || statusUpper === "ASSIGNED") {
+            if (!job.startCodeVerified) {
+              statusText = "Give the start code to the hustler when they arrive and are ready to begin.";
             } else if (!job.completionCodeVerified) {
               statusText = "Job in progress. Enter completion code when done.";
             } else {
@@ -10979,7 +10979,9 @@ async function renderJobs(reset = false) {
                 
                 const statusColors = {
                   'OPEN': '#10b981',
-                  'ASSIGNED': '#3b82f6',
+                  'SCHEDULED': '#f59e0b', // Orange for scheduled (waiting for start)
+                  'ASSIGNED': '#3b82f6', // Blue for assigned (backwards compatibility)
+                  'IN_PROGRESS': '#3b82f6', // Blue for in progress
                   'COMPLETED_BY_HUSTLER': '#10b981', // Green for completed
                   'AWAITING_CUSTOMER_CONFIRM': '#f59e0b',
                   'PAID': '#10b981', // Green for completed
@@ -10988,7 +10990,9 @@ async function renderJobs(reset = false) {
                 
                 const statusLabels = {
                   'OPEN': 'Open',
-                  'ASSIGNED': 'In Progress',
+                  'SCHEDULED': 'Scheduled',
+                  'ASSIGNED': 'Assigned',
+                  'IN_PROGRESS': 'In Progress',
                   'COMPLETED_BY_HUSTLER': 'Awaiting Confirmation',
                   'AWAITING_CUSTOMER_CONFIRM': 'Awaiting Confirmation',
                   'PAID': 'Completed',
@@ -12240,9 +12244,9 @@ meta.textContent =
             if (job.status === 'OPEN') {
               statusBadge = 'Open for Applications';
               statusColor = '#10b981';
-            } else if (job.status === 'ASSIGNED' || job.status === 'REQUESTED') {
-              statusBadge = 'Hustler Assigned';
-              statusColor = '#3b82f6';
+            } else if (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'REQUESTED') {
+              statusBadge = job.status === 'SCHEDULED' ? 'Scheduled' : 'Hustler Assigned';
+              statusColor = job.status === 'SCHEDULED' ? '#f59e0b' : '#3b82f6';
             } else if (job.status === 'COMPLETED_BY_HUSTLER') {
               statusBadge = 'Awaiting Completion';
               statusColor = '#f59e0b';
@@ -12695,7 +12699,7 @@ meta.textContent =
           // Always show PENDING offers
           if (offer.status === 'PENDING') return true;
           // Show ACCEPTED offers only if job is ASSIGNED but start code not verified (can still cancel)
-          if (offer.status === 'ACCEPTED' && offer.job && offer.job.status === 'ASSIGNED' && !offer.job.startCodeVerified) return true;
+          if (offer.status === 'ACCEPTED' && offer.job && (offer.job.status === 'SCHEDULED' || offer.job.status === 'ASSIGNED') && !offer.job.startCodeVerified) return true;
           // Don't show DECLINED offers
           return false;
         });

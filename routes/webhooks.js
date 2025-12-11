@@ -124,10 +124,11 @@ async function handleCheckoutSessionCompleted(session) {
     const startCodeExpiresAt = new Date(Date.now() + 78 * 60 * 60 * 1000); // 78 hours from now
     
     // Update job with hustler and verification codes
+    // Set status to SCHEDULED (not ASSIGNED) - job is scheduled but not started yet
     await prisma.job.update({
       where: { id: offer.job.id },
       data: {
-        status: 'ASSIGNED',
+        status: 'SCHEDULED', // Scheduled, not active yet - waiting for Start Code
         hustlerId: offer.hustlerId,
         startCode: startCode,
         startCodeExpiresAt: startCodeExpiresAt,

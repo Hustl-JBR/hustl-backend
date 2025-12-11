@@ -117,8 +117,10 @@ router.get('/user-posted', authenticate, async (req, res) => {
       where: {
         customerId: userId,
         status: {
-          notIn: ['PAID', 'COMPLETED_BY_HUSTLER', 'CANCELLED', 'EXPIRED']
-        }
+          notIn: ['PAID', 'CANCELLED', 'EXPIRED']
+        },
+        // Exclude jobs where completion code has been verified (these are completed)
+        completionCodeVerified: false
       },
       include: {
         customer: {
@@ -168,10 +170,11 @@ router.get('/active', authenticate, async (req, res) => {
     const userId = req.user.id;
     
     // Active jobs are:
-    // 1. ASSIGNED - Hustler accepted, can message, waiting for start code
-    // 2. IN_PROGRESS - Start code verified, job actively being worked on
+    // 1. SCHEDULED - Hustler accepted, can message, waiting for Start Code (does NOT count toward 2-job limit)
+    // 2. IN_PROGRESS - Start code verified, job actively being worked on (DOES count toward 2-job limit)
     // Note: COMPLETED_BY_HUSTLER and AWAITING_CUSTOMER_CONFIRM are intermediate states
     // that should move to Completed Jobs once completion code is verified
+    // Also include ASSIGNED for backwards compatibility during migration
     const jobs = await prisma.job.findMany({
       where: {
         OR: [
@@ -179,7 +182,7 @@ router.get('/active', authenticate, async (req, res) => {
           { hustlerId: userId }
         ],
         status: {
-          in: ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM']
+          in: ['SCHEDULED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM']
         },
         // Exclude jobs where completion code has been verified (these are completed)
         completionCodeVerified: false
@@ -863,9 +866,11 @@ router.post('/:id/cancel', authenticate, requireRole('CUSTOMER'), async (req, re
       });
     }
 
-    // BUSINESS RULE: Customer cannot cancel after Hustler is assigned (ASSIGNED or in progress)
+    // BUSINESS RULE: Customer cannot cancel after Hustler is assigned (SCHEDULED, IN_PROGRESS, or completed states)
     // Allow cancellation for OPEN/REQUESTED jobs regardless of date
-    if (job.status === 'ASSIGNED' || job.status === 'COMPLETED_BY_HUSTLER' || job.status === 'AWAITING_CUSTOMER_CONFIRM') {
+    // Also allow ASSIGNED for backwards compatibility during migration
+    if (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS' || 
+        job.status === 'COMPLETED_BY_HUSTLER' || job.status === 'AWAITING_CUSTOMER_CONFIRM') {
       return res.status(400).json({ 
         error: 'Cannot cancel job that is in progress. The hustler is already assigned or working. Please contact support if there is an emergency.' 
       });
@@ -1100,8 +1105,9 @@ router.post('/:id/complete', authenticate, requireRole('HUSTLER'), async (req, r
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    if (job.status !== 'ASSIGNED') {
-      return res.status(400).json({ error: 'Job is not assigned' });
+    // Allow SCHEDULED or ASSIGNED (for backwards compatibility during migration)
+    if (job.status !== 'SCHEDULED' && job.status !== 'ASSIGNED') {
+      return res.status(400).json({ error: 'Job is not scheduled or assigned' });
     }
 
     // Protection: Can't mark complete before job date (prevents premature completion scams)
