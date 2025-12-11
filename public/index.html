@@ -3425,8 +3425,35 @@ heart of Hustl.
 <script src="/api-integration.js?v=3"></script>
 <script>
   // Simple stub functions - will be replaced when real functions are defined
-  window.setView = function(view) {
-    console.warn("setView not ready yet, view:", view);
+  // The stub actually works as a fallback to ensure navigation always functions
+  window.setView = async function(view) {
+    console.log("⚠️ setView stub called, using fallback for view:", view);
+    // Fallback implementation - manually switch views
+    if (typeof window.activeView !== 'undefined') {
+      window.activeView = view;
+    }
+    // Hide all views
+    document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+    // Show target view
+    const target = document.getElementById("view-" + view);
+    if (target) {
+      target.style.display = "block";
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+    // Update nav tabs
+    document.querySelectorAll(".nav-tab").forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.view === view);
+    });
+    // Call renderAll if available
+    if (typeof window.renderAll === 'function') {
+      setTimeout(async () => {
+        try {
+          await window.renderAll();
+        } catch (err) {
+          console.error("Error in stub renderAll:", err);
+        }
+      }, 50);
+    }
   };
   window.openAuthModal = function(mode) {
     console.warn("openAuthModal not ready yet, mode:", mode);
