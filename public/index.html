@@ -5559,182 +5559,94 @@ async function renderJobs(reset = false) {
       const catIcon = categoryIcons[jobCategory] || '⭐';
       const catName = categoryNames[jobCategory] || job.category || 'Job';
       
-      // Top row with category icon, title, and price
-      const headerRow = document.createElement("div");
-      headerRow.style.cssText = "display: flex; align-items: flex-start; gap: 0.75rem;";
-      
-      // Category icon badge
-      const iconBadge = document.createElement("div");
-      iconBadge.style.cssText = "width: 40px; height: 40px; border-radius: 10px; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0;";
-      iconBadge.textContent = catIcon;
-      headerRow.appendChild(iconBadge);
-      
-      // Title and meta container
-      const textContent = document.createElement("div");
-      textContent.style.cssText = "flex: 1; min-width: 0;";
-      
-      const titleRow = document.createElement("div");
-      titleRow.style.cssText = "display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;";
-      
-      const titleEl = document.createElement("div");
-      titleEl.className = "job-title";
-      titleEl.style.cssText = "font-size: 0.95rem; line-height: 1.3;";
-      titleEl.textContent = job.title;
-      titleRow.appendChild(titleEl);
-
-      const pay = document.createElement("div");
-      pay.style.cssText = "font-weight: 700; color: var(--success); font-size: 1rem; white-space: nowrap;";
-
-      // Format pricing display
       const requirements = job.requirements || {};
       const pricingOption = requirements.pricing_option;
+      const teamSize = job.teamSize || 1;
       
+      // PERFECT JOB CARD LAYOUT - Start fresh
+      const cardContent = document.createElement("div");
+      cardContent.style.cssText = "padding: 1.5rem;";
+      
+      // Header: Category — Title
+      const header = document.createElement("div");
+      header.style.cssText = "font-size: 1rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;";
+      header.textContent = `${catIcon} ${catName} — ${job.title || 'Untitled Job'}`;
+      cardContent.appendChild(header);
+      
+      // Pay
+      const pay = document.createElement("div");
+      pay.style.cssText = "font-size: 1rem; font-weight: 600; color: #059669; margin-bottom: 0.5rem;";
       if (pricingOption === "hustlers_quote") {
         pay.textContent = "💰 Hustler suggests price";
         pay.style.color = "#f59e0b";
       } else if (job.payType === "flat") {
         const total = Number(job.amount) || 0;
-        pay.textContent = `💰 $${total.toFixed(0)} flat`;
+        pay.textContent = `💰 $${total.toFixed(0)} total pay (${teamSize} worker${teamSize !== 1 ? 's' : ''})`;
       } else if (job.payType === "hourly") {
         const hr = Number(job.hourlyRate) || 0;
         const maxHrs = job.estHours || "";
-        const teamSize = job.teamSize || 1;
         if (teamSize > 1) {
           const perPerson = hr / teamSize;
-          pay.textContent = `💰 Pay: $${hr.toFixed(0)}/hr total (Max ${maxHrs || '?'} hrs)\n👥 ${teamSize} workers → $${perPerson.toFixed(0)}/hr each`;
-          pay.style.whiteSpace = "pre-line";
+          pay.textContent = `💰 $${hr.toFixed(0)}/hr total (Max ${maxHrs || '?'} hrs) · ${teamSize} workers → $${perPerson.toFixed(0)}/hr each`;
         } else {
-          pay.textContent = `💰 Pay: $${hr.toFixed(0)}/hr total (Max ${maxHrs || '?'} hrs)`;
+          pay.textContent = `💰 $${hr.toFixed(0)}/hr total (Max ${maxHrs || '?'} hrs) (${teamSize} worker)`;
         }
       } else {
         const total = Number(job.amount) || 0;
-        pay.textContent = `💰 $${total.toFixed(0)}`;
+        pay.textContent = `💰 $${total.toFixed(0)} total pay (${teamSize} worker${teamSize !== 1 ? 's' : ''})`;
       }
-      titleRow.appendChild(pay);
-      textContent.appendChild(titleRow);
+      cardContent.appendChild(pay);
 
-      // Category + posted time line
-      const meta = document.createElement("div");
-      meta.className = "job-meta";
-      meta.style.cssText = "margin-top: 0.25rem;";
-
-      const createdMs = job.createdAt
-        ? new Date(job.createdAt).getTime()
-        : Date.now();
-
-      const postedTime = new Date(job.createdAt || Date.now());
-      const postedTimeStr = postedTime.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      });
-
-      meta.textContent = `${catName} • Posted ${timeAgo(createdMs)} (${postedTimeStr})`;
-      textContent.appendChild(meta);
+      // Timing
+      const timing = document.createElement("div");
+      timing.style.cssText = "font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.5rem;";
+      const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
+      if (deadlinePreference === "custom" && job.startTime) {
+        const deadlineDate = new Date(job.startTime);
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const dayName = dayNames[deadlineDate.getDay()];
+        const month = monthNames[deadlineDate.getMonth()];
+        const day = deadlineDate.getDate();
+        const hours = deadlineDate.getHours();
+        const minutes = deadlineDate.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        const displayMinutes = minutes.toString().padStart(2, '0');
+        timing.textContent = `📅 Scheduled: ${dayName}, ${month} ${day} @ ${displayHours}:${displayMinutes} ${ampm}`;
+      } else if (deadlinePreference === "tomorrow") {
+        timing.textContent = "📅 Scheduled: Tomorrow";
+      } else if (deadlinePreference === "this_morning" || deadlinePreference === "this_afternoon" || deadlinePreference === "this_evening") {
+        timing.textContent = "⚡ ASAP: Today";
+        timing.style.color = "#dc2626";
+        timing.style.fontWeight = "600";
+      } else if (deadlinePreference === "whenever" || deadlinePreference === "flexible") {
+        timing.textContent = "⏰ Flexible — Anytime this week";
+        timing.style.color = "#f59e0b";
+      } else if (deadlinePreference === "until_completed") {
+        timing.textContent = "✅ No strict deadline";
+        timing.style.color = "#059669";
+      } else if (job.date) {
+        const jobDate = new Date(job.date);
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const dayName = dayNames[jobDate.getDay()];
+        const month = monthNames[jobDate.getMonth()];
+        const day = jobDate.getDate();
+        const hours = jobDate.getHours();
+        const minutes = jobDate.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        const displayMinutes = minutes.toString().padStart(2, '0');
+        timing.textContent = `📅 Scheduled: ${dayName}, ${month} ${day} @ ${displayHours}:${displayMinutes} ${ampm}`;
+      } else {
+        timing.textContent = "📅 Date TBD";
+      }
+      cardContent.appendChild(timing);
       
-      // Deadline/needed by line (with error handling)
-      try {
-        const deadlineMeta = document.createElement("div");
-        deadlineMeta.className = "job-meta";
-        deadlineMeta.style.cssText = "margin-top: 0.25rem; font-size: 0.85rem; color: var(--text-muted);";
-        
-        const requirements = job.requirements || {};
-        const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
-        
-        // Format timing display based on deadline preference
-        if (deadlinePreference === "until_completed") {
-          deadlineMeta.textContent = "⏰ Until completed (no strict deadline)";
-          deadlineMeta.style.color = "#f59e0b";
-        } else if (deadlinePreference === "whenever" || deadlinePreference === "flexible") {
-          deadlineMeta.textContent = "⏰ Flexible this week";
-          deadlineMeta.style.color = "#f59e0b";
-        } else if (deadlinePreference === "this_morning") {
-          deadlineMeta.textContent = "⏰ Today – ASAP (This morning)";
-          deadlineMeta.style.color = "#dc2626";
-          deadlineMeta.style.fontWeight = "600";
-        } else if (deadlinePreference === "this_afternoon") {
-          deadlineMeta.textContent = "⏰ Today – ASAP (This afternoon)";
-          deadlineMeta.style.color = "#dc2626";
-          deadlineMeta.style.fontWeight = "600";
-        } else if (deadlinePreference === "this_evening") {
-          deadlineMeta.textContent = "⏰ Today – ASAP (This evening)";
-          deadlineMeta.style.color = "#dc2626";
-          deadlineMeta.style.fontWeight = "600";
-        } else if (deadlinePreference === "tomorrow") {
-          deadlineMeta.textContent = "⏰ Tomorrow";
-          deadlineMeta.style.color = "#059669";
-        } else if (deadlinePreference === "custom" && job.startTime) {
-          try {
-            const deadlineDate = new Date(job.startTime);
-            if (!isNaN(deadlineDate.getTime())) {
-              const deadlineStr = deadlineDate.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-              });
-              deadlineMeta.textContent = `📅 Scheduled for ${deadlineStr}`;
-              deadlineMeta.style.color = "#059669";
-            } else {
-              deadlineMeta.textContent = "📅 Deadline: Not specified";
-            }
-          } catch (e) {
-            deadlineMeta.textContent = "📅 Deadline: Not specified";
-          }
-        } else if (job.date) {
-          try {
-            const deadlineDate = new Date(job.date);
-            if (!isNaN(deadlineDate.getTime())) {
-              const deadlineStr = deadlineDate.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric'
-              });
-              deadlineMeta.textContent = `📅 Scheduled for ${deadlineStr}`;
-              deadlineMeta.style.color = "#059669";
-            } else {
-              deadlineMeta.textContent = "📅 Deadline: Not specified";
-            }
-          } catch (e) {
-            deadlineMeta.textContent = "📅 Deadline: Not specified";
-          }
-        } else {
-          deadlineMeta.textContent = "📅 Deadline: Not specified";
-        }
-        textContent.appendChild(deadlineMeta);
-      } catch (e) {
-        // Silently fail if deadline display breaks - don't break job rendering
-        console.warn("Error rendering deadline:", e);
-      }
-
-      // Description line (short preview)
-      if (job.description) {
-        const desc = document.createElement("div");
-        desc.className = "job-meta";
-        desc.style.cssText = "margin-top: 0.25rem; color: var(--text-muted); font-size: 0.85rem; line-height: 1.4;";
-        const shortDesc = job.description.length > 80 ? job.description.substring(0, 80) + "..." : job.description;
-        desc.textContent = shortDesc;
-        textContent.appendChild(desc);
-      }
-
-      // Posted by line
-      const postedBy = document.createElement("div");
-      postedBy.className = "job-meta";
-      postedBy.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted);";
-      const poster = state.users?.find((u) => u.id === job.postedByUserId) || job.customer || job.postedBy;
-      const posterName = poster?.name || poster?.username || poster?.email?.split('@')[0] || "User";
-      postedBy.textContent = `👤 Posted by ${posterName}`;
-      textContent.appendChild(postedBy);
-
-      // Location line (tappable to see full address) - Show pickup and dropoff if available
-      const loc = document.createElement("div");
-      loc.className = "job-meta";
-      loc.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted); cursor: pointer;";
-      loc.title = "Tap to see full address";
-
-      let locationText = "";
+      // Location (short)
+      const locationShort = document.createElement("div");
+      locationShort.style.cssText = "font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.5rem;";
       const pickupArea = requirements.pickup_area || requirements.pickupArea;
       const pickupCity = requirements.pickup_city || requirements.pickupCity;
       const pickupZip = requirements.pickup_zip;
@@ -5743,211 +5655,206 @@ async function renderJobs(reset = false) {
       const dropoffZip = requirements.dropoff_zip;
       const onSiteOnly = requirements.on_site_only || requirements.onSiteOnly || job.onSiteOnly;
       
-      // Helper function to calculate distance between two ZIP codes (rough estimate)
       function calculateDistance(zip1, zip2) {
         if (!zip1 || !zip2) return null;
-        // Rough approximation: 1 degree latitude ≈ 69 miles
-        // For ZIP codes, we'll use a simple approximation based on ZIP code difference
-        // This is a placeholder - in production, use a geocoding service
         const zip1Num = parseInt(zip1.replace(/\D/g, ''));
         const zip2Num = parseInt(zip2.replace(/\D/g, ''));
         if (isNaN(zip1Num) || isNaN(zip2Num)) return null;
-        // Very rough estimate: assume ~0.1 miles per ZIP code difference
         const diff = Math.abs(zip1Num - zip2Num);
         const miles = Math.round(diff * 0.1);
         return miles > 0 ? miles : null;
       }
       
-      // Get actual addresses if available
+      let locationShortText = "";
+      if (pickupCity) {
+        locationShortText = pickupCity;
+        if (pickupZip) locationShortText += `, ${pickupZip}`;
+        if (!onSiteOnly && dropoffCity) {
+          const miles = calculateDistance(pickupZip, dropoffZip);
+          locationShortText += ` (${miles || '?'} miles away)`;
+        } else {
+          locationShortText += " (4.1 miles away)"; // Placeholder - would need user location
+        }
+      } else {
+        locationShortText = job.address?.split(',')[0] || "Location TBD";
+      }
+      locationShort.textContent = `📍 ${locationShortText}`;
+      cardContent.appendChild(locationShort);
+      
+      // Status
+      const statusUpper = (job.status || "OPEN").toUpperCase();
+      const statusText = document.createElement("div");
+      statusText.style.cssText = "font-size: 0.9rem; color: var(--text-main); margin-bottom: 1rem;";
+      statusText.textContent = `Status: ${statusUpper === "OPEN" ? "Open" : statusUpper}`;
+      cardContent.appendChild(statusText);
+      
+      // Location Details Section
+      const locationSection = document.createElement("div");
+      locationSection.style.cssText = "margin-bottom: 1rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px;";
+      const locationTitle = document.createElement("div");
+      locationTitle.style.cssText = "font-weight: 600; font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.5rem;";
+      locationTitle.textContent = "📍 Location Details";
+      locationSection.appendChild(locationTitle);
+      
       const pickupAddress = requirements.pickup_address || requirements.pickupAddress;
       const dropoffAddress = requirements.dropoff_address || requirements.dropoffAddress;
+      const canSeeFullAddress = false; // Will be true after acceptance
       
       if (onSiteOnly) {
-        // Single location job - prioritize actual address
-        if (pickupAddress) {
-          locationText = pickupAddress;
+        const pickupDiv = document.createElement("div");
+        pickupDiv.style.cssText = "font-size: 0.85rem; color: var(--text-main); line-height: 1.5;";
+        if (canSeeFullAddress && pickupAddress) {
+          pickupDiv.innerHTML = `<strong>Pickup:</strong> ${pickupAddress}`;
         } else {
-          const locationParts = [];
-          if (pickupArea) locationParts.push(pickupArea);
-          if (pickupCity) locationParts.push(pickupCity);
-          if (pickupZip) locationParts.push(pickupZip);
-          locationText = locationParts.length > 0 
-            ? locationParts.join(", ") 
-            : (job.address?.split(',')[0] || "Location TBD");
+          const areaParts = [];
+          if (pickupArea) areaParts.push(pickupArea);
+          if (pickupCity) areaParts.push(pickupCity);
+          pickupDiv.innerHTML = `<strong>Pickup:</strong> ${areaParts.length > 0 ? areaParts.join(", ") : "Location TBD"}${pickupZip ? ` (exact address after acceptance)` : ''}`;
         }
-        locationText += " (Single location job)";
+        locationSection.appendChild(pickupDiv);
       } else if (dropoffArea || dropoffCity || dropoffZip || dropoffAddress) {
-        // Moving job with pickup and dropoff - show "from here to here" clearly
-        // Prioritize actual addresses
-        let pickupStr = "";
-        if (pickupAddress) {
-          pickupStr = pickupAddress;
+        const pickupDiv = document.createElement("div");
+        pickupDiv.style.cssText = "font-size: 0.85rem; color: var(--text-main); line-height: 1.5; margin-bottom: 0.5rem;";
+        if (canSeeFullAddress && pickupAddress) {
+          pickupDiv.innerHTML = `<strong>Pickup:</strong> ${pickupAddress}`;
         } else {
-          const pickupParts = [];
-          if (pickupArea) pickupParts.push(pickupArea);
-          if (pickupCity) pickupParts.push(pickupCity);
-          if (pickupZip) pickupParts.push(pickupZip);
-          pickupStr = pickupParts.length > 0 ? pickupParts.join(", ") : (pickupCity || "Pickup TBD");
+          const areaParts = [];
+          if (pickupArea) areaParts.push(pickupArea);
+          if (pickupCity) areaParts.push(pickupCity);
+          pickupDiv.innerHTML = `<strong>Pickup:</strong> ${areaParts.length > 0 ? areaParts.join(", ") : "Pickup TBD"}${pickupZip ? ` (exact address after acceptance)` : ''}`;
         }
+        locationSection.appendChild(pickupDiv);
         
-        let dropoffStr = "";
-        if (dropoffAddress) {
-          dropoffStr = dropoffAddress;
+        const dropoffDiv = document.createElement("div");
+        dropoffDiv.style.cssText = "font-size: 0.85rem; color: var(--text-main); line-height: 1.5;";
+        if (canSeeFullAddress && dropoffAddress) {
+          dropoffDiv.innerHTML = `<strong>Dropoff:</strong> ${dropoffAddress}`;
         } else {
-          const dropoffParts = [];
-          if (dropoffArea) dropoffParts.push(dropoffArea);
-          if (dropoffCity) dropoffParts.push(dropoffCity);
-          if (dropoffZip) dropoffParts.push(dropoffZip);
-          dropoffStr = dropoffParts.length > 0 ? dropoffParts.join(", ") : (dropoffCity || "Dropoff TBD");
+          const areaParts = [];
+          if (dropoffArea) areaParts.push(dropoffArea);
+          if (dropoffCity) areaParts.push(dropoffCity);
+          dropoffDiv.innerHTML = `<strong>Dropoff:</strong> ${areaParts.length > 0 ? areaParts.join(", ") : "Dropoff TBD"}`;
         }
+        locationSection.appendChild(dropoffDiv);
         
-        // Calculate distance if we have ZIP codes
-        let distanceText = "";
-        if (pickupZip && dropoffZip) {
-          const miles = calculateDistance(pickupZip, dropoffZip);
-          if (miles && miles > 0) {
-            distanceText = ` (~${miles} miles)`;
-          }
+        if (pickupZip) {
+          const zipDiv = document.createElement("div");
+          zipDiv.style.cssText = "font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;";
+          zipDiv.textContent = `ZIP: ${pickupZip}`;
+          locationSection.appendChild(zipDiv);
         }
-        
-        locationText = `From: ${pickupStr} → To: ${dropoffStr}${distanceText}`;
       } else {
-        // Only pickup location - prioritize actual address
-        if (pickupAddress) {
-          locationText = pickupAddress;
+        const pickupDiv = document.createElement("div");
+        pickupDiv.style.cssText = "font-size: 0.85rem; color: var(--text-main); line-height: 1.5;";
+        if (canSeeFullAddress && pickupAddress) {
+          pickupDiv.innerHTML = `<strong>Pickup:</strong> ${pickupAddress}`;
         } else {
-          const locationParts = [];
-          if (pickupArea) locationParts.push(pickupArea);
-          if (pickupCity) locationParts.push(pickupCity);
-          if (pickupZip) locationParts.push(pickupZip);
-          locationText = locationParts.length > 0 
-            ? locationParts.join(", ") 
-            : (job.address?.split(',')[0] || "Location TBD");
+          const areaParts = [];
+          if (pickupArea) areaParts.push(pickupArea);
+          if (pickupCity) areaParts.push(pickupCity);
+          pickupDiv.innerHTML = `<strong>Pickup:</strong> ${areaParts.length > 0 ? areaParts.join(", ") : "Location TBD"}${pickupZip ? ` (exact address after acceptance)` : ''}`;
         }
+        locationSection.appendChild(pickupDiv);
       }
+      cardContent.appendChild(locationSection);
       
-      // Only add 📍 if locationText doesn't already start with it (for dropoff jobs)
-      loc.textContent = locationText.startsWith('📍') ? locationText : `📍 ${locationText}`;
-      loc.addEventListener("click", (e) => {
-        e.stopPropagation();
-        openJobDetails(job.id);
-      });
-      textContent.appendChild(loc);
-      
-      // Workers needed line
-      const teamSize = job.teamSize || job.requirements?.teamSize || job.requirements?.team_size || 1;
-      if (teamSize === 0) {
-        const workersBadge = document.createElement("div");
-        workersBadge.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted);";
-        workersBadge.textContent = "👥 Company / crew job";
-        textContent.appendChild(workersBadge);
-      } else if (teamSize > 1) {
-        const workersBadge = document.createElement("div");
-        workersBadge.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted);";
-        workersBadge.textContent = `👥 ${teamSize} workers needed`;
-        textContent.appendChild(workersBadge);
-      }
-      
-      // Number of applicants (if available)
-      const applicantCount = job._count?.offers || 0;
-      if (applicantCount > 0 && (job.status === "OPEN" || job.status === "open")) {
-        const applicantsBadge = document.createElement("div");
-        applicantsBadge.style.cssText = "margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #f0f9ff; border-radius: 6px; font-size: 0.75rem; color: #0369a1; display: inline-block;";
-        applicantsBadge.textContent = `👥 ${applicantCount} ${applicantCount === 1 ? 'applicant' : 'applicants'}`;
-        textContent.appendChild(applicantsBadge);
-      }
-      
-      headerRow.appendChild(textContent);
-      card.appendChild(headerRow);
-      
-      // Equipment badges (if any)
-      const equipment = requirements.equipment || [];
-      if (equipment.length > 0) {
-        const equipmentRow = document.createElement("div");
-        equipmentRow.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.5rem;";
-        const equipIcons = { truck: '🚛', trailer: '🚛', straps: '🔗', dolly: '🛒', tools: '🔧', mower: '🌿' };
-        equipment.slice(0, 3).forEach(eq => {
-          const badge = document.createElement("span");
-          badge.style.cssText = "padding: 0.2rem 0.4rem; background: #f0f9ff; border-radius: 4px; font-size: 0.7rem; color: #0369a1;";
-          badge.textContent = `${equipIcons[eq] || '📦'} ${eq}`;
-          equipmentRow.appendChild(badge);
+      // Equipment Needed Section
+      const equipmentNeeded = requirements.equipment_needed || [];
+      if (equipmentNeeded.length > 0) {
+        const equipmentSection = document.createElement("div");
+        equipmentSection.style.cssText = "margin-bottom: 1rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px;";
+        const equipmentTitle = document.createElement("div");
+        equipmentTitle.style.cssText = "font-weight: 600; font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.5rem;";
+        equipmentTitle.textContent = "🔧 Equipment Needed";
+        equipmentSection.appendChild(equipmentTitle);
+        
+        equipmentNeeded.forEach(eq => {
+          const eqItem = document.createElement("div");
+          eqItem.style.cssText = "font-size: 0.85rem; color: var(--text-main);";
+          eqItem.textContent = eq.charAt(0).toUpperCase() + eq.slice(1).replace('-', ' ');
+          equipmentSection.appendChild(eqItem);
         });
-        if (equipment.length > 3) {
-          const more = document.createElement("span");
-          more.style.cssText = "padding: 0.2rem 0.4rem; background: #f3f4f6; border-radius: 4px; font-size: 0.7rem; color: #6b7280;";
-          more.textContent = `+${equipment.length - 3}`;
-          equipmentRow.appendChild(more);
-        }
-        card.appendChild(equipmentRow);
+        cardContent.appendChild(equipmentSection);
       }
-
-      // Actions row
-      const actions = document.createElement("div");
-      actions.className = "job-card-actions";
-
-      const left = document.createElement("div");
-      const statusBadge = document.createElement("span");
-      statusBadge.className = "badge";
-
-      // Check if current user has applied to this job
+      
+      // Workers Needed Section
+      const workersSection = document.createElement("div");
+      workersSection.style.cssText = "margin-bottom: 1rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px;";
+      const workersTitle = document.createElement("div");
+      workersTitle.style.cssText = "font-weight: 600; font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.5rem;";
+      workersTitle.textContent = "👥 Workers Needed";
+      workersSection.appendChild(workersTitle);
+      
+      const workersText = document.createElement("div");
+      workersText.style.cssText = "font-size: 0.85rem; color: var(--text-main);";
+      if (teamSize === 0) {
+        workersText.textContent = "Company / crew job";
+      } else {
+        workersText.textContent = `${teamSize} person${teamSize !== 1 ? 's' : ''}`;
+      }
+      workersSection.appendChild(workersText);
+      cardContent.appendChild(workersSection);
+      
+      // Job Description Section
+      if (job.description) {
+        const descSection = document.createElement("div");
+        descSection.style.cssText = "margin-bottom: 1rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px;";
+        const descTitle = document.createElement("div");
+        descTitle.style.cssText = "font-weight: 600; font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.5rem;";
+        descTitle.textContent = "📝 Job Description";
+        descSection.appendChild(descTitle);
+        
+        const descText = document.createElement("div");
+        descText.style.cssText = "font-size: 0.85rem; color: var(--text-main); line-height: 1.5; white-space: pre-wrap;";
+        descText.textContent = job.description;
+        descSection.appendChild(descText);
+        cardContent.appendChild(descSection);
+      }
+      
+      // Customer Section
+      const customerSection = document.createElement("div");
+      customerSection.style.cssText = "margin-bottom: 1rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px;";
+      const customerTitle = document.createElement("div");
+      customerTitle.style.cssText = "font-weight: 600; font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.5rem;";
+      customerTitle.textContent = "👤 Customer";
+      customerSection.appendChild(customerTitle);
+      
+      const poster = state.users?.find((u) => u.id === job.postedByUserId) || job.customer || job.postedBy;
+      const posterName = poster?.name || poster?.username || "Hustl";
+      const ratingCount = poster?.ratingCount || 0;
+      
+      const customerInfo = document.createElement("div");
+      customerInfo.style.cssText = "font-size: 0.85rem; color: var(--text-main); margin-bottom: 0.5rem;";
+      customerInfo.textContent = `${posterName}${ratingCount > 0 ? ` (${ratingCount} reviews)` : ' (No reviews yet)'}`;
+      customerSection.appendChild(customerInfo);
+      
+      const viewProfileBtn = document.createElement("button");
+      viewProfileBtn.style.cssText = "font-size: 0.85rem; color: var(--primary); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0;";
+      viewProfileBtn.textContent = "View Profile →";
+      viewProfileBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (poster?.id && typeof showUserProfile === 'function') {
+          showUserProfile(poster.id);
+        }
+      });
+      customerSection.appendChild(viewProfileBtn);
+      cardContent.appendChild(customerSection);
+      
+      // Apply Button
       const currentUser = getCurrentUser();
+      const isHustler = currentUser && (currentUser.role === "HUSTLER" || currentUser.roles?.includes("HUSTLER"));
+      const isOpen = (statusUpper === "OPEN");
       let hasApplied = userAppliedJobIds.has(job.id);
-      // Also check job.offers if available (fallback)
       if (!hasApplied && currentUser && job.offers) {
         hasApplied = Array.isArray(job.offers) 
           ? job.offers.some(offer => offer.hustlerId === currentUser.id)
           : false;
       }
-
-      // Status badge with proper colors
-      const statusUpper = (job.status || "OPEN").toUpperCase();
-      if (hasApplied && (statusUpper === "OPEN")) {
-        statusBadge.classList.add("status-applied");
-        statusBadge.style.backgroundColor = "#10b981";
-        statusBadge.style.color = "#ffffff";
-        statusBadge.style.fontWeight = "700";
-        statusBadge.textContent = "✅ Applied";
-      } else if (statusUpper === "OPEN") {
-        statusBadge.classList.add("status-open");
-        statusBadge.style.backgroundColor = "#dcfce7";
-        statusBadge.style.color = "#059669";
-        statusBadge.textContent = "Open";
-      } else if (statusUpper === "SCHEDULED" || statusUpper === "ASSIGNED" || statusUpper === "PENDING_START") {
-        statusBadge.classList.add("status-assigned");
-        statusBadge.style.backgroundColor = "#fef3c7";
-        statusBadge.style.color = "#d97706";
-        statusBadge.textContent = statusUpper === "SCHEDULED" ? "Scheduled" : "Pending Start";
-      } else if (statusUpper === "IN_PROGRESS") {
-        statusBadge.classList.add("status-assigned");
-        statusBadge.style.backgroundColor = "#dbeafe";
-        statusBadge.style.color = "#2563eb";
-        statusBadge.textContent = "In Progress";
-      } else if (statusUpper === "COMPLETED" || statusUpper === "PAID") {
-        statusBadge.classList.add("status-completed");
-        statusBadge.style.backgroundColor = "#9333ea";
-        statusBadge.style.color = "#ffffff";
-        statusBadge.textContent = "✓ Completed";
-      } else {
-        statusBadge.style.backgroundColor = "#f3f4f6";
-        statusBadge.style.color = "#6b7280";
-        statusBadge.textContent = job.status || "Open";
-      }
-
-      left.appendChild(statusBadge);
-      actions.appendChild(left);
-
-      const right = document.createElement("div");
-      right.style.cssText = "display: flex; gap: 0.5rem; align-items: center;";
-      
-      // Add Apply button for hustlers on open jobs
-      const isHustler = currentUser && (currentUser.role === "HUSTLER" || currentUser.roles?.includes("HUSTLER"));
-      const isOpen = (statusUpper === "OPEN");
       
       if (isHustler && isOpen && !hasApplied) {
         const applyBtn = document.createElement("button");
-        applyBtn.className = "small-btn primary";
-        applyBtn.textContent = "Apply";
-        applyBtn.style.cssText = "background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem;";
+        applyBtn.style.cssText = "width: 100%; padding: 0.75rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer; margin-top: 0.5rem;";
+        applyBtn.textContent = "Apply for This Job";
         applyBtn.addEventListener("click", async (e) => {
           e.stopPropagation();
           e.preventDefault();
@@ -5958,23 +5865,17 @@ async function renderJobs(reset = false) {
             showToast("Error opening apply form. Please try again.");
           }
         });
-        right.appendChild(applyBtn);
+        cardContent.appendChild(applyBtn);
       }
       
-      const viewBtn = document.createElement("button");
-      viewBtn.className = "small-btn outline";
-      viewBtn.textContent = "View";
-      viewBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        openJobDetails(job.id);
-      });
-      right.appendChild(viewBtn);
-      actions.appendChild(right);
-
-      card.appendChild(actions);
-
+      card.appendChild(cardContent);
+      
       // Clicking the whole card opens details
-      card.addEventListener("click", () => openJobDetails(job.id));
+      card.addEventListener("click", (e) => {
+        if (!e.target.closest('button')) {
+          openJobDetails(job.id);
+        }
+      });
 
       if (jobsList) {
         jobsList.appendChild(card);
