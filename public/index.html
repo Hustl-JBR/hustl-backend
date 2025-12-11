@@ -2965,23 +2965,29 @@
               </div>
             </div>
 
-            <div class="field-inline" id="hourlyFields" style="display:none;">
+            <div id="hourlyFields" style="display:none;">
+              <div style="margin-bottom: 0.75rem; padding: 0.75rem; background: #f0fdf4; border-radius: 8px; border-left: 3px solid #10b981;">
+                <div style="font-weight: 600; color: #059669; margin-bottom: 0.5rem;">Hourly Pay (per job, split between workers)</div>
+              </div>
               <div class="field">
-                <label for="hourlyRate">Total hourly rate ($/hr total for all workers)</label>
+                <label for="hourlyRate">Total hourly rate for this job ($/hr):</label>
                 <input id="hourlyRate" type="number" min="0" step="1" value="20" />
               </div>
               <div class="field">
-                <label for="maxHours">Max hours</label>
+                <label for="maxHours">Max hours you're willing to pay for:</label>
                 <input id="maxHours" type="number" min="1" step="1" value="3" />
               </div>
-            </div>
-            <div id="hourlyRateCalculation" style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: #eff6ff; border-radius: 8px; border-left: 3px solid var(--primary);">
-              <div style="font-size: 0.9rem; font-weight: 600; color: var(--primary); margin-bottom: 0.25rem;">💰 Total Hourly Rate</div>
-              <div style="font-size: 0.85rem; color: var(--text-muted);">
-                <span id="totalHourlyRateDisplay">$20</span>/hr total
-                <span id="perPersonBreakdown" style="display: none;"> = <span id="hourlyRateDisplay">$20</span>/hr per person × <span id="workersCountDisplay">1</span> worker(s)</span>
-                <div style="font-size: 0.8rem; color: #6b7280; margin-top: 0.25rem; font-style: italic;">
-                  Each worker will earn their share (before platform fees)
+              <div id="hourlyRateCalculation" style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: #eff6ff; border-radius: 8px; border-left: 3px solid var(--primary);">
+                <div style="font-size: 0.9rem; font-weight: 600; color: var(--primary); margin-bottom: 0.5rem;">ℹ️ How pay works:</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                  Hustl will divide the hourly rate equally among all workers you requested.
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-main); font-weight: 600; padding: 0.5rem; background: white; border-radius: 6px;">
+                  <span id="totalHourlyRateDisplay">$20</span>/hr total
+                  <span id="perPersonBreakdown" style="display: none;"> → <span id="workersCountDisplay">2</span> workers → $<span id="hourlyRateDisplay">10</span>/hr each</span>
+                </div>
+                <div style="font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem; font-style: italic;">
+                  Example: If you choose $<span id="exampleRate">20</span>/hr and <span id="exampleWorkers">2</span> workers, each worker earns $<span id="examplePerPerson">10</span>/hr.
                 </div>
               </div>
             </div>
@@ -4464,11 +4470,18 @@ function showChangePasswordModal() {
           const workersCountDisplay = document.getElementById("workersCountDisplay");
           const totalHourlyRateDisplay = document.getElementById("totalHourlyRateDisplay");
           const perPersonBreakdown = document.getElementById("perPersonBreakdown");
+          const exampleRate = document.getElementById("exampleRate");
+          const exampleWorkers = document.getElementById("exampleWorkers");
+          const examplePerPerson = document.getElementById("examplePerPerson");
           
           if (totalHourlyRateDisplay) totalHourlyRateDisplay.textContent = `$${totalRate.toFixed(0)}`;
+          if (exampleRate) exampleRate.textContent = totalRate.toFixed(0);
+          if (exampleWorkers) exampleWorkers.textContent = workersCount;
+          if (examplePerPerson) examplePerPerson.textContent = perPersonRate.toFixed(0);
+          
           if (workersCount > 1) {
             // Show breakdown only if multiple workers
-            if (hourlyRateDisplay) hourlyRateDisplay.textContent = `$${perPersonRate.toFixed(0)}`;
+            if (hourlyRateDisplay) hourlyRateDisplay.textContent = perPersonRate.toFixed(0);
             if (workersCountDisplay) workersCountDisplay.textContent = workersCount;
             if (perPersonBreakdown) perPersonBreakdown.style.display = "inline";
           } else {
@@ -5588,9 +5601,10 @@ async function renderJobs(reset = false) {
         const teamSize = job.teamSize || 1;
         if (teamSize > 1) {
           const perPerson = hr / teamSize;
-          pay.textContent = `💰 $${hr.toFixed(0)}/hr total ($${perPerson.toFixed(0)}/hr per person)${maxHrs ? ` · max ${maxHrs} hrs` : ""}`;
+          pay.textContent = `💰 Pay: $${hr.toFixed(0)}/hr total (Max ${maxHrs || '?'} hrs)\n👥 ${teamSize} workers → $${perPerson.toFixed(0)}/hr each`;
+          pay.style.whiteSpace = "pre-line";
         } else {
-          pay.textContent = `💰 $${hr.toFixed(0)}/hr total${maxHrs ? ` (max ${maxHrs} hrs)` : ""}`;
+          pay.textContent = `💰 Pay: $${hr.toFixed(0)}/hr total (Max ${maxHrs || '?'} hrs)`;
         }
       } else {
         const total = Number(job.amount) || 0;
@@ -6757,13 +6771,42 @@ async function renderJobs(reset = false) {
       } else {
         const hourlyRate = Number(job.hourlyRate || 0);
         const maxHours = Number(job.maxHours || job.estHours || 0);
-        payText = formatMoney(hourlyRate) + "/hr";
+        payText = formatMoney(hourlyRate) + "/hr total";
         if (maxHours > 0) {
-          payText += ` · max ${maxHours}h`;
+          payText += ` (Max ${maxHours} hrs)`;
         }
       }
       payRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Pay:</span> <span style="color: var(--text-muted);">${payText}</span>`;
       summaryGrid.appendChild(payRow);
+      
+      // Hourly Pay Breakdown Section (if hourly)
+      if (job.payType === "hourly") {
+        const hourlyBreakdownSection = document.createElement("div");
+        hourlyBreakdownSection.style.cssText = "grid-column: 1 / -1; margin-top: 1rem; padding: 1rem; background: #eff6ff; border-radius: 8px; border-left: 3px solid #3b82f6;";
+        
+        const breakdownTitle = document.createElement("div");
+        breakdownTitle.style.cssText = "font-weight: 700; font-size: 0.95rem; color: #1e40af; margin-bottom: 0.75rem;";
+        breakdownTitle.textContent = "💰 Hourly Pay Breakdown";
+        hourlyBreakdownSection.appendChild(breakdownTitle);
+        
+        const hourlyRate = Number(job.hourlyRate || 0);
+        const maxHours = Number(job.maxHours || job.estHours || 0);
+        const teamSize = job.teamSize || 1;
+        const perPersonRate = teamSize > 0 ? hourlyRate / teamSize : hourlyRate;
+        
+        const breakdownList = document.createElement("div");
+        breakdownList.style.cssText = "display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; color: var(--text-main);";
+        
+        breakdownList.innerHTML = `
+          <div><strong>Total hourly rate:</strong> $${hourlyRate.toFixed(0)}/hr</div>
+          ${maxHours > 0 ? `<div><strong>Max hours:</strong> ${maxHours} hours</div>` : ''}
+          <div><strong>Workers needed:</strong> ${teamSize}</div>
+          ${teamSize > 1 ? `<div><strong>Each worker earns:</strong> $${perPersonRate.toFixed(0)}/hr (before platform fees)</div>` : ''}
+        `;
+        
+        hourlyBreakdownSection.appendChild(breakdownList);
+        summaryGrid.appendChild(hourlyBreakdownSection);
+      }
 
       // Status
       const statusRow = document.createElement("div");
