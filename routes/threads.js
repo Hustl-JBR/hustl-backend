@@ -11,13 +11,35 @@ router.use(authenticate);
 // GET /threads - List user's threads (only for ASSIGNED jobs)
 router.get('/', async (req, res) => {
   try {
+    console.log(`[THREADS] Fetching threads for user ${req.user.id}`);
+    
+    // First, check if user has any threads at all (for debugging)
+    const allUserThreads = await prisma.thread.findMany({
+      where: {
+        OR: [
+          { userAId: req.user.id },
+          { userBId: req.user.id },
+        ],
+      },
+      include: {
+        job: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+          },
+        },
+      },
+    });
+    console.log(`[THREADS] User has ${allUserThreads.length} total threads. Job statuses:`, allUserThreads.map(t => ({ jobId: t.job.id, status: t.job.status })));
+    
     const threads = await prisma.thread.findMany({
       where: {
         AND: [
           {
-        OR: [
-          { userAId: req.user.id },
-          { userBId: req.user.id },
+            OR: [
+              { userAId: req.user.id },
+              { userBId: req.user.id },
             ],
           },
           {

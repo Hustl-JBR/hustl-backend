@@ -9513,12 +9513,26 @@ async function renderJobs(reset = false) {
     /* ---------- Messages view ---------- */
 
     async function renderMessagesView() {
+      console.log('[MESSAGES] renderMessagesView called');
       const user = getCurrentUser();
+      console.log('[MESSAGES] User:', user ? user.id : 'not logged in');
+      
       const convList = document.getElementById("conversationList");
       const convTitle = document.getElementById("conversationTitle");
       const convSummary = document.getElementById("conversationJobSummary");
       const convMessages = document.getElementById("conversationMessages");
-      if (!convList) return;
+      
+      console.log('[MESSAGES] Elements found:', {
+        convList: !!convList,
+        convTitle: !!convTitle,
+        convSummary: !!convSummary,
+        convMessages: !!convMessages
+      });
+      
+      if (!convList) {
+        console.error('[MESSAGES] conversationList element not found!');
+        return;
+      }
 
       // Not logged in: nothing to show
       if (!user) {
