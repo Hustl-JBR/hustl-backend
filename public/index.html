@@ -15065,16 +15065,22 @@ meta.textContent =
           // Fallback: manual view switching
           console.log("Using fallback view switching for:", v);
           // CRITICAL: Set activeView so renderAll knows which view to render
+          activeView = v;
           window.activeView = v;
           document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
           const target = document.getElementById("view-" + v);
-          if (target) target.style.display = "block";
+          if (target) {
+            target.style.display = "block";
+          } else {
+            console.error("View target not found:", "view-" + v);
+          }
           document.querySelectorAll(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === v));
           window.scrollTo({ top: 0, behavior: 'instant' });
           // IMPORTANT: Also call renderAll to actually render the content
           setTimeout(async () => {
             try {
               // Ensure activeView is set before calling renderAll
+              activeView = v;
               window.activeView = v;
               console.log("🔵 Calling renderAll with activeView:", window.activeView);
               if (typeof window.renderAll === 'function') {
