@@ -271,32 +271,36 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         }
       });
 
-      // Mark completion as verified and update job status
+      // Mark completion as verified and update job status to PAID (allows reviews)
       const updatedJob = await prisma.job.update({
         where: { id: jobId },
         data: { 
           completionCodeVerified: true,
-          status: 'COMPLETED_BY_HUSTLER' // Job is completed, awaiting customer confirmation
+          status: 'PAID' // Job is completed and paid, ready for reviews
         }
       });
 
       res.json({
         success: true,
-        message: 'Job completion verified! Payment released to hustler.',
+        message: 'Job completed successfully! Please leave a review.',
         completionCodeVerified: true,
         jobStatus: updatedJob.status,
         paymentReleased: true,
         hustlerPayout: hustlerPayout,
-        platformFee: platformFee
+        platformFee: platformFee,
+        jobId: jobId,
+        customerId: job.customerId,
+        hustlerId: job.hustlerId
       });
     } catch (paymentError) {
       console.error('Error releasing payment:', paymentError);
       // Still mark completion as verified even if payment fails (can be retried)
+      // But don't set to PAID if payment failed
       await prisma.job.update({
         where: { id: jobId },
         data: { 
           completionCodeVerified: true,
-          status: 'COMPLETED_BY_HUSTLER'
+          status: 'COMPLETED_BY_HUSTLER' // Keep as completed but not paid if payment failed
         }
       });
       return res.status(500).json({ 

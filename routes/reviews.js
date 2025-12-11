@@ -84,10 +84,13 @@ router.post('/', authenticate, [
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    // Check if job is paid
-    if (job.status !== 'PAID' || !job.payment || job.payment.status !== 'CAPTURED') {
+    // Check if job is paid (PAID status) or completed (COMPLETED_BY_HUSTLER with captured payment)
+    const isPaid = job.status === 'PAID' && job.payment && job.payment.status === 'CAPTURED';
+    const isCompleted = job.status === 'COMPLETED_BY_HUSTLER' && job.payment && job.payment.status === 'CAPTURED';
+    
+    if (!isPaid && !isCompleted) {
       return res.status(400).json({ 
-        error: 'Can only review jobs that have been paid' 
+        error: 'Can only review jobs that have been completed and paid' 
       });
     }
 

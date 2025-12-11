@@ -8871,10 +8871,12 @@ async function renderJobs(reset = false) {
                   if (!response.ok) {
                     throw new Error(data.error || "Verification failed");
                   }
-                  showToast("✅ Job complete! Payment released.");
+                  
                   overlay.remove();
                   document.body.style.overflow = "";
-                  openJobDetails(job.id); // Refresh
+                  
+                  // Show congratulations modal, then force review
+                  showJobCompletionFlow(data.jobId, data.customerId, data.hustlerId);
                 } catch (error) {
                   showToast("Error: " + (error.message || "Failed to verify"));
                   verifyBtn.disabled = false;
@@ -9814,9 +9816,29 @@ async function renderJobs(reset = false) {
           
           // Job title below the name
           const jobTitle = document.createElement("div");
-          jobTitle.style.color = "var(--text-muted)";
+          jobTitle.style.display = "flex";
+          jobTitle.style.alignItems = "center";
+          jobTitle.style.gap = "0.5rem";
           jobTitle.style.fontSize = "0.85rem";
-          jobTitle.textContent = job.title;
+          
+          const titleText = document.createElement("span");
+          titleText.style.color = "var(--text-muted)";
+          titleText.textContent = job.title;
+          jobTitle.appendChild(titleText);
+          
+          // Add "Completed Job" badge if job is PAID
+          if (job.status === 'PAID') {
+            const completedBadge = document.createElement("span");
+            completedBadge.style.background = "#dcfce7";
+            completedBadge.style.color = "#166534";
+            completedBadge.style.padding = "0.15rem 0.5rem";
+            completedBadge.style.borderRadius = "4px";
+            completedBadge.style.fontSize = "0.7rem";
+            completedBadge.style.fontWeight = "600";
+            completedBadge.textContent = "✅ Completed";
+            jobTitle.appendChild(completedBadge);
+          }
+          
           nameAndJob.appendChild(jobTitle);
           
           userInfo.appendChild(nameAndJob);
@@ -10048,7 +10070,8 @@ async function renderJobs(reset = false) {
         
         if (thread) {
           convTitle.textContent = thread.job.title;
-          convSummary.textContent = `Job ID: ${thread.job.id} · Status: ${thread.job.status}`;
+          const statusText = thread.job.status === 'PAID' ? '✅ Completed Job' : thread.job.status;
+          convSummary.textContent = `Job ID: ${thread.job.id} · Status: ${statusText}`;
         }
 
         convMessages.innerHTML = "";
@@ -13542,8 +13565,15 @@ meta.textContent =
                 throw new Error(error.error || 'Failed to verify completion code');
               }
               
-              showToast("✅ Completion verified! Payment will be processed.");
+              const data = await response.json();
+              
+              // Close the job modal
               document.body.removeChild(modalOverlay);
+              
+              // Show congratulations modal, then force review
+              showJobCompletionFlow(data.jobId, data.customerId, data.hustlerId);
+              
+              // Refresh jobs
               loadActiveJobs(); // Refresh list
               loadCompletedJobs(); // Refresh completed list
             } catch (error) {
@@ -14351,10 +14381,16 @@ meta.textContent =
               if (!response.ok) {
                 throw new Error(data.error || "Verification failed");
               }
-              showToast("✅ Completion code verified! Job is now complete.");
+              
+              // Close the job modal
               document.body.removeChild(modalOverlay);
-              showViewJobModal(job.id, 'hustler');
+              
+              // Show congratulations modal, then force review
+              showJobCompletionFlow(data.jobId, data.customerId, data.hustlerId);
+              
+              // Refresh jobs
               if (typeof loadActiveJobs === 'function') loadActiveJobs();
+              if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
             } catch (error) {
               showToast("Error: " + (error.message || "Failed to verify"));
               e.target.disabled = false;
@@ -15656,6 +15692,283 @@ meta.textContent =
       modalOverlay.addEventListener('click', (e) => {
         if (e.target === modalOverlay) {
           document.body.removeChild(modalOverlay);
+        }
+      });
+    }
+    
+    // Show Job Completion Flow: Congratulations → Forced Review
+    async function showJobCompletionFlow(jobId, customerId, hustlerId) {
+      const user = await window.hustlAPI.auth.getCurrentUser();
+      if (!user) return;
+      
+      const isCustomer = user.id === customerId;
+      const isHustler = user.id === hustlerId;
+      const otherUserId = isCustomer ? hustlerId : customerId;
+      
+      // Step 1: Show Congratulations Modal
+      const congratsModal = document.createElement('div');
+      congratsModal.id = 'jobCompletionCongrats';
+      congratsModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 10002;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+      `;
+      
+      congratsModal.innerHTML = `
+        <div style="
+          background: white;
+          border-radius: 24px;
+          max-width: 600px;
+          width: 100%;
+          padding: 3rem 2rem;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+          text-align: center;
+        ">
+          <div style="font-size: 5rem; margin-bottom: 1rem;">🎉</div>
+          <h2 style="font-size: 2rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">
+            Job Completed Successfully!
+          </h2>
+          <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 2rem; line-height: 1.6;">
+            Great work! Please take a moment to leave a review for ${isCustomer ? 'your hustler' : 'your customer'}.
+          </p>
+          <button class="btn btn-primary continueToReviewBtn" style="
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            width: 100%;
+            max-width: 300px;
+          ">Continue to Review →</button>
+        </div>
+      `;
+      
+      document.body.appendChild(congratsModal);
+      
+      // Continue button - show review modal
+      congratsModal.querySelector('.continueToReviewBtn')?.addEventListener('click', () => {
+        document.body.removeChild(congratsModal);
+        showForcedReviewModal(jobId, otherUserId, isCustomer);
+      });
+    }
+    
+    // Show Forced Review Modal (no cancel, must submit)
+    async function showForcedReviewModal(jobId, revieweeId, isCustomer) {
+      // Fetch reviewee info
+      const token = localStorage.getItem('hustl_token');
+      let revieweeName = 'the other party';
+      try {
+        const userResponse = await fetch(`${API_BASE}/users/${revieweeId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          revieweeName = userData.name || revieweeName;
+        }
+      } catch (e) {
+        console.error("Error fetching reviewee:", e);
+      }
+      
+      const modalOverlay = document.createElement('div');
+      modalOverlay.id = 'forcedReviewModal';
+      modalOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 10003;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+      `;
+      
+      let selectedRating = 0;
+      
+      modalOverlay.innerHTML = `
+        <div style="
+          background: white;
+          border-radius: 16px;
+          max-width: 600px;
+          width: 100%;
+          padding: 2.5rem;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+          position: relative;
+        ">
+          <h2 style="font-size: 1.75rem; font-weight: 700; margin: 0 0 0.5rem 0; color: var(--text-main); text-align: center;">
+            ⭐ Rate ${revieweeName}
+          </h2>
+          <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 2rem; text-align: center;">
+            Your feedback helps build trust in our community
+          </p>
+          
+          <div style="margin-bottom: 2rem;">
+            <div style="font-size: 1rem; font-weight: 600; color: var(--text-main); margin-bottom: 1rem; text-align: center;">Rating *</div>
+            <div id="ratingStars" style="display: flex; gap: 0.75rem; font-size: 3rem; cursor: pointer; justify-content: center;">
+              ${[1,2,3,4,5].map(i => `<span class="ratingStar" data-rating="${i}" style="color: #d1d5db; transition: all 0.2s; user-select: none;">⭐</span>`).join('')}
+            </div>
+            <div id="ratingText" style="margin-top: 0.75rem; font-size: 1rem; color: var(--text-muted); text-align: center; min-height: 1.5rem;">Select a rating</div>
+          </div>
+          
+          <div style="margin-bottom: 2rem;">
+            <label style="display: block; font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">Review (optional)</label>
+            <textarea id="reviewCommentInput" placeholder="Share your experience... (minimum 10 characters)" style="width: 100%; min-height: 120px; padding: 1rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; font-family: inherit; resize: vertical;"></textarea>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">Optional: Tell others about your experience</div>
+          </div>
+          
+          <button class="btn btn-primary submitForcedReviewBtn" data-reviewee-id="${revieweeId}" data-job-id="${jobId}" style="
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            background: var(--primary);
+          ">Submit Review</button>
+        </div>
+      `;
+      
+      document.body.appendChild(modalOverlay);
+      
+      // Rating stars interaction
+      const stars = modalOverlay.querySelectorAll('.ratingStar');
+      const ratingText = modalOverlay.querySelector('#ratingText');
+      const ratingTexts = {
+        1: 'Poor',
+        2: 'Fair',
+        3: 'Good',
+        4: 'Very Good',
+        5: 'Excellent'
+      };
+      
+      stars.forEach(star => {
+        star.addEventListener('mouseenter', (e) => {
+          const rating = parseInt(e.target.dataset.rating);
+          stars.forEach((s, i) => {
+            if (i < rating) {
+              s.style.color = '#fbbf24';
+              s.style.transform = 'scale(1.1)';
+            } else {
+              s.style.color = '#d1d5db';
+              s.style.transform = 'scale(1)';
+            }
+          });
+          ratingText.textContent = ratingTexts[rating] || '';
+        });
+        
+        star.addEventListener('click', (e) => {
+          selectedRating = parseInt(e.target.dataset.rating);
+          stars.forEach((s, i) => {
+            if (i < selectedRating) {
+              s.style.color = '#fbbf24';
+              s.style.transform = 'scale(1.1)';
+            } else {
+              s.style.color = '#d1d5db';
+              s.style.transform = 'scale(1)';
+            }
+          });
+          ratingText.textContent = ratingTexts[selectedRating] || '';
+        });
+      });
+      
+      modalOverlay.querySelector('#ratingStars').addEventListener('mouseleave', () => {
+        if (selectedRating === 0) {
+          stars.forEach(s => {
+            s.style.color = '#d1d5db';
+            s.style.transform = 'scale(1)';
+          });
+          ratingText.textContent = 'Select a rating';
+        } else {
+          stars.forEach((s, i) => {
+            if (i < selectedRating) {
+              s.style.color = '#fbbf24';
+              s.style.transform = 'scale(1.1)';
+            } else {
+              s.style.color = '#d1d5db';
+              s.style.transform = 'scale(1)';
+            }
+          });
+        }
+      });
+      
+      // Submit review (required)
+      modalOverlay.querySelector('.submitForcedReviewBtn')?.addEventListener('click', async () => {
+        if (selectedRating === 0) {
+          showToast("Please select a rating before submitting.");
+          return;
+        }
+        
+        const comment = document.getElementById('reviewCommentInput')?.value.trim() || '';
+        
+        // Validate comment length if provided (API requires min 10 chars)
+        if (comment && comment.length < 10) {
+          showToast("Review must be at least 10 characters if provided.");
+          return;
+        }
+        
+        // Use default text if no comment provided (API requires text field)
+        const reviewText = comment.length >= 10 ? comment : 'Great job!';
+        
+        const btn = modalOverlay.querySelector('.submitForcedReviewBtn');
+        btn.disabled = true;
+        btn.textContent = "Submitting...";
+        
+        try {
+          const token = localStorage.getItem('hustl_token');
+          const response = await fetch(`${API_BASE}/reviews`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              jobId: jobId,
+              revieweeId: revieweeId,
+              stars: selectedRating,
+              text: reviewText
+            })
+          });
+          
+          const data = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to submit review');
+          }
+          
+          showToast("✅ Review submitted! Thank you for your feedback.");
+          document.body.removeChild(modalOverlay);
+          
+          // Refresh jobs
+          if (typeof loadActiveJobs === 'function') loadActiveJobs();
+          if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
+          
+          // Navigate to completed jobs
+          if (typeof setView === 'function') {
+            setView('manage-jobs');
+            setTimeout(() => {
+              const completedTab = document.querySelector('[data-status="done"]');
+              if (completedTab) completedTab.click();
+            }, 300);
+          }
+        } catch (error) {
+          console.error("Error submitting review:", error);
+          showToast("Error: " + (error.message || "Failed to submit review. Please try again."));
+          btn.disabled = false;
+          btn.textContent = "Submit Review";
+        }
+      });
+      
+      // Prevent closing by clicking outside
+      modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+          // Don't allow closing - review is required
+          showToast("Please submit a review to continue.");
         }
       });
     }
