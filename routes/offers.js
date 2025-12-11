@@ -516,15 +516,21 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     });
 
     // Create thread for messaging (use upsert to avoid duplicate errors)
-    await prisma.thread.upsert({
-      where: { jobId: offer.job.id },
-      update: {}, // If exists, don't update
-      create: {
-        jobId: offer.job.id,
-        userAId: req.user.id,
-        userBId: offer.hustlerId,
-      },
-    });
+    try {
+      await prisma.thread.upsert({
+        where: { jobId: offer.job.id },
+        update: {}, // If exists, don't update
+        create: {
+          jobId: offer.job.id,
+          userAId: req.user.id, // Customer
+          userBId: offer.hustlerId, // Hustler
+        },
+      });
+      console.log(`[THREAD] Created thread for job ${offer.job.id} between customer ${req.user.id} and hustler ${offer.hustlerId}`);
+    } catch (error) {
+      console.error(`[THREAD] Error creating thread for job ${offer.job.id}:`, error);
+      // Don't fail offer acceptance if thread creation fails
+    }
 
     // Send notification email to hustler
     const { sendJobAssignedEmail } = require('../services/email');

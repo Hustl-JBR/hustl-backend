@@ -44,9 +44,12 @@
   <meta name="geo.placename" content="Tennessee" />
   
   <!-- Mobile App Experience -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5, user-scalable=yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Hustl" />
   <meta name="application-name" content="Hustl Jobs" />
@@ -7606,16 +7609,23 @@ async function renderJobs(reset = false) {
             messageBtn.style.marginTop = "0.75rem";
             messageBtn.style.width = "100%";
             messageBtn.textContent = "💬 Message Customer";
-            messageBtn.addEventListener("click", () => {
+            messageBtn.addEventListener("click", async () => {
               // Set active conversation and switch to messages view
               activeConversationJobId = job.id;
               overlay.remove();
               document.body.style.overflow = "";
               setView("messages");
-              // Small delay to ensure messages view is rendered
-              setTimeout(() => {
-                renderMessagesView();
-              }, 100);
+              // Small delay to ensure messages view is rendered, then open conversation
+              setTimeout(async () => {
+                await renderMessagesView();
+                // Find and click the conversation for this job
+                const conversationItems = document.querySelectorAll('[data-job-id]');
+                conversationItems.forEach(item => {
+                  if (item.dataset.jobId === job.id) {
+                    item.click();
+                  }
+                });
+              }, 200);
             });
             applySection.appendChild(messageBtn);
             
@@ -8629,16 +8639,23 @@ async function renderJobs(reset = false) {
           messageBtn.className = "btn btn-primary";
           messageBtn.style.flex = "1";
           messageBtn.textContent = "💬 Message Hustler";
-          messageBtn.addEventListener("click", () => {
+          messageBtn.addEventListener("click", async () => {
             // Set active conversation and switch to messages view
             activeConversationJobId = job.id;
             overlay.remove();
             document.body.style.overflow = "";
             setView("messages");
-            // Small delay to ensure messages view is rendered
-            setTimeout(() => {
-              renderMessagesView();
-            }, 100);
+            // Small delay to ensure messages view is rendered, then open conversation
+            setTimeout(async () => {
+              await renderMessagesView();
+              // Find and click the conversation for this job
+              const conversationItems = document.querySelectorAll('[data-job-id]');
+              conversationItems.forEach(item => {
+                if (item.dataset.jobId === job.id) {
+                  item.click();
+                }
+              });
+            }, 200);
           });
           messageBtnRow.appendChild(messageBtn);
           

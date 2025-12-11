@@ -706,22 +706,22 @@ router.post('/confirm-payment', authenticate, requireRole('CUSTOMER'), async (re
       },
     });
 
-    // Create thread for messaging
-    await prisma.thread.upsert({
-      where: {
-        userAId_userBId_jobId: {
+    // Create thread for messaging (use upsert to avoid duplicate errors)
+    try {
+      await prisma.thread.upsert({
+        where: { jobId: offer.job.id },
+        update: {}, // If exists, don't update
+        create: {
+          jobId: offer.job.id,
           userAId: offer.job.customerId,
           userBId: offer.hustlerId,
-          jobId: offer.job.id,
         },
-      },
-      create: {
-        jobId: offer.job.id,
-        userAId: offer.job.customerId,
-        userBId: offer.hustlerId,
-      },
-      update: {},
-    });
+      });
+      console.log(`[THREAD] Created thread for job ${offer.job.id} between customer ${offer.job.customerId} and hustler ${offer.hustlerId}`);
+    } catch (error) {
+      console.error(`[THREAD] Error creating thread for job ${offer.job.id}:`, error);
+      // Don't fail payment if thread creation fails
+    }
 
     // Send email notifications
     try {

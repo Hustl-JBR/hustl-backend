@@ -136,14 +136,22 @@ async function handleCheckoutSessionCompleted(session) {
       },
     });
 
-    // Create thread for messaging
-    await prisma.thread.create({
-      data: {
-        jobId: offer.job.id,
-        userAId: offer.job.customerId,
-        userBId: offer.hustlerId,
-      },
-    });
+    // Create thread for messaging (use upsert to avoid duplicate errors)
+    try {
+      await prisma.thread.upsert({
+        where: { jobId: offer.job.id },
+        update: {}, // If exists, don't update
+        create: {
+          jobId: offer.job.id,
+          userAId: offer.job.customerId,
+          userBId: offer.hustlerId,
+        },
+      });
+      console.log(`[THREAD] Created thread for job ${offer.job.id} via webhook`);
+    } catch (error) {
+      console.error(`[THREAD] Error creating thread for job ${offer.job.id}:`, error);
+      // Don't fail webhook if thread creation fails
+    }
 
     console.log('Offer accepted via Stripe checkout:', offerId);
   } catch (error) {
