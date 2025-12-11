@@ -12909,13 +12909,28 @@ meta.textContent =
         // Event listeners based on role
         if (role === 'customer') {
           modalOverlay.querySelectorAll('.messageHustlerBtn').forEach(btn => {
-            btn.addEventListener('click', () => {
-              // Set the active conversation to this job
-              if (typeof window !== 'undefined' && window.activeConversationJobId !== undefined) {
-                window.activeConversationJobId = job.id;
-              }
+            btn.addEventListener('click', async () => {
+              const jobId = btn.dataset.jobId || job.id;
+              
+              // Set active conversation job ID
+              activeConversationJobId = jobId;
+              
               document.body.removeChild(modalOverlay);
+              
+              // Switch to messages view
               setView('messages');
+              
+              // Wait for view to switch, then render and open conversation
+              setTimeout(async () => {
+                await renderMessagesView();
+                // Find and click the conversation for this job
+                const conversationItems = document.querySelectorAll('[data-job-id]');
+                conversationItems.forEach(item => {
+                  if (item.dataset.jobId === jobId) {
+                    item.click();
+                  }
+                });
+              }, 200);
             });
           });
           
