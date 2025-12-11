@@ -9541,7 +9541,26 @@ async function renderJobs(reset = false) {
 
     async function renderMessagesView() {
       console.log('[MESSAGES] renderMessagesView called');
-      const user = getCurrentUser();
+      // Use API-based authentication instead of state-based
+      let user = null;
+      try {
+        if (window.hustlAPI && window.hustlAPI.auth && typeof window.hustlAPI.auth.getCurrentUser === 'function') {
+          user = await window.hustlAPI.auth.getCurrentUser();
+        } else {
+          // Fallback: try to get user from token
+          const token = localStorage.getItem('hustl_token') || sessionStorage.getItem('hustl_token');
+          if (token) {
+            const response = await fetch(`${API_BASE}/users/me`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+              user = await response.json();
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[MESSAGES] Error getting current user:', error);
+      }
       console.log('[MESSAGES] User:', user ? user.id : 'not logged in');
       
       const convList = document.getElementById("conversationList");
@@ -9633,45 +9652,27 @@ async function renderJobs(reset = false) {
           item.style.boxShadow = "0 0 0 1px #2563eb20";
         }
 
-        const top = document.createElement("div");
-        top.className = "job-card-top";
-
-        const title = document.createElement("div");
-        title.className = "job-title";
-        title.textContent = job.title;
-        top.appendChild(title);
-
-        const status = document.createElement("span");
-        status.className = "badge";
-        status.textContent =
-          job.status === "open"
-            ? "Open"
-            : job.status === "assigned"
-            ? "Assigned"
-            : "Completed";
-        top.appendChild(status);
-        item.appendChild(top);
-
-        // Add other user's profile picture and name
+        // Add other user's profile picture and name at the top (most prominent)
         const userInfo = document.createElement("div");
         userInfo.style.display = "flex";
         userInfo.style.alignItems = "center";
-        userInfo.style.gap = "0.5rem";
+        userInfo.style.gap = "0.75rem";
         userInfo.style.marginBottom = "0.5rem";
         
         if (otherUser) {
           if (otherUser.photoUrl) {
             const photo = document.createElement("img");
             photo.src = otherUser.photoUrl;
-            photo.style.width = "32px";
-            photo.style.height = "32px";
+            photo.style.width = "48px";
+            photo.style.height = "48px";
             photo.style.borderRadius = "50%";
             photo.style.objectFit = "cover";
+            photo.style.flexShrink = "0";
             userInfo.appendChild(photo);
           } else {
             const avatar = document.createElement("div");
-            avatar.style.width = "32px";
-            avatar.style.height = "32px";
+            avatar.style.width = "48px";
+            avatar.style.height = "48px";
             avatar.style.borderRadius = "50%";
             avatar.style.background = "var(--primary-soft)";
             avatar.style.display = "flex";
@@ -9679,16 +9680,32 @@ async function renderJobs(reset = false) {
             avatar.style.justifyContent = "center";
             avatar.style.fontWeight = "700";
             avatar.style.color = "var(--primary)";
-            avatar.style.fontSize = "0.9rem";
+            avatar.style.fontSize = "1.1rem";
+            avatar.style.flexShrink = "0";
             avatar.textContent = (otherUser.name || "U")[0].toUpperCase();
             userInfo.appendChild(avatar);
           }
           
-          const name = document.createElement("span");
+          const nameAndJob = document.createElement("div");
+          nameAndJob.style.flex = "1";
+          nameAndJob.style.minWidth = "0";
+          
+          const name = document.createElement("div");
           name.style.fontWeight = "600";
           name.style.color = "var(--text-main)";
+          name.style.fontSize = "1rem";
+          name.style.marginBottom = "0.25rem";
           name.textContent = otherUser.name || "Unknown";
-          userInfo.appendChild(name);
+          nameAndJob.appendChild(name);
+          
+          // Job title below the name
+          const jobTitle = document.createElement("div");
+          jobTitle.style.color = "var(--text-muted)";
+          jobTitle.style.fontSize = "0.85rem";
+          jobTitle.textContent = job.title;
+          nameAndJob.appendChild(jobTitle);
+          
+          userInfo.appendChild(nameAndJob);
         }
         item.appendChild(userInfo);
         
