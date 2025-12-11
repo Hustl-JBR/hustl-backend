@@ -2774,7 +2774,7 @@
           </div>
           
           <div id="flexibleDeadlineNote" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: #fef3c7; border-radius: 8px; border-left: 3px solid #f59e0b;">
-            <p style="margin: 0; font-size: 0.85rem; color: #92400e;">
+            <p style="margin: 0; font-size: 0.85rem; color: #92400e;" id="flexibleDeadlineNoteText">
               <strong>⏰ Flexible Deadline:</strong> This job will stay active until someone completes it. No rush!
             </p>
           </div>
@@ -2864,7 +2864,6 @@
               <option value="5">5 people</option>
               <option value="6">6 people</option>
               <option value="custom">Custom</option>
-              <option value="my_team">Company/Team (I'll provide the workers)</option>
             </select>
           </div>
           
@@ -4430,11 +4429,7 @@ function showChangePasswordModal() {
         let workersCount = 1;
         if (workersNeeded) {
           const workersValue = workersNeeded.value;
-          if (workersValue === "my_team") {
-            workersCount = 0; // Special case
-            hourlyRateCalculation.style.display = "none";
-            return;
-          } else if (workersValue === "custom") {
+          if (workersValue === "custom") {
             workersCount = parseInt(document.getElementById("customWorkersCount")?.value || 1);
           } else {
             workersCount = parseInt(workersValue || 1);
@@ -4495,9 +4490,24 @@ function showChangePasswordModal() {
               const customDateInput = document.getElementById("customDate");
               if (customDateInput) customDateInput.focus();
             }, 100);
-          } else if (jobWhenSelect.value === "flexible_week" || jobWhenSelect.value === "no_deadline") {
+          } else if (jobWhenSelect.value === "flexible_week") {
             if (customDateFields) customDateFields.style.display = "none";
-            if (flexibleDeadlineNote) flexibleDeadlineNote.style.display = "block";
+            if (flexibleDeadlineNote) {
+              flexibleDeadlineNote.style.display = "block";
+              const noteText = document.getElementById("flexibleDeadlineNoteText");
+              if (noteText) {
+                noteText.innerHTML = '<strong>⏰ Flexible (This Week):</strong> This job will stay active for 7 days after posting.';
+              }
+            }
+          } else if (jobWhenSelect.value === "no_deadline") {
+            if (customDateFields) customDateFields.style.display = "none";
+            if (flexibleDeadlineNote) {
+              flexibleDeadlineNote.style.display = "block";
+              const noteText = document.getElementById("flexibleDeadlineNoteText");
+              if (noteText) {
+                noteText.innerHTML = '<strong>⏰ Flexible Deadline:</strong> This job will stay active until someone completes it. No rush!';
+              }
+            }
           } else {
             if (customDateFields) customDateFields.style.display = "none";
             if (flexibleDeadlineNote) flexibleDeadlineNote.style.display = "none";
@@ -4760,8 +4770,6 @@ function showChangePasswordModal() {
           if (workersNeededValue === "custom") {
             const customCount = Number(document.getElementById("customWorkersCount")?.value || 1);
             workersNeeded = Math.max(1, Math.min(20, customCount));
-          } else if (workersNeededValue === "my_team") {
-            workersNeeded = 0; // Special value for "Company/Team"
           } else {
             workersNeeded = Number(workersNeededValue) || 1;
           }
