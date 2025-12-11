@@ -65,6 +65,7 @@ router.get('/', async (req, res) => {
       orderBy: { lastMessageAt: 'desc' },
     });
 
+    console.log(`[THREADS] Found ${threads.length} threads for user ${req.user.id}`);
     res.json(threads);
   } catch (error) {
     console.error('List threads error:', error);
