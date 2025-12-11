@@ -2746,17 +2746,15 @@
           <div class="field">
             <label for="jobWhen">Preferred time</label>
             <select id="jobWhen">
-              <option value="this_morning">🌅 This morning</option>
-              <option value="this_afternoon">☀️ This afternoon</option>
-              <option value="this_evening">🌙 This evening/night</option>
+              <option value="today_asap">⚡ Today – ASAP</option>
               <option value="tomorrow">📆 Tomorrow</option>
-              <option value="custom_date">📅 Custom date</option>
-              <option value="whenever">⏰ Whenever (flexible)</option>
-              <option value="until_completed">✅ Until completed (no deadline)</option>
+              <option value="specific_date">📅 Specific date</option>
+              <option value="flexible_week">⏰ Flexible (this week)</option>
+              <option value="no_deadline">✅ No strict deadline</option>
             </select>
           </div>
           
-          <!-- Custom date fields (shown when "Custom date" is selected) -->
+          <!-- Specific date fields (shown when "Specific date" is selected) -->
           <div id="customDateFields" style="display: none;">
             <div class="field-inline">
               <div class="field">
@@ -2878,14 +2876,19 @@
 
           <div class="section-title" style="margin-top: 1rem; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">📍 Location Details</div>
 
+          <!-- Pickup Location -->
           <div class="field-inline">
             <div class="field">
               <label for="pickupArea">Pickup area / neighborhood</label>
               <input id="pickupArea" type="text" placeholder="Example: West Knoxville near UTK" />
             </div>
             <div class="field">
-              <label for="pickupCity">City</label>
+              <label for="pickupCity">Pickup city</label>
               <input id="pickupCity" type="text" placeholder="Example: Knoxville, TN" />
+            </div>
+            <div class="field">
+              <label for="pickupZip">Pickup ZIP</label>
+              <input id="pickupZip" type="text" placeholder="Example: 37919" maxlength="10" />
             </div>
           </div>
 
@@ -2901,6 +2904,7 @@
             </label>
           </div>
 
+          <!-- Dropoff Location -->
           <div id="dropoffFields">
             <div class="field-inline">
               <div class="field">
@@ -2910,6 +2914,10 @@
               <div class="field">
                 <label for="dropoffCity">Dropoff city</label>
                 <input id="dropoffCity" type="text" placeholder="Example: Knoxville, TN" />
+              </div>
+              <div class="field">
+                <label for="dropoffZip">Dropoff ZIP</label>
+                <input id="dropoffZip" type="text" placeholder="Example: 37918" maxlength="10" />
               </div>
             </div>
             <div class="field">
@@ -4322,10 +4330,12 @@ function showChangePasswordModal() {
       document.getElementById("jobDescription").value = "";
       document.getElementById("pickupArea").value = "";
       document.getElementById("pickupCity").value = "";
+      document.getElementById("pickupZip").value = "";
       document.getElementById("pickupAddress").value = "";
       document.getElementById("jobOnSiteOnly").checked = false;
       document.getElementById("dropoffArea").value = "";
       document.getElementById("dropoffCity").value = "";
+      document.getElementById("dropoffZip").value = "";
       document.getElementById("dropoffAddress").value = "";
       if (document.getElementById("pricingOption")) {
         document.getElementById("pricingOption").value = "set_price";
@@ -4477,7 +4487,7 @@ function showChangePasswordModal() {
       const flexibleDeadlineNote = document.getElementById("flexibleDeadlineNote");
       if (jobWhenSelect) {
         jobWhenSelect.addEventListener("change", () => {
-          if (jobWhenSelect.value === "custom_date") {
+          if (jobWhenSelect.value === "specific_date") {
             if (customDateFields) customDateFields.style.display = "block";
             if (flexibleDeadlineNote) flexibleDeadlineNote.style.display = "none";
             // Focus on date input immediately
@@ -4485,7 +4495,7 @@ function showChangePasswordModal() {
               const customDateInput = document.getElementById("customDate");
               if (customDateInput) customDateInput.focus();
             }, 100);
-          } else if (jobWhenSelect.value === "whenever" || jobWhenSelect.value === "until_completed") {
+          } else if (jobWhenSelect.value === "flexible_week" || jobWhenSelect.value === "no_deadline") {
             if (customDateFields) customDateFields.style.display = "none";
             if (flexibleDeadlineNote) flexibleDeadlineNote.style.display = "block";
           } else {
@@ -4698,6 +4708,9 @@ function showChangePasswordModal() {
           const pickupCity = document
             .getElementById("pickupCity")
             .value.trim();
+          const pickupZip = document
+            .getElementById("pickupZip")
+            .value.trim();
           const pickupAddress = document
             .getElementById("pickupAddress")
             .value.trim();
@@ -4708,6 +4721,9 @@ function showChangePasswordModal() {
             .value.trim();
           const dropoffCity = document
             .getElementById("dropoffCity")
+            .value.trim();
+          const dropoffZip = document
+            .getElementById("dropoffZip")
             .value.trim();
           const dropoffAddress = document
             .getElementById("dropoffAddress")
@@ -4779,8 +4795,17 @@ function showChangePasswordModal() {
             );
 
           // Validate address fields
-          if (!pickupAddress || !pickupCity || !pickupArea) {
-            return showToast("Please fill in pickup location (address, city, and area).");
+          if (!pickupCity || !pickupArea) {
+            return showToast("Please fill in pickup location (city and area/neighborhood).");
+          }
+          if (!pickupZip) {
+            return showToast("Please enter pickup ZIP code.");
+          }
+          if (!onSiteOnly && (!dropoffCity || !dropoffArea)) {
+            return showToast("Please fill in dropoff location (city and area/neighborhood).");
+          }
+          if (!onSiteOnly && !dropoffZip) {
+            return showToast("Please enter dropoff ZIP code.");
           }
 
           // Validate payment if set_price
@@ -4799,7 +4824,7 @@ function showChangePasswordModal() {
             const addressParts = [];
             if (pickupAddress) addressParts.push(pickupAddress);
             if (pickupCity) addressParts.push(pickupCity);
-            if (pickupArea) addressParts.push(`TN ${pickupArea}`);
+            if (pickupZip) addressParts.push(pickupZip);
             const address = addressParts.join(', ').trim();
             
             if (!address) {
@@ -4807,12 +4832,12 @@ function showChangePasswordModal() {
             }
             
             // Build date/time based on user's "when" selection
-            const jobWhen = document.getElementById("jobWhen")?.value || "tomorrow";
+            const jobWhen = document.getElementById("jobWhen")?.value || "today_asap";
             const now = new Date();
             let date, startTime, endTime, deadlinePreference;
             
-            if (jobWhen === "until_completed" || jobWhen === "whenever") {
-              // Flexible deadline - set far future date (1 year from now)
+            if (jobWhen === "no_deadline") {
+              // No strict deadline - set far future date (1 year from now)
               const futureDate = new Date(now);
               futureDate.setFullYear(futureDate.getFullYear() + 1);
               date = futureDate.toISOString().split('T')[0];
@@ -4820,12 +4845,22 @@ function showChangePasswordModal() {
               startTime.setHours(9, 0, 0, 0);
               endTime = new Date(futureDate);
               endTime.setHours(17, 0, 0, 0);
-              deadlinePreference = jobWhen === "until_completed" ? "until_completed" : "flexible";
-            } else if (jobWhen === "custom_date") {
+              deadlinePreference = "no_deadline";
+            } else if (jobWhen === "flexible_week") {
+              // Flexible this week - set end of week
+              const endOfWeek = new Date(now);
+              endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay())); // Next Sunday
+              date = endOfWeek.toISOString().split('T')[0];
+              startTime = new Date(now);
+              startTime.setHours(9, 0, 0, 0);
+              endTime = new Date(endOfWeek);
+              endTime.setHours(17, 0, 0, 0);
+              deadlinePreference = "flexible_week";
+            } else if (jobWhen === "specific_date") {
               const customDate = document.getElementById("customDate")?.value;
               const customTime = document.getElementById("customTime")?.value || "morning";
               if (!customDate) {
-                return showToast("Please select a date for your custom deadline.");
+                return showToast("Please select a date for your specific deadline.");
               }
               date = customDate;
               const selectedDate = new Date(customDate);
@@ -4851,38 +4886,30 @@ function showChangePasswordModal() {
                 endTime = new Date(selectedDate);
                 endTime.setHours(23, 0, 0, 0);
               }
-              deadlinePreference = "custom";
-            } else {
-              // this_morning, this_afternoon, this_evening, tomorrow
-              let targetDate = new Date(now);
-              if (jobWhen === "tomorrow") {
-                targetDate.setDate(targetDate.getDate() + 1);
-              }
-              
+              deadlinePreference = "specific_date";
+            } else if (jobWhen === "tomorrow") {
+              // Tomorrow - set to tomorrow with flexible time
+              const targetDate = new Date(now);
+              targetDate.setDate(targetDate.getDate() + 1);
               date = targetDate.toISOString().split('T')[0];
-              
-              if (jobWhen === "this_morning" || (jobWhen === "tomorrow" && document.getElementById("customTime")?.value === "morning")) {
-                startTime = new Date(targetDate);
-                startTime.setHours(8, 0, 0, 0);
-                endTime = new Date(targetDate);
-                endTime.setHours(12, 0, 0, 0);
-              } else if (jobWhen === "this_afternoon" || (jobWhen === "tomorrow" && document.getElementById("customTime")?.value === "afternoon")) {
-                startTime = new Date(targetDate);
-                startTime.setHours(12, 0, 0, 0);
-                endTime = new Date(targetDate);
-                endTime.setHours(17, 0, 0, 0);
-              } else { // this_evening or default
-                startTime = new Date(targetDate);
-                startTime.setHours(17, 0, 0, 0);
-                endTime = new Date(targetDate);
-                endTime.setHours(21, 0, 0, 0);
-              }
-              deadlinePreference = jobWhen;
+              startTime = new Date(targetDate);
+              startTime.setHours(8, 0, 0, 0);
+              endTime = new Date(targetDate);
+              endTime.setHours(21, 0, 0, 0);
+              deadlinePreference = "tomorrow";
+            } else {
+              // today_asap - set to today with ASAP timing
+              date = now.toISOString().split('T')[0];
+              startTime = new Date(now);
+              startTime.setHours(now.getHours(), 0, 0, 0);
+              endTime = new Date(now);
+              endTime.setHours(23, 59, 59, 0);
+              deadlinePreference = "today_asap";
             }
             
             // Ensure deadlinePreference is set
             if (!deadlinePreference) {
-              deadlinePreference = jobWhen || "tomorrow";
+              deadlinePreference = jobWhen || "today_asap";
             }
             
             // Transform payment data to backend format
@@ -4942,13 +4969,13 @@ function showChangePasswordModal() {
               requirements: {
                 pickup_area: pickupArea,
                 pickup_city: pickupCity,
+                pickup_zip: pickupZip,
                 pickup_address: pickupAddress,
-                pickup_zip: pickupArea, // Store ZIP/area code
                 on_site_only: onSiteOnly,
                 dropoff_area: onSiteOnly ? null : dropoffArea,
                 dropoff_city: onSiteOnly ? null : dropoffCity,
+                dropoff_zip: onSiteOnly ? null : dropoffZip,
                 dropoff_address: onSiteOnly ? null : dropoffAddress,
-                dropoff_zip: onSiteOnly ? null : dropoffArea, // Store ZIP/area code
                 equipment_needed: equipmentNeeded.length > 0 ? equipmentNeeded : null,
                 sub_tags: subTags.length > 0 ? subTags : null,
                 notes: notes || null,
