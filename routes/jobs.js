@@ -178,17 +178,11 @@ router.get('/active', authenticate, async (req, res) => {
           { customerId: userId },
           { hustlerId: userId }
         ],
-        AND: [
-          {
-            status: {
-              in: ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM']
-            }
-          },
-          {
-            // Exclude jobs where completion code has been verified (these are completed)
-            completionCodeVerified: false
-          }
-        ]
+        status: {
+          in: ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM']
+        },
+        // Exclude jobs where completion code has been verified (these are completed)
+        completionCodeVerified: false
       },
       include: {
         customer: {
