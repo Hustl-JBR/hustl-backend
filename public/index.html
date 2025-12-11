@@ -4463,27 +4463,12 @@ function showChangePasswordModal() {
           // hourlyRate is now the TOTAL rate, not per person
           const totalRate = hourlyRate; // Total rate entered by user
           const perPersonRate = totalRate / workersCount; // Calculate per person
-          const hourlyRateDisplay = document.getElementById("hourlyRateDisplay");
-          const workersCountDisplay = document.getElementById("workersCountDisplay");
-          const totalHourlyRateDisplay = document.getElementById("totalHourlyRateDisplay");
-          const perPersonBreakdown = document.getElementById("perPersonBreakdown");
-          const exampleRate = document.getElementById("exampleRate");
           const exampleWorkers = document.getElementById("exampleWorkers");
           const examplePerPerson = document.getElementById("examplePerPerson");
           
-          if (totalHourlyRateDisplay) totalHourlyRateDisplay.textContent = `$${totalRate.toFixed(0)}`;
-          if (exampleRate) exampleRate.textContent = totalRate.toFixed(0);
           if (exampleWorkers) exampleWorkers.textContent = workersCount;
-          if (examplePerPerson) examplePerPerson.textContent = perPersonRate.toFixed(0);
+          if (examplePerPerson) examplePerPerson.textContent = perPersonRate.toFixed(workersCount > 1 ? 2 : 0);
           
-          if (workersCount > 1) {
-            // Show breakdown only if multiple workers
-            if (hourlyRateDisplay) hourlyRateDisplay.textContent = perPersonRate.toFixed(0);
-            if (workersCountDisplay) workersCountDisplay.textContent = workersCount;
-            if (perPersonBreakdown) perPersonBreakdown.style.display = "inline";
-          } else {
-            if (perPersonBreakdown) perPersonBreakdown.style.display = "none";
-          }
           hourlyRateCalculation.style.display = "block";
         } else {
           hourlyRateCalculation.style.display = "none";
@@ -5582,11 +5567,13 @@ async function renderJobs(reset = false) {
       } else if (job.payType === "hourly") {
         const hr = Number(job.hourlyRate) || 0;
         const maxHrs = job.estHours || "";
+        const perPerson = hr / teamSize;
         if (teamSize > 1) {
-          const perPerson = hr / teamSize;
-          pay.textContent = `💰 $${hr.toFixed(0)}/hr total (Max ${maxHrs || '?'} hrs) · ${teamSize} workers → $${perPerson.toFixed(0)}/hr each`;
+          pay.textContent = `💰 $${hr.toFixed(0)}/hr total (Max ${maxHrs || '?'} hrs)\n👥 ${teamSize} workers → $${perPerson.toFixed(2)}/hr each`;
+          pay.style.whiteSpace = "pre-line";
         } else {
-          pay.textContent = `💰 $${hr.toFixed(0)}/hr total (Max ${maxHrs || '?'} hrs) (${teamSize} worker)`;
+          pay.textContent = `💰 $${hr.toFixed(0)}/hr total (Max ${maxHrs || '?'} hrs)\n👥 ${teamSize} worker → $${hr.toFixed(0)}/hr`;
+          pay.style.whiteSpace = "pre-line";
         }
       } else {
         const total = Number(job.amount) || 0;
