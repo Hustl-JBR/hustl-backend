@@ -234,22 +234,24 @@ router.get('/completed', authenticate, async (req, res) => {
     // 3. completionCodeVerified is true (completion code submitted)
     const jobs = await prisma.job.findMany({
       where: {
-        OR: [
-          { customerId: userId },
-          { hustlerId: userId }
-        ],
         AND: [
           {
             OR: [
-              { status: 'PAID' }, // Fully paid and completed
-              { 
-                status: 'COMPLETED_BY_HUSTLER',
-                completionCodeVerified: true // Completion code verified but not yet PAID
-              }
+              { customerId: userId },
+              { hustlerId: userId }
             ]
           },
           {
-            completionCodeVerified: true // Must have submitted completion code
+            OR: [
+              { 
+                status: 'PAID',
+                completionCodeVerified: true
+              },
+              { 
+                status: 'COMPLETED_BY_HUSTLER',
+                completionCodeVerified: true
+              }
+            ]
           },
           {
             payment: {
