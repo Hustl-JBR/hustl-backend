@@ -9759,6 +9759,7 @@ async function renderJobs(reset = false) {
         // Show latest message preview if available
         const latestMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
         const previewContainer = document.createElement("div");
+        previewContainer.className = "preview-container"; // Add class for lightweight refresh
         previewContainer.style.display = "flex";
         previewContainer.style.alignItems = "center";
         previewContainer.style.justifyContent = "space-between";
@@ -9788,6 +9789,7 @@ async function renderJobs(reset = false) {
         // Add unread badge
         if (hasUnread) {
           const unreadBadge = document.createElement("div");
+          unreadBadge.className = "unread-badge"; // Add class for lightweight refresh
           unreadBadge.style.background = "#3b82f6";
           unreadBadge.style.color = "#fff";
           unreadBadge.style.borderRadius = "12px";
@@ -9880,6 +9882,8 @@ async function renderJobs(reset = false) {
         item.addEventListener("click", () => {
           activeConversationJobId = job.id;
           activeConversationThreadId = thread.id;
+          // Reset message tracking for new conversation
+          resetMessageTracking();
           // Re-render list (to update highlight) + right-hand chat
           renderMessagesView();
         });
@@ -9906,26 +9910,30 @@ async function renderJobs(reset = false) {
 
 
     async function renderConversation() {
-      // Use API-based authentication instead of state-based
-      let user = null;
-      try {
-        if (window.hustlAPI && window.hustlAPI.auth && typeof window.hustlAPI.auth.getCurrentUser === 'function') {
-          user = await window.hustlAPI.auth.getCurrentUser();
-        } else {
-          // Fallback: try to get user from token
-          const token = localStorage.getItem('hustl_token') || sessionStorage.getItem('hustl_token');
-          if (token) {
-            const response = await fetch(`${API_BASE}/users/me`, {
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (response.ok) {
-              user = await response.json();
+      // Use cached user to avoid repeated auth checks during refresh
+      // Only fetch if not cached
+      if (!window._cachedCurrentUser) {
+        try {
+          if (window.hustlAPI && window.hustlAPI.auth && typeof window.hustlAPI.auth.getCurrentUser === 'function') {
+            window._cachedCurrentUser = await window.hustlAPI.auth.getCurrentUser();
+          } else {
+            // Fallback: try to get user from token
+            const token = localStorage.getItem('hustl_token') || sessionStorage.getItem('hustl_token');
+            if (token) {
+              const response = await fetch(`${API_BASE}/users/me`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              if (response.ok) {
+                window._cachedCurrentUser = await response.json();
+              }
             }
           }
+        } catch (error) {
+          console.error('[CONVERSATION] Error getting current user:', error);
+          window._cachedCurrentUser = null;
         }
-      } catch (error) {
-        console.error('[CONVERSATION] Error getting current user:', error);
       }
+      const user = window._cachedCurrentUser;
       
       const convTitle = document.getElementById("conversationTitle");
       const convSummary = document.getElementById("conversationJobSummary");
@@ -9992,6 +10000,8 @@ async function renderJobs(reset = false) {
           // Create wrapper for message bubble and timestamp
           const wrapper = document.createElement("div");
           wrapper.className = "chat-msg-wrapper " + (isMe ? "me" : "them");
+          wrapper.dataset.messageId = m.id; // Track message ID for lightweight refresh
+          wrapper.dataset.senderId = m.senderId; // Track sender for isMe detection
           
           // Create message bubble
           const bubble = document.createElement("div");
@@ -10008,9 +10018,14 @@ async function renderJobs(reset = false) {
           convMessages.appendChild(wrapper);
         });
         
+        // Set lastMessageId for lightweight refresh
+        if (messages.length > 0) {
+          lastMessageId = messages[messages.length - 1].id;
+        }
+        
         convMessages.scrollTop = convMessages.scrollHeight;
         
-        // Start auto-refresh polling for messages (every 2.5 seconds)
+        // Start auto-refresh polling for messages (lightweight version)
         startMessagePolling();
       } catch (error) {
         console.error("Error loading messages:", error);
@@ -10105,36 +10120,207 @@ async function renderJobs(reset = false) {
       });
     }
     
-    // Auto-refresh polling for messages
+    // Lightweight refresh functions - NO auth checks, NO full re-renders
+    let lastMessageId = null; // Track last message ID to only append new ones
+    
+    async function refreshMessagesOnly() {
+      // Only refresh if we have an active conversation
+      if (!activeConversationThreadId) return;
+      
+      try {
+        const token = localStorage.getItem('hustl_token');
+        if (!token) return; // Don't refresh if no token - but don't trigger logout
+        
+        const response = await fetch(`${API_BASE}/threads/${activeConversationThreadId}/messages`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) return; // Silently fail - don't show errors
+        
+        const messages = await response.json();
+        const convMessages = document.getElementById("conversationMessages");
+        if (!convMessages) return;
+        
+        // Only append NEW messages (messages after lastMessageId)
+        let foundNewMessages = false;
+        const currentMessageIds = new Set(
+          Array.from(convMessages.querySelectorAll('.chat-msg-wrapper'))
+            .map(el => el.dataset.messageId)
+            .filter(id => id)
+        );
+        
+        messages.forEach((m) => {
+          // Skip if message already exists
+          if (currentMessageIds.has(m.id)) return;
+          
+          foundNewMessages = true;
+          
+          // Get current user ID from cached user (no auth check)
+          // If no cached user, skip this message (will be added on next full render)
+          const cachedUser = window._cachedCurrentUser || window.hustlAPI?.auth?.currentUser;
+          if (!cachedUser) return; // Skip if no cached user - don't trigger auth check
+          const isMe = m.senderId === cachedUser.id;
+          
+          // Create message bubble (same structure as renderConversation)
+          const wrapper = document.createElement("div");
+          wrapper.className = "chat-msg-wrapper " + (isMe ? "me" : "them");
+          wrapper.dataset.messageId = m.id;
+          wrapper.dataset.senderId = m.senderId;
+          
+          const bubble = document.createElement("div");
+          bubble.className = "chat-msg " + (isMe ? "me" : "them");
+          bubble.textContent = m.body;
+          wrapper.appendChild(bubble);
+          
+          const timestamp = document.createElement("div");
+          timestamp.className = "chat-msg-timestamp";
+          timestamp.textContent = timeAgo(m.createdAt);
+          wrapper.appendChild(timestamp);
+          
+          convMessages.appendChild(wrapper);
+        });
+        
+        // Update lastMessageId
+        if (messages.length > 0) {
+          lastMessageId = messages[messages.length - 1].id;
+        }
+        
+        // Scroll to bottom only if new messages were added
+        if (foundNewMessages) {
+          convMessages.scrollTop = convMessages.scrollHeight;
+        }
+      } catch (error) {
+        // Silently fail - don't log or show errors during background refresh
+        console.debug('[MESSAGES] Background refresh error (silent):', error);
+      }
+    }
+    
+    async function refreshConversationListUnreadCounts() {
+      // Only update unread badges - don't re-render entire list
+      try {
+        const token = localStorage.getItem('hustl_token');
+        if (!token) return;
+        
+        const response = await fetch(`${API_BASE}/threads`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) return;
+        
+        const threads = await response.json();
+        const convList = document.getElementById("conversationList");
+        if (!convList) return;
+        
+        // Update unread badges for each conversation item
+        threads.forEach((thread) => {
+          const item = convList.querySelector(`[data-thread-id="${thread.id}"]`);
+          if (!item) return;
+          
+          const unreadCount = thread.unreadCount || 0;
+          const hasUnread = unreadCount > 0;
+          
+          // Update unread badge
+          let badge = item.querySelector('.unread-badge');
+          if (hasUnread) {
+            if (!badge) {
+              badge = document.createElement("div");
+              badge.className = "unread-badge";
+              badge.style.background = "#3b82f6";
+              badge.style.color = "#fff";
+              badge.style.borderRadius = "12px";
+              badge.style.padding = "0.2rem 0.5rem";
+              badge.style.fontSize = "0.75rem";
+              badge.style.fontWeight = "700";
+              badge.style.minWidth = "24px";
+              badge.style.textAlign = "center";
+              
+              const previewContainer = item.querySelector('.preview-container');
+              if (previewContainer) {
+                previewContainer.appendChild(badge);
+              }
+            }
+            badge.textContent = unreadCount > 99 ? "99+" : unreadCount.toString();
+            
+            // Update styling for unread
+            if (item.dataset.jobId !== activeConversationJobId) {
+              item.style.background = "#eff6ff";
+              item.style.borderColor = "#3b82f6";
+              item.style.borderWidth = "2px";
+              item.style.fontWeight = "600";
+            }
+            
+            // Update message preview styling
+            const preview = item.querySelector('.job-meta');
+            if (preview) {
+              preview.style.color = "#1e40af";
+              preview.style.fontWeight = "600";
+            }
+          } else {
+            // Remove badge if no unread
+            if (badge) badge.remove();
+            
+            // Reset styling if not active
+            if (item.dataset.jobId !== activeConversationJobId) {
+              item.style.background = "";
+              item.style.borderColor = "";
+              item.style.borderWidth = "";
+              item.style.fontWeight = "";
+            }
+            
+            // Reset preview styling
+            const preview = item.querySelector('.job-meta');
+            if (preview) {
+              preview.style.color = "var(--text-muted)";
+              preview.style.fontWeight = "400";
+            }
+          }
+        });
+      } catch (error) {
+        // Silently fail
+        console.debug('[MESSAGES] Background unread refresh error (silent):', error);
+      }
+    }
+    
+    // Auto-refresh polling for messages - LIGHTWEIGHT VERSION
     function startMessagePolling() {
       // Stop any existing polling
       stopMessagePolling();
       
-      // Only poll if we're on the messages view and have an active conversation
-      if (activeView !== 'messages' || !activeConversationThreadId) {
+      // Only poll if we're on the messages view
+      if (activeView !== 'messages') {
         return;
       }
       
-      console.log('[MESSAGES] Starting auto-refresh polling');
+      console.log('[MESSAGES] Starting lightweight auto-refresh polling');
       
-      // Poll every 2.5 seconds
+      // Poll every 3 seconds (slightly less aggressive)
       messagePollInterval = setInterval(async () => {
-        // Only poll if still on messages view and conversation is active
-        if (activeView !== 'messages' || !activeConversationThreadId) {
+        // Only poll if still on messages view
+        if (activeView !== 'messages') {
           stopMessagePolling();
           return;
         }
         
+        // Lightweight refresh - NO auth checks, NO full re-renders
         try {
-          // Refresh the conversation list (for unread indicators)
-          await renderMessagesView();
+          // Update unread counts in conversation list (lightweight)
+          await refreshConversationListUnreadCounts();
           
-          // Refresh the active conversation messages
-          await renderConversation();
+          // Only refresh messages if we have an active conversation
+          if (activeConversationThreadId) {
+            await refreshMessagesOnly();
+          }
         } catch (error) {
-          console.error('[MESSAGES] Error in auto-refresh:', error);
+          // Silently fail - don't log errors during background refresh
+          console.debug('[MESSAGES] Background refresh error (silent):', error);
         }
-      }, 2500); // 2.5 seconds
+      }, 3000); // 3 seconds (less aggressive)
     }
     
     function stopMessagePolling() {
@@ -10145,15 +10331,9 @@ async function renderJobs(reset = false) {
       }
     }
     
-    // Stop polling when leaving messages view
-    const originalSetView = window.setView;
-    if (originalSetView && typeof originalSetView === 'function') {
-      window.setView = async function(view) {
-        if (view !== 'messages') {
-          stopMessagePolling();
-        }
-        return originalSetView.call(this, view);
-      };
+    // Reset lastMessageId when conversation changes
+    function resetMessageTracking() {
+      lastMessageId = null;
     }
 
     /* ---------- Profile ---------- */
@@ -16049,6 +16229,9 @@ try {
     if (window.hustlAPI && window.hustlAPI.auth) {
       window.hustlAPI.auth.currentUser = null;
     }
+    
+    // Clear cached current user for messages
+    window._cachedCurrentUser = null;
     
     // Force clear any cached API responses
     if (window.optimizedApi) {
