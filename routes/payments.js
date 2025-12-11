@@ -663,10 +663,10 @@ router.post('/confirm-payment', authenticate, requireRole('CUSTOMER'), async (re
     });
 
     // Accept the offer (call the accept endpoint logic)
-    const generateCode = () => String(Math.floor(1000 + Math.random() * 9000));
+    const generateCode = () => String(Math.floor(100000 + Math.random() * 900000)); // 6-digit code
     const startCode = generateCode();
     const completionCode = generateCode();
-    const startCodeExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const startCodeExpiresAt = new Date(Date.now() + 78 * 60 * 60 * 1000); // 78 hours
 
     // Update offer status
     await prisma.offer.update({

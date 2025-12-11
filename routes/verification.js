@@ -149,12 +149,19 @@ router.post('/job/:jobId/verify-start', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Incorrect code. Ask the customer for the correct 6-digit start code.' });
     }
 
-    // Mark start code as verified - job is now ACTIVE
+    // Generate completion code if it doesn't exist
+    let completionCode = job.completionCode;
+    if (!completionCode) {
+      completionCode = generateCode();
+    }
+
+    // Mark start code as verified - job is now IN_PROGRESS
     const updatedJob = await prisma.job.update({
       where: { id: jobId },
       data: { 
         startCodeVerified: true,
-        status: 'PAID' // Job is now active, payment is held
+        status: 'IN_PROGRESS', // Job is now in progress
+        completionCode: completionCode // Ensure completion code exists
       }
     });
 
@@ -162,7 +169,7 @@ router.post('/job/:jobId/verify-start', authenticate, async (req, res) => {
       success: true,
       message: 'Start code verified! Job is now active. You can begin work.',
       startCodeVerified: true,
-      completionCode: updatedJob.completionCode
+      jobStatus: 'IN_PROGRESS'
     });
 
   } catch (error) {
@@ -179,7 +186,7 @@ router.post('/job/:jobId/verify-arrival', authenticate, async (req, res) => {
 
 // ============================================
 // POST /verification/job/:jobId/verify-completion
-// Customer enters the completion code (from hustler) to release payment
+// Hustler enters the completion code to complete the job
 // ============================================
 router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
   try {
@@ -200,17 +207,17 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    // Only the customer can verify completion
-    if (job.customerId !== userId) {
-      return res.status(403).json({ error: 'Only the customer can verify completion' });
+    // Only the assigned hustler can verify completion
+    if (job.hustlerId !== userId) {
+      return res.status(403).json({ error: 'Only the assigned hustler can verify completion code' });
     }
 
     if (!code || code.length !== 6) {
       return res.status(400).json({ error: 'Completion code must be 6 digits' });
     }
 
-    // Job must be active (start code verified) to complete
-    if (!job.startCodeVerified && !job.arrivalCodeVerified) {
+    // Job must be IN_PROGRESS (start code verified) to complete
+    if (job.status !== 'IN_PROGRESS' && !job.startCodeVerified && !job.arrivalCodeVerified) {
       return res.status(400).json({ error: 'Job must be started (start code verified) before completion can be verified' });
     }
 
@@ -269,7 +276,7 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         where: { id: jobId },
         data: { 
           completionCodeVerified: true,
-          status: 'PAID'
+          status: 'COMPLETED_BY_HUSTLER' // Job is completed, awaiting customer confirmation
         }
       });
 
@@ -285,7 +292,7 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
     } catch (paymentError) {
       console.error('Error releasing payment:', paymentError);
       // Still mark completion as verified even if payment fails (can be retried)
-      const updatedJob = await prisma.job.update({
+      await prisma.job.update({
         where: { id: jobId },
         data: { 
           completionCodeVerified: true,
@@ -305,10 +312,10 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
 });
 
 // ============================================
-// POST /verification/job/:jobId/generate-codes
-// Generate codes when job is assigned (internal use)
+// POST /verification/job/:jobId/regenerate-start-code
+// Customer regenerates the start code (invalidates old one)
 // ============================================
-router.post('/job/:jobId/generate-codes', authenticate, async (req, res) => {
+router.post('/job/:jobId/regenerate-start-code', authenticate, async (req, res) => {
   try {
     const { jobId } = req.params;
     const userId = req.user.id;
@@ -321,40 +328,93 @@ router.post('/job/:jobId/generate-codes', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    // Only the customer can generate codes
+    // Only the customer can regenerate codes
     if (job.customerId !== userId) {
-      return res.status(403).json({ error: 'Only the customer can generate codes' });
+      return res.status(403).json({ error: 'Only the customer can regenerate codes' });
     }
 
-    // Don't regenerate if codes already exist
-    if (job.arrivalCode && job.completionCode) {
-      return res.json({
-        arrivalCode: job.arrivalCode,
-        completionCode: job.completionCode,
-        message: 'Codes already generated'
-      });
+    // Can only regenerate if start code hasn't been verified yet
+    if (job.startCodeVerified) {
+      return res.status(400).json({ error: 'Cannot regenerate start code after it has been verified' });
     }
 
-    const arrivalCode = generateCode();
-    const completionCode = generateCode();
+    // Generate new start code
+    const newStartCode = generateCode();
+    const startCodeExpiresAt = new Date(Date.now() + 78 * 60 * 60 * 1000); // 78 hours
 
     const updatedJob = await prisma.job.update({
       where: { id: jobId },
       data: {
-        arrivalCode,
-        completionCode
+        startCode: newStartCode,
+        startCodeExpiresAt: startCodeExpiresAt,
+        startCodeVerified: false // Reset verification status
       }
     });
 
     res.json({
       success: true,
-      arrivalCode: updatedJob.arrivalCode,
-      completionCode: updatedJob.completionCode
+      startCode: updatedJob.startCode,
+      message: 'Start code regenerated. Old code is no longer valid.'
     });
 
   } catch (error) {
-    console.error('Error generating codes:', error);
-    res.status(500).json({ error: 'Failed to generate codes' });
+    console.error('Error regenerating start code:', error);
+    res.status(500).json({ error: 'Failed to regenerate start code' });
+  }
+});
+
+// ============================================
+// POST /verification/job/:jobId/regenerate-completion-code
+// Customer regenerates the completion code (invalidates old one)
+// ============================================
+router.post('/job/:jobId/regenerate-completion-code', authenticate, async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const userId = req.user.id;
+
+    const job = await prisma.job.findUnique({
+      where: { id: jobId }
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    // Only the customer can regenerate codes
+    if (job.customerId !== userId) {
+      return res.status(403).json({ error: 'Only the customer can regenerate codes' });
+    }
+
+    // Can only regenerate if completion code hasn't been verified yet
+    if (job.completionCodeVerified) {
+      return res.status(400).json({ error: 'Cannot regenerate completion code after it has been verified' });
+    }
+
+    // Job must be started (IN_PROGRESS) to regenerate completion code
+    if (!job.startCodeVerified && job.status !== 'IN_PROGRESS') {
+      return res.status(400).json({ error: 'Job must be started before completion code can be regenerated' });
+    }
+
+    // Generate new completion code
+    const newCompletionCode = generateCode();
+
+    const updatedJob = await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        completionCode: newCompletionCode,
+        completionCodeVerified: false // Reset verification status
+      }
+    });
+
+    res.json({
+      success: true,
+      completionCode: updatedJob.completionCode,
+      message: 'Completion code regenerated. Old code is no longer valid.'
+    });
+
+  } catch (error) {
+    console.error('Error regenerating completion code:', error);
+    res.status(500).json({ error: 'Failed to regenerate completion code' });
   }
 });
 

@@ -7141,7 +7141,7 @@ async function renderJobs(reset = false) {
       modalContent.appendChild(contentSection);
 
       // Customer view: Show start code if hustler is accepted but not started
-      if (user && user.id === job.postedByUserId && job.hustlerId && job.arrivalCode && !job.arrivalCodeVerified) {
+      if (user && user.id === job.postedByUserId && job.hustlerId && job.startCode && !job.startCodeVerified && job.status === 'ASSIGNED') {
         const startCodeSection = document.createElement("div");
         startCodeSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #fef3c7; border-radius: 12px; border: 2px solid #fbbf24;";
         
@@ -7152,12 +7152,18 @@ async function renderJobs(reset = false) {
         
         const startCodeDisplay = document.createElement("div");
         startCodeDisplay.style.cssText = "font-size: 2rem; font-weight: 700; letter-spacing: 0.3em; color: #92400e; text-align: center; padding: 1rem; background: white; border-radius: 8px; font-family: 'Courier New', monospace; margin-bottom: 0.75rem;";
-        startCodeDisplay.textContent = job.arrivalCode;
+        startCodeDisplay.textContent = job.startCode;
         startCodeSection.appendChild(startCodeDisplay);
         
+        // Safety warning
+        const safetyWarning = document.createElement("div");
+        safetyWarning.style.cssText = "padding: 0.75rem; background: #fee2e2; border-left: 4px solid #dc2626; border-radius: 6px; margin-bottom: 0.75rem;";
+        safetyWarning.innerHTML = `<div style="font-weight: 600; color: #991b1b; margin-bottom: 0.25rem;">⚠️ Safety Warning</div><div style="font-size: 0.85rem; color: #991b1b;">Do not give the Start Code until the hustler is physically there and ready to begin the job.</div>`;
+        startCodeSection.appendChild(safetyWarning);
+        
         const startCodeInstructions = document.createElement("div");
-        startCodeInstructions.style.cssText = "font-size: 0.9rem; color: #92400e; line-height: 1.5;";
-        const expiresAt = job.arrivalCodeExpiresAt ? new Date(job.arrivalCodeExpiresAt) : null;
+        startCodeInstructions.style.cssText = "font-size: 0.9rem; color: #92400e; line-height: 1.5; margin-bottom: 0.75rem;";
+        const expiresAt = job.startCodeExpiresAt ? new Date(job.startCodeExpiresAt) : null;
         const hoursLeft = expiresAt ? Math.max(0, Math.floor((expiresAt - new Date()) / (1000 * 60 * 60))) : 78;
         startCodeInstructions.innerHTML = `
           <div style="margin-bottom: 0.5rem;">Share this 6-digit code with your hustler when they arrive to start the job.</div>
@@ -7165,11 +7171,94 @@ async function renderJobs(reset = false) {
         `;
         startCodeSection.appendChild(startCodeInstructions);
         
+        // Regenerate button
+        const regenerateBtn = document.createElement("button");
+        regenerateBtn.className = "btn btn-ghost";
+        regenerateBtn.textContent = "🔄 Regenerate Code";
+        regenerateBtn.style.cssText = "width: 100%; padding: 0.5rem; font-size: 0.85rem;";
+        regenerateBtn.addEventListener("click", async () => {
+          if (!confirm("Regenerate the start code? The old code will no longer work.")) return;
+          try {
+            const token = localStorage.getItem("hustl_token");
+            const response = await fetch(`${API_BASE}/verification/job/${job.id}/regenerate-start-code`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+              }
+            });
+            if (!response.ok) throw new Error("Failed to regenerate");
+            showToast("✅ Start code regenerated!");
+            document.body.removeChild(modalOverlay);
+            document.body.style.overflow = "";
+            openJobDetails(job.id);
+          } catch (error) {
+            showToast("Error regenerating code: " + error.message);
+          }
+        });
+        startCodeSection.appendChild(regenerateBtn);
+        
         contentSection.appendChild(startCodeSection);
       }
       
+      // Customer view: Show completion code after job is started (IN_PROGRESS)
+      if (user && user.id === job.postedByUserId && job.startCodeVerified && job.status === 'IN_PROGRESS' && job.completionCode && !job.completionCodeVerified) {
+        const completionCodeSection = document.createElement("div");
+        completionCodeSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #dcfce7; border-radius: 12px; border: 2px solid #16a34a;";
+        
+        const completionCodeTitle = document.createElement("div");
+        completionCodeTitle.style.cssText = "font-weight: 700; font-size: 1.1rem; color: #166534; margin-bottom: 0.75rem;";
+        completionCodeTitle.textContent = "🔐 Completion Code (For Hustler)";
+        completionCodeSection.appendChild(completionCodeTitle);
+        
+        const completionCodeDisplay = document.createElement("div");
+        completionCodeDisplay.style.cssText = "font-size: 2rem; font-weight: 700; letter-spacing: 0.3em; color: #166534; text-align: center; padding: 1rem; background: white; border-radius: 8px; font-family: 'Courier New', monospace; margin-bottom: 0.75rem;";
+        completionCodeDisplay.textContent = job.completionCode;
+        completionCodeSection.appendChild(completionCodeDisplay);
+        
+        // Safety warning
+        const safetyWarning = document.createElement("div");
+        safetyWarning.style.cssText = "padding: 0.75rem; background: #fee2e2; border-left: 4px solid #dc2626; border-radius: 6px; margin-bottom: 0.75rem;";
+        safetyWarning.innerHTML = `<div style="font-weight: 600; color: #991b1b; margin-bottom: 0.25rem;">⚠️ Safety Warning</div><div style="font-size: 0.85rem; color: #991b1b;">Only give the Completion Code after the job is fully done and you are satisfied with the work.</div>`;
+        completionCodeSection.appendChild(safetyWarning);
+        
+        const completionInstructions = document.createElement("div");
+        completionInstructions.style.cssText = "font-size: 0.9rem; color: #166534; margin-bottom: 0.75rem;";
+        completionInstructions.textContent = "The hustler will enter this code when the job is complete. Do not share it until you are satisfied with the work.";
+        completionCodeSection.appendChild(completionInstructions);
+        
+        // Regenerate button
+        const regenerateBtn = document.createElement("button");
+        regenerateBtn.className = "btn btn-ghost";
+        regenerateBtn.textContent = "🔄 Regenerate Code";
+        regenerateBtn.style.cssText = "width: 100%; padding: 0.5rem; font-size: 0.85rem;";
+        regenerateBtn.addEventListener("click", async () => {
+          if (!confirm("Regenerate the completion code? The old code will no longer work.")) return;
+          try {
+            const token = localStorage.getItem("hustl_token");
+            const response = await fetch(`${API_BASE}/verification/job/${job.id}/regenerate-completion-code`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+              }
+            });
+            if (!response.ok) throw new Error("Failed to regenerate");
+            showToast("✅ Completion code regenerated!");
+            document.body.removeChild(modalOverlay);
+            document.body.style.overflow = "";
+            openJobDetails(job.id);
+          } catch (error) {
+            showToast("Error regenerating code: " + error.message);
+          }
+        });
+        completionCodeSection.appendChild(regenerateBtn);
+        
+        contentSection.appendChild(completionCodeSection);
+      }
+      
       // Hustler view: Show start code input if accepted but not started
-      if (user && user.id === job.hustlerId && job.arrivalCode && !job.arrivalCodeVerified) {
+      if (user && user.id === job.hustlerId && job.startCode && !job.startCodeVerified && job.status === 'ASSIGNED') {
         const startCodeInputSection = document.createElement("div");
         startCodeInputSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #dbeafe; border-radius: 12px; border: 2px solid #3b82f6;";
         
@@ -7239,31 +7328,8 @@ async function renderJobs(reset = false) {
         contentSection.appendChild(startCodeInputSection);
       }
       
-      // Hustler view: Show completion code if job is active
-      if (user && user.id === job.hustlerId && job.arrivalCodeVerified && job.completionCode && !job.completionCodeVerified) {
-        const completionCodeSection = document.createElement("div");
-        completionCodeSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #dcfce7; border-radius: 12px; border: 2px solid #16a34a;";
-        
-        const completionCodeTitle = document.createElement("div");
-        completionCodeTitle.style.cssText = "font-weight: 700; font-size: 1.1rem; color: #166534; margin-bottom: 0.75rem;";
-        completionCodeTitle.textContent = "🔐 Completion Code (Give to Customer)";
-        completionCodeSection.appendChild(completionCodeTitle);
-        
-        const completionCodeDisplay = document.createElement("div");
-        completionCodeDisplay.style.cssText = "font-size: 2rem; font-weight: 700; letter-spacing: 0.3em; color: #166534; text-align: center; padding: 1rem; background: white; border-radius: 8px; font-family: 'Courier New', monospace; margin-bottom: 0.75rem;";
-        completionCodeDisplay.textContent = job.completionCode;
-        completionCodeSection.appendChild(completionCodeDisplay);
-        
-        const completionInstructions = document.createElement("div");
-        completionInstructions.style.cssText = "font-size: 0.9rem; color: #166534;";
-        completionInstructions.textContent = "Share this 6-digit code with the customer when the job is complete. They will enter it to release payment.";
-        completionCodeSection.appendChild(completionInstructions);
-        
-        contentSection.appendChild(completionCodeSection);
-      }
-      
-      // Customer view: Show completion code input if job is active
-      if (user && user.id === job.postedByUserId && job.arrivalCodeVerified && job.completionCode && !job.completionCodeVerified) {
+      // Hustler view: Show completion code input if job is IN_PROGRESS
+      if (user && user.id === job.hustlerId && job.startCodeVerified && job.status === 'IN_PROGRESS' && job.completionCode && !job.completionCodeVerified) {
         const completionCodeInputSection = document.createElement("div");
         completionCodeInputSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #dbeafe; border-radius: 12px; border: 2px solid #3b82f6;";
         
@@ -7272,10 +7338,10 @@ async function renderJobs(reset = false) {
         completionCodeTitle.textContent = "🔐 Enter Completion Code";
         completionCodeInputSection.appendChild(completionCodeTitle);
         
-        const completionInstructions = document.createElement("div");
-        completionInstructions.style.cssText = "font-size: 0.9rem; color: #1e40af; margin-bottom: 1rem;";
-        completionInstructions.textContent = "Ask the hustler for the 6-digit completion code to release payment.";
-        completionCodeInputSection.appendChild(completionInstructions);
+        const completionCodeInstructions = document.createElement("div");
+        completionCodeInstructions.style.cssText = "font-size: 0.9rem; color: #1e40af; margin-bottom: 1rem;";
+        completionCodeInstructions.textContent = "Ask the customer for the 6-digit completion code to finish the job and release payment.";
+        completionCodeInputSection.appendChild(completionCodeInstructions);
         
         const codeInput = document.createElement("input");
         codeInput.type = "text";
@@ -7317,7 +7383,7 @@ async function renderJobs(reset = false) {
               throw new Error(data.error || "Verification failed");
             }
             
-            showToast("✅ Job completed! Payment released to hustler.");
+            showToast("✅ Completion code verified! Job is now complete.");
             document.body.removeChild(modalOverlay);
             document.body.style.overflow = "";
             openJobDetails(job.id);
@@ -7332,6 +7398,7 @@ async function renderJobs(reset = false) {
         
         contentSection.appendChild(completionCodeInputSection);
       }
+      
 
       // Customer view: Show applicants if job is posted by current user
       if (user && user.id === job.postedByUserId && (job.status === "OPEN" || job.status === "open")) {
