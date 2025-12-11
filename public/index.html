@@ -2966,28 +2966,25 @@
             </div>
 
             <div id="hourlyFields" style="display:none;">
-              <div style="margin-bottom: 0.75rem; padding: 0.75rem; background: #f0fdf4; border-radius: 8px; border-left: 3px solid #10b981;">
-                <div style="font-weight: 600; color: #059669; margin-bottom: 0.5rem;">Hourly Pay (per job, split between workers)</div>
-              </div>
-              <div class="field">
-                <label for="hourlyRate">Total hourly rate for this job ($/hr):</label>
-                <input id="hourlyRate" type="number" min="0" step="1" value="20" />
-              </div>
-              <div class="field">
-                <label for="maxHours">Max hours you're willing to pay for:</label>
-                <input id="maxHours" type="number" min="1" step="1" value="3" />
-              </div>
-              <div id="hourlyRateCalculation" style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: #eff6ff; border-radius: 8px; border-left: 3px solid var(--primary);">
-                <div style="font-size: 0.9rem; font-weight: 600; color: var(--primary); margin-bottom: 0.5rem;">ℹ️ How pay works:</div>
-                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
-                  Hustl will divide the hourly rate equally among all workers you requested.
+              <div style="margin-bottom: 1rem; padding: 1rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+                <div style="font-weight: 600; font-size: 1rem; color: var(--text-main); margin-bottom: 0.75rem;">Hourly Pay</div>
+                
+                <div class="field" style="margin-bottom: 0.75rem;">
+                  <label for="hourlyRate" style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Total hourly rate:</label>
+                  <input id="hourlyRate" type="number" min="0" step="1" value="20" style="width: 100%;" />
+                  <span style="font-size: 0.85rem; color: var(--text-muted); margin-left: 0.5rem;">/hr</span>
                 </div>
-                <div style="font-size: 0.85rem; color: var(--text-main); font-weight: 600; padding: 0.5rem; background: white; border-radius: 6px;">
-                  <span id="totalHourlyRateDisplay">$20</span>/hr total
-                  <span id="perPersonBreakdown" style="display: none;"> → <span id="workersCountDisplay">2</span> workers → $<span id="hourlyRateDisplay">10</span>/hr each</span>
+                
+                <div class="field" style="margin-bottom: 0.75rem;">
+                  <label for="maxHours" style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Max hours:</label>
+                  <input id="maxHours" type="number" min="1" step="1" value="3" style="width: 100%;" />
                 </div>
-                <div style="font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem; font-style: italic;">
-                  Example: If you choose $<span id="exampleRate">20</span>/hr and <span id="exampleWorkers">2</span> workers, each worker earns $<span id="examplePerPerson">10</span>/hr.
+                
+                <div id="hourlyRateCalculation" style="display: none; margin-top: 1rem; padding: 0.75rem; background: #eff6ff; border-radius: 6px;">
+                  <div style="font-size: 0.85rem; color: var(--text-main); margin-bottom: 0.5rem; font-weight: 600;">Split between workers</div>
+                  <div style="font-size: 0.85rem; color: var(--text-muted);">
+                    Example: <span id="exampleWorkers">2</span> workers → $<span id="examplePerPerson">10</span>/hr each
+                  </div>
                 </div>
               </div>
             </div>
