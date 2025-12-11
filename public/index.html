@@ -2791,8 +2791,8 @@
             </p>
           </div>
 
-          <!-- Keep job active for -->
-          <div class="field">
+          <!-- Keep job active for (hidden - auto-set based on When selection) -->
+          <div class="field" id="jobDurationField" style="display: none;">
             <label for="jobDuration">⏳ Keep this job active for</label>
             <select id="jobDuration">
               <option value="1">1 day</option>
@@ -4550,6 +4550,23 @@ function showChangePasswordModal() {
             if (todayAsapNote) todayAsapNote.style.display = "none";
             if (tomorrowNote) tomorrowNote.style.display = "none";
           }
+          
+          // Auto-set keepActiveFor based on When selection
+          const jobDurationField = document.getElementById("jobDurationField");
+          const jobDurationSelect = document.getElementById("jobDuration");
+          if (jobDurationSelect) {
+            if (jobWhenSelect.value === "today_asap") {
+              jobDurationSelect.value = "1"; // 1 day for today
+            } else if (jobWhenSelect.value === "tomorrow") {
+              jobDurationSelect.value = "1"; // 1 day for tomorrow
+            } else if (jobWhenSelect.value === "flexible_week") {
+              jobDurationSelect.value = "7"; // 1 week
+            } else if (jobWhenSelect.value === "no_deadline") {
+              jobDurationSelect.value = "30"; // 1 month
+            } else {
+              jobDurationSelect.value = "3"; // Default 3 days
+            }
+          }
         });
       }
 
@@ -5054,6 +5071,60 @@ function showChangePasswordModal() {
 
             // Show success message with details
             const successMessage = result?.message || "✅ Job posted successfully! Hustlers nearby will begin applying soon. Go to Manage Jobs to choose your favorite.";
+            
+            // Make button green and show congratulations popup
+            const postButton = document.getElementById("postJobButton");
+            if (postButton) {
+              postButton.style.background = "#10b981";
+              postButton.style.borderColor = "#10b981";
+              postButton.textContent = "✅ Job Posted Successfully!";
+              postButton.disabled = true;
+              
+              // Reset button after 5 seconds
+              setTimeout(() => {
+                postButton.style.background = "";
+                postButton.style.borderColor = "";
+                postButton.textContent = "Post job to Hustl";
+                postButton.disabled = false;
+              }, 5000);
+            }
+            
+            // Show congratulations popup
+            const congratsModal = document.createElement("div");
+            congratsModal.style.cssText = `
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background: rgba(0, 0, 0, 0.6);
+              z-index: 10001;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 1rem;
+            `;
+            congratsModal.innerHTML = `
+              <div style="background: white; border-radius: 16px; padding: 2rem; max-width: 400px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">🎉</div>
+                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.5rem 0;">Congratulations!</h2>
+                <p style="color: var(--text-muted); margin: 0 0 1.5rem 0; line-height: 1.6;">
+                  Your job has been posted successfully! Hustlers nearby will begin applying soon.
+                </p>
+                <button onclick="this.closest('div[style*=\"position: fixed\"]').remove();" style="
+                  padding: 0.75rem 2rem;
+                  background: var(--primary);
+                  color: white;
+                  border: none;
+                  border-radius: 8px;
+                  font-size: 1rem;
+                  font-weight: 600;
+                  cursor: pointer;
+                ">Got it!</button>
+              </div>
+            `;
+            document.body.appendChild(congratsModal);
+            
             showToast(successMessage);
             
             // Show job stats on the post page
@@ -5653,29 +5724,48 @@ async function renderJobs(reset = false) {
         return miles > 0 ? miles : null;
       }
       
+      // Get actual addresses if available
+      const pickupAddress = requirements.pickup_address || requirements.pickupAddress;
+      const dropoffAddress = requirements.dropoff_address || requirements.dropoffAddress;
+      
       if (onSiteOnly) {
-        // Single location job
-        const locationParts = [];
-        if (pickupArea) locationParts.push(pickupArea);
-        if (pickupCity) locationParts.push(pickupCity);
-        if (pickupZip) locationParts.push(pickupZip);
-        locationText = locationParts.length > 0 
-          ? locationParts.join(", ") 
-          : (job.address?.split(',')[0] || "Location TBD");
+        // Single location job - prioritize actual address
+        if (pickupAddress) {
+          locationText = pickupAddress;
+        } else {
+          const locationParts = [];
+          if (pickupArea) locationParts.push(pickupArea);
+          if (pickupCity) locationParts.push(pickupCity);
+          if (pickupZip) locationParts.push(pickupZip);
+          locationText = locationParts.length > 0 
+            ? locationParts.join(", ") 
+            : (job.address?.split(',')[0] || "Location TBD");
+        }
         locationText += " (Single location job)";
-      } else if (dropoffArea || dropoffCity || dropoffZip) {
+      } else if (dropoffArea || dropoffCity || dropoffZip || dropoffAddress) {
         // Moving job with pickup and dropoff - show "from here to here" clearly
-        const pickupParts = [];
-        if (pickupArea) pickupParts.push(pickupArea);
-        if (pickupCity) pickupParts.push(pickupCity);
-        if (pickupZip) pickupParts.push(pickupZip);
-        const pickupStr = pickupParts.length > 0 ? pickupParts.join(", ") : (pickupCity || "Pickup TBD");
+        // Prioritize actual addresses
+        let pickupStr = "";
+        if (pickupAddress) {
+          pickupStr = pickupAddress;
+        } else {
+          const pickupParts = [];
+          if (pickupArea) pickupParts.push(pickupArea);
+          if (pickupCity) pickupParts.push(pickupCity);
+          if (pickupZip) pickupParts.push(pickupZip);
+          pickupStr = pickupParts.length > 0 ? pickupParts.join(", ") : (pickupCity || "Pickup TBD");
+        }
         
-        const dropoffParts = [];
-        if (dropoffArea) dropoffParts.push(dropoffArea);
-        if (dropoffCity) dropoffParts.push(dropoffCity);
-        if (dropoffZip) dropoffParts.push(dropoffZip);
-        const dropoffStr = dropoffParts.length > 0 ? dropoffParts.join(", ") : (dropoffCity || "Dropoff TBD");
+        let dropoffStr = "";
+        if (dropoffAddress) {
+          dropoffStr = dropoffAddress;
+        } else {
+          const dropoffParts = [];
+          if (dropoffArea) dropoffParts.push(dropoffArea);
+          if (dropoffCity) dropoffParts.push(dropoffCity);
+          if (dropoffZip) dropoffParts.push(dropoffZip);
+          dropoffStr = dropoffParts.length > 0 ? dropoffParts.join(", ") : (dropoffCity || "Dropoff TBD");
+        }
         
         // Calculate distance if we have ZIP codes
         let distanceText = "";
@@ -5688,14 +5778,18 @@ async function renderJobs(reset = false) {
         
         locationText = `From: ${pickupStr} → To: ${dropoffStr}${distanceText}`;
       } else {
-        // Only pickup location
-        const locationParts = [];
-        if (pickupArea) locationParts.push(pickupArea);
-        if (pickupCity) locationParts.push(pickupCity);
-        if (pickupZip) locationParts.push(pickupZip);
-        locationText = locationParts.length > 0 
-          ? locationParts.join(", ") 
-          : (job.address?.split(',')[0] || "Location TBD");
+        // Only pickup location - prioritize actual address
+        if (pickupAddress) {
+          locationText = pickupAddress;
+        } else {
+          const locationParts = [];
+          if (pickupArea) locationParts.push(pickupArea);
+          if (pickupCity) locationParts.push(pickupCity);
+          if (pickupZip) locationParts.push(pickupZip);
+          locationText = locationParts.length > 0 
+            ? locationParts.join(", ") 
+            : (job.address?.split(',')[0] || "Location TBD");
+        }
       }
       
       // Only add 📍 if locationText doesn't already start with it (for dropoff jobs)
@@ -8157,6 +8251,10 @@ async function renderJobs(reset = false) {
             ? Number(job.amount || 0)
             : (Number(job.hourlyRate || 0) * Number(job.estHours || 0) * teamSize);
           
+          // Check if this is a hustler-suggested-price job
+          const pricingOption = job.requirements?.pricing_option;
+          const isHustlerSuggestedPrice = pricingOption === "hustlers_quote";
+          
           // Enhanced Price Section - Uber-style
           const pricingSection = document.createElement("div");
           pricingSection.style.cssText = `
@@ -8167,42 +8265,63 @@ async function renderJobs(reset = false) {
             margin-bottom: 1rem;
           `;
 
-          // Customer's offered price
-          const customerOffer = document.createElement("div");
-          customerOffer.style.cssText = `
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 0.75rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px solid #bae6fd;
-          `;
-          
-          let priceDisplay = "";
-          if (job.payType === "hourly") {
-            const hourlyRate = Number(job.hourlyRate || 0);
-            const estHours = job.estHours || 0;
-            priceDisplay = `$${hourlyRate.toFixed(0)}/hr`;
-            if (teamSize > 1) {
-              priceDisplay += ` × ${teamSize} people`;
-            }
-            priceDisplay += ` · ${estHours}h max`;
-          } else {
-            priceDisplay = `$${originalAmount.toFixed(0)}`;
+          // Show suggested price box only if hustler suggests price
+          if (isHustlerSuggestedPrice) {
+            const suggestedPriceBox = document.createElement("div");
+            suggestedPriceBox.style.cssText = `
+              background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+              border: 2px solid #f59e0b;
+              border-radius: 12px;
+              padding: 1rem;
+              margin-bottom: 1rem;
+              text-align: center;
+            `;
+            suggestedPriceBox.innerHTML = `
+              <div style="font-size: 0.9rem; color: #92400e; margin-bottom: 0.5rem; font-weight: 600;">💰 Suggested Price</div>
+              <div style="font-size: 1.75rem; font-weight: 700; color: #78350f;">$${originalAmount.toFixed(0)}</div>
+              <div style="font-size: 0.85rem; color: #92400e; margin-top: 0.25rem;">You can suggest your own price below</div>
+            `;
+            pricingSection.appendChild(suggestedPriceBox);
           }
-          
-          customerOffer.innerHTML = `
-            <div>
-              <div style="font-size: 0.8rem; color: #0369a1; margin-bottom: 0.25rem;">💰 Customer's Offer</div>
-              <div style="font-size: 1.5rem; font-weight: 700; color: #0c4a6e;">${priceDisplay}</div>
-            </div>
-            <div style="text-align: right;">
-              <span style="background: #0ea5e9; color: white; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
-                ${job.payType === "hourly" ? "HOURLY" : "FLAT RATE"}
-              </span>
-            </div>
-          `;
-          pricingSection.appendChild(customerOffer);
+
+          // Customer's offered price (only show if not hustler-suggested-price)
+          if (!isHustlerSuggestedPrice) {
+            const customerOffer = document.createElement("div");
+            customerOffer.style.cssText = `
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              margin-bottom: 0.75rem;
+              padding-bottom: 0.75rem;
+              border-bottom: 1px solid #bae6fd;
+            `;
+            
+            let priceDisplay = "";
+            if (job.payType === "hourly") {
+              const hourlyRate = Number(job.hourlyRate || 0);
+              const estHours = job.estHours || 0;
+              priceDisplay = `$${hourlyRate.toFixed(0)}/hr`;
+              if (teamSize > 1) {
+                priceDisplay += ` × ${teamSize} people`;
+              }
+              priceDisplay += ` · ${estHours}h max`;
+            } else {
+              priceDisplay = `$${originalAmount.toFixed(0)}`;
+            }
+            
+            customerOffer.innerHTML = `
+              <div>
+                <div style="font-size: 0.8rem; color: #0369a1; margin-bottom: 0.25rem;">💰 Customer's Offer</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #0c4a6e;">${priceDisplay}</div>
+              </div>
+              <div style="text-align: right;">
+                <span style="background: #0ea5e9; color: white; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
+                  ${job.payType === "hourly" ? "HOURLY" : "FLAT RATE"}
+                </span>
+              </div>
+            `;
+            pricingSection.appendChild(customerOffer);
+          }
 
           // Your Price section
           const yourPrice = document.createElement("div");
