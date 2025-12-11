@@ -81,14 +81,31 @@ router.get('/', async (req, res) => {
             body: true,
             senderId: true,
             createdAt: true,
+            read: true,
           },
         },
       },
       orderBy: { lastMessageAt: 'desc' },
     });
 
-    console.log(`[THREADS] Found ${threads.length} threads for user ${req.user.id}`);
-    res.json(threads);
+    // Calculate unread count for each thread
+    const threadsWithUnread = await Promise.all(threads.map(async (thread) => {
+      const unreadCount = await prisma.message.count({
+        where: {
+          threadId: thread.id,
+          senderId: { not: req.user.id }, // Only count messages from other user
+          read: false,
+        },
+      });
+      
+      return {
+        ...thread,
+        unreadCount,
+      };
+    }));
+
+    console.log(`[THREADS] Found ${threadsWithUnread.length} threads for user ${req.user.id}`);
+    res.json(threadsWithUnread);
   } catch (error) {
     console.error('List threads error:', error);
     res.status(500).json({ error: 'Internal server error' });

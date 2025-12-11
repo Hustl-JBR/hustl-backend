@@ -1310,16 +1310,53 @@
     }
 
     .chat-msg {
-      font-size: 0.75rem;
-      padding: 0.3rem 0.45rem;
-      border-radius: 999px;
-      max-width: 85%;
+      font-size: 0.9rem;
+      padding: 0.6rem 0.85rem;
+      border-radius: 18px;
+      max-width: 75%;
+      margin-bottom: 0.25rem;
+      word-wrap: break-word;
+      line-height: 1.4;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      position: relative;
     }
 
     .chat-msg.me {
       align-self: flex-end;
       background: var(--primary);
       color: #fff;
+      border-bottom-right-radius: 4px;
+      margin-left: auto;
+    }
+    
+    .chat-msg.them {
+      align-self: flex-start;
+      background: #f0f0f0;
+      color: var(--text-main);
+      border-bottom-left-radius: 4px;
+      margin-right: auto;
+    }
+    
+    .chat-msg-wrapper {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 0.5rem;
+      width: 100%;
+    }
+    
+    .chat-msg-wrapper.me {
+      align-items: flex-end;
+    }
+    
+    .chat-msg-wrapper.them {
+      align-items: flex-start;
+    }
+    
+    .chat-msg-timestamp {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+      padding: 0 0.5rem;
     }
     
     /* Modern Messages Layout */
@@ -3496,6 +3533,7 @@ heart of Hustl.
     let activeJobsStatusFilter = "all";
     let activeConversationJobId = null;
     let activeConversationThreadId = null;
+    let messagePollInterval = null;
     
     // Pagination state
     let currentJobsPage = 1;
@@ -9646,10 +9684,19 @@ async function renderJobs(reset = false) {
         item.dataset.jobId = job.id;
         item.dataset.threadId = thread.id;
 
-        // Highlight the active conversation
+        // Highlight the active conversation and unread messages
+        const unreadCount = thread.unreadCount || 0;
+        const hasUnread = unreadCount > 0;
+        
         if (job.id === activeConversationJobId) {
           item.style.borderColor = "#2563eb";
           item.style.boxShadow = "0 0 0 1px #2563eb20";
+        } else if (hasUnread) {
+          // Blue background for unread conversations
+          item.style.background = "#eff6ff";
+          item.style.borderColor = "#3b82f6";
+          item.style.borderWidth = "2px";
+          item.style.fontWeight = "600";
         }
 
         // Add other user's profile picture and name at the top (most prominent)
@@ -9711,23 +9758,49 @@ async function renderJobs(reset = false) {
         
         // Show latest message preview if available
         const latestMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
+        const previewContainer = document.createElement("div");
+        previewContainer.style.display = "flex";
+        previewContainer.style.alignItems = "center";
+        previewContainer.style.justifyContent = "space-between";
+        previewContainer.style.marginTop = "0.25rem";
+        previewContainer.style.gap = "0.5rem";
+        
         if (latestMessage) {
           const messagePreview = document.createElement("div");
           messagePreview.className = "job-meta";
-          messagePreview.style.color = "var(--text-muted)";
+          messagePreview.style.color = hasUnread ? "#1e40af" : "var(--text-muted)";
           messagePreview.style.fontSize = "0.85rem";
-          messagePreview.style.marginTop = "0.25rem";
+          messagePreview.style.fontWeight = hasUnread ? "600" : "400";
+          messagePreview.style.flex = "1";
           const previewText = latestMessage.body.length > 50 ? latestMessage.body.substring(0, 50) + "..." : latestMessage.body;
           messagePreview.textContent = previewText;
-          item.appendChild(messagePreview);
+          previewContainer.appendChild(messagePreview);
         } else {
           const meta = document.createElement("div");
           meta.className = "job-meta";
           meta.style.color = "var(--text-muted)";
           meta.style.fontSize = "0.85rem";
+          meta.style.flex = "1";
           meta.textContent = "No messages yet";
-          item.appendChild(meta);
+          previewContainer.appendChild(meta);
         }
+        
+        // Add unread badge
+        if (hasUnread) {
+          const unreadBadge = document.createElement("div");
+          unreadBadge.style.background = "#3b82f6";
+          unreadBadge.style.color = "#fff";
+          unreadBadge.style.borderRadius = "12px";
+          unreadBadge.style.padding = "0.2rem 0.5rem";
+          unreadBadge.style.fontSize = "0.75rem";
+          unreadBadge.style.fontWeight = "700";
+          unreadBadge.style.minWidth = "24px";
+          unreadBadge.style.textAlign = "center";
+          unreadBadge.textContent = unreadCount > 99 ? "99+" : unreadCount.toString();
+          previewContainer.appendChild(unreadBadge);
+        }
+        
+        item.appendChild(previewContainer);
 
         // Archive/Delete buttons
         const actionsRow = document.createElement("div");
@@ -9908,39 +9981,37 @@ async function renderJobs(reset = false) {
         if (messages.length === 0) {
           convMessages.innerHTML = "<div style='text-align: center; padding: 3rem; color: var(--text-muted);'><div style='font-size: 2rem; margin-bottom: 1rem;'>💬</div><div>No messages yet. Start the conversation!</div></div>";
           convMessages.scrollTop = convMessages.scrollHeight;
+          // Start auto-refresh polling
+          startMessagePolling();
           return;
         }
 
         messages.forEach((m) => {
+          const isMe = m.senderId === user.id;
+          
+          // Create wrapper for message bubble and timestamp
+          const wrapper = document.createElement("div");
+          wrapper.className = "chat-msg-wrapper " + (isMe ? "me" : "them");
+          
+          // Create message bubble
           const bubble = document.createElement("div");
-          bubble.className = "chat-msg " + (m.senderId === user.id ? "me" : "them");
+          bubble.className = "chat-msg " + (isMe ? "me" : "them");
           bubble.textContent = m.body;
-          convMessages.appendChild(bubble);
+          wrapper.appendChild(bubble);
           
-          const meta = document.createElement("div");
-          meta.className = "chat-meta";
-          meta.innerHTML = "";
+          // Create timestamp
+          const timestamp = document.createElement("div");
+          timestamp.className = "chat-msg-timestamp";
+          timestamp.textContent = timeAgo(m.createdAt);
+          wrapper.appendChild(timestamp);
           
-          if (m.sender) {
-            const link = document.createElement("span");
-            link.className = "linkish";
-            link.textContent = m.sender.name || "Unknown";
-            link.style.cursor = "pointer";
-            link.addEventListener("click", () => {
-              if (typeof showApplicantProfileModal === 'function') {
-                showApplicantProfileModal(m.senderId);
-              }
-            });
-            meta.appendChild(link);
-          } else {
-            meta.append("Unknown");
-          }
-          meta.append(" · " + timeAgo(m.createdAt));
-
-          convMessages.appendChild(meta);
+          convMessages.appendChild(wrapper);
         });
         
         convMessages.scrollTop = convMessages.scrollHeight;
+        
+        // Start auto-refresh polling for messages (every 2.5 seconds)
+        startMessagePolling();
       } catch (error) {
         console.error("Error loading messages:", error);
         convMessages.innerHTML = "<div style='text-align: center; padding: 2rem; color: #dc2626;'>Error loading messages. Please try again.</div>";
@@ -10032,6 +10103,57 @@ async function renderJobs(reset = false) {
           newSendBtn.click();
         }
       });
+    }
+    
+    // Auto-refresh polling for messages
+    function startMessagePolling() {
+      // Stop any existing polling
+      stopMessagePolling();
+      
+      // Only poll if we're on the messages view and have an active conversation
+      if (activeView !== 'messages' || !activeConversationThreadId) {
+        return;
+      }
+      
+      console.log('[MESSAGES] Starting auto-refresh polling');
+      
+      // Poll every 2.5 seconds
+      messagePollInterval = setInterval(async () => {
+        // Only poll if still on messages view and conversation is active
+        if (activeView !== 'messages' || !activeConversationThreadId) {
+          stopMessagePolling();
+          return;
+        }
+        
+        try {
+          // Refresh the conversation list (for unread indicators)
+          await renderMessagesView();
+          
+          // Refresh the active conversation messages
+          await renderConversation();
+        } catch (error) {
+          console.error('[MESSAGES] Error in auto-refresh:', error);
+        }
+      }, 2500); // 2.5 seconds
+    }
+    
+    function stopMessagePolling() {
+      if (messagePollInterval) {
+        clearInterval(messagePollInterval);
+        messagePollInterval = null;
+        console.log('[MESSAGES] Stopped auto-refresh polling');
+      }
+    }
+    
+    // Stop polling when leaving messages view
+    const originalSetView = window.setView;
+    if (originalSetView && typeof originalSetView === 'function') {
+      window.setView = async function(view) {
+        if (view !== 'messages') {
+          stopMessagePolling();
+        }
+        return originalSetView.call(this, view);
+      };
     }
 
     /* ---------- Profile ---------- */
@@ -11503,23 +11625,30 @@ meta.textContent =
         console.log("🔵 Rendering messages view");
         try {
           await renderMessagesView();
+          // Start polling when messages view is rendered
+          startMessagePolling();
         } catch (err) {
           console.error("Error rendering messages:", err);
         }
       } else if (currentView === "profile") {
         console.log("🔵 Rendering profile view");
         renderProfile();
+        stopMessagePolling(); // Stop polling when leaving messages view
       } else if (currentView === "manage-jobs") {
         console.log("🔵 Rendering manage-jobs view - calling renderManageJobs");
         renderManageJobs();
+        stopMessagePolling(); // Stop polling when leaving messages view
       } else if (currentView === "owner") {
         console.log("🔵 Rendering owner view");
         renderOwnerView();
+        stopMessagePolling(); // Stop polling when leaving messages view
       } else if (currentView === "home") {
         console.log("🔵 Rendering home view (no special rendering needed)");
         // Home view doesn't need special rendering - it's the default
+        stopMessagePolling(); // Stop polling when leaving messages view
       } else {
         console.log("⚠️ renderAll - unknown view:", currentView);
+        stopMessagePolling(); // Stop polling when leaving messages view
       }
       
       // Unread message count - function not implemented yet
