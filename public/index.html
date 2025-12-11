@@ -9833,7 +9833,27 @@ async function renderJobs(reset = false) {
 
 
     async function renderConversation() {
-      const user = getCurrentUser();
+      // Use API-based authentication instead of state-based
+      let user = null;
+      try {
+        if (window.hustlAPI && window.hustlAPI.auth && typeof window.hustlAPI.auth.getCurrentUser === 'function') {
+          user = await window.hustlAPI.auth.getCurrentUser();
+        } else {
+          // Fallback: try to get user from token
+          const token = localStorage.getItem('hustl_token') || sessionStorage.getItem('hustl_token');
+          if (token) {
+            const response = await fetch(`${API_BASE}/users/me`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+              user = await response.json();
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[CONVERSATION] Error getting current user:', error);
+      }
+      
       const convTitle = document.getElementById("conversationTitle");
       const convSummary = document.getElementById("conversationJobSummary");
       const convMessages = document.getElementById("conversationMessages");
@@ -9939,7 +9959,27 @@ async function renderJobs(reset = false) {
       input.parentNode.replaceChild(newInput, input);
       
       newSendBtn.addEventListener("click", async () => {
-        const user = getCurrentUser();
+        // Use API-based authentication instead of state-based
+        let user = null;
+        try {
+          if (window.hustlAPI && window.hustlAPI.auth && typeof window.hustlAPI.auth.getCurrentUser === 'function') {
+            user = await window.hustlAPI.auth.getCurrentUser();
+          } else {
+            // Fallback: try to get user from token
+            const token = localStorage.getItem('hustl_token') || sessionStorage.getItem('hustl_token');
+            if (token) {
+              const response = await fetch(`${API_BASE}/users/me`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              if (response.ok) {
+                user = await response.json();
+              }
+            }
+          }
+        } catch (error) {
+          console.error('[MESSAGE INPUT] Error getting current user:', error);
+        }
+        
         if (!user) {
           showToast("Log in to send messages.");
           return;
