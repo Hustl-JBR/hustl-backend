@@ -12142,8 +12142,8 @@ meta.textContent =
           });
         }
         
-        // The API endpoint already filters for customer's posted jobs, so use directly
-        const postedJobs = jobs;
+        // The API endpoint already filters for customer's posted jobs, but add client-side filter for PAID jobs (safety check)
+        const postedJobs = jobs.filter(job => job.status !== 'PAID');
         
         if (postedJobs.length === 0) {
           postedJobsList.innerHTML = `
@@ -12430,8 +12430,8 @@ meta.textContent =
         
         console.log("✅ Fetched active jobs:", jobs.length, "jobs");
         
-        // The API endpoint already filters for active jobs, so use directly
-        const activeJobs = jobs;
+        // The API endpoint already filters for active jobs, but add client-side filter for PAID jobs (safety check)
+        const activeJobs = jobs.filter(job => job.status !== 'PAID');
         
         if (activeJobs.length === 0) {
           activeJobsList.innerHTML = `
