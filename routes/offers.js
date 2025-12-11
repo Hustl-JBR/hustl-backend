@@ -311,12 +311,12 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     }
 
     // CHECK ACTIVE JOBS LIMIT - Hustlers can only have 2 active jobs at once
-    // Active = ASSIGNED status where hustler has received start code (status = PAID) OR status = ASSIGNED
+    // Active = ASSIGNED, IN_PROGRESS, COMPLETED_BY_HUSTLER, or AWAITING_CUSTOMER_CONFIRM
     const activeJobsCount = await prisma.job.count({
       where: {
         hustlerId: offer.hustlerId,
         status: {
-          in: ['ASSIGNED', 'PAID', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM']
+          in: ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM']
         }
       }
     });

@@ -168,9 +168,10 @@ router.get('/active', authenticate, async (req, res) => {
     const userId = req.user.id;
     
     // Active jobs are:
-    // 1. ASSIGNED - Hustler accepted, can message, job in progress
-    // 2. COMPLETED_BY_HUSTLER - Hustler marked as done, waiting for customer confirmation
-    // 3. AWAITING_CUSTOMER_CONFIRM - Customer needs to verify completion and release escrow
+    // 1. ASSIGNED - Hustler accepted, can message, waiting for start code
+    // 2. IN_PROGRESS - Start code verified, job actively being worked on
+    // 3. COMPLETED_BY_HUSTLER - Hustler marked as done, waiting for customer confirmation
+    // 4. AWAITING_CUSTOMER_CONFIRM - Customer needs to verify completion and release escrow
     const jobs = await prisma.job.findMany({
       where: {
         OR: [
@@ -178,7 +179,7 @@ router.get('/active', authenticate, async (req, res) => {
           { hustlerId: userId }
         ],
         status: {
-          in: ['ASSIGNED', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM']
+          in: ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM']
         }
       },
       include: {
@@ -376,7 +377,7 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
         where: {
           hustlerId: req.user.id,
           status: {
-            in: ['ASSIGNED', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM'],
+            in: ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM'],
           },
         },
       });
