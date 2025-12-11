@@ -380,32 +380,33 @@
       display: none;
       width: 44px;
       height: 44px;
-      border: 1px solid var(--border);
+      border: 1.5px solid var(--border);
       background: #fff;
-      border-radius: 10px;
+      border-radius: 8px;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 5px;
+      gap: 4px;
       cursor: pointer;
       transition: all 0.2s ease;
       z-index: 101;
       position: relative;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      flex-shrink: 0;
     }
     
     .hamburger-btn:hover {
       background: var(--primary-soft);
       border-color: var(--primary);
-      box-shadow: 0 2px 12px rgba(37, 99, 235, 0.2);
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
     }
 
     .hamburger-btn span {
       display: block;
-      width: 20px;
-      height: 2.5px;
+      width: 18px;
+      height: 2px;
       background: var(--text-main);
-      border-radius: 2px;
+      border-radius: 1px;
       transition: all 0.3s ease;
       opacity: 1;
     }
@@ -431,13 +432,21 @@
       right: 0;
       bottom: 0;
       background: #ffffff;
-      z-index: 99;
-      padding: 80px 1rem 2rem;
+      z-index: 100;
+      padding: 70px 1rem 2rem;
       flex-direction: column;
       gap: 0.25rem;
       overflow-y: auto;
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+      overscroll-behavior: contain; /* Prevent scroll chaining */
+    }
+    
+    /* Prevent body scroll when menu is open */
+    body.mobile-menu-open {
+      overflow: hidden !important;
+      position: fixed;
+      width: 100%;
     }
 
     .mobile-menu.open {
@@ -2001,7 +2010,7 @@
     footer {
       border-top: 1px solid rgba(255, 255, 255, 0.1);
       padding: 0.75rem 1rem;
-      font-size: 0.75rem;
+      font-size: 0.65rem;
       background: #000000;
       color: #ffffff;
     }
@@ -3638,19 +3647,19 @@
           <!-- Tabs with blue highlighting -->
           <div class="profile-tabs" style="margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">
             <button class="profile-tab active manage-tab" data-manage-tab="posted" style="position: relative;">
-              📋 Posted Jobs
+              📋 Posted
               <span class="tab-indicator" style="position: absolute; bottom: -0.5rem; left: 0; right: 0; height: 3px; background: var(--primary); border-radius: 2px 2px 0 0; display: block;"></span>
             </button>
             <button class="profile-tab manage-tab" data-manage-tab="active" style="position: relative;">
-              🟡 Active Jobs
+              🟡 Active
               <span class="tab-indicator" style="position: absolute; bottom: -0.5rem; left: 0; right: 0; height: 3px; background: var(--primary); border-radius: 2px 2px 0 0; display: none;"></span>
             </button>
             <button class="profile-tab manage-tab" data-manage-tab="completed" style="position: relative;">
-              ✅ Completed Jobs
+              ✅ Completed
               <span class="tab-indicator" style="position: absolute; bottom: -0.5rem; left: 0; right: 0; height: 3px; background: var(--primary); border-radius: 2px 2px 0 0; display: none;"></span>
             </button>
             <button class="profile-tab manage-tab" data-manage-tab="applied" style="position: relative; display: none;" id="appliedJobsTab">
-              📝 Applied Jobs
+              📝 Applied
               <span class="tab-indicator" style="position: absolute; bottom: -0.5rem; left: 0; right: 0; height: 3px; background: var(--primary); border-radius: 2px 2px 0 0; display: none;"></span>
             </button>
           </div>
@@ -3658,7 +3667,7 @@
           <!-- Posted Jobs Tab -->
           <div id="manageTabPosted" class="profile-tab-content active">
             <div style="margin-bottom: 1.5rem;">
-              <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 0.5rem 0; color: var(--text-main);">📋 Your Posted Jobs</h2>
+              <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 0.5rem 0; color: var(--text-main);">📋 Posted</h2>
               <div style="color: var(--text-muted); font-size: 0.9rem;">Manage your job postings, review applicants, and track activity</div>
             </div>
             <div id="managePostedJobsList" style="display: grid; gap: 1.5rem;">
@@ -3685,7 +3694,7 @@
           <!-- Applied Jobs Tab (Hustler only) -->
           <div id="manageTabApplied" class="profile-tab-content" style="display: none;">
             <div style="margin-bottom: 1.5rem;">
-              <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 0.5rem 0; color: var(--text-main);">📝 Jobs You Applied To</h2>
+              <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 0.5rem 0; color: var(--text-main);">📝 Applied</h2>
               <div style="color: var(--text-muted); font-size: 0.9rem;">Track your applications and see their status</div>
             </div>
             <div id="manageAppliedJobsList" style="display: grid; gap: 1.5rem;">
@@ -3709,7 +3718,7 @@
         <div class="profile-tabs">
           <button class="profile-tab active" data-tab="settings">⚙️ Settings</button>
           <button class="profile-tab" data-tab="ratings">⭐ View Ratings</button>
-          <button class="profile-tab" data-tab="jobs">📋 My Jobs</button>
+          <button class="profile-tab" data-tab="jobs">📋 Jobs</button>
           <button class="profile-tab" data-tab="earnings">💰 Earnings</button>
         </div>
         
@@ -3802,7 +3811,7 @@
           <!-- Posted Jobs Section (Customer) -->
           <div class="card" style="margin-bottom: 1.5rem;">
             <div class="card-header">
-              <div class="card-title">📋 Posted Jobs</div>
+              <div class="card-title">📋 Posted</div>
               <div style="font-size: 0.85rem; color: var(--text-muted);">Manage jobs you've posted</div>
             </div>
             <div id="postedJobsList" style="padding: 1rem;">
@@ -3813,7 +3822,7 @@
           <!-- Active Jobs Section (Hustler) -->
           <div class="card">
             <div class="card-header">
-              <div class="card-title">💼 Active Jobs</div>
+              <div class="card-title">💼 Active</div>
               <div style="font-size: 0.85rem; color: var(--text-muted);">Jobs you're working on</div>
             </div>
             <div id="activeJobsList" style="padding: 1rem;">
@@ -11445,7 +11454,7 @@ async function renderJobs(reset = false) {
                     <span style="color: var(--text-muted); font-size: 0.9rem;">(${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})</span>
                   </div>
                 </div>
-                <button class="btn btn-primary" id="basicInfoEditBtn" style="padding: 0.5rem 1rem; font-size: 0.9rem; white-space: nowrap;">Edit Profile</button>
+                <button class="btn btn-primary" id="basicInfoEditBtn" style="padding: 0.5rem 1rem; font-size: 0.9rem; white-space: nowrap;">Edit</button>
               </div>
               
               ${genderLabel ? `<div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;">${genderLabel}</div>` : ''}
@@ -17806,8 +17815,21 @@ try {
       if (isToggling) return;
       isToggling = true;
       
-      freshHamburgerBtn.classList.toggle('open');
-      freshMobileMenu.classList.toggle('open');
+      const isOpen = freshMobileMenu.classList.contains('open');
+      
+      if (isOpen) {
+        // Closing menu
+        freshHamburgerBtn.classList.remove('open');
+        freshMobileMenu.classList.remove('open');
+        document.body.classList.remove('mobile-menu-open');
+        document.body.style.overflow = '';
+      } else {
+        // Opening menu
+        freshHamburgerBtn.classList.add('open');
+        freshMobileMenu.classList.add('open');
+        document.body.classList.add('mobile-menu-open');
+        document.body.style.overflow = 'hidden';
+      }
       
       setTimeout(() => {
         isToggling = false;
@@ -17849,6 +17871,7 @@ try {
         // Close menu
         freshHamburgerBtn.classList.remove('open');
         freshMobileMenu.classList.remove('open');
+        document.body.classList.remove('mobile-menu-open');
         document.body.style.overflow = '';
         
         // Update active state
@@ -17864,6 +17887,7 @@ try {
           e.stopPropagation();
           freshHamburgerBtn.classList.remove('open');
           freshMobileMenu.classList.remove('open');
+          document.body.classList.remove('mobile-menu-open');
           document.body.style.overflow = '';
           if (typeof window.openAuthModal === 'function') {
             window.openAuthModal('login');
@@ -17875,6 +17899,7 @@ try {
           e.stopPropagation();
           freshHamburgerBtn.classList.remove('open');
           freshMobileMenu.classList.remove('open');
+          document.body.classList.remove('mobile-menu-open');
           document.body.style.overflow = '';
           if (typeof window.openAuthModal === 'function') {
             window.openAuthModal('create');
@@ -17890,6 +17915,7 @@ try {
           console.log('Mobile sign out button clicked');
           freshHamburgerBtn.classList.remove('open');
           freshMobileMenu.classList.remove('open');
+          document.body.classList.remove('mobile-menu-open');
           document.body.style.overflow = '';
           // Call handleSignOut directly
           if (window.handleSignOut) {
