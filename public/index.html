@@ -13842,8 +13842,8 @@ meta.textContent =
                   </div>
                 </div>
                 
-                <!-- Start Code Section (Customer) -->
-                ${job.hustlerId && job.startCode && !job.startCodeVerified && job.status === 'ASSIGNED' ? `
+                <!-- Start Code Section (Customer) - NOT for completed jobs -->
+                ${job.hustlerId && job.startCode && !job.startCodeVerified && job.status === 'ASSIGNED' && job.status !== 'PAID' ? `
                 <div style="border-top: 2px solid var(--border); padding-top: 2rem; margin-bottom: 2rem;">
                   <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; border: 2px solid #fbbf24;">
                     <div style="font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 0.75rem;">🔐 Start Code (Give to Hustler)</div>
@@ -13860,8 +13860,8 @@ meta.textContent =
                 </div>
                 ` : ''}
                 
-                <!-- Completion Code Section (Customer) -->
-                ${job.startCodeVerified && job.status === 'IN_PROGRESS' && job.completionCode && !job.completionCodeVerified ? `
+                <!-- Completion Code Section (Customer) - NOT for completed jobs -->
+                ${job.startCodeVerified && job.status === 'IN_PROGRESS' && job.status !== 'PAID' && job.completionCode && !job.completionCodeVerified ? `
                 <div style="border-top: 2px solid var(--border); padding-top: 2rem; margin-bottom: 2rem;">
                   <div style="padding: 1.5rem; background: #dcfce7; border-radius: 12px; border: 2px solid #16a34a;">
                     <div style="font-weight: 700; font-size: 1.1rem; color: #166534; margin-bottom: 0.75rem;">🔐 Completion Code (For Hustler)</div>
@@ -14157,8 +14157,8 @@ meta.textContent =
                 </div>
                 ` : ''}
                 
-                <!-- Start Code Input (Hustler) -->
-                ${isHustler && job.startCode && !job.startCodeVerified && job.status === 'ASSIGNED' ? `
+                <!-- Start Code Input (Hustler) - NOT for completed jobs -->
+                ${isHustler && job.startCode && !job.startCodeVerified && job.status === 'ASSIGNED' && job.status !== 'PAID' ? `
                 <div style="padding: 1.5rem; background: #dbeafe; border-radius: 12px; margin-bottom: 2rem; border: 2px solid #3b82f6;">
                   <div style="font-weight: 700; font-size: 1.1rem; color: #1e40af; margin-bottom: 0.75rem;">🔐 Enter Start Code</div>
                   <div style="font-size: 0.9rem; color: #1e40af; margin-bottom: 1rem;">Ask the customer for the 6-digit start code to begin the job.</div>
@@ -14167,8 +14167,8 @@ meta.textContent =
                 </div>
                 ` : ''}
                 
-                <!-- Completion Code Input (Hustler) -->
-                ${isHustler && job.startCodeVerified && job.status === 'IN_PROGRESS' && job.completionCode && !job.completionCodeVerified ? `
+                <!-- Completion Code Input (Hustler) - NOT for completed jobs -->
+                ${isHustler && job.startCodeVerified && job.status === 'IN_PROGRESS' && job.status !== 'PAID' && job.completionCode && !job.completionCodeVerified ? `
                 <div style="padding: 1.5rem; background: #dbeafe; border-radius: 12px; margin-bottom: 2rem; border: 2px solid #3b82f6;">
                   <div style="font-weight: 700; font-size: 1.1rem; color: #1e40af; margin-bottom: 0.75rem;">🔐 Enter Completion Code</div>
                   <div style="font-size: 0.9rem; color: #1e40af; margin-bottom: 1rem;">Ask the customer for the 6-digit completion code to finish the job and release payment.</div>
