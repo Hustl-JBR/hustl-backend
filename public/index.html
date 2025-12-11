@@ -7207,6 +7207,10 @@ async function renderJobs(reset = false) {
           appliedBadge.textContent = statusText;
           applySection.appendChild(appliedBadge);
         } else {
+          // Check if this is a hustler-suggested-price job
+          const pricingOption = job.requirements?.pricing_option;
+          const isHustlerSuggestedPrice = pricingOption === "hustlers_quote";
+          
           // Apply form directly in the modal
           const applyTitle = document.createElement("div");
           applyTitle.style.cssText = "font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 1rem;";
@@ -7241,34 +7245,40 @@ async function renderJobs(reset = false) {
           charCounter.textContent = "400 characters remaining";
           applySection.appendChild(charCounter);
           
-          // Suggest Different Price (Optional) - with checkbox toggle
-          const priceCheckboxContainer = document.createElement("div");
-          priceCheckboxContainer.style.cssText = "margin-bottom: 1rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;";
+          // For hustler-suggested-price jobs, show price input directly (required)
+          // For customer-set-price jobs, show optional checkbox
+          if (!isHustlerSuggestedPrice) {
+            // Suggest Different Price (Optional) - with checkbox toggle
+            const priceCheckboxContainer = document.createElement("div");
+            priceCheckboxContainer.style.cssText = "margin-bottom: 1rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;";
+            
+            const priceCheckboxLabel = document.createElement("label");
+            priceCheckboxLabel.style.cssText = "display: flex; align-items: center; gap: 0.75rem; cursor: pointer; font-weight: 600; font-size: 0.95rem; color: var(--text-main);";
+            
+            const priceCheckbox = document.createElement("input");
+            priceCheckbox.type = "checkbox";
+            priceCheckbox.id = `suggestPriceCheckbox_${job.id}`;
+            priceCheckbox.style.cssText = "width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);";
+            
+            const priceCheckboxText = document.createElement("span");
+            priceCheckboxText.textContent = "💵 Suggest a different price";
+            
+            priceCheckboxLabel.appendChild(priceCheckbox);
+            priceCheckboxLabel.appendChild(priceCheckboxText);
+            priceCheckboxContainer.appendChild(priceCheckboxLabel);
+            applySection.appendChild(priceCheckboxContainer);
+          }
           
-          const priceCheckboxLabel = document.createElement("label");
-          priceCheckboxLabel.style.cssText = "display: flex; align-items: center; gap: 0.75rem; cursor: pointer; font-weight: 600; font-size: 0.95rem; color: var(--text-main);";
-          
-          const priceCheckbox = document.createElement("input");
-          priceCheckbox.type = "checkbox";
-          priceCheckbox.id = `suggestPriceCheckbox_${job.id}`;
-          priceCheckbox.style.cssText = "width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);";
-          
-          const priceCheckboxText = document.createElement("span");
-          priceCheckboxText.textContent = "💵 Suggest a different price";
-          
-          priceCheckboxLabel.appendChild(priceCheckbox);
-          priceCheckboxLabel.appendChild(priceCheckboxText);
-          priceCheckboxContainer.appendChild(priceCheckboxLabel);
-          applySection.appendChild(priceCheckboxContainer);
-          
-          // Price negotiation fields (hidden by default)
+          // Price negotiation fields (shown directly for hustler-suggested-price, hidden by default for customer-set-price)
           const priceNegotiationSection = document.createElement("div");
           priceNegotiationSection.id = `priceNegotiationSection_${job.id}`;
-          priceNegotiationSection.style.cssText = "display: none; margin-top: 1rem; padding: 1rem; background: white; border: 2px solid #e5e7eb; border-radius: 8px;";
+          priceNegotiationSection.style.cssText = isHustlerSuggestedPrice 
+            ? "margin-top: 1rem; padding: 1rem; background: white; border: 2px solid #e5e7eb; border-radius: 8px;"
+            : "display: none; margin-top: 1rem; padding: 1rem; background: white; border: 2px solid #e5e7eb; border-radius: 8px;";
           
           const priceLabel = document.createElement("label");
           priceLabel.style.cssText = "display: block; font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.75rem;";
-          priceLabel.textContent = "Your Proposed Price";
+          priceLabel.textContent = isHustlerSuggestedPrice ? "Your Proposed Price *" : "Your Proposed Price";
           priceNegotiationSection.appendChild(priceLabel);
           
           // Show current price
@@ -7297,6 +7307,7 @@ async function renderJobs(reset = false) {
           priceInput.placeholder = job.payType === "flat" ? "e.g., 150.00" : "e.g., 25.00";
           priceInput.min = "0";
           priceInput.step = "0.01";
+          priceInput.required = isHustlerSuggestedPrice; // Required for hustler-suggested-price jobs
           priceInput.style.cssText = "width: 100%; padding: 2rem 1.5rem 2rem 4rem; border: 4px solid var(--primary); border-radius: 16px; font-size: 2.5rem; font-weight: 700; text-align: left; background: #f0fdf4; color: var(--text-main); min-height: 85px; box-sizing: border-box; transition: all 0.2s; font-family: inherit;";
           priceInputWrapper.appendChild(priceInput);
           
@@ -7329,16 +7340,21 @@ async function renderJobs(reset = false) {
           
           applySection.appendChild(priceNegotiationSection);
           
-          // Toggle price negotiation section when checkbox is clicked
-          priceCheckbox.addEventListener("change", () => {
-            if (priceCheckbox.checked) {
-              priceNegotiationSection.style.display = "block";
-              priceInput.focus();
-            } else {
-              priceNegotiationSection.style.display = "none";
-              priceInput.value = "";
+          // Toggle price negotiation section when checkbox is clicked (only for customer-set-price jobs)
+          if (!isHustlerSuggestedPrice) {
+            const priceCheckbox = document.getElementById(`suggestPriceCheckbox_${job.id}`);
+            if (priceCheckbox) {
+              priceCheckbox.addEventListener("change", () => {
+                if (priceCheckbox.checked) {
+                  priceNegotiationSection.style.display = "block";
+                  priceInput.focus();
+                } else {
+                  priceNegotiationSection.style.display = "none";
+                  priceInput.value = "";
+                }
+              });
             }
-          });
+          }
           
           // Stripe requirement check - TEMPORARILY DISABLED FOR SANDBOX MODE
           // const stripeCheck = document.createElement("div");
@@ -7431,16 +7447,36 @@ async function renderJobs(reset = false) {
                 note: whyFit
               };
               
-              if (priceCheckbox.checked) {
-                const proposedPrice = priceInput.value ? parseFloat(priceInput.value) : null;
-                if (proposedPrice && proposedPrice > 0) {
-                  requestBody.proposedAmount = proposedPrice;
-                  requestBody.proposedPriceType = priceTypeSelect.value;
-                } else {
-                  showToast("Please enter a proposed price or uncheck the price suggestion option.");
+              // For hustler-suggested-price jobs, price is always required
+              // For customer-set-price jobs, price is only required if checkbox is checked
+              const pricingOption = job.requirements?.pricing_option;
+              const isHustlerSuggestedPrice = pricingOption === "hustlers_quote";
+              
+              if (isHustlerSuggestedPrice) {
+                // Price is required for hustler-suggested-price jobs
+                const proposedPrice = priceInput && priceInput.value ? parseFloat(priceInput.value) : null;
+                if (!proposedPrice || proposedPrice <= 0) {
+                  showToast("Please enter your proposed price.");
                   applyNowBtn.disabled = false;
                   applyNowBtn.textContent = "Submit Application";
                   return;
+                }
+                requestBody.proposedAmount = proposedPrice;
+                requestBody.proposedPriceType = priceTypeSelect ? priceTypeSelect.value : (job.payType || "flat");
+              } else {
+                // Price is optional for customer-set-price jobs (only if checkbox checked)
+                const priceCheckbox = document.getElementById(`suggestPriceCheckbox_${job.id}`);
+                if (priceCheckbox && priceCheckbox.checked) {
+                  const proposedPrice = priceInput && priceInput.value ? parseFloat(priceInput.value) : null;
+                  if (proposedPrice && proposedPrice > 0) {
+                    requestBody.proposedAmount = proposedPrice;
+                    requestBody.proposedPriceType = priceTypeSelect ? priceTypeSelect.value : (job.payType || "flat");
+                  } else {
+                    showToast("Please enter a proposed price or uncheck the price suggestion option.");
+                    applyNowBtn.disabled = false;
+                    applyNowBtn.textContent = "Submit Application";
+                    return;
+                  }
                 }
               }
               
