@@ -11311,7 +11311,11 @@ meta.textContent =
         renderJobs();
       } else if (currentView === "messages") {
         console.log("🔵 Rendering messages view");
-        renderMessagesView();
+        try {
+          await renderMessagesView();
+        } catch (err) {
+          console.error("Error rendering messages:", err);
+        }
       } else if (currentView === "profile") {
         console.log("🔵 Rendering profile view");
         renderProfile();
