@@ -7281,16 +7281,18 @@ async function renderJobs(reset = false) {
           priceLabel.textContent = isHustlerSuggestedPrice ? "Your Proposed Price *" : "Your Proposed Price";
           priceNegotiationSection.appendChild(priceLabel);
           
-          // Show current price
-          const currentPriceDisplay = document.createElement("div");
-          currentPriceDisplay.style.cssText = "padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 2px solid var(--border);";
-          const currentPrice = job.payType === "flat" ? formatMoney(job.flatAmount || job.amount || 0) : formatMoney(job.hourlyRate || 0) + "/hr";
-          const priceTypeLabel = job.payType === "flat" ? "Flat Rate" : "Hourly Rate";
-          currentPriceDisplay.innerHTML = `
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Current ${priceTypeLabel}:</div>
-            <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">${currentPrice}</div>
-          `;
-          priceNegotiationSection.appendChild(currentPriceDisplay);
+          // Show current price (only for customer-set-price jobs, not for hustler-suggested-price)
+          if (!isHustlerSuggestedPrice) {
+            const currentPriceDisplay = document.createElement("div");
+            currentPriceDisplay.style.cssText = "padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 2px solid var(--border);";
+            const currentPrice = job.payType === "flat" ? formatMoney(job.flatAmount || job.amount || 0) : formatMoney(job.hourlyRate || 0) + "/hr";
+            const priceTypeLabel = job.payType === "flat" ? "Flat Rate" : "Hourly Rate";
+            currentPriceDisplay.innerHTML = `
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Current ${priceTypeLabel}:</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">${currentPrice}</div>
+            `;
+            priceNegotiationSection.appendChild(currentPriceDisplay);
+          }
           
           // Price input container with dollar sign
           const priceInputWrapper = document.createElement("div");
