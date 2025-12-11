@@ -7140,8 +7140,8 @@ async function renderJobs(reset = false) {
       // Now append contentSection to modalContent (after all content including apply section is added)
       modalContent.appendChild(contentSection);
 
-      // Customer view: Show start code if hustler is accepted but not started
-      if (user && user.id === job.postedByUserId && job.hustlerId && job.startCode && !job.startCodeVerified && job.status === 'ASSIGNED') {
+      // Customer view: Show start code if hustler is accepted but not started (NOT for completed jobs)
+      if (user && user.id === job.postedByUserId && job.hustlerId && job.startCode && !job.startCodeVerified && job.status === 'ASSIGNED' && job.status !== 'PAID') {
         const startCodeSection = document.createElement("div");
         startCodeSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #fef3c7; border-radius: 12px; border: 2px solid #fbbf24;";
         
@@ -7201,8 +7201,8 @@ async function renderJobs(reset = false) {
         contentSection.appendChild(startCodeSection);
       }
       
-      // Customer view: Show completion code after job is started (IN_PROGRESS)
-      if (user && user.id === job.postedByUserId && job.startCodeVerified && job.status === 'IN_PROGRESS' && job.completionCode && !job.completionCodeVerified) {
+      // Customer view: Show completion code after job is started (IN_PROGRESS, NOT for completed jobs)
+      if (user && user.id === job.postedByUserId && job.startCodeVerified && job.status === 'IN_PROGRESS' && job.status !== 'PAID' && job.completionCode && !job.completionCodeVerified) {
         const completionCodeSection = document.createElement("div");
         completionCodeSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #dcfce7; border-radius: 12px; border: 2px solid #16a34a;";
         
@@ -7257,8 +7257,8 @@ async function renderJobs(reset = false) {
         contentSection.appendChild(completionCodeSection);
       }
       
-      // Hustler view: Show start code input if accepted but not started
-      if (user && user.id === job.hustlerId && job.startCode && !job.startCodeVerified && job.status === 'ASSIGNED') {
+      // Hustler view: Show start code input if accepted but not started (NOT for completed jobs)
+      if (user && user.id === job.hustlerId && job.startCode && !job.startCodeVerified && job.status === 'ASSIGNED' && job.status !== 'PAID') {
         const startCodeInputSection = document.createElement("div");
         startCodeInputSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #dbeafe; border-radius: 12px; border: 2px solid #3b82f6;";
         
@@ -7328,8 +7328,8 @@ async function renderJobs(reset = false) {
         contentSection.appendChild(startCodeInputSection);
       }
       
-      // Hustler view: Show completion code input if job is IN_PROGRESS
-      if (user && user.id === job.hustlerId && job.startCodeVerified && job.status === 'IN_PROGRESS' && job.completionCode && !job.completionCodeVerified) {
+      // Hustler view: Show completion code input if job is IN_PROGRESS (NOT for completed jobs)
+      if (user && user.id === job.hustlerId && job.startCodeVerified && job.status === 'IN_PROGRESS' && job.status !== 'PAID' && job.completionCode && !job.completionCodeVerified) {
         const completionCodeInputSection = document.createElement("div");
         completionCodeInputSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #dbeafe; border-radius: 12px; border: 2px solid #3b82f6;";
         
@@ -12845,8 +12845,9 @@ meta.textContent =
         
         console.log("✅ Fetched completed jobs:", jobs.length, "jobs");
         
-        // The API endpoint already filters for completed jobs, so use directly
-        const completedJobs = jobs;
+        // Filter out deleted jobs (client-side only, for personal organization)
+        const deleted = JSON.parse(localStorage.getItem('deletedCompletedJobs') || '[]');
+        const completedJobs = jobs.filter(job => !deleted.includes(job.id));
         
         if (completedJobs.length === 0) {
           completedJobsList.innerHTML = `
@@ -12927,6 +12928,7 @@ meta.textContent =
                 ${otherUser ? `<button class="btn btn-ghost viewReviewsBtn" data-user-id="${otherUser.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">📝 View Reviews</button>` : ''}
                 ${otherUser ? `<button class="btn btn-ghost rehireBtn" data-user-id="${otherUser.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">🔄 Re-hire</button>` : ''}
                 ${otherUser ? `<button class="btn btn-ghost favoriteBtn" data-user-id="${otherUser.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">⭐ Favorite</button>` : ''}
+                <button class="btn btn-ghost deleteCompletedJobBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem; color: #dc2626; border-color: #fecaca;">🗑️ Delete</button>
               </div>
             `;
             
@@ -12969,6 +12971,21 @@ meta.textContent =
                 const userId = btn.dataset.userId;
                 showApplicantProfileModal(userId);
               });
+            });
+            
+            // Delete completed job (client-side only, for personal organization)
+            card.querySelector('.deleteCompletedJobBtn')?.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const jobId = e.target.dataset.jobId;
+              if (confirm('Delete this completed job from your list? This will only hide it from your dashboard. The job, payment history, and messages will remain in the system.')) {
+                const deleted = JSON.parse(localStorage.getItem('deletedCompletedJobs') || '[]');
+                if (!deleted.includes(jobId)) {
+                  deleted.push(jobId);
+                  localStorage.setItem('deletedCompletedJobs', JSON.stringify(deleted));
+                  showToast('✅ Job removed from your completed jobs list');
+                  loadCompletedJobs(); // Refresh list
+                }
+              }
             });
             
             completedJobsList.appendChild(card);

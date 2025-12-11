@@ -44,7 +44,9 @@ router.get('/', async (req, res) => {
           },
           {
             job: {
-              status: 'ASSIGNED', // Only show messages for assigned jobs
+              status: {
+                in: ['ASSIGNED', 'IN_PROGRESS', 'PAID'] // Show messages for assigned, in-progress, and completed jobs
+              },
             },
           },
         ],
