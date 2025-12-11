@@ -2630,7 +2630,7 @@
 
           <div class="field">
             <label for="jobTitle">Job title</label>
-            <input id="jobTitle" type="text" placeholder="Example: Dump run from West Knoxville" />
+            <input id="jobTitle" type="text" placeholder="Example: Dump run from West Nashville" />
           </div>
 
           <!-- Category Selection - Mobile-friendly -->
@@ -2778,6 +2778,18 @@
               <strong>⏰ Flexible Deadline:</strong> This job will stay active until someone completes it. No rush!
             </p>
           </div>
+          
+          <div id="todayAsapNote" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: #fee2e2; border-radius: 8px; border-left: 3px solid #ef4444;">
+            <p style="margin: 0; font-size: 0.85rem; color: #991b1b;">
+              <strong>⚡ Today – ASAP:</strong> This job will be deleted after today unless you renew it.
+            </p>
+          </div>
+          
+          <div id="tomorrowNote" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: #fef3c7; border-radius: 8px; border-left: 3px solid #f59e0b;">
+            <p style="margin: 0; font-size: 0.85rem; color: #92400e;">
+              <strong>📆 Tomorrow:</strong> This job will be active until tomorrow.
+            </p>
+          </div>
 
           <!-- Keep job active for -->
           <div class="field">
@@ -2864,6 +2876,7 @@
               <option value="5">5 people</option>
               <option value="6">6 people</option>
               <option value="custom">Custom</option>
+              <option value="company">Company (Insured company/crew)</option>
             </select>
           </div>
           
@@ -2879,15 +2892,15 @@
           <div class="field-inline">
             <div class="field">
               <label for="pickupArea">Pickup area / neighborhood</label>
-              <input id="pickupArea" type="text" placeholder="Example: West Knoxville near UTK" />
+              <input id="pickupArea" type="text" placeholder="Example: West Nashville near Vanderbilt" />
             </div>
             <div class="field">
               <label for="pickupCity">Pickup city</label>
-              <input id="pickupCity" type="text" placeholder="Example: Knoxville, TN" />
+              <input id="pickupCity" type="text" placeholder="Example: Nashville, TN" />
             </div>
             <div class="field">
               <label for="pickupZip">Pickup ZIP</label>
-              <input id="pickupZip" type="text" placeholder="Example: 37919" maxlength="10" />
+              <input id="pickupZip" type="text" placeholder="Example: 37203" maxlength="10" />
             </div>
           </div>
 
@@ -2908,15 +2921,15 @@
             <div class="field-inline">
               <div class="field">
                 <label for="dropoffArea">Dropoff area / neighborhood</label>
-                <input id="dropoffArea" type="text" placeholder="Example: Fountain City" />
+                <input id="dropoffArea" type="text" placeholder="Example: East Nashville" />
               </div>
               <div class="field">
                 <label for="dropoffCity">Dropoff city</label>
-                <input id="dropoffCity" type="text" placeholder="Example: Knoxville, TN" />
+                <input id="dropoffCity" type="text" placeholder="Example: Nashville, TN" />
               </div>
               <div class="field">
                 <label for="dropoffZip">Dropoff ZIP</label>
-                <input id="dropoffZip" type="text" placeholder="Example: 37918" maxlength="10" />
+                <input id="dropoffZip" type="text" placeholder="Example: 37206" maxlength="10" />
               </div>
             </div>
             <div class="field">
@@ -4431,6 +4444,10 @@ function showChangePasswordModal() {
           const workersValue = workersNeeded.value;
           if (workersValue === "custom") {
             workersCount = parseInt(document.getElementById("customWorkersCount")?.value || 1);
+          } else if (workersValue === "company") {
+            workersCount = 0; // Company option - don't calculate hourly rate
+            hourlyRateCalculation.style.display = "none";
+            return;
           } else {
             workersCount = parseInt(workersValue || 1);
           }
@@ -4482,16 +4499,33 @@ function showChangePasswordModal() {
       const flexibleDeadlineNote = document.getElementById("flexibleDeadlineNote");
       if (jobWhenSelect) {
         jobWhenSelect.addEventListener("change", () => {
+          const todayAsapNote = document.getElementById("todayAsapNote");
+          const tomorrowNote = document.getElementById("tomorrowNote");
+          
           if (jobWhenSelect.value === "specific_date") {
             if (customDateFields) customDateFields.style.display = "block";
             if (flexibleDeadlineNote) flexibleDeadlineNote.style.display = "none";
+            if (todayAsapNote) todayAsapNote.style.display = "none";
+            if (tomorrowNote) tomorrowNote.style.display = "none";
             // Focus on date input immediately
             setTimeout(() => {
               const customDateInput = document.getElementById("customDate");
               if (customDateInput) customDateInput.focus();
             }, 100);
+          } else if (jobWhenSelect.value === "today_asap") {
+            if (customDateFields) customDateFields.style.display = "none";
+            if (flexibleDeadlineNote) flexibleDeadlineNote.style.display = "none";
+            if (todayAsapNote) todayAsapNote.style.display = "block";
+            if (tomorrowNote) tomorrowNote.style.display = "none";
+          } else if (jobWhenSelect.value === "tomorrow") {
+            if (customDateFields) customDateFields.style.display = "none";
+            if (flexibleDeadlineNote) flexibleDeadlineNote.style.display = "none";
+            if (todayAsapNote) todayAsapNote.style.display = "none";
+            if (tomorrowNote) tomorrowNote.style.display = "block";
           } else if (jobWhenSelect.value === "flexible_week") {
             if (customDateFields) customDateFields.style.display = "none";
+            if (todayAsapNote) todayAsapNote.style.display = "none";
+            if (tomorrowNote) tomorrowNote.style.display = "none";
             if (flexibleDeadlineNote) {
               flexibleDeadlineNote.style.display = "block";
               const noteText = document.getElementById("flexibleDeadlineNoteText");
@@ -4501,6 +4535,8 @@ function showChangePasswordModal() {
             }
           } else if (jobWhenSelect.value === "no_deadline") {
             if (customDateFields) customDateFields.style.display = "none";
+            if (todayAsapNote) todayAsapNote.style.display = "none";
+            if (tomorrowNote) tomorrowNote.style.display = "none";
             if (flexibleDeadlineNote) {
               flexibleDeadlineNote.style.display = "block";
               const noteText = document.getElementById("flexibleDeadlineNoteText");
@@ -4511,6 +4547,8 @@ function showChangePasswordModal() {
           } else {
             if (customDateFields) customDateFields.style.display = "none";
             if (flexibleDeadlineNote) flexibleDeadlineNote.style.display = "none";
+            if (todayAsapNote) todayAsapNote.style.display = "none";
+            if (tomorrowNote) tomorrowNote.style.display = "none";
           }
         });
       }
@@ -4770,6 +4808,8 @@ function showChangePasswordModal() {
           if (workersNeededValue === "custom") {
             const customCount = Number(document.getElementById("customWorkersCount")?.value || 1);
             workersNeeded = Math.max(1, Math.min(20, customCount));
+          } else if (workersNeededValue === "company") {
+            workersNeeded = 0; // Special value for "Company" (insured company/crew)
           } else {
             workersNeeded = Number(workersNeededValue) || 1;
           }
@@ -5598,6 +5638,21 @@ async function renderJobs(reset = false) {
       const dropoffZip = requirements.dropoff_zip;
       const onSiteOnly = requirements.on_site_only || requirements.onSiteOnly || job.onSiteOnly;
       
+      // Helper function to calculate distance between two ZIP codes (rough estimate)
+      function calculateDistance(zip1, zip2) {
+        if (!zip1 || !zip2) return null;
+        // Rough approximation: 1 degree latitude ≈ 69 miles
+        // For ZIP codes, we'll use a simple approximation based on ZIP code difference
+        // This is a placeholder - in production, use a geocoding service
+        const zip1Num = parseInt(zip1.replace(/\D/g, ''));
+        const zip2Num = parseInt(zip2.replace(/\D/g, ''));
+        if (isNaN(zip1Num) || isNaN(zip2Num)) return null;
+        // Very rough estimate: assume ~0.1 miles per ZIP code difference
+        const diff = Math.abs(zip1Num - zip2Num);
+        const miles = Math.round(diff * 0.1);
+        return miles > 0 ? miles : null;
+      }
+      
       if (onSiteOnly) {
         // Single location job
         const locationParts = [];
@@ -5608,19 +5663,30 @@ async function renderJobs(reset = false) {
           ? locationParts.join(", ") 
           : (job.address?.split(',')[0] || "Location TBD");
         locationText += " (Single location job)";
-      } else if (dropoffArea || dropoffCity) {
-        // Moving job with pickup and dropoff
+      } else if (dropoffArea || dropoffCity || dropoffZip) {
+        // Moving job with pickup and dropoff - show "from here to here" clearly
         const pickupParts = [];
         if (pickupArea) pickupParts.push(pickupArea);
-        if (pickupZip) pickupParts.push(`(${pickupZip})`);
-        const pickupStr = pickupParts.length > 0 ? pickupParts.join(" ") : (pickupCity || "Pickup TBD");
+        if (pickupCity) pickupParts.push(pickupCity);
+        if (pickupZip) pickupParts.push(pickupZip);
+        const pickupStr = pickupParts.length > 0 ? pickupParts.join(", ") : (pickupCity || "Pickup TBD");
         
         const dropoffParts = [];
         if (dropoffArea) dropoffParts.push(dropoffArea);
-        if (dropoffZip) dropoffParts.push(`(${dropoffZip})`);
-        const dropoffStr = dropoffParts.length > 0 ? dropoffParts.join(" ") : (dropoffCity || "Dropoff TBD");
+        if (dropoffCity) dropoffParts.push(dropoffCity);
+        if (dropoffZip) dropoffParts.push(dropoffZip);
+        const dropoffStr = dropoffParts.length > 0 ? dropoffParts.join(", ") : (dropoffCity || "Dropoff TBD");
         
-        locationText = `${pickupStr} → ${dropoffStr}`;
+        // Calculate distance if we have ZIP codes
+        let distanceText = "";
+        if (pickupZip && dropoffZip) {
+          const miles = calculateDistance(pickupZip, dropoffZip);
+          if (miles && miles > 0) {
+            distanceText = ` (~${miles} miles)`;
+          }
+        }
+        
+        locationText = `From: ${pickupStr} → To: ${dropoffStr}${distanceText}`;
       } else {
         // Only pickup location
         const locationParts = [];
@@ -5632,7 +5698,8 @@ async function renderJobs(reset = false) {
           : (job.address?.split(',')[0] || "Location TBD");
       }
       
-      loc.textContent = `📍 ${locationText}`;
+      // Only add 📍 if locationText doesn't already start with it (for dropoff jobs)
+      loc.textContent = locationText.startsWith('📍') ? locationText : `📍 ${locationText}`;
       loc.addEventListener("click", (e) => {
         e.stopPropagation();
         openJobDetails(job.id);
