@@ -12766,9 +12766,9 @@ meta.textContent =
               const hourlyRate = parseFloat(job.hourlyRate || 0);
               if (teamSize > 1) {
                 const perPersonRate = hourlyRate / teamSize;
-                payDisplay = `$${hourlyRate.toFixed(0)}/hr total ($${perPersonRate.toFixed(0)}/hr per person)${job.estHours ? ` · max ${job.estHours} hrs` : ''}`;
+                payDisplay = `$${hourlyRate.toFixed(0)}/hr total (Max ${job.estHours || '?'} hrs) · ${teamSize} workers → $${perPersonRate.toFixed(0)}/hr each`;
               } else {
-                payDisplay = `$${hourlyRate.toFixed(2)}/hr total${job.estHours ? ` (max ${job.estHours} hrs)` : ''}`;
+                payDisplay = `$${hourlyRate.toFixed(0)}/hr total (Max ${job.estHours || '?'} hrs)`;
               }
             } else {
               payDisplay = `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
@@ -13133,9 +13133,9 @@ meta.textContent =
               const hourlyRate = parseFloat(job.hourlyRate || 0);
               if (teamSize > 1) {
                 const perPersonRate = hourlyRate / teamSize;
-                payDisplay = `$${hourlyRate.toFixed(0)}/hr total ($${perPersonRate.toFixed(0)}/hr per person)${job.estHours ? ` · max ${job.estHours} hrs` : ''}`;
+                payDisplay = `$${hourlyRate.toFixed(0)}/hr total (Max ${job.estHours || '?'} hrs) · ${teamSize} workers → $${perPersonRate.toFixed(0)}/hr each`;
               } else {
-                payDisplay = `$${hourlyRate.toFixed(2)}/hr total${job.estHours ? ` (max ${job.estHours} hrs)` : ''}`;
+                payDisplay = `$${hourlyRate.toFixed(0)}/hr total (Max ${job.estHours || '?'} hrs)`;
               }
             } else {
               payDisplay = `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
