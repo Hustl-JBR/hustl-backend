@@ -12463,14 +12463,14 @@ meta.textContent =
                     <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
                       ${hustler.photoUrl ? `<img src="${hustler.photoUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; cursor: pointer;" class="viewHustlerProfileBtn" data-user-id="${hustler.id}">` : `<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); cursor: pointer;" class="viewHustlerProfileBtn" data-user-id="${hustler.id}">${(hustler.name || 'H')[0].toUpperCase()}</div>`}
                       <div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted);">✅ Assigned</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">${job.status === 'IN_PROGRESS' ? '🔄 In Progress' : '✅ Assigned'}</div>
                         <div style="font-weight: 600; color: var(--text-main); cursor: pointer;" class="viewHustlerProfileBtn" data-user-id="${hustler.id}">${hustler.name || 'Unknown'}</div>
                       </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
                       <span style="font-weight: 600; color: var(--text-main);">💰 ${payDisplay}</span>
                       <span>📅 ${dateStr} at ${timeStr}</span>
-                      <span style="padding: 0.25rem 0.75rem; background: #3b82f620; color: #3b82f6; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">${job.status || 'Active'}</span>
+                      <span style="padding: 0.25rem 0.75rem; background: ${job.status === 'IN_PROGRESS' ? '#f59e0b20' : '#3b82f620'}; color: ${job.status === 'IN_PROGRESS' ? '#f59e0b' : '#3b82f6'}; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">${job.status === 'IN_PROGRESS' ? 'In Progress' : (job.status || 'Active')}</span>
                     </div>
                     <div style="font-size: 0.85rem; color: var(--text-muted);">
                       <span>📍 ${job.address || 'Location not specified'}</span>
@@ -12497,14 +12497,14 @@ meta.textContent =
                     <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
                       ${customer.photoUrl ? `<img src="${customer.photoUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; cursor: pointer;" class="viewCustomerProfileBtn" data-user-id="${customer.id}">` : `<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); cursor: pointer;" class="viewCustomerProfileBtn" data-user-id="${customer.id}">${(customer.name || 'C')[0].toUpperCase()}</div>`}
                       <div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted);">✅ Assigned</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">${job.status === 'IN_PROGRESS' ? '🔄 In Progress' : '✅ Assigned'}</div>
                         <div style="font-weight: 600; color: var(--text-main); cursor: pointer;" class="viewCustomerProfileBtn" data-user-id="${customer.id}">${customer.name || 'Unknown'}</div>
                       </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
                       <span style="font-weight: 600; color: var(--text-main);">💰 ${payDisplay}</span>
                       <span>📅 ${dateStr} at ${timeStr}</span>
-                      <span style="padding: 0.25rem 0.75rem; background: #3b82f620; color: #3b82f6; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">${job.status || 'Active'}</span>
+                      <span style="padding: 0.25rem 0.75rem; background: ${job.status === 'IN_PROGRESS' ? '#f59e0b20' : '#3b82f620'}; color: ${job.status === 'IN_PROGRESS' ? '#f59e0b' : '#3b82f6'}; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">${job.status === 'IN_PROGRESS' ? 'In Progress' : (job.status || 'Active')}</span>
                     </div>
                     <div style="font-size: 0.85rem; color: var(--text-muted);">
                       <span>📍 ${job.address || 'Location not specified'}</span>
