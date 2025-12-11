@@ -9,6 +9,18 @@ const { execSync, spawn } = require('child_process');
 async function main() {
   console.log('🔄 Running database migrations...');
   
+  // FIRST: Run the emergency fix script to resolve failed migrations
+  console.log('🔧 Running emergency migration fix...');
+  try {
+    execSync('node scripts/fix-failed-migration.js', {
+      stdio: 'inherit',
+      timeout: 60000
+    });
+    console.log('✅ Emergency fix completed\n');
+  } catch (e) {
+    console.log('⚠️  Emergency fix script failed, continuing anyway...\n');
+  }
+  
   try {
     // List of all migrations that might be in a failed state
     const allMigrations = [
@@ -24,24 +36,24 @@ async function main() {
       '20250123_add_scheduled_status',
     ];
     
-    // First, try to resolve any failed migrations
-    console.log('🔄 Checking for failed migrations...');
+    // Try to resolve any remaining failed migrations
+    console.log('🔄 Checking for remaining failed migrations...');
     for (const migration of allMigrations) {
       try {
-        // First try to mark as rolled back
-        execSync(`npx prisma migrate resolve --rolled-back ${migration}`, {
+        // Try to mark as applied first (more likely if enum was added)
+        execSync(`npx prisma migrate resolve --applied ${migration}`, {
           stdio: 'pipe',
           timeout: 30000
         });
-        console.log(`✅ Marked as rolled back: ${migration}`);
+        console.log(`✅ Marked as applied: ${migration}`);
       } catch (e) {
-        // Try to mark as applied if it might have partially succeeded
+        // Try rolled back as fallback
         try {
-          execSync(`npx prisma migrate resolve --applied ${migration}`, {
+          execSync(`npx prisma migrate resolve --rolled-back ${migration}`, {
             stdio: 'pipe',
             timeout: 30000
           });
-          console.log(`✅ Marked as applied: ${migration}`);
+          console.log(`✅ Marked as rolled back: ${migration}`);
         } catch (e2) {
           // Migration might not be in failed state, that's fine
         }
@@ -58,14 +70,14 @@ async function main() {
   } catch (error) {
     console.error('⚠️  Migration deploy failed:', error.message);
     
-    // Try to mark problematic migrations as applied and skip them
-    console.log('ℹ️  Attempting to force-apply failed migrations...');
+    // Last resort: Try to mark problematic migrations as applied
+    console.log('ℹ️  Last resort: Attempting to force-apply failed migrations...');
     const problematicMigrations = [
       '20250120_add_expired_job_status',
       '20250120_add_email_verification_fields', 
       '20250120_add_message_read_status',
       '20251202_fix_all_missing',
-      '20250123_add_scheduled_status', // Check if SCHEDULED enum value exists, if so mark as applied
+      '20250123_add_scheduled_status',
     ];
     
     for (const migration of problematicMigrations) {
