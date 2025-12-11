@@ -7614,7 +7614,25 @@ async function renderJobs(reset = false) {
               activeConversationJobId = job.id;
               overlay.remove();
               document.body.style.overflow = "";
-              setView("messages");
+              
+              // Switch to messages view
+              if (window.setView && typeof window.setView === 'function') {
+                const funcStr = window.setView.toString();
+                const isStub = funcStr.includes('not ready yet');
+                if (!isStub) {
+                  await window.setView("messages");
+                } else {
+                  // Use fallback
+                  activeView = "messages";
+                  window.activeView = "messages";
+                  document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
+                  const target = document.getElementById("view-messages");
+                  if (target) target.style.display = "block";
+                  document.querySelectorAll(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === "messages"));
+                  await renderAll();
+                }
+              }
+              
               // Small delay to ensure messages view is rendered, then open conversation
               setTimeout(async () => {
                 await renderMessagesView();
@@ -7625,7 +7643,7 @@ async function renderJobs(reset = false) {
                     item.click();
                   }
                 });
-              }, 200);
+              }, 300);
             });
             applySection.appendChild(messageBtn);
             
