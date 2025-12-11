@@ -10980,9 +10980,9 @@ async function renderJobs(reset = false) {
                 const statusColors = {
                   'OPEN': '#10b981',
                   'ASSIGNED': '#3b82f6',
-                  'COMPLETED_BY_HUSTLER': '#f59e0b',
+                  'COMPLETED_BY_HUSTLER': '#10b981', // Green for completed
                   'AWAITING_CUSTOMER_CONFIRM': '#f59e0b',
-                  'PAID': '#6b7280',
+                  'PAID': '#10b981', // Green for completed
                   'CANCELLED': '#ef4444'
                 };
                 
@@ -12142,8 +12142,11 @@ meta.textContent =
           });
         }
         
-        // The API endpoint already filters for customer's posted jobs, but add client-side filter for PAID jobs (safety check)
-        const postedJobs = jobs.filter(job => job.status !== 'PAID');
+        // The API endpoint already filters for customer's posted jobs, but add client-side filter for completed jobs (safety check)
+        const postedJobs = jobs.filter(job => 
+          job.status !== 'PAID' && 
+          !(job.status === 'COMPLETED_BY_HUSTLER' && job.completionCodeVerified)
+        );
         
         if (postedJobs.length === 0) {
           postedJobsList.innerHTML = `
@@ -12430,8 +12433,11 @@ meta.textContent =
         
         console.log("✅ Fetched active jobs:", jobs.length, "jobs");
         
-        // The API endpoint already filters for active jobs, but add client-side filter for PAID jobs (safety check)
-        const activeJobs = jobs.filter(job => job.status !== 'PAID');
+        // The API endpoint already filters for active jobs, but add client-side filter for completed jobs (safety check)
+        const activeJobs = jobs.filter(job => 
+          job.status !== 'PAID' && 
+          !(job.status === 'COMPLETED_BY_HUSTLER' && job.completionCodeVerified)
+        );
         
         if (activeJobs.length === 0) {
           activeJobsList.innerHTML = `
