@@ -4751,6 +4751,10 @@ function showChangePasswordModal() {
           }
           const customEquipment = document.getElementById("customEquipment")?.value.trim() || "";
           
+          // Collect keepActiveFor (jobDuration)
+          const jobDuration = document.getElementById("jobDuration")?.value || "3";
+          const keepActiveFor = parseInt(jobDuration) || 3; // Days to keep job active
+          
           // Collect equipment checkboxes
           const equipmentNeeded = [];
           document.querySelectorAll('input[name="equipment"]:checked').forEach(cb => {
@@ -4934,14 +4938,17 @@ function showChangePasswordModal() {
               payType: payType, // Backend expects 'flat' or 'hourly'
               amount: amount, // Backend expects dollar amount (not cents)
               teamSize: workersNeeded || 1,
+              keepActiveFor: keepActiveFor, // Days to keep job active
               requirements: {
                 pickup_area: pickupArea,
                 pickup_city: pickupCity,
                 pickup_address: pickupAddress,
+                pickup_zip: pickupArea, // Store ZIP/area code
                 on_site_only: onSiteOnly,
                 dropoff_area: onSiteOnly ? null : dropoffArea,
                 dropoff_city: onSiteOnly ? null : dropoffCity,
                 dropoff_address: onSiteOnly ? null : dropoffAddress,
+                dropoff_zip: onSiteOnly ? null : dropoffArea, // Store ZIP/area code
                 equipment_needed: equipmentNeeded.length > 0 ? equipmentNeeded : null,
                 sub_tags: subTags.length > 0 ? subTags : null,
                 notes: notes || null,
@@ -4970,7 +4977,9 @@ function showChangePasswordModal() {
               throw error;
             }
 
-            showToast("✅ Job posted successfully! View stats below.");
+            // Show success message with details
+            const successMessage = result?.message || "✅ Job posted successfully! Hustlers nearby will begin applying soon. Go to Manage Jobs to choose your favorite.";
+            showToast(successMessage);
             
             // Show job stats on the post page
             if (result && result.id) {
@@ -5403,12 +5412,23 @@ async function renderJobs(reset = false) {
       const pay = document.createElement("div");
       pay.style.cssText = "font-weight: 700; color: var(--success); font-size: 1rem; white-space: nowrap;";
 
-      if (job.payType === "flat") {
+      // Format pricing display
+      const requirements = job.requirements || {};
+      const pricingOption = requirements.pricing_option;
+      
+      if (pricingOption === "hustlers_quote") {
+        pay.textContent = "💰 Hustler suggests price";
+        pay.style.color = "#f59e0b";
+      } else if (job.payType === "flat") {
         const total = Number(job.amount) || 0;
-        pay.textContent = `$${total.toFixed(0)}`;
-      } else {
+        pay.textContent = `💰 $${total.toFixed(0)} flat`;
+      } else if (job.payType === "hourly") {
         const hr = Number(job.hourlyRate) || 0;
-        pay.textContent = `$${hr.toFixed(0)}/hr`;
+        const maxHrs = job.estHours || "";
+        pay.textContent = `💰 $${hr.toFixed(0)}/hr${maxHrs ? ` (max ${maxHrs} hrs)` : ""}`;
+      } else {
+        const total = Number(job.amount) || 0;
+        pay.textContent = `💰 $${total.toFixed(0)}`;
       }
       titleRow.appendChild(pay);
       textContent.appendChild(titleRow);
@@ -5443,10 +5463,29 @@ async function renderJobs(reset = false) {
         const requirements = job.requirements || {};
         const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
         
-        if (deadlinePreference === "until_completed" || deadlinePreference === "whenever" || deadlinePreference === "flexible") {
-          deadlineMeta.textContent = "⏰ Flexible deadline - Until completed";
+        // Format timing display based on deadline preference
+        if (deadlinePreference === "until_completed") {
+          deadlineMeta.textContent = "⏰ Until completed (no strict deadline)";
           deadlineMeta.style.color = "#f59e0b";
-        } else if (job.startTime) {
+        } else if (deadlinePreference === "whenever" || deadlinePreference === "flexible") {
+          deadlineMeta.textContent = "⏰ Flexible this week";
+          deadlineMeta.style.color = "#f59e0b";
+        } else if (deadlinePreference === "this_morning") {
+          deadlineMeta.textContent = "⏰ Today – ASAP (This morning)";
+          deadlineMeta.style.color = "#dc2626";
+          deadlineMeta.style.fontWeight = "600";
+        } else if (deadlinePreference === "this_afternoon") {
+          deadlineMeta.textContent = "⏰ Today – ASAP (This afternoon)";
+          deadlineMeta.style.color = "#dc2626";
+          deadlineMeta.style.fontWeight = "600";
+        } else if (deadlinePreference === "this_evening") {
+          deadlineMeta.textContent = "⏰ Today – ASAP (This evening)";
+          deadlineMeta.style.color = "#dc2626";
+          deadlineMeta.style.fontWeight = "600";
+        } else if (deadlinePreference === "tomorrow") {
+          deadlineMeta.textContent = "⏰ Tomorrow";
+          deadlineMeta.style.color = "#059669";
+        } else if (deadlinePreference === "custom" && job.startTime) {
           try {
             const deadlineDate = new Date(job.startTime);
             if (!isNaN(deadlineDate.getTime())) {
@@ -5457,7 +5496,7 @@ async function renderJobs(reset = false) {
                 minute: '2-digit',
                 hour12: true
               });
-              deadlineMeta.textContent = `📅 Needed by: ${deadlineStr}`;
+              deadlineMeta.textContent = `📅 Scheduled for ${deadlineStr}`;
               deadlineMeta.style.color = "#059669";
             } else {
               deadlineMeta.textContent = "📅 Deadline: Not specified";
@@ -5473,7 +5512,7 @@ async function renderJobs(reset = false) {
                 month: 'short', 
                 day: 'numeric'
               });
-              deadlineMeta.textContent = `📅 Needed by: ${deadlineStr}`;
+              deadlineMeta.textContent = `📅 Scheduled for ${deadlineStr}`;
               deadlineMeta.style.color = "#059669";
             } else {
               deadlineMeta.textContent = "📅 Deadline: Not specified";
@@ -5509,25 +5548,75 @@ async function renderJobs(reset = false) {
       postedBy.textContent = `👤 Posted by ${posterName}`;
       textContent.appendChild(postedBy);
 
-      // Location line (tappable to see full address)
+      // Location line (tappable to see full address) - Show pickup and dropoff if available
       const loc = document.createElement("div");
       loc.className = "job-meta";
       loc.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted); cursor: pointer;";
       loc.title = "Tap to see full address";
 
-      const requirements = job.requirements || {};
       let locationText = "";
-      if (requirements.onSiteOnly || job.onSiteOnly) {
-        locationText = requirements.pickupCity || requirements.pickupArea || job.address?.split(',')[0] || "TBD";
+      const pickupArea = requirements.pickup_area || requirements.pickupArea;
+      const pickupCity = requirements.pickup_city || requirements.pickupCity;
+      const pickupZip = requirements.pickup_zip;
+      const dropoffArea = requirements.dropoff_area || requirements.dropoffArea;
+      const dropoffCity = requirements.dropoff_city || requirements.dropoffCity;
+      const dropoffZip = requirements.dropoff_zip;
+      const onSiteOnly = requirements.on_site_only || requirements.onSiteOnly || job.onSiteOnly;
+      
+      if (onSiteOnly) {
+        // Single location job
+        const locationParts = [];
+        if (pickupArea) locationParts.push(pickupArea);
+        if (pickupCity) locationParts.push(pickupCity);
+        if (pickupZip) locationParts.push(pickupZip);
+        locationText = locationParts.length > 0 
+          ? locationParts.join(", ") 
+          : (job.address?.split(',')[0] || "Location TBD");
+        locationText += " (Single location job)";
+      } else if (dropoffArea || dropoffCity) {
+        // Moving job with pickup and dropoff
+        const pickupParts = [];
+        if (pickupArea) pickupParts.push(pickupArea);
+        if (pickupZip) pickupParts.push(`(${pickupZip})`);
+        const pickupStr = pickupParts.length > 0 ? pickupParts.join(" ") : (pickupCity || "Pickup TBD");
+        
+        const dropoffParts = [];
+        if (dropoffArea) dropoffParts.push(dropoffArea);
+        if (dropoffZip) dropoffParts.push(`(${dropoffZip})`);
+        const dropoffStr = dropoffParts.length > 0 ? dropoffParts.join(" ") : (dropoffCity || "Dropoff TBD");
+        
+        locationText = `${pickupStr} → ${dropoffStr}`;
       } else {
-        locationText = requirements.pickupCity || requirements.pickupArea || job.address?.split(',')[0] || "TBD";
+        // Only pickup location
+        const locationParts = [];
+        if (pickupArea) locationParts.push(pickupArea);
+        if (pickupCity) locationParts.push(pickupCity);
+        if (pickupZip) locationParts.push(pickupZip);
+        locationText = locationParts.length > 0 
+          ? locationParts.join(", ") 
+          : (job.address?.split(',')[0] || "Location TBD");
       }
+      
       loc.textContent = `📍 ${locationText}`;
       loc.addEventListener("click", (e) => {
         e.stopPropagation();
         openJobDetails(job.id);
       });
       textContent.appendChild(loc);
+      
+      // Workers needed line
+      const teamSize = job.teamSize || job.requirements?.teamSize || job.requirements?.team_size || 1;
+      if (teamSize === 0) {
+        const workersBadge = document.createElement("div");
+        workersBadge.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted);";
+        workersBadge.textContent = "👥 Company / crew job";
+        textContent.appendChild(workersBadge);
+      } else if (teamSize > 1) {
+        const workersBadge = document.createElement("div");
+        workersBadge.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted);";
+        workersBadge.textContent = `👥 ${teamSize} workers needed`;
+        textContent.appendChild(workersBadge);
+      }
       
       // Number of applicants (if available)
       const applicantCount = job._count?.offers || 0;
@@ -13716,16 +13805,96 @@ meta.textContent =
           overflow-y: auto;
         `;
         
+        // Get requirements for additional fields
+        const requirements = job.requirements || {};
+        const pricingOption = requirements.pricing_option;
+        const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
+        const teamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
+        const keepActiveFor = requirements.keepActiveFor;
+        const expiresAt = requirements.expiresAt ? new Date(requirements.expiresAt) : null;
+        
         // Format pay
         const payType = job.payType || 'flat';
-        const payDisplay = payType === 'hourly' 
-          ? `$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hr${job.estHours ? ` (est. ${job.estHours} hrs)` : ''}` 
-          : `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
+        let payDisplay = '';
+        if (pricingOption === 'hustlers_quote') {
+          payDisplay = '💰 Hustler suggests price';
+        } else if (payType === 'hourly') {
+          payDisplay = `$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hr${job.estHours ? ` (max ${job.estHours} hrs)` : ''}`;
+        } else {
+          payDisplay = `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
+        }
+        
+        // Format timing display
+        let timingDisplay = '';
+        if (deadlinePreference === 'until_completed') {
+          timingDisplay = 'Until completed (no strict deadline)';
+        } else if (deadlinePreference === 'whenever' || deadlinePreference === 'flexible') {
+          timingDisplay = 'Flexible this week';
+        } else if (deadlinePreference === 'this_morning' || deadlinePreference === 'this_afternoon' || deadlinePreference === 'this_evening') {
+          timingDisplay = 'Today – ASAP';
+        } else if (deadlinePreference === 'tomorrow') {
+          timingDisplay = 'Tomorrow';
+        } else if (deadlinePreference === 'custom' && job.startTime) {
+          const deadlineDate = new Date(job.startTime);
+          timingDisplay = deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        } else if (job.startTime) {
+          const deadlineDate = new Date(job.startTime);
+          timingDisplay = deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        } else {
+          timingDisplay = 'Not specified';
+        }
         
         // Format date/time
         const jobDate = new Date(job.date);
         const dateStr = jobDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
         const timeStr = jobDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        
+        // Format location
+        const pickupArea = requirements.pickup_area || requirements.pickupArea;
+        const pickupCity = requirements.pickup_city || requirements.pickupCity;
+        const pickupZip = requirements.pickup_zip;
+        const dropoffArea = requirements.dropoff_area || requirements.dropoffArea;
+        const dropoffCity = requirements.dropoff_city || requirements.dropoffCity;
+        const dropoffZip = requirements.dropoff_zip;
+        const onSiteOnly = requirements.on_site_only || requirements.onSiteOnly;
+        
+        let locationDisplay = job.address || 'Address not specified';
+        if (pickupArea || pickupCity) {
+          const pickupParts = [];
+          if (pickupArea) pickupParts.push(pickupArea);
+          if (pickupCity) pickupParts.push(pickupCity);
+          if (pickupZip) pickupParts.push(pickupZip);
+          locationDisplay = pickupParts.join(', ');
+          
+          if (!onSiteOnly && (dropoffArea || dropoffCity)) {
+            const dropoffParts = [];
+            if (dropoffArea) dropoffParts.push(dropoffArea);
+            if (dropoffCity) dropoffParts.push(dropoffCity);
+            if (dropoffZip) dropoffParts.push(dropoffZip);
+            locationDisplay += ` → ${dropoffParts.join(', ')}`;
+          } else if (onSiteOnly) {
+            locationDisplay += ' (Single location job)';
+          }
+        }
+        
+        // Format workers display
+        let workersDisplay = '';
+        if (teamSize === 0) {
+          workersDisplay = 'Company / crew job';
+        } else if (teamSize === 1) {
+          workersDisplay = '1 worker';
+        } else {
+          workersDisplay = `${teamSize} workers`;
+        }
+        
+        // Format expiration
+        let expirationDisplay = '';
+        if (expiresAt && expiresAt > new Date()) {
+          const daysLeft = Math.ceil((expiresAt - new Date()) / (1000 * 60 * 60 * 24));
+          expirationDisplay = `Expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
+        } else if (expiresAt && expiresAt <= new Date()) {
+          expirationDisplay = 'Expired — Repost?';
+        }
         
         // Category icon
         const categoryIcons = {
@@ -13802,14 +13971,32 @@ meta.textContent =
                     <div style="font-weight: 700; color: var(--text-main); font-size: 1.1rem;">${payDisplay}</div>
                   </div>
                   <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">📍 Location</div>
-                    <div style="font-weight: 600; color: var(--text-main);">${job.address || 'Address not specified'}</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">⏰ Timing</div>
+                    <div style="font-weight: 600; color: var(--text-main);">${timingDisplay}</div>
                   </div>
                   <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">📅 Scheduled</div>
-                    <div style="font-weight: 600; color: var(--text-main);">${dateStr} at ${timeStr}</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">👥 Workers</div>
+                    <div style="font-weight: 600; color: var(--text-main);">${workersDisplay}</div>
                   </div>
+                  <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">📍 Location</div>
+                    <div style="font-weight: 600; color: var(--text-main); font-size: 0.9rem;">${locationDisplay}</div>
+                  </div>
+                  ${expirationDisplay ? `
+                  <div style="padding: 1rem; background: ${expiresAt && expiresAt <= new Date() ? '#fee2e2' : '#fef3c7'}; border-radius: 8px; border: 1px solid ${expiresAt && expiresAt <= new Date() ? '#fca5a5' : '#fbbf24'};">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">⏳ Visibility</div>
+                    <div style="font-weight: 600; color: ${expiresAt && expiresAt <= new Date() ? '#dc2626' : '#d97706'};">${expirationDisplay}</div>
+                  </div>
+                  ` : ''}
                 </div>
+                
+                ${requirements.notes ? `
+                <!-- Notes Section -->
+                <div style="margin-bottom: 2rem; padding: 1.5rem; background: #fef3c7; border-radius: 12px; border: 1px solid #fbbf24;">
+                  <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; color: #92400e;">📝 Additional Notes</h3>
+                  <div style="color: #92400e; line-height: 1.7; white-space: pre-wrap;">${requirements.notes}</div>
+                </div>
+                ` : ''}
                 
                 <!-- Job Timeline -->
                 <div style="margin-bottom: 2rem; padding: 1.5rem; background: #f9fafb; border-radius: 12px;">

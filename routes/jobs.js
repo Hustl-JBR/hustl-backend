@@ -428,6 +428,7 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
       requirements = {},
       recurrenceType,
       recurrenceEndDate,
+      keepActiveFor, // Days to keep job active (1, 3, 7, 14, 30)
     } = req.body;
 
     // Geocode address (with error handling)
@@ -454,6 +455,14 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
       }
     }
 
+    // Calculate expiration date based on keepActiveFor (days)
+    let expiresAt = null;
+    if (keepActiveFor) {
+      const days = parseInt(keepActiveFor) || 3; // Default to 3 days
+      expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + days);
+    }
+
     // Build job data object
     const jobData = {
       customerId: req.user.id,
@@ -474,6 +483,8 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
       requirements: {
         ...requirements,
         teamSize: parseInt(teamSize) || 1,
+        keepActiveFor: keepActiveFor ? parseInt(keepActiveFor) : null,
+        expiresAt: expiresAt ? expiresAt.toISOString() : null,
       },
       status: 'OPEN',
       recurrencePaused: false,
@@ -515,12 +526,32 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
             id: true,
             name: true,
             username: true,
+            email: true,
             ratingAvg: true,
             ratingCount: true,
           },
         },
       },
     });
+
+    // Send job posting success email
+    try {
+      const { sendJobPostedEmail } = require('../services/email');
+      await sendJobPostedEmail(
+        job.customer.email,
+        job.customer.name,
+        job.title,
+        job.id,
+        job.date,
+        job.amount,
+        job.payType,
+        job.hourlyRate,
+        job.estHours
+      );
+    } catch (emailError) {
+      console.error('[POST /jobs] Error sending job posted email:', emailError);
+      // Don't fail job creation if email fails
+    }
 
     // Store payment amounts in job metadata for later use when accepting offer
     // Payment will be created when customer accepts an offer
@@ -533,6 +564,7 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
         fee: customerFee,
         total: total,
       },
+      message: 'Job posted successfully! Hustlers nearby will begin applying soon.',
     });
   } catch (error) {
     console.error('Create job error:', error);

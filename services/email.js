@@ -611,6 +611,7 @@ module.exports = {
   sendOfferReceivedEmail,
   sendJobAssignedEmail,
   sendJobCompleteEmail,
+  sendJobPostedEmail,
   sendPaymentReceiptEmail,
   sendPayoutSentEmail,
   sendPaymentCompleteEmail,
@@ -622,6 +623,99 @@ module.exports = {
   sendFeedbackEmail,
   sendNewMessageEmail,
 };
+
+async function sendJobPostedEmail(email, name, jobTitle, jobId, jobDate, amount, payType, hourlyRate, estHours) {
+  if (!isEmailConfigured()) return;
+  try {
+    const jobUrl = `${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'https://hustljobs.com'}/jobs/${jobId}`;
+    const manageJobsUrl = `${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'https://hustljobs.com'}`;
+    
+    // Format price display
+    let priceDisplay = '';
+    if (payType === 'hourly' && hourlyRate && estHours) {
+      priceDisplay = `$${parseFloat(hourlyRate).toFixed(2)}/hr (max ${estHours} hrs)`;
+    } else {
+      priceDisplay = `$${parseFloat(amount || 0).toFixed(2)} flat`;
+    }
+    
+    // Format date
+    const formattedDate = new Date(jobDate).toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `✅ Job Posted: "${jobTitle}"`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #ffffff; padding: 0;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">✅ Job Posted Successfully!</h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hey <strong>${name}</strong>! 👋
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              Great news! Your job has been posted and is now visible to hustlers nearby. They'll start applying soon!
+            </p>
+            
+            <!-- Job Details Card -->
+            <div style="background: white; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; border: 2px solid #10b981; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <h2 style="color: #047857; margin: 0 0 1rem 0; font-size: 1.5rem;">${jobTitle}</h2>
+              
+              <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <span style="font-size: 1.2rem;">💰</span>
+                  <div>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.25rem;">Price</div>
+                    <div style="font-weight: 700; color: #1e293b; font-size: 1.1rem;">${priceDisplay}</div>
+                  </div>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <span style="font-size: 1.2rem;">📅</span>
+                  <div>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.25rem;">Scheduled For</div>
+                    <div style="font-weight: 600; color: #1e293b;">${formattedDate}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div style="background: #eff6ff; border-radius: 8px; padding: 1rem; margin: 1.5rem 0; border-left: 4px solid #2563eb;">
+              <p style="color: #1e40af; margin: 0; font-size: 0.95rem; line-height: 1.6;">
+                <strong>💡 What's next?</strong><br>
+                Go to <strong>Manage Jobs</strong> to review applicants and choose your favorite hustler. You'll receive notifications when hustlers apply!
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 2rem 0;">
+              <a href="${manageJobsUrl}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+                View Manage Jobs →
+              </a>
+            </div>
+            
+            <p style="color: #64748b; font-size: 0.9rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0; text-align: center;">
+              Questions? Just reply to this email — we're here to help!
+            </p>
+          </div>
+        </div>
+      `,
+    });
+    console.log('[Email] Job posted email sent successfully to:', email);
+  } catch (error) {
+    console.error('[Email] Send job posted email error:', error);
+    // Don't throw - email failures shouldn't break job posting
+  }
+}
 
 async function sendSupportEmail({ from, fromName, subject, message, userId }) {
   if (!isEmailConfigured()) {
