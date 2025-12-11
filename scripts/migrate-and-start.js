@@ -21,19 +21,30 @@ async function main() {
       '20250120_add_message_read_status',
       '20251202_add_verification_codes',
       '20251202_fix_all_missing',
+      '20250123_add_scheduled_status',
     ];
     
-    // First, try to mark any failed migrations as rolled back
+    // First, try to resolve any failed migrations
     console.log('🔄 Checking for failed migrations...');
     for (const migration of allMigrations) {
       try {
+        // First try to mark as rolled back
         execSync(`npx prisma migrate resolve --rolled-back ${migration}`, {
           stdio: 'pipe',
           timeout: 30000
         });
-        console.log(`✅ Rolled back failed: ${migration}`);
+        console.log(`✅ Marked as rolled back: ${migration}`);
       } catch (e) {
-        // Migration might not be in failed state, that's fine
+        // Try to mark as applied if it might have partially succeeded
+        try {
+          execSync(`npx prisma migrate resolve --applied ${migration}`, {
+            stdio: 'pipe',
+            timeout: 30000
+          });
+          console.log(`✅ Marked as applied: ${migration}`);
+        } catch (e2) {
+          // Migration might not be in failed state, that's fine
+        }
       }
     }
     
@@ -54,6 +65,7 @@ async function main() {
       '20250120_add_email_verification_fields', 
       '20250120_add_message_read_status',
       '20251202_fix_all_missing',
+      '20250123_add_scheduled_status', // Check if SCHEDULED enum value exists, if so mark as applied
     ];
     
     for (const migration of problematicMigrations) {
