@@ -7337,7 +7337,12 @@ async function renderJobs(reset = false) {
           
           const priceHint = document.createElement("div");
           priceHint.style.cssText = "padding: 0.75rem; background: #dbeafe; border-radius: 8px; font-size: 0.85rem; color: #1e40af;";
-          priceHint.textContent = `💡 Customer will see your proposed ${priceTypeLabel.toLowerCase()} when reviewing your application`;
+          if (isHustlerSuggestedPrice) {
+            priceHint.textContent = `💡 The customer will see your proposed price and compare it with other hustlers' proposals to decide who's the best fit.`;
+          } else {
+            const priceTypeLabel = job.payType === "flat" ? "Flat Rate" : "Hourly Rate";
+            priceHint.textContent = `💡 Customer will see your proposed ${priceTypeLabel.toLowerCase()} when reviewing your application`;
+          }
           priceNegotiationSection.appendChild(priceHint);
           
           applySection.appendChild(priceNegotiationSection);
