@@ -5876,35 +5876,118 @@ async function renderJobs(reset = false) {
       jobTitle.textContent = "Apply for This Job";
       jobSummary.appendChild(jobTitle);
 
+      // Get requirements for additional fields
+      const requirements = job.requirements || {};
+      const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
+      const teamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
+      const pricingOption = requirements.pricing_option;
+      
+      // Format location
+      const pickupArea = requirements.pickup_area || requirements.pickupArea;
+      const pickupCity = requirements.pickup_city || requirements.pickupCity;
+      const pickupZip = requirements.pickup_zip;
+      const dropoffArea = requirements.dropoff_area || requirements.dropoffArea;
+      const dropoffCity = requirements.dropoff_city || requirements.dropoffCity;
+      const dropoffZip = requirements.dropoff_zip;
+      const onSiteOnly = requirements.on_site_only || requirements.onSiteOnly;
+      
+      let locationDisplay = job.address || 'Location TBD';
+      if (pickupArea || pickupCity) {
+        const pickupParts = [];
+        if (pickupArea) pickupParts.push(pickupArea);
+        if (pickupCity) pickupParts.push(pickupCity);
+        if (pickupZip) pickupParts.push(pickupZip);
+        locationDisplay = pickupParts.join(', ');
+        
+        if (!onSiteOnly && (dropoffArea || dropoffCity)) {
+          const dropoffParts = [];
+          if (dropoffArea) dropoffParts.push(dropoffArea);
+          if (dropoffCity) dropoffParts.push(dropoffCity);
+          if (dropoffZip) dropoffParts.push(dropoffZip);
+          locationDisplay += ` → ${dropoffParts.join(', ')}`;
+        } else if (onSiteOnly) {
+          locationDisplay += ' (Single location)';
+        }
+      }
+      
+      // Format timing
+      let timingDisplay = '';
+      if (deadlinePreference === 'until_completed') {
+        timingDisplay = 'Until completed (no strict deadline)';
+      } else if (deadlinePreference === 'whenever' || deadlinePreference === 'flexible') {
+        timingDisplay = 'Flexible this week';
+      } else if (deadlinePreference === 'this_morning' || deadlinePreference === 'this_afternoon' || deadlinePreference === 'this_evening') {
+        timingDisplay = 'Today – ASAP';
+      } else if (deadlinePreference === 'tomorrow') {
+        timingDisplay = 'Tomorrow';
+      } else if (job.startTime) {
+        const deadlineDate = new Date(job.startTime);
+        timingDisplay = deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      } else {
+        timingDisplay = 'Not specified';
+      }
+      
+      // Format price
+      const jobAmount = Number(job.amount) || 0;
+      const jobHourlyRate = Number(job.hourlyRate) || 0;
+      let price = '';
+      if (pricingOption === 'hustlers_quote') {
+        price = 'Hustler suggests price';
+      } else if (job.payType === "flat" || job.paymentType === "flat") {
+        price = `$${jobAmount.toFixed(2)} flat`;
+      } else if (jobHourlyRate > 0) {
+        price = `$${jobHourlyRate.toFixed(2)}/hr${job.estHours ? ` (max ${job.estHours} hrs)` : ''}`;
+      } else {
+        price = `$${jobAmount.toFixed(2)}`;
+      }
+      
+      // Format workers
+      let workersDisplay = '';
+      if (teamSize === 0) {
+        workersDisplay = 'Company/crew job';
+      } else if (teamSize === 1) {
+        workersDisplay = '1 worker';
+      } else {
+        workersDisplay = `${teamSize} workers needed`;
+      }
+
       const summaryInfo = document.createElement("div");
-      summaryInfo.style.cssText = "display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.9rem; color: var(--text-muted);";
+      summaryInfo.style.cssText = "display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.9rem; color: var(--text-muted);";
       
       const jobTitleRow = document.createElement("div");
-      jobTitleRow.style.cssText = "font-weight: 600; color: var(--text-main);";
+      jobTitleRow.style.cssText = "font-weight: 600; color: var(--text-main); font-size: 1rem;";
       jobTitleRow.innerHTML = `<strong>Job:</strong> ${job.title || 'Untitled Job'}`;
       summaryInfo.appendChild(jobTitleRow);
 
+      const timingRow = document.createElement("div");
+      timingRow.innerHTML = `<strong>⏰ Timing:</strong> ${timingDisplay}`;
+      summaryInfo.appendChild(timingRow);
+
       const locationRow = document.createElement("div");
-      const location = job.address || job.pickupArea || job.pickupCity || "Location TBD";
-      locationRow.innerHTML = `<strong>Location:</strong> ${location}`;
+      locationRow.innerHTML = `<strong>📍 Location:</strong> ${locationDisplay}`;
       summaryInfo.appendChild(locationRow);
 
+      const workersRow = document.createElement("div");
+      workersRow.innerHTML = `<strong>👥 Workers:</strong> ${workersDisplay}`;
+      summaryInfo.appendChild(workersRow);
+
       const priceRow = document.createElement("div");
-      const jobAmount = Number(job.amount) || 0;
-      const jobHourlyRate = Number(job.hourlyRate) || 0;
-      const price = job.payType === "flat" || job.paymentType === "flat"
-        ? `$${jobAmount.toFixed(2)}`
-        : jobHourlyRate > 0 
-          ? `$${jobHourlyRate.toFixed(2)}/hr`
-          : `$${jobAmount.toFixed(2)}`;
-      priceRow.innerHTML = `<strong>Posted Price:</strong> ${price}`;
+      priceRow.style.cssText = "font-weight: 600; color: var(--primary); font-size: 1rem;";
+      priceRow.innerHTML = `<strong>💰 Price:</strong> ${price}`;
       summaryInfo.appendChild(priceRow);
 
       if (job.date) {
         const dateRow = document.createElement("div");
         const jobDate = new Date(job.date);
-        dateRow.innerHTML = `<strong>Scheduled Date:</strong> ${jobDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+        dateRow.innerHTML = `<strong>📅 Scheduled:</strong> ${jobDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
         summaryInfo.appendChild(dateRow);
+      }
+      
+      if (requirements.notes) {
+        const notesRow = document.createElement("div");
+        notesRow.style.cssText = "padding: 0.75rem; background: #fef3c7; border-radius: 8px; margin-top: 0.5rem;";
+        notesRow.innerHTML = `<strong>📝 Notes:</strong><br><span style="font-size: 0.85rem;">${requirements.notes}</span>`;
+        summaryInfo.appendChild(notesRow);
       }
 
       jobSummary.appendChild(summaryInfo);
@@ -12270,15 +12353,89 @@ meta.textContent =
               console.error("Error fetching offers:", e);
             }
             
-            // Format location (shortened)
-            const location = job.address || 'Location not specified';
-            const shortLocation = location.length > 40 ? location.substring(0, 40) + '...' : location;
+            // Get requirements for additional fields
+            const requirements = job.requirements || {};
+            const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
+            const teamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
+            const keepActiveFor = requirements.keepActiveFor;
+            const expiresAt = requirements.expiresAt ? new Date(requirements.expiresAt) : null;
+            const pricingOption = requirements.pricing_option;
+            
+            // Format location (pickup/dropoff)
+            const pickupArea = requirements.pickup_area || requirements.pickupArea;
+            const pickupCity = requirements.pickup_city || requirements.pickupCity;
+            const pickupZip = requirements.pickup_zip;
+            const dropoffArea = requirements.dropoff_area || requirements.dropoffArea;
+            const dropoffCity = requirements.dropoff_city || requirements.dropoffCity;
+            const dropoffZip = requirements.dropoff_zip;
+            const onSiteOnly = requirements.on_site_only || requirements.onSiteOnly;
+            
+            let locationDisplay = job.address || 'Location not specified';
+            if (pickupArea || pickupCity) {
+              const pickupParts = [];
+              if (pickupArea) pickupParts.push(pickupArea);
+              if (pickupCity) pickupParts.push(pickupCity);
+              if (pickupZip) pickupParts.push(pickupZip);
+              locationDisplay = pickupParts.join(', ');
+              
+              if (!onSiteOnly && (dropoffArea || dropoffCity)) {
+                const dropoffParts = [];
+                if (dropoffArea) dropoffParts.push(dropoffArea);
+                if (dropoffCity) dropoffParts.push(dropoffCity);
+                if (dropoffZip) dropoffParts.push(dropoffZip);
+                locationDisplay += ` → ${dropoffParts.join(', ')}`;
+              } else if (onSiteOnly) {
+                locationDisplay += ' (Single location)';
+              }
+            }
+            const shortLocation = locationDisplay.length > 50 ? locationDisplay.substring(0, 50) + '...' : locationDisplay;
+            
+            // Format timing
+            let timingDisplay = '';
+            if (deadlinePreference === 'until_completed') {
+              timingDisplay = 'Until completed';
+            } else if (deadlinePreference === 'whenever' || deadlinePreference === 'flexible') {
+              timingDisplay = 'Flexible this week';
+            } else if (deadlinePreference === 'this_morning' || deadlinePreference === 'this_afternoon' || deadlinePreference === 'this_evening') {
+              timingDisplay = 'Today – ASAP';
+            } else if (deadlinePreference === 'tomorrow') {
+              timingDisplay = 'Tomorrow';
+            } else if (job.startTime) {
+              const deadlineDate = new Date(job.startTime);
+              timingDisplay = deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            } else {
+              timingDisplay = 'Not specified';
+            }
             
             // Format pay
             const payType = job.payType || 'flat';
-            const payDisplay = payType === 'hourly' 
-              ? `$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hr` 
-              : `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
+            let payDisplay = '';
+            if (pricingOption === 'hustlers_quote') {
+              payDisplay = 'Hustler suggests price';
+            } else if (payType === 'hourly') {
+              payDisplay = `$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hr${job.estHours ? ` (max ${job.estHours} hrs)` : ''}`;
+            } else {
+              payDisplay = `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
+            }
+            
+            // Format workers
+            let workersDisplay = '';
+            if (teamSize === 0) {
+              workersDisplay = 'Company/crew';
+            } else if (teamSize === 1) {
+              workersDisplay = '1 worker';
+            } else {
+              workersDisplay = `${teamSize} workers`;
+            }
+            
+            // Format expiration
+            let expirationDisplay = '';
+            if (expiresAt && expiresAt > new Date()) {
+              const daysLeft = Math.ceil((expiresAt - new Date()) / (1000 * 60 * 60 * 24));
+              expirationDisplay = `Expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
+            } else if (expiresAt && expiresAt <= new Date()) {
+              expirationDisplay = 'Expired — Repost?';
+            }
             
             // Posted date
             const postedDate = new Date(job.createdAt);
@@ -12371,12 +12528,26 @@ meta.textContent =
                         <span style="font-weight: 700; color: var(--text-main); font-size: 1.1rem;">${payDisplay}</span>
                       </div>
                       <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span>📅</span>
-                        <span style="color: var(--text-muted);">${timeAgo}</span>
+                        <span>⏰</span>
+                        <span style="color: var(--text-muted);">${timingDisplay}</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span>👥</span>
+                        <span style="color: var(--text-muted);">${workersDisplay}</span>
                       </div>
                       <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <span>📍</span>
                         <span style="color: var(--text-muted);">${shortLocation}</span>
+                      </div>
+                      ${expirationDisplay ? `
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span>⏳</span>
+                        <span style="color: ${expiresAt && expiresAt <= new Date() ? '#dc2626' : '#d97706'}; font-weight: 600;">${expirationDisplay}</span>
+                      </div>
+                      ` : ''}
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📅</span>
+                        <span style="color: var(--text-muted);">${timeAgo}</span>
                       </div>
                     </div>
                   </div>
@@ -12546,11 +12717,77 @@ meta.textContent =
             const isCustomer = job.customerId === user.id;
             const isHustler = job.hustlerId === user.id;
             
+            // Get requirements for additional fields
+            const requirements = job.requirements || {};
+            const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
+            const teamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
+            const pricingOption = requirements.pricing_option;
+            
+            // Format location
+            const pickupArea = requirements.pickup_area || requirements.pickupArea;
+            const pickupCity = requirements.pickup_city || requirements.pickupCity;
+            const pickupZip = requirements.pickup_zip;
+            const dropoffArea = requirements.dropoff_area || requirements.dropoffArea;
+            const dropoffCity = requirements.dropoff_city || requirements.dropoffCity;
+            const dropoffZip = requirements.dropoff_zip;
+            const onSiteOnly = requirements.on_site_only || requirements.onSiteOnly;
+            
+            let locationDisplay = job.address || 'Location not specified';
+            if (pickupArea || pickupCity) {
+              const pickupParts = [];
+              if (pickupArea) pickupParts.push(pickupArea);
+              if (pickupCity) pickupParts.push(pickupCity);
+              if (pickupZip) pickupParts.push(pickupZip);
+              locationDisplay = pickupParts.join(', ');
+              
+              if (!onSiteOnly && (dropoffArea || dropoffCity)) {
+                const dropoffParts = [];
+                if (dropoffArea) dropoffParts.push(dropoffArea);
+                if (dropoffCity) dropoffParts.push(dropoffCity);
+                if (dropoffZip) dropoffParts.push(dropoffZip);
+                locationDisplay += ` → ${dropoffParts.join(', ')}`;
+              } else if (onSiteOnly) {
+                locationDisplay += ' (Single location)';
+              }
+            }
+            
+            // Format timing
+            let timingDisplay = '';
+            if (deadlinePreference === 'until_completed') {
+              timingDisplay = 'Until completed';
+            } else if (deadlinePreference === 'whenever' || deadlinePreference === 'flexible') {
+              timingDisplay = 'Flexible this week';
+            } else if (deadlinePreference === 'this_morning' || deadlinePreference === 'this_afternoon' || deadlinePreference === 'this_evening') {
+              timingDisplay = 'Today – ASAP';
+            } else if (deadlinePreference === 'tomorrow') {
+              timingDisplay = 'Tomorrow';
+            } else if (job.startTime) {
+              const deadlineDate = new Date(job.startTime);
+              timingDisplay = deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            } else {
+              timingDisplay = 'Not specified';
+            }
+            
             // Format pay
             const payType = job.payType || 'flat';
-            const payDisplay = payType === 'hourly' 
-              ? `$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hr` 
-              : `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
+            let payDisplay = '';
+            if (pricingOption === 'hustlers_quote') {
+              payDisplay = 'Hustler suggests price';
+            } else if (payType === 'hourly') {
+              payDisplay = `$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hr${job.estHours ? ` (max ${job.estHours} hrs)` : ''}`;
+            } else {
+              payDisplay = `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
+            }
+            
+            // Format workers
+            let workersDisplay = '';
+            if (teamSize === 0) {
+              workersDisplay = 'Company/crew';
+            } else if (teamSize === 1) {
+              workersDisplay = '1 worker';
+            } else {
+              workersDisplay = `${teamSize} workers`;
+            }
             
             // Format scheduled time
             const jobDate = new Date(job.date);
@@ -12625,18 +12862,20 @@ meta.textContent =
                     </div>
                     <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
                       <span style="font-weight: 600; color: var(--text-main);">💰 ${payDisplay}</span>
+                      <span>⏰ ${timingDisplay}</span>
+                      <span>👥 ${workersDisplay}</span>
                       <span>📅 ${dateStr} at ${timeStr}</span>
                       <span style="padding: 0.25rem 0.75rem; background: ${job.status === 'IN_PROGRESS' ? '#f59e0b20' : '#3b82f620'}; color: ${job.status === 'IN_PROGRESS' ? '#f59e0b' : '#3b82f6'}; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">${job.status === 'IN_PROGRESS' ? 'In Progress' : (job.status || 'Active')}</span>
                     </div>
                     <div style="font-size: 0.85rem; color: var(--text-muted);">
-                      <span>📍 ${job.address || 'Location not specified'}</span>
+                      <span>📍 ${locationDisplay}</span>
                     </div>
                   </div>
                 </div>
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
                   <button class="btn btn-primary messageBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">💬 Message</button>
                   <button class="btn btn-ghost viewJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem;">🔍 View Job</button>
-                  <button class="btn btn-ghost mapBtn" data-address="${job.address || ''}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">🗺️ Map</button>
+                  <button class="btn btn-ghost mapBtn" data-address="${locationDisplay || job.address || ''}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">🗺️ Map</button>
                   ${job.status === 'ASSIGNED' && !job.startCodeVerified ? `<button class="btn btn-primary markStartedBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-weight: 600; background: #10b981; font-size: 0.9rem;">✅ Mark Started</button>` : ''}
                   ${job.status === 'ASSIGNED' && job.startCodeVerified ? `<button class="btn btn-primary markFinishedBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-weight: 600; background: #10b981; font-size: 0.9rem;">✅ Mark Finished</button>` : ''}
                   ${job.status === 'ASSIGNED' && !job.startCodeVerified ? `<button class="btn btn-ghost cancelApplicationBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">Cancel</button>` : ''}
@@ -12963,12 +13202,78 @@ meta.textContent =
             const role = isCustomer ? 'Customer' : 'Hustler';
             const otherUser = isCustomer ? job.hustler : job.customer;
             
+            // Get requirements for additional fields
+            const requirements = job.requirements || {};
+            const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
+            const teamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
+            const pricingOption = requirements.pricing_option;
+            
+            // Format location
+            const pickupArea = requirements.pickup_area || requirements.pickupArea;
+            const pickupCity = requirements.pickup_city || requirements.pickupCity;
+            const pickupZip = requirements.pickup_zip;
+            const dropoffArea = requirements.dropoff_area || requirements.dropoffArea;
+            const dropoffCity = requirements.dropoff_city || requirements.dropoffCity;
+            const dropoffZip = requirements.dropoff_zip;
+            const onSiteOnly = requirements.on_site_only || requirements.onSiteOnly;
+            
+            let locationDisplay = job.address || 'Location not specified';
+            if (pickupArea || pickupCity) {
+              const pickupParts = [];
+              if (pickupArea) pickupParts.push(pickupArea);
+              if (pickupCity) pickupParts.push(pickupCity);
+              if (pickupZip) pickupParts.push(pickupZip);
+              locationDisplay = pickupParts.join(', ');
+              
+              if (!onSiteOnly && (dropoffArea || dropoffCity)) {
+                const dropoffParts = [];
+                if (dropoffArea) dropoffParts.push(dropoffArea);
+                if (dropoffCity) dropoffParts.push(dropoffCity);
+                if (dropoffZip) dropoffParts.push(dropoffZip);
+                locationDisplay += ` → ${dropoffParts.join(', ')}`;
+              } else if (onSiteOnly) {
+                locationDisplay += ' (Single location)';
+              }
+            }
+            
+            // Format timing
+            let timingDisplay = '';
+            if (deadlinePreference === 'until_completed') {
+              timingDisplay = 'Until completed';
+            } else if (deadlinePreference === 'whenever' || deadlinePreference === 'flexible') {
+              timingDisplay = 'Flexible this week';
+            } else if (deadlinePreference === 'this_morning' || deadlinePreference === 'this_afternoon' || deadlinePreference === 'this_evening') {
+              timingDisplay = 'Today – ASAP';
+            } else if (deadlinePreference === 'tomorrow') {
+              timingDisplay = 'Tomorrow';
+            } else if (job.startTime) {
+              const deadlineDate = new Date(job.startTime);
+              timingDisplay = deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            } else {
+              timingDisplay = 'Not specified';
+            }
+            
             // Format pay (final pay)
             const payType = job.payType || 'flat';
             const finalPay = job.payment?.amount || job.amount || 0;
-            const payDisplay = payType === 'hourly' 
-              ? `$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hr` 
-              : `$${parseFloat(finalPay).toFixed(2)} flat`;
+            let payDisplay = '';
+            if (pricingOption === 'hustlers_quote') {
+              payDisplay = 'Hustler suggested price';
+            } else if (payType === 'hourly') {
+              payDisplay = `$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hr${job.estHours ? ` (max ${job.estHours} hrs)` : ''}`;
+            } else {
+              payDisplay = `$${parseFloat(finalPay).toFixed(2)} flat`;
+            }
+            
+            // Format workers
+            let workersDisplay = '';
+            if (teamSize === 0) {
+              workersDisplay = 'Company/crew';
+            } else if (teamSize === 1) {
+              workersDisplay = '1 worker';
+            } else {
+              workersDisplay = `${teamSize} workers`;
+            }
             
             // Category icon
             const categoryIcons = {
@@ -13002,6 +13307,8 @@ meta.textContent =
                   </div>
                   <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
                     <span style="font-weight: 600; color: var(--text-main);">💰 Final Pay: ${payDisplay}</span>
+                    <span>⏰ ${timingDisplay}</span>
+                    <span>👥 ${workersDisplay}</span>
                     <span>📅 ${postedText}</span>
                   </div>
                   ${otherUser ? `
@@ -13015,7 +13322,7 @@ meta.textContent =
                   </div>
                   ` : ''}
                   <div style="font-size: 0.85rem; color: var(--text-muted);">
-                    <span>📍 ${job.address || 'Location not specified'}</span>
+                    <span>📍 ${locationDisplay}</span>
                   </div>
                 </div>
                 <span style="padding: 0.25rem 0.75rem; background: #10b98120; color: #10b981; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">✅ Completed</span>
@@ -14278,21 +14585,43 @@ meta.textContent =
                   <div style="color: var(--text-main); line-height: 1.7; white-space: pre-wrap;">${job.description || 'No description provided.'}</div>
                 </div>
                 
-                <!-- Job Details -->
+                <!-- Job Details Grid -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
                   <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">💰 Pay</div>
                     <div style="font-weight: 700; color: var(--text-main); font-size: 1.1rem;">${payDisplay}</div>
                   </div>
                   <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">📍 Location</div>
-                    <div style="font-weight: 600; color: var(--text-main);">${job.address || 'Address not specified'}</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">⏰ Timing</div>
+                    <div style="font-weight: 600; color: var(--text-main);">${timingDisplay}</div>
                   </div>
                   <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">📅 Scheduled</div>
-                    <div style="font-weight: 600; color: var(--text-main);">${dateStr} at ${timeStr}</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">👥 Workers</div>
+                    <div style="font-weight: 600; color: var(--text-main);">${workersDisplay}</div>
+                  </div>
+                  <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">📍 Location</div>
+                    <div style="font-weight: 600; color: var(--text-main); font-size: 0.9rem;">${locationDisplay}</div>
                   </div>
                 </div>
+                
+                ${requirements.notes ? `
+                <!-- Notes Section -->
+                <div style="margin-bottom: 2rem; padding: 1.5rem; background: #fef3c7; border-radius: 12px; border: 1px solid #fbbf24;">
+                  <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; color: #92400e;">📝 Additional Notes</h3>
+                  <div style="color: #92400e; line-height: 1.7; white-space: pre-wrap;">${requirements.notes}</div>
+                </div>
+                ` : ''}
+                
+                ${requirements.equipment_needed && requirements.equipment_needed.length > 0 ? `
+                <!-- Equipment Needed -->
+                <div style="margin-bottom: 2rem; padding: 1.5rem; background: #eff6ff; border-radius: 12px; border: 1px solid #3b82f6;">
+                  <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; color: #1e40af;">🔧 Equipment Needed</h3>
+                  <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                    ${requirements.equipment_needed.map(eq => `<span style="padding: 0.5rem 1rem; background: white; border: 1px solid #3b82f6; border-radius: 6px; font-size: 0.9rem; color: #1e40af; font-weight: 600;">${eq}</span>`).join('')}
+                  </div>
+                </div>
+                ` : ''}
                 
                 <!-- Customer Info -->
                 ${job.customer ? `

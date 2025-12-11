@@ -602,6 +602,17 @@ router.get('/', optionalAuth, [
     if (status) where.status = status;
     if (category) where.category = category;
     
+    // Exclude expired jobs from browse (unless specifically requesting expired status)
+    if (!status || status !== 'EXPIRED') {
+      where.status = {
+        not: 'EXPIRED'
+      };
+      // Also override if status was provided
+      if (status) {
+        where.status = status;
+      }
+    }
+    
     // Filter by ZIP code if provided (searches in address field)
     if (zip && zip.trim().length > 0) {
       where.address = {

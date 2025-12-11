@@ -136,6 +136,77 @@ async function cleanup72HourJobs() {
 }
 
 /**
+ * Clean up jobs that have passed their expiration date (based on keepActiveFor)
+ * Checks requirements.expiresAt and sets status to EXPIRED if date has passed
+ */
+async function cleanupExpiredJobs() {
+  try {
+    const now = new Date();
+    
+    // Find OPEN jobs where expiresAt has passed
+    // We need to check the requirements JSON field for expiresAt
+    const allOpenJobs = await prisma.job.findMany({
+      where: {
+        status: 'OPEN',
+      },
+      select: {
+        id: true,
+        title: true,
+        requirements: true,
+        customer: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    // Filter jobs where expiresAt has passed
+    const expiredJobs = allOpenJobs.filter(job => {
+      const requirements = job.requirements || {};
+      const expiresAt = requirements.expiresAt;
+      
+      if (!expiresAt) return false; // No expiration set
+      
+      try {
+        const expirationDate = new Date(expiresAt);
+        return expirationDate <= now;
+      } catch (e) {
+        return false; // Invalid date
+      }
+    });
+
+    if (expiredJobs.length === 0) {
+      console.log('[Cleanup Expired] No expired jobs found');
+      return { expired: 0 };
+    }
+
+    console.log(`[Cleanup Expired] Found ${expiredJobs.length} jobs past expiration date`);
+
+    const jobIds = expiredJobs.map(j => j.id);
+    
+    // Set status to EXPIRED
+    const result = await prisma.job.updateMany({
+      where: {
+        id: { in: jobIds },
+      },
+      data: {
+        status: 'EXPIRED',
+      },
+    });
+
+    console.log(`[Cleanup Expired] Expired ${result.count} jobs past their expiration date`);
+    
+    return { expired: result.count };
+  } catch (error) {
+    console.error('[Cleanup Expired] Error cleaning up expired jobs:', error);
+    throw error;
+  }
+}
+
+/**
  * Clean up jobs with expired start codes (78 hours from acceptance)
  * If start code not verified within 78 hours, refund customer and expire job
  */
@@ -377,6 +448,7 @@ async function runAllCleanup() {
   }
   
   const results = {
+    'expired': await cleanupExpiredJobs().catch(e => ({ error: e.message })),
     '72h': await cleanup72HourJobs().catch(e => ({ error: e.message })),
     'startCodes': await cleanupExpiredStartCodes().catch(e => ({ error: e.message })),
     '2w': await cleanupOldJobs().catch(e => ({ error: e.message })),
@@ -388,6 +460,7 @@ async function runAllCleanup() {
 module.exports = {
   cleanupOldJobs,
   cleanup72HourJobs,
+  cleanupExpiredJobs,
   cleanupExpiredStartCodes,
   cleanupUnverifiedAccounts,
   runAllCleanup,
