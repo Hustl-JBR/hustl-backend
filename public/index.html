@@ -6378,19 +6378,23 @@ async function renderJobs(reset = false) {
       const dropoffLat = requirements.dropoff_lat || requirements.dropoffLat;
       const dropoffLng = requirements.dropoff_lng || requirements.dropoffLng;
       
-      // Check if user is hustler and job not accepted - hide full address
-      // Note: This is checked synchronously - if user is not loaded yet, default to showing full address
+      // Check if user is hustler and job not accepted - hide full address (OPTIONAL FEATURE)
+      // Set HIDE_ADDRESSES_FROM_HUSTLERS to false in config to disable this feature
+      const hideAddressesEnabled = window.HUSTL_CONFIG?.HIDE_ADDRESSES_FROM_HUSTLERS !== false; // Default: true (enabled)
       let showFullAddress = true;
-      try {
-        const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
-        if (user) {
-          const isHustler = user && !user.roles?.includes('CUSTOMER');
-          const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
-          showFullAddress = !isHustler || jobAccepted;
+      
+      if (hideAddressesEnabled) {
+        try {
+          const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
+          if (user) {
+            const isHustler = user && !user.roles?.includes('CUSTOMER');
+            const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
+            showFullAddress = !isHustler || jobAccepted;
+          }
+        } catch (e) {
+          // If we can't determine user, default to showing full address
+          showFullAddress = true;
         }
-      } catch (e) {
-        // If we can't determine user, default to showing full address
-        showFullAddress = true;
       }
       
       if (onSiteOnly) {
