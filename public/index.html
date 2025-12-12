@@ -12205,6 +12205,7 @@ async function renderJobs(reset = false) {
           }
           
           saveBtn.disabled = true;
+          const originalText = saveBtn.textContent;
           saveBtn.textContent = "Saving...";
           
           try {
@@ -12231,33 +12232,66 @@ async function renderJobs(reset = false) {
               }
             }
             
-            // Update profile
-            await window.hustlAPI.users.updateProfile(updates);
+            // Update profile - get the updated user from response
+            const updatedUser = await window.hustlAPI.users.updateProfile(updates);
             
-            // Update local storage
-            const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
-            Object.assign(storedUser, updates);
-            localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+            if (!updatedUser) {
+              throw new Error("No user data returned from server");
+            }
+            
+            // Update local storage with the complete user object from server
+            localStorage.setItem('hustl_user', JSON.stringify(updatedUser));
+            
+            // Update cached user in auth object
+            if (window.hustlAPI && window.hustlAPI.auth) {
+              window.hustlAPI.auth.currentUser = updatedUser;
+            }
+            
+            // Invalidate API cache to force fresh fetch on next render
+            if (window.optimizedApi && typeof window.optimizedApi.invalidateCache === 'function') {
+              window.optimizedApi.invalidateCache('/users/me');
+            }
             
             // Update user object for re-render
-            Object.assign(user, updates);
+            Object.assign(user, updatedUser);
             if (updates.photoUrl) {
               photoPreview = updates.photoUrl;
             }
             
-            // Show success toast
-            showToast("Profile updated.");
+            // Show success confirmation
+            saveBtn.textContent = "Saved ✅";
+            saveBtn.style.background = "#16a34a";
+            saveBtn.style.color = "white";
+            showToast("✅ Profile saved successfully!");
             
-            // Return to view mode
-            renderBasicInfoView(user, ratingAvg, ratingCount, container);
+            // Return to view mode with updated user
+            renderBasicInfoView(updatedUser, ratingAvg, ratingCount, container);
             
-            // Re-render profile to update other sections
-            setTimeout(() => renderProfile(), 500);
+            // Re-render profile to update other sections with fresh data
+            setTimeout(async () => {
+              // Force fresh fetch from server to ensure persistence
+              await renderProfile();
+            }, 300);
+            
+            // Reset button after 2 seconds
+            setTimeout(() => {
+              saveBtn.disabled = false;
+              saveBtn.textContent = originalText;
+              saveBtn.style.background = "";
+              saveBtn.style.color = "";
+            }, 2000);
           } catch (error) {
             console.error("Error saving profile:", error);
-            showToast("Error saving profile. Please try again.");
+            
+            // Show detailed error message
+            const errorMessage = error.message || "Error saving profile. Please try again.";
+            showToast(`❌ ${errorMessage}`);
+            
+            // Re-enable save button
             saveBtn.disabled = false;
-            saveBtn.textContent = "Save";
+            saveBtn.textContent = originalText;
+            saveBtn.style.background = "";
+            saveBtn.style.color = "";
           }
         });
       }
