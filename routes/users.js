@@ -194,10 +194,77 @@ router.patch('/me', authenticate, [
     let user;
     try {
       console.log('[PATCH /users/me] Attempting Prisma update with data:', JSON.stringify(updateData, null, 2));
-      user = await prisma.user.update({
-        where: { id: req.user.id },
-        data: updateData,
-        select: {
+      
+      // Build select statement - try without tools first since it may not exist
+      const baseSelect = {
+        id: true,
+        email: true,
+        name: true,
+        username: true,
+        city: true,
+        zip: true,
+        photoUrl: true,
+        roles: true,
+        ratingAvg: true,
+        ratingCount: true,
+        idVerified: true,
+        updatedAt: true,
+        gender: true,
+        bio: true,
+      };
+      
+      // Try update with tools in select first, fall back without it if it fails
+      // Note: We only include tools in SELECT, not in updateData (unless it was explicitly sent)
+      let selectWithTools = { ...baseSelect, tools: true };
+      
+      try {
+        user = await prisma.user.update({
+          where: { id: req.user.id },
+          data: updateData,
+          select: selectWithTools,
+        });
+        console.log('[PATCH /users/me] Prisma update succeeded. User bio:', JSON.stringify(user.bio), 'gender:', user.gender);
+      } catch (toolsError) {
+        // If tools column doesn't exist in SELECT, try without it
+        if (toolsError.code === 'P2022' && toolsError.message && toolsError.message.includes('tools')) {
+          console.warn('[PATCH /users/me] Tools column does not exist in database, retrying without tools in select');
+          // Remove tools from updateData if it was there (but keep bio and gender!)
+          const updateDataWithoutTools = { ...updateData };
+          delete updateDataWithoutTools.tools;
+          
+          user = await prisma.user.update({
+            where: { id: req.user.id },
+            data: updateDataWithoutTools, // This still has bio and gender!
+            select: baseSelect, // This still has bio and gender!
+          });
+          user.tools = null; // Set to null since column doesn't exist
+          console.log('[PATCH /users/me] Prisma update succeeded without tools. User bio:', JSON.stringify(user.bio), 'gender:', user.gender);
+        } else {
+          throw toolsError; // Re-throw if it's a different error
+        }
+      }
+    } catch (updateError) {
+      console.error('[PATCH /users/me] Prisma update error:', updateError);
+      console.error('[PATCH /users/me] Error message:', updateError.message);
+      console.error('[PATCH /users/me] Error code:', updateError.code);
+      
+      // Check which specific column is causing the error
+      const errorMessage = updateError.message || '';
+      const isToolsError = errorMessage.includes('tools');
+      const isBioError = errorMessage.includes('bio');
+      const isGenderError = errorMessage.includes('gender');
+      const isColumnError = updateError.code === 'P2021' || updateError.code === 'P2022';
+      
+      // If it's a column error, try updating without the problematic column(s)
+      if (isColumnError && (isToolsError || isBioError || isGenderError)) {
+        console.warn('[PATCH /users/me] Database column error detected. Problematic columns:', {
+          tools: isToolsError,
+          bio: isBioError,
+          gender: isGenderError
+        });
+        
+        const fallbackUpdateData = { ...updateData };
+        const fallbackSelect = {
           id: true,
           email: true,
           name: true,
@@ -210,47 +277,48 @@ router.patch('/me', authenticate, [
           ratingCount: true,
           idVerified: true,
           updatedAt: true,
-          gender: true,
-          bio: true,
-          tools: true,
-        },
-      });
-      console.log('[PATCH /users/me] Prisma update succeeded. User bio:', JSON.stringify(user.bio), 'gender:', user.gender);
-    } catch (updateError) {
-      console.error('[PATCH /users/me] Prisma update error:', updateError);
-      console.error('[PATCH /users/me] Error message:', updateError.message);
-      console.error('[PATCH /users/me] Error code:', updateError.code);
-      
-      // If gender/bio/tools columns don't exist, update without them
-      if (updateError.message && (updateError.message.includes('gender') || updateError.message.includes('tools') || updateError.message.includes('bio') || updateError.code === 'P2021')) {
-        console.warn('[PATCH /users/me] Database columns may not exist, attempting update without bio/gender/tools');
-        const fallbackUpdateData = { ...updateData };
-        delete fallbackUpdateData.bio;
-        delete fallbackUpdateData.gender;
-        delete fallbackUpdateData.tools;
+        };
         
-        user = await prisma.user.update({
-          where: { id: req.user.id },
-          data: fallbackUpdateData,
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            username: true,
-            city: true,
-            zip: true,
-            photoUrl: true,
-            roles: true,
-            ratingAvg: true,
-            ratingCount: true,
-            idVerified: true,
-            updatedAt: true,
-          },
-        });
-        user.gender = null;
-        user.bio = null;
-        user.tools = null;
-        console.warn('[PATCH /users/me] Updated without bio/gender/tools - these columns may not exist in database');
+        // Only remove the column(s) that are causing the error
+        if (isToolsError) {
+          delete fallbackUpdateData.tools;
+          console.warn('[PATCH /users/me] Removing tools from update (column does not exist)');
+        } else {
+          fallbackSelect.tools = true;
+        }
+        
+        if (isBioError) {
+          delete fallbackUpdateData.bio;
+          console.warn('[PATCH /users/me] Removing bio from update (column does not exist)');
+        } else {
+          fallbackSelect.bio = true;
+        }
+        
+        if (isGenderError) {
+          delete fallbackUpdateData.gender;
+          console.warn('[PATCH /users/me] Removing gender from update (column does not exist)');
+        } else {
+          fallbackSelect.gender = true;
+        }
+        
+        // Try the update again without the problematic column(s)
+        try {
+          user = await prisma.user.update({
+            where: { id: req.user.id },
+            data: fallbackUpdateData,
+            select: fallbackSelect,
+          });
+          
+          // Set null for columns that don't exist
+          if (isToolsError && !user.tools) user.tools = null;
+          if (isBioError && !user.bio) user.bio = null;
+          if (isGenderError && !user.gender) user.gender = null;
+          
+          console.log('[PATCH /users/me] Update succeeded after removing problematic columns');
+        } catch (retryError) {
+          console.error('[PATCH /users/me] Retry also failed:', retryError);
+          throw updateError; // Throw original error
+        }
       } else {
         throw updateError;
       }
