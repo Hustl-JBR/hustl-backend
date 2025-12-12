@@ -6221,25 +6221,65 @@ async function renderJobs(reset = false) {
       return j.status === "OPEN" || j.status === "open";
     }) : [];
     
-    // Apply distance filter if location is set and filter is active
-    if (activeDistanceFilter && userLocation) {
-      const maxDistance = activeDistanceFilter === 'statewide' ? Infinity : parseInt(activeDistanceFilter);
+    // Apply category filters
+    if (activeCategoryFilters.size > 0) {
       filteredJobs = filteredJobs.filter((j) => {
-        if (activeDistanceFilter === 'statewide') return true;
-        if (!j.lat || !j.lng) return false;
+        const jobCategory = (j.category || 'other').toLowerCase();
+        return activeCategoryFilters.has(jobCategory);
+      });
+    }
+    
+    // Apply price type filters
+    if (activePriceTypeFilters.size > 0) {
+      filteredJobs = filteredJobs.filter((j) => {
+        if (activePriceTypeFilters.has('flat') && j.payType === 'flat') return true;
+        if (activePriceTypeFilters.has('hourly') && j.payType === 'hourly') return true;
+        if (activePriceTypeFilters.has('hustler_sets')) {
+          const pricingOption = j.requirements?.pricing_option;
+          if (pricingOption === 'hustlers_quote' || pricingOption === 'hustler_sets') return true;
+        }
+        return false;
+      });
+    }
+    
+    // Apply time filters
+    if (activeTimeFilters.size > 0) {
+      filteredJobs = filteredJobs.filter((j) => {
+        const deadlinePreference = j.requirements?.deadline_preference || j.deadlinePreference;
+        const jobWhen = deadlinePreference || '';
         
-        // Calculate distance using Haversine formula
-        const R = 3959; // Earth's radius in miles
-        const dLat = (j.lat - userLocation.lat) * Math.PI / 180;
-        const dLng = (j.lng - userLocation.lng) * Math.PI / 180;
-        const a = 
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(j.lat * Math.PI / 180) *
-          Math.sin(dLng / 2) * Math.sin(dLng / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const distance = R * c;
-        
-        return distance <= maxDistance;
+        if (activeTimeFilters.has('asap')) {
+          if (jobWhen === 'today_asap' || jobWhen === 'asap') return true;
+        }
+        if (activeTimeFilters.has('tomorrow')) {
+          if (jobWhen === 'tomorrow') return true;
+        }
+        if (activeTimeFilters.has('this_week')) {
+          if (jobWhen === 'flexible_week') return true;
+        }
+        if (activeTimeFilters.has('scheduled')) {
+          if (jobWhen === 'specific_date' && j.startTime) {
+            const startDate = new Date(j.startTime);
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            if (startDate > tomorrow) return true;
+          }
+        }
+        if (activeTimeFilters.has('flexible')) {
+          if (jobWhen === 'no_deadline' || jobWhen === 'flexible') return true;
+        }
+        return false;
+      });
+    }
+    
+    // Apply workers filters
+    if (activeWorkersFilters.size > 0) {
+      filteredJobs = filteredJobs.filter((j) => {
+        const teamSize = j.teamSize || j.requirements?.teamSize || j.requirements?.team_size || 1;
+        if (activeWorkersFilters.has('1') && teamSize === 1) return true;
+        if (activeWorkersFilters.has('2') && teamSize === 2) return true;
+        if (activeWorkersFilters.has('3') && teamSize >= 3) return true;
+        return false;
       });
     }
     
@@ -6262,6 +6302,57 @@ async function renderJobs(reset = false) {
         const distance = R * c;
         
         return distance <= maxDistance;
+      });
+    }
+    
+    // Apply sorting
+    if (activeSortBy === 'newest') {
+      filteredJobs.sort((a, b) => {
+        const dateA = new Date(a.createdAt || a.created_at || 0);
+        const dateB = new Date(b.createdAt || b.created_at || 0);
+        return dateB - dateA; // Newest first
+      });
+    } else if (activeSortBy === 'highest_paid') {
+      filteredJobs.sort((a, b) => {
+        const amountA = Number(a.amount) || 0;
+        const amountB = Number(b.amount) || 0;
+        return amountB - amountA; // Highest first
+      });
+    } else if (activeSortBy === 'lowest_paid') {
+      filteredJobs.sort((a, b) => {
+        const amountA = Number(a.amount) || 0;
+        const amountB = Number(b.amount) || 0;
+        return amountA - amountB; // Lowest first
+      });
+    } else if (activeSortBy === 'closest' && userLocation) {
+      filteredJobs.sort((a, b) => {
+        if (!a.lat || !a.lng) return 1;
+        if (!b.lat || !b.lng) return -1;
+        
+        const R = 3959;
+        const distA = (() => {
+          const dLat = (a.lat - userLocation.lat) * Math.PI / 180;
+          const dLng = (a.lng - userLocation.lng) * Math.PI / 180;
+          const calc = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(a.lat * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+          return R * 2 * Math.atan2(Math.sqrt(calc), Math.sqrt(1 - calc));
+        })();
+        const distB = (() => {
+          const dLat = (b.lat - userLocation.lat) * Math.PI / 180;
+          const dLng = (b.lng - userLocation.lng) * Math.PI / 180;
+          const calc = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+          return R * 2 * Math.atan2(Math.sqrt(calc), Math.sqrt(1 - calc));
+        })();
+        return distA - distB;
+      });
+    } else if (activeSortBy === 'soonest') {
+      filteredJobs.sort((a, b) => {
+        const dateA = a.startTime ? new Date(a.startTime) : new Date(a.date || a.createdAt || 0);
+        const dateB = b.startTime ? new Date(b.startTime) : new Date(b.date || b.createdAt || 0);
+        return dateA - dateB; // Soonest first
       });
     }
     
