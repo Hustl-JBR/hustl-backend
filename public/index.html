@@ -3579,80 +3579,97 @@
           </div>
           
           <!-- Panel Content -->
-          <div style="padding: 1.5rem;">
+          <div style="padding: 1.25rem 1.5rem 1.5rem;">
             <!-- Category Filter -->
-            <div style="margin-bottom: 1.5rem;">
-              <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">Category</div>
-              <div id="categoryFilterContainer" style="overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin;">
-                <div id="categoryFilterChips" style="display: flex; gap: 0.5rem; flex-wrap: wrap; padding-bottom: 0.25rem;">
+            <div style="margin-bottom: 2rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                <span style="font-size: 1.1rem;">🏷️</span>
+                <div style="font-size: 1rem; font-weight: 700; color: var(--text-main);">Category</div>
+              </div>
+              <div id="categoryFilterContainer" style="overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; margin-bottom: 0.75rem;">
+                <div id="categoryFilterChips" style="display: flex; gap: 0.6rem; flex-wrap: wrap; padding-bottom: 0.5rem;">
                   <!-- Categories will be populated dynamically -->
                 </div>
               </div>
+              <button id="categoryViewMoreBtn" style="display: none; padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--border); border-radius: 20px; font-size: 0.85rem; color: var(--primary); cursor: pointer; margin-top: 0.5rem;">➕ Show More</button>
+              <div id="categoryMoreOptions" style="display: none; margin-top: 0.75rem; display: flex; gap: 0.6rem; flex-wrap: wrap;"></div>
             </div>
             
             <!-- Price Type Filter -->
-            <div style="margin-bottom: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
-              <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">Price Type</div>
-              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <button class="filter-chip price-chip" data-price-type="flat" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">Flat</button>
-                <button class="filter-chip price-chip" data-price-type="hourly" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">Hourly</button>
-                <button class="filter-chip price-chip" data-price-type="hustler_sets" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">Hustler Sets</button>
+            <div style="margin-bottom: 2rem; padding-top: 1.75rem; border-top: 1px solid #e5e7eb;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                <span style="font-size: 1.1rem;">💰</span>
+                <div style="font-size: 1rem; font-weight: 700; color: var(--text-main);">Price Type</div>
+              </div>
+              <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+                <button class="filter-chip price-chip" data-price-type="flat" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;">💵 Flat</button>
+                <button class="filter-chip price-chip" data-price-type="hourly" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;">⏱️ Hourly</button>
+                <button class="filter-chip price-chip" data-price-type="hustler_sets" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;">💬 Hustler Sets Price</button>
               </div>
             </div>
             
             <!-- Time Filter -->
-            <div style="margin-bottom: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
-              <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">Time</div>
-              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <button class="filter-chip time-chip" data-time="asap" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">ASAP/Today</button>
-                <button class="filter-chip time-chip" data-time="tomorrow" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">Tomorrow</button>
-                <button class="filter-chip time-chip" data-time="this_week" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">This Week</button>
-                <button class="filter-chip time-chip" data-time="scheduled" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">Scheduled</button>
-                <button class="filter-chip time-chip" data-time="flexible" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">Flexible</button>
+            <div style="margin-bottom: 2rem; padding-top: 1.75rem; border-top: 1px solid #e5e7eb;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                <span style="font-size: 1.1rem;">⏰</span>
+                <div style="font-size: 1rem; font-weight: 700; color: var(--text-main);">Time</div>
+              </div>
+              <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+                <button class="filter-chip time-chip" data-time="asap" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;">⚡ ASAP/Today</button>
+                <button class="filter-chip time-chip" data-time="tomorrow" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;">📅 Tomorrow</button>
+                <button class="filter-chip time-chip" data-time="this_week" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;">📆 This Week</button>
+                <button class="filter-chip time-chip" data-time="scheduled" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;">🗓 Scheduled</button>
+                <button class="filter-chip time-chip" data-time="flexible" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;">🌀 Flexible</button>
               </div>
             </div>
             
             <!-- Workers Filter -->
-            <div style="margin-bottom: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
-              <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">Workers</div>
-              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <button class="filter-chip workers-chip" data-workers="1" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">1 worker</button>
-                <button class="filter-chip workers-chip" data-workers="2" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">2 workers</button>
-                <button class="filter-chip workers-chip" data-workers="3" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">3+ workers</button>
+            <div style="margin-bottom: 2rem; padding-top: 1.75rem; border-top: 1px solid #e5e7eb;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                <span style="font-size: 1.1rem;">👥</span>
+                <div style="font-size: 1rem; font-weight: 700; color: var(--text-main);">Workers</div>
+              </div>
+              <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+                <button class="filter-chip workers-chip" data-workers="1" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;">👤 1 worker</button>
+                <button class="filter-chip workers-chip" data-workers="2" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;">👥 2 workers</button>
+                <button class="filter-chip workers-chip" data-workers="3" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;">👥 3+ workers</button>
               </div>
             </div>
             
             <!-- Location Permission & Distance Filter -->
-            <div style="margin-bottom: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
-              <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">📍 Distance (from your location)</div>
+            <div style="margin-bottom: 2rem; padding-top: 1.75rem; border-top: 1px solid #e5e7eb;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                <span style="font-size: 1.1rem;">📍</span>
+                <div style="font-size: 1rem; font-weight: 700; color: var(--text-main);">Distance (from your location)</div>
+              </div>
               
               <!-- Location Status -->
-              <div id="locationStatusContainer" style="margin-bottom: 0.75rem; padding: 0.75rem; background: #f3f4f6; border-radius: 8px;">
-                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-                  <div style="font-size: 0.85rem; color: var(--text-main);">
+              <div id="locationStatusContainer" style="margin-bottom: 1rem; padding: 1rem; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 12px; border: 1px solid #e5e7eb;">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+                  <div style="font-size: 0.9rem; color: var(--text-main); font-weight: 500;">
                     <span id="locationStatusText">📍 Location not set</span>
                   </div>
-                  <button id="requestLocationBtn" style="padding: 0.5rem 1rem; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 0.85rem; cursor: pointer; white-space: nowrap;">Get My Location</button>
+                  <button id="requestLocationBtn" style="padding: 0.6rem 1.25rem; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 0.9rem; font-weight: 600; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.2s;">Get My Location</button>
                 </div>
               </div>
               
               <!-- Distance Filter Chips (hidden until location is set) -->
               <div id="distanceFilterContainer" style="display: none;">
-                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                  <button class="filter-chip distance-chip" data-distance="5" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">5 mi</button>
-                  <button class="filter-chip distance-chip" data-distance="10" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">10 mi</button>
-                  <button class="filter-chip distance-chip" data-distance="20" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">20 mi</button>
-                  <button class="filter-chip distance-chip" data-distance="30" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">30 mi</button>
-                  <button class="filter-chip distance-chip" data-distance="50" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">50 mi</button>
-                  <button class="filter-chip distance-chip" data-distance="statewide" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">Statewide</button>
+                <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+                  <button class="filter-chip distance-chip" data-distance="5" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500;">5 mi</button>
+                  <button class="filter-chip distance-chip" data-distance="10" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500;">10 mi</button>
+                  <button class="filter-chip distance-chip" data-distance="20" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500;">20 mi</button>
+                  <button class="filter-chip distance-chip" data-distance="30" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500;">30 mi</button>
+                  <button class="filter-chip distance-chip" data-distance="50" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500;">50 mi</button>
+                  <button class="filter-chip distance-chip" data-distance="statewide" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500;">Statewide</button>
                 </div>
               </div>
             </div>
             
             <!-- Action Buttons -->
-            <div style="position: sticky; bottom: 0; background: white; padding-top: 1.5rem; border-top: 1px solid var(--border); margin-top: 1rem; display: flex; gap: 0.75rem;">
-              <button id="clearFiltersBtn" style="flex: 1; padding: 0.9rem; background: white; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-weight: 600; color: var(--text-main); cursor: pointer;">Clear All</button>
-              <button id="applyFiltersBtn" style="flex: 2; padding: 0.9rem; background: var(--primary); border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; color: white; cursor: pointer;">Apply Filters</button>
+            <div style="position: sticky; bottom: 0; background: white; padding-top: 1.5rem; border-top: 2px solid #e5e7eb; margin-top: 1rem; display: flex; gap: 0.75rem; padding-bottom: 0.5rem;">
+              <button id="clearFiltersBtn" style="flex: 1; padding: 1rem; background: white; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; font-weight: 700; color: var(--text-main); cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">Clear All</button>
+              <button id="applyFiltersBtn" style="flex: 2; padding: 1rem; background: var(--primary); border: none; border-radius: 12px; font-size: 1rem; font-weight: 700; color: white; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 8px rgba(0,0,0,0.15);">Apply Filters</button>
             </div>
           </div>
         </div>
