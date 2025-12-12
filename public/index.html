@@ -12324,39 +12324,43 @@ async function renderJobs(reset = false) {
               
               if (uploadResponse.ok) {
                 const uploadData = await uploadResponse.json();
-                uploadedPhotoUrl = uploadData.photoUrl || uploadData.user?.photoUrl;
-                if (uploadedPhotoUrl) {
-                  // Add cache-busting parameter to force image refresh
-                  const cacheBuster = `?t=${Date.now()}`;
-                  uploadedPhotoUrl = uploadedPhotoUrl.includes('?') 
-                    ? `${uploadedPhotoUrl}&t=${Date.now()}` 
-                    : `${uploadedPhotoUrl}?t=${Date.now()}`;
-                  
-                  // Immediately update user object and localStorage with photoUrl
-                  user.photoUrl = uploadedPhotoUrl;
-                  updates.photoUrl = uploadedPhotoUrl;
-                  
-                  // Update localStorage immediately so photo shows everywhere
-                  const currentUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
-                  currentUser.photoUrl = uploadedPhotoUrl;
-                  localStorage.setItem('hustl_user', JSON.stringify(currentUser));
-                  
-                  // Update cached user in auth object
-                  if (window.hustlAPI && window.hustlAPI.auth) {
-                    if (!window.hustlAPI.auth.currentUser) {
-                      window.hustlAPI.auth.currentUser = currentUser;
-                    } else {
-                      window.hustlAPI.auth.currentUser.photoUrl = uploadedPhotoUrl;
-                    }
-                  }
-                  
-                  console.log('[PROFILE SAVE] Photo uploaded successfully:', uploadedPhotoUrl);
-                  
-                  // Force immediate UI update of all avatars
-                  updateAllAvatarsInDOM(uploadedPhotoUrl, user.id);
-                } else {
-                  console.warn('[PROFILE SAVE] Photo upload succeeded but no photoUrl in response');
+                console.log('[PROFILE SAVE] Photo upload response:', uploadData);
+                
+                // Get photoUrl from response - prefer user.photoUrl (from DB) over photoUrl (from R2)
+                // Both should be the same, but DB version is the source of truth
+                uploadedPhotoUrl = uploadData.user?.photoUrl || uploadData.photoUrl;
+                
+                if (!uploadedPhotoUrl) {
+                  console.error('[PROFILE SAVE] Photo upload succeeded but no photoUrl in response:', uploadData);
+                  throw new Error("Photo upload succeeded but no photoUrl returned");
                 }
+                
+                // Store the clean URL (without cache buster) for database/localStorage
+                const photoUrlClean = uploadedPhotoUrl.replace(/\?t=\d+(&t=\d+)*$/, '');
+                
+                // Immediately update localStorage with clean URL (source of truth)
+                const currentUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
+                currentUser.photoUrl = photoUrlClean;
+                currentUser.id = user.id; // Ensure ID is set
+                localStorage.setItem('hustl_user', JSON.stringify(currentUser));
+                
+                // Update cached user in auth object with clean URL
+                if (window.hustlAPI && window.hustlAPI.auth) {
+                  if (!window.hustlAPI.auth.currentUser) {
+                    window.hustlAPI.auth.currentUser = { ...currentUser };
+                  } else {
+                    window.hustlAPI.auth.currentUser.photoUrl = photoUrlClean;
+                  }
+                }
+                
+                // Update local user object
+                user.photoUrl = photoUrlClean;
+                
+                console.log('[PROFILE SAVE] Photo uploaded successfully. Clean URL:', photoUrlClean);
+                
+                // Force immediate UI update with cache-busted URL for display
+                const photoUrlForDisplay = `${photoUrlClean}?t=${Date.now()}`;
+                updateAllAvatarsInDOM(photoUrlForDisplay, user.id);
               } else {
                 const errorData = await uploadResponse.json().catch(() => ({}));
                 const errorText = await uploadResponse.text().catch(() => '');
@@ -12409,26 +12413,43 @@ async function renderJobs(reset = false) {
               console.warn('[PROFILE SAVE] Bio types - Sent type:', typeof cleanUpdates.bio, 'Got type:', typeof updatedUser.bio);
             }
             
-            // Handle photoUrl from upload or response
+            // Handle photoUrl - ensure it's always set correctly
             if (uploadedPhotoUrl) {
-              // Remove cache buster for storage, but keep it for display
+              // We already updated localStorage and auth.currentUser above
+              // But ensure updatedUser has the clean URL (without cache buster)
               const photoUrlClean = uploadedPhotoUrl.replace(/\?t=\d+(&t=\d+)*$/, '');
               updatedUser.photoUrl = photoUrlClean;
-              
-              // Force update all avatars in the DOM with cache-busted URL for immediate display
-              updateAllAvatarsInDOM(uploadedPhotoUrl, user.id);
+              console.log('[PROFILE SAVE] Photo URL in updatedUser:', updatedUser.photoUrl);
             } else if (updatedUser.photoUrl) {
-              // If photoUrl came from the update response, use it
-              updateAllAvatarsInDOM(updatedUser.photoUrl, user.id);
+              // If photoUrl came from the update response (not from upload), use it
+              console.log('[PROFILE SAVE] Photo URL from update response:', updatedUser.photoUrl);
+              updateAllAvatarsInDOM(`${updatedUser.photoUrl}?t=${Date.now()}`, user.id);
+            } else {
+              console.warn('[PROFILE SAVE] No photoUrl in updatedUser after save');
             }
             
             // Update local storage with the complete user object from server
             // This is the single source of truth - what's actually in the database
-            localStorage.setItem('hustl_user', JSON.stringify(updatedUser));
+            // CRITICAL: Always include photoUrl
+            if (updatedUser.photoUrl) {
+              localStorage.setItem('hustl_user', JSON.stringify(updatedUser));
+              console.log('[PROFILE SAVE] Updated localStorage with photoUrl:', updatedUser.photoUrl);
+            } else {
+              console.warn('[PROFILE SAVE] updatedUser missing photoUrl, preserving existing localStorage value');
+              // Don't overwrite localStorage if photoUrl is missing
+              const existingUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
+              if (existingUser.photoUrl) {
+                updatedUser.photoUrl = existingUser.photoUrl;
+                localStorage.setItem('hustl_user', JSON.stringify(updatedUser));
+              } else {
+                localStorage.setItem('hustl_user', JSON.stringify(updatedUser));
+              }
+            }
             
             // Update cached user in auth object
             if (window.hustlAPI && window.hustlAPI.auth) {
               window.hustlAPI.auth.currentUser = updatedUser;
+              console.log('[PROFILE SAVE] Updated auth.currentUser with photoUrl:', updatedUser.photoUrl);
             }
             
             // Invalidate API cache to force fresh fetch on next render
@@ -12500,7 +12521,19 @@ async function renderJobs(reset = false) {
       if (response.ok) {
         user = await response.json();
         console.log('[PROFILE RENDER] Fetched fresh user data from server:', user);
-        // Update cache with fresh data from server
+        console.log('[PROFILE RENDER] User photoUrl:', user.photoUrl);
+        
+        // CRITICAL: Ensure photoUrl is always included
+        if (!user.photoUrl) {
+          console.warn('[PROFILE RENDER] User data missing photoUrl, checking localStorage');
+          const cachedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
+          if (cachedUser.photoUrl && cachedUser.id === user.id) {
+            user.photoUrl = cachedUser.photoUrl;
+            console.log('[PROFILE RENDER] Restored photoUrl from localStorage:', user.photoUrl);
+          }
+        }
+        
+        // Update cache with fresh data from server (including photoUrl)
         localStorage.setItem('hustl_user', JSON.stringify(user));
         if (window.hustlAPI && window.hustlAPI.auth) {
           window.hustlAPI.auth.currentUser = user;

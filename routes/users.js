@@ -20,7 +20,7 @@ router.get('/me', authenticate, async (req, res) => {
           username: true,
           city: true,
           zip: true,
-          photoUrl: true,
+          photoUrl: true, // CRITICAL: Always include photoUrl
           roles: true,
           ratingAvg: true,
           ratingCount: true,
@@ -33,7 +33,9 @@ router.get('/me', authenticate, async (req, res) => {
       });
     } catch (genderError) {
       // If gender/bio/tools columns don't exist, query without them
+      // BUT ALWAYS include photoUrl
       if (genderError.message && (genderError.message.includes('gender') || genderError.message.includes('tools'))) {
+        console.warn('[GET /users/me] Some columns missing, retrying without them (but keeping photoUrl)');
         user = await prisma.user.findUnique({
           where: { id: req.user.id },
           select: {
@@ -43,7 +45,7 @@ router.get('/me', authenticate, async (req, res) => {
             username: true,
             city: true,
             zip: true,
-            photoUrl: true,
+            photoUrl: true, // CRITICAL: Always include photoUrl even in fallback
             roles: true,
             ratingAvg: true,
             ratingCount: true,
@@ -57,6 +59,12 @@ router.get('/me', authenticate, async (req, res) => {
       } else {
         throw genderError;
       }
+    }
+    
+    // Ensure photoUrl is always present (even if null)
+    if (user && user.photoUrl === undefined) {
+      console.warn('[GET /users/me] photoUrl was undefined, setting to null');
+      user.photoUrl = null;
     }
 
     res.json(user);
@@ -195,7 +203,8 @@ router.patch('/me', authenticate, [
     try {
       console.log('[PATCH /users/me] Attempting Prisma update with data:', JSON.stringify(updateData, null, 2));
       
-      // Build select statement - try without tools first since it may not exist
+      // Build select statement - ALWAYS include photoUrl (critical for profile photos)
+      // Try without tools first since it may not exist
       const baseSelect = {
         id: true,
         email: true,
@@ -203,7 +212,7 @@ router.patch('/me', authenticate, [
         username: true,
         city: true,
         zip: true,
-        photoUrl: true,
+        photoUrl: true, // CRITICAL: Always include photoUrl
         roles: true,
         ratingAvg: true,
         ratingCount: true,
@@ -271,7 +280,7 @@ router.patch('/me', authenticate, [
           username: true,
           city: true,
           zip: true,
-          photoUrl: true,
+          photoUrl: true, // CRITICAL: Always include photoUrl even in fallback
           roles: true,
           ratingAvg: true,
           ratingCount: true,
@@ -355,16 +364,27 @@ const upload = multer({
 
 router.post('/me/photo', authenticate, upload.single('photo'), async (req, res) => {
   try {
+    console.log('[POST /users/me/photo] Photo upload request received');
+    
     if (!req.file) {
+      console.error('[POST /users/me/photo] No file provided');
       return res.status(400).json({ error: 'No photo file provided' });
     }
 
     const { file } = req;
+    console.log('[POST /users/me/photo] File received:', {
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      userId: req.user.id
+    });
     
     // Generate unique filename
     const timestamp = Date.now();
     const extension = file.originalname.split('.').pop() || 'jpg';
     const filename = `profile-photos/${req.user.id}/${timestamp}.${extension}`;
+    
+    console.log('[POST /users/me/photo] Uploading to R2:', filename);
     
     // Upload to R2
     const { fileKey, publicUrl } = await uploadFileToR2(
@@ -373,30 +393,73 @@ router.post('/me/photo', authenticate, upload.single('photo'), async (req, res) 
       file.mimetype
     );
 
-    // Update user's photoUrl in database
-    const user = await prisma.user.update({
-      where: { id: req.user.id },
-      data: {
-        photoUrl: publicUrl,
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        username: true,
-        photoUrl: true,
-        updatedAt: true,
-      },
-    });
+    console.log('[POST /users/me/photo] R2 upload successful:', { fileKey, publicUrl });
+
+    // Update user's photoUrl in database - ALWAYS include photoUrl in select
+    // Handle tools column error gracefully
+    let user;
+    try {
+      user = await prisma.user.update({
+        where: { id: req.user.id },
+        data: {
+          photoUrl: publicUrl,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          username: true,
+          photoUrl: true, // CRITICAL: Always include photoUrl
+          updatedAt: true,
+          gender: true,
+          bio: true,
+          tools: true,
+        },
+      });
+    } catch (toolsError) {
+      // If tools column doesn't exist, retry without it
+      if (toolsError.code === 'P2022' && toolsError.message && toolsError.message.includes('tools')) {
+        console.warn('[POST /users/me/photo] Tools column missing, retrying without it');
+        user = await prisma.user.update({
+          where: { id: req.user.id },
+          data: {
+            photoUrl: publicUrl,
+          },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            username: true,
+            photoUrl: true, // CRITICAL: Always include photoUrl
+            updatedAt: true,
+            gender: true,
+            bio: true,
+          },
+        });
+        user.tools = null;
+      } else {
+        throw toolsError;
+      }
+    }
+
+    console.log('[POST /users/me/photo] Database updated successfully. photoUrl:', user.photoUrl);
 
     res.json({
       success: true,
-      photoUrl: publicUrl,
-      user: user,
+      photoUrl: publicUrl, // Return the publicUrl from R2
+      user: user, // Return full user object with photoUrl from database
     });
   } catch (error) {
-    console.error('Upload profile photo error:', error);
-    res.status(500).json({ error: error.message || 'Failed to upload profile photo' });
+    console.error('[POST /users/me/photo] Upload error:', error);
+    console.error('[POST /users/me/photo] Error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      error: error.message || 'Failed to upload profile photo',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
