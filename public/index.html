@@ -5795,7 +5795,8 @@ function showChangePasswordModal() {
                 dropoff_apt: onSiteOnly ? null : (dropoffApt || null),
                 dropoff_lat: onSiteOnly ? null : (document.getElementById('dropoffLat')?.value || null),
                 dropoff_lng: onSiteOnly ? null : (document.getElementById('dropoffLng')?.value || null),
-                hide_address_until_assigned: hideAddressUntilAssigned, // Privacy setting
+                hide_pickup_address_until_assigned: hidePickupAddressUntilAssigned, // Privacy setting for pickup
+                hide_dropoff_address_until_assigned: hideDropoffAddressUntilAssigned, // Privacy setting for dropoff
                 equipment_needed: equipmentNeeded.length > 0 ? equipmentNeeded : null,
                 sub_tags: subTags.length > 0 ? subTags : null,
                 notes: notes || null,
@@ -7676,20 +7677,35 @@ async function renderJobs(reset = false) {
         detailsList.style.cssText = "display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
         
         // Check if address should be hidden based on customer preference
-        const hideAddressUntilAssigned = job.requirements?.hide_address_until_assigned || job.requirements?.hideAddressUntilAssigned;
-        let showFullAddressDetails = true;
+        const hidePickupAddressUntilAssigned = job.requirements?.hide_pickup_address_until_assigned || job.requirements?.hidePickupAddressUntilAssigned;
+        let showFullPickupAddressDetails = true;
         
-        if (hideAddressUntilAssigned) {
+        if (hidePickupAddressUntilAssigned) {
           try {
             const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
             if (user) {
               const isHustler = user && !user.roles?.includes('CUSTOMER');
               const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS' || job.status === 'COMPLETED_BY_HUSTLER');
-              // Show address if: user is customer OR job is accepted/assigned
-              showFullAddressDetails = !isHustler || jobAccepted;
+              showFullPickupAddressDetails = !isHustler || jobAccepted;
             }
           } catch (e) {
-            showFullAddressDetails = true;
+            showFullPickupAddressDetails = true;
+          }
+        }
+        
+        const hideDropoffAddressUntilAssigned = job.requirements?.hide_dropoff_address_until_assigned || job.requirements?.hideDropoffAddressUntilAssigned;
+        let showFullDropoffAddressDetails = true;
+        
+        if (hideDropoffAddressUntilAssigned) {
+          try {
+            const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
+            if (user) {
+              const isHustler = user && !user.roles?.includes('CUSTOMER');
+              const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS' || job.status === 'COMPLETED_BY_HUSTLER');
+              showFullDropoffAddressDetails = !isHustler || jobAccepted;
+            }
+          } catch (e) {
+            showFullDropoffAddressDetails = true;
           }
         }
         
