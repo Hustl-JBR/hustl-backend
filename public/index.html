@@ -4913,26 +4913,38 @@ function showChangePasswordModal() {
     }
     // Initialize Mapbox Places Autocomplete
     async function initMapboxAutocomplete() {
-      // Get Mapbox token from config, window variable, or fetch from backend
-      let MAPBOX_TOKEN = window.HUSTL_CONFIG?.MAPBOX_TOKEN || window.MAPBOX_TOKEN || '';
+      // Always try to fetch from backend first (Railway environment variable)
+      let MAPBOX_TOKEN = '';
       
-      // If not in config, try to fetch from backend
+      try {
+        const response = await fetch(`${API_BASE}/jobs/mapbox-token`);
+        if (response.ok) {
+          const data = await response.json();
+          MAPBOX_TOKEN = data.token;
+          console.log('✅ Mapbox token loaded from backend');
+        } else {
+          console.warn('⚠️ Could not fetch Mapbox token from backend:', response.status);
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not fetch Mapbox token from backend:', e);
+      }
+      
+      // Fallback to config or window variable
       if (!MAPBOX_TOKEN) {
-        try {
-          const response = await fetch(`${API_BASE}/jobs/mapbox-token`);
-          if (response.ok) {
-            const data = await response.json();
-            MAPBOX_TOKEN = data.token;
-          }
-        } catch (e) {
-          console.warn('Could not fetch Mapbox token from backend:', e);
+        MAPBOX_TOKEN = window.HUSTL_CONFIG?.MAPBOX_TOKEN || window.MAPBOX_TOKEN || '';
+        if (MAPBOX_TOKEN) {
+          console.log('✅ Mapbox token loaded from frontend config');
         }
       }
       
       if (!MAPBOX_TOKEN) {
-        console.warn('Mapbox token not configured. Address autocomplete will not work. See MAPBOX_SETUP.md for instructions.');
+        console.warn('❌ Mapbox token not configured. Address autocomplete will not work.');
+        console.warn('💡 Make sure MAPBOX_TOKEN is set in Railway environment variables.');
         return;
       }
+      
+      // Store token globally for map initialization
+      window.MAPBOX_TOKEN = MAPBOX_TOKEN;
       
       // Helper function to extract address components from Mapbox result
       function extractAddressComponents(feature) {
@@ -5084,8 +5096,13 @@ function showChangePasswordModal() {
       });
       
       // Initialize Mapbox autocomplete after form is ready
-      setTimeout(() => {
-        initMapboxAutocomplete();
+      // Also ensure token is loaded for maps
+      setTimeout(async () => {
+        await initMapboxAutocomplete();
+        // If token wasn't loaded yet, try to initialize mapboxgl
+        if (window.MAPBOX_TOKEN && window.mapboxgl) {
+          mapboxgl.accessToken = window.MAPBOX_TOKEN;
+        }
       }, 500);
 
       // Pricing option toggle
