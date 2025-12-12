@@ -12144,11 +12144,11 @@ async function renderJobs(reset = false) {
       if (!container) {
         return;
       }
-      // Use smaller size for mobile-friendly profile photo (60px for compact mobile view)
-      const avatarContent = renderUserAvatar(user, 60, { 
+      // Use much smaller size for mobile-friendly profile photo (48px for compact mobile view)
+      const avatarContent = renderUserAvatar(user, 48, { 
         showBorder: true, 
         borderWidth: '2px',
-        style: 'box-shadow: 0 2px 6px rgba(0,0,0,0.1);'
+        style: 'box-shadow: 0 2px 4px rgba(0,0,0,0.1);'
       });
       
       const genderLabel = user.gender ? 
@@ -12158,10 +12158,10 @@ async function renderJobs(reset = false) {
          user.gender === 'prefer_not_to_say' ? 'Prefer not to say' : user.gender) : '';
       
       container.innerHTML = `
-        <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;">
-          <div style="display: flex; gap: 1.25rem; align-items: flex-start;">
+        <div class="card" style="padding: 1rem; margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;">
+          <div style="display: flex; gap: 1rem; align-items: flex-start;">
             <!-- Profile Photo -->
-            ${avatarContent.replace('width: 60px; height: 60px;', 'width: 60px; height: 60px;').replace('class=""', 'class="" style="flex-shrink: 0;"')}
+            ${avatarContent.replace('width: 48px; height: 48px;', 'width: 48px; height: 48px;').replace('class=""', 'class="" style="flex-shrink: 0;"')}
             
             <!-- Info -->
             <div style="flex: 1; min-width: 0;">
@@ -12213,8 +12213,8 @@ async function renderJobs(reset = false) {
           <div style="display: flex; gap: 1.5rem; align-items: flex-start;">
             <!-- Profile Photo with Upload -->
             <div style="flex-shrink: 0;">
-              <div id="basicInfoPhotoPreview" style="margin-bottom: 1rem; width: 60px; height: 60px;">
-                ${avatarContent.replace('width: 60px; height: 60px;', 'width: 60px; height: 60px;')}
+              <div id="basicInfoPhotoPreview" style="margin-bottom: 1rem; width: 48px; height: 48px;">
+                ${avatarContent.replace('width: 48px; height: 48px;', 'width: 48px; height: 48px;')}
               </div>
               <input type="file" id="basicInfoPhotoUpload" accept="image/*" style="display: none;" />
               <button class="btn btn-ghost" onclick="document.getElementById('basicInfoPhotoUpload').click();" style="width: 100%; padding: 0.5rem; font-size: 0.85rem;">Upload new photo</button>
@@ -12292,10 +12292,10 @@ async function renderJobs(reset = false) {
             photoPreview = event.target.result;
             newPhotoFile = file;
             const tempUserForPreview = { ...user, photoUrl: photoPreview };
-            photoPreviewDiv.innerHTML = renderUserAvatar(tempUserForPreview, 60, { 
+            photoPreviewDiv.innerHTML = renderUserAvatar(tempUserForPreview, 48, { 
               showBorder: true, 
               borderWidth: '2px',
-              style: 'box-shadow: 0 2px 6px rgba(0,0,0,0.1);'
+              style: 'box-shadow: 0 2px 4px rgba(0,0,0,0.1);'
             });
           };
           reader.readAsDataURL(file);
@@ -12675,10 +12675,10 @@ async function renderJobs(reset = false) {
       basicInfoSection.innerHTML = `
         <div class="card" style="padding: 2rem; margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;">
           <div style="display: flex; gap: 2rem; align-items: flex-start;">
-            ${renderUserAvatar(user, 60, { 
+            ${renderUserAvatar(user, 48, { 
               showBorder: true, 
               borderWidth: '2px',
-              style: 'box-shadow: 0 2px 6px rgba(0,0,0,0.1); flex-shrink: 0;'
+              style: 'box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex-shrink: 0;'
             })}
             <div style="flex: 1; min-width: 0;">
               <h2 style="margin: 0; font-size: 1.75rem; font-weight: 700; color: var(--text-main);">${user.name || 'User'}</h2>
