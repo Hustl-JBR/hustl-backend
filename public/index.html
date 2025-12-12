@@ -12120,7 +12120,7 @@ async function renderJobs(reset = false) {
           <div style="display: flex; gap: 2rem; align-items: flex-start;">
             <!-- Profile Photo with Upload -->
             <div style="flex-shrink: 0;">
-              <div style="width: 120px; height: 120px; border-radius: 50%; overflow: hidden; border: 3px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 1rem;" id="basicInfoPhotoPreview">
+              <div id="basicInfoPhotoPreview" style="margin-bottom: 1rem;">
                 ${avatarContent}
               </div>
               <input type="file" id="basicInfoPhotoUpload" accept="image/*" style="display: none;" />
