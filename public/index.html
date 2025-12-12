@@ -3580,17 +3580,64 @@
           <!-- Sort & Status Row -->
           <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
             <!-- Sort Dropdown -->
-            <div style="flex: 1; min-width: 140px;">
-              <select id="jobsSortBy" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: white;">
-                <option value="newest">🕐 Newest First</option>
-                <option value="highest">💰 Highest Pay</option>
-                <option value="lowest">💵 Lowest Pay</option>
-                <option value="closest">📍 Closest</option>
+            <div style="flex: 1; min-width: 150px;">
+              <select id="jobsSortSelect" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; background: white; cursor: pointer;">
+                <option value="newest">Newest</option>
+                <option value="highest_paid">Highest Paid</option>
+                <option value="lowest_paid">Lowest Paid</option>
+                <option value="closest">Closest</option>
+                <option value="soonest">Soonest Deadline</option>
               </select>
             </div>
-            
-            <!-- Status Pills -->
-            <!-- Status filters removed - Browse Jobs only shows OPEN jobs -->
+          </div>
+          
+          <!-- Category Filter -->
+          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">Category</div>
+            <div id="categoryFilterContainer" style="overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin;">
+              <div id="categoryFilterChips" style="display: flex; gap: 0.5rem; flex-wrap: nowrap; padding-bottom: 0.25rem;">
+                <!-- Categories will be populated dynamically -->
+              </div>
+            </div>
+            <button id="categoryViewMoreBtn" style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: transparent; border: none; font-size: 0.8rem; color: var(--primary); cursor: pointer; display: none;">View More</button>
+          </div>
+          
+          <!-- Price Type Filter -->
+          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">Price Type</div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="filter-chip price-chip" data-price-type="flat" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">Flat</button>
+              <button class="filter-chip price-chip" data-price-type="hourly" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">Hourly</button>
+              <button class="filter-chip price-chip" data-price-type="hustler_sets" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">Hustler Sets</button>
+            </div>
+          </div>
+          
+          <!-- Time Filter -->
+          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">Time</div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="filter-chip time-chip" data-time="asap" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">ASAP/Today</button>
+              <button class="filter-chip time-chip" data-time="tomorrow" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">Tomorrow</button>
+              <button class="filter-chip time-chip" data-time="this_week" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">This Week</button>
+              <button id="timeViewMoreBtn" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--primary); cursor: pointer; white-space: nowrap;">View More</button>
+            </div>
+            <div id="timeMoreOptions" style="display: none; margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="filter-chip time-chip" data-time="scheduled" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">Scheduled</button>
+              <button class="filter-chip time-chip" data-time="flexible" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">Flexible</button>
+            </div>
+          </div>
+          
+          <!-- Workers Filter -->
+          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">Workers</div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="filter-chip workers-chip" data-workers="1" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">1 worker</button>
+              <button class="filter-chip workers-chip" data-workers="2" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">2 workers</button>
+              <button id="workersViewMoreBtn" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--primary); cursor: pointer; white-space: nowrap;">View More</button>
+            </div>
+            <div id="workersMoreOptions" style="display: none; margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="filter-chip workers-chip" data-workers="3" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">3+ workers</button>
+            </div>
           </div>
           
           <!-- Location Permission & Distance Filter -->
@@ -18294,13 +18341,190 @@ meta.textContent =
       }
       
       // Sort dropdown
-      const sortSelect = document.getElementById("jobsSortBy");
+      const sortSelect = document.getElementById("jobsSortSelect");
       if (sortSelect) {
-        sortSelect.addEventListener("change", () => {
-          activeSortBy = sortSelect.value;
+        sortSelect.value = activeSortBy;
+        sortSelect.addEventListener("change", (e) => {
+          activeSortBy = e.target.value;
           if (typeof renderJobs === 'function') {
             renderJobs(true);
           }
+        });
+      }
+      
+      // Category filter - populate dynamically from available jobs
+      const categoryFilterChips = document.getElementById("categoryFilterChips");
+      const categoryViewMoreBtn = document.getElementById("categoryViewMoreBtn");
+      if (categoryFilterChips) {
+        // Function to populate categories
+        function populateCategories() {
+          const categories = new Set();
+          if (Array.isArray(allLoadedJobs)) {
+            allLoadedJobs.forEach(job => {
+              if (job.category) categories.add(job.category.toLowerCase());
+            });
+          }
+          
+          const categoryNames = {
+            'moving': 'Moving', 'yard-work': 'Yard Work', 'dump-run': 'Dump Run',
+            'cleaning': 'Cleaning', 'power-washing': 'Power Wash', 'furniture-assembly': 'Assembly',
+            'painting': 'Painting', 'handyman': 'Handyman', 'landscaping': 'Landscaping',
+            'pet-care': 'Pet Care', 'delivery': 'Delivery', 'car-cleaning': 'Car Clean',
+            'event-setup': 'Event Setup', 'snow-removal': 'Snow Removal', 'other': 'Other'
+          };
+          
+          const categoryArray = Array.from(categories);
+          const initialCategories = categoryArray.slice(0, 6);
+          const moreCategories = categoryArray.slice(6);
+          
+          // Clear existing chips
+          categoryFilterChips.innerHTML = '';
+          
+          // Add initial categories
+          initialCategories.forEach(cat => {
+            const chip = document.createElement("button");
+            chip.className = "filter-chip category-chip";
+            chip.dataset.category = cat;
+            chip.textContent = categoryNames[cat] || cat;
+            chip.style.cssText = "padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;";
+            chip.addEventListener("click", () => {
+              if (activeCategoryFilters.has(cat)) {
+                activeCategoryFilters.delete(cat);
+                chip.style.background = "white";
+                chip.style.color = "var(--text-main)";
+              } else {
+                activeCategoryFilters.add(cat);
+                chip.style.background = "var(--primary)";
+                chip.style.color = "white";
+              }
+              if (typeof renderJobs === 'function') {
+                renderJobs(true);
+              }
+            });
+            categoryFilterChips.appendChild(chip);
+          });
+          
+          // Show "View More" if there are more categories
+          if (moreCategories.length > 0 && categoryViewMoreBtn) {
+            categoryViewMoreBtn.style.display = "block";
+            let showingMore = false;
+            const moreContainer = document.createElement("div");
+            moreContainer.id = "categoryMoreOptions";
+            moreContainer.style.cssText = "display: none; margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;";
+            
+            moreCategories.forEach(cat => {
+              const chip = document.createElement("button");
+              chip.className = "filter-chip category-chip";
+              chip.dataset.category = cat;
+              chip.textContent = categoryNames[cat] || cat;
+              chip.style.cssText = "padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;";
+              chip.addEventListener("click", () => {
+                if (activeCategoryFilters.has(cat)) {
+                  activeCategoryFilters.delete(cat);
+                  chip.style.background = "white";
+                  chip.style.color = "var(--text-main)";
+                } else {
+                  activeCategoryFilters.add(cat);
+                  chip.style.background = "var(--primary)";
+                  chip.style.color = "white";
+                }
+                if (typeof renderJobs === 'function') {
+                  renderJobs(true);
+                }
+              });
+              moreContainer.appendChild(chip);
+            });
+            
+            categoryViewMoreBtn.parentNode.insertBefore(moreContainer, categoryViewMoreBtn.nextSibling);
+            
+            categoryViewMoreBtn.addEventListener("click", () => {
+              showingMore = !showingMore;
+              moreContainer.style.display = showingMore ? "flex" : "none";
+              categoryViewMoreBtn.textContent = showingMore ? "View Less" : "View More";
+            });
+          }
+        }
+        
+        // Populate categories when jobs are loaded
+        populateCategories();
+      }
+      
+      // Price type filter handlers
+      document.querySelectorAll('.price-chip').forEach(btn => {
+        btn.addEventListener("click", () => {
+          const priceType = btn.dataset.priceType;
+          if (activePriceTypeFilters.has(priceType)) {
+            activePriceTypeFilters.delete(priceType);
+            btn.style.background = "white";
+            btn.style.color = "var(--text-main)";
+          } else {
+            activePriceTypeFilters.add(priceType);
+            btn.style.background = "var(--primary)";
+            btn.style.color = "white";
+          }
+          if (typeof renderJobs === 'function') {
+            renderJobs(true);
+          }
+        });
+      });
+      
+      // Time filter handlers
+      document.querySelectorAll('.time-chip').forEach(btn => {
+        btn.addEventListener("click", () => {
+          const time = btn.dataset.time;
+          if (activeTimeFilters.has(time)) {
+            activeTimeFilters.delete(time);
+            btn.style.background = "white";
+            btn.style.color = "var(--text-main)";
+          } else {
+            activeTimeFilters.add(time);
+            btn.style.background = "var(--primary)";
+            btn.style.color = "white";
+          }
+          if (typeof renderJobs === 'function') {
+            renderJobs(true);
+          }
+        });
+      });
+      
+      const timeViewMoreBtn = document.getElementById("timeViewMoreBtn");
+      const timeMoreOptions = document.getElementById("timeMoreOptions");
+      if (timeViewMoreBtn && timeMoreOptions) {
+        let showingMore = false;
+        timeViewMoreBtn.addEventListener("click", () => {
+          showingMore = !showingMore;
+          timeMoreOptions.style.display = showingMore ? "flex" : "none";
+          timeViewMoreBtn.textContent = showingMore ? "View Less" : "View More";
+        });
+      }
+      
+      // Workers filter handlers
+      document.querySelectorAll('.workers-chip').forEach(btn => {
+        btn.addEventListener("click", () => {
+          const workers = btn.dataset.workers;
+          if (activeWorkersFilters.has(workers)) {
+            activeWorkersFilters.delete(workers);
+            btn.style.background = "white";
+            btn.style.color = "var(--text-main)";
+          } else {
+            activeWorkersFilters.add(workers);
+            btn.style.background = "var(--primary)";
+            btn.style.color = "white";
+          }
+          if (typeof renderJobs === 'function') {
+            renderJobs(true);
+          }
+        });
+      });
+      
+      const workersViewMoreBtn = document.getElementById("workersViewMoreBtn");
+      const workersMoreOptions = document.getElementById("workersMoreOptions");
+      if (workersViewMoreBtn && workersMoreOptions) {
+        let showingMore = false;
+        workersViewMoreBtn.addEventListener("click", () => {
+          showingMore = !showingMore;
+          workersMoreOptions.style.display = showingMore ? "flex" : "none";
+          workersViewMoreBtn.textContent = showingMore ? "View Less" : "View More";
         });
       }
       
