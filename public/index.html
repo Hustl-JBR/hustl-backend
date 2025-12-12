@@ -12021,28 +12021,53 @@ async function renderJobs(reset = false) {
     }
     
     // Function to update all avatars in the DOM for a specific user
+    // This ensures immediate propagation when a photo is updated
     function updateAllAvatarsInDOM(photoUrl, userId) {
-      if (!photoUrl || !userId) return;
+      if (!photoUrl || !userId) {
+        console.warn('[updateAllAvatarsInDOM] Missing photoUrl or userId:', { photoUrl, userId });
+        return;
+      }
       
-      // Find all avatar images for this user
-      const allAvatars = document.querySelectorAll(`img[data-user-id="${userId}"], img[alt*="${userId}"]`);
-      allAvatars.forEach(img => {
-        if (img.src !== photoUrl) {
-          // Add cache-busting to force refresh
-          const separator = photoUrl.includes('?') ? '&' : '?';
-          img.src = `${photoUrl}${separator}t=${Date.now()}`;
+      const cleanPhotoUrl = photoUrl.replace(/\?t=\d+(&t=\d+)*$/, ''); // Remove existing cache busters
+      const cacheBuster = `?t=${Date.now()}`;
+      const photoUrlWithCache = `${cleanPhotoUrl}${cacheBuster}`;
+      
+      console.log('[updateAllAvatarsInDOM] Updating avatars for user:', userId, 'with URL:', cleanPhotoUrl);
+      
+      // Find all avatar images for this user (by data-user-id attribute)
+      const allAvatarImages = document.querySelectorAll(`img[data-user-id="${userId}"]`);
+      allAvatarImages.forEach(img => {
+        const currentSrc = img.src.split('?')[0]; // Compare without cache buster
+        if (currentSrc !== cleanPhotoUrl) {
+          img.src = photoUrlWithCache;
+          console.log('[updateAllAvatarsInDOM] Updated img src:', img.src);
         }
       });
       
-      // Also update any avatar containers that might have user data
+      // Also update any avatar containers (divs with data-user-id)
       const avatarContainers = document.querySelectorAll(`[data-user-id="${userId}"]`);
       avatarContainers.forEach(container => {
         const img = container.querySelector('img');
-        if (img && img.src !== photoUrl) {
-          const separator = photoUrl.includes('?') ? '&' : '?';
-          img.src = `${photoUrl}${separator}t=${Date.now()}`;
+        if (img) {
+          const currentSrc = img.src.split('?')[0];
+          if (currentSrc !== cleanPhotoUrl) {
+            img.src = photoUrlWithCache;
+            console.log('[updateAllAvatarsInDOM] Updated container img src:', img.src);
+          }
         }
       });
+      
+      // Force re-render by triggering a re-render of conversation items if messages view is active
+      if (activeView === 'messages') {
+        // Re-render conversation list to pick up new photo
+        setTimeout(() => {
+          if (typeof renderMessagesView === 'function') {
+            renderMessagesView();
+          }
+        }, 100);
+      }
+      
+      console.log('[updateAllAvatarsInDOM] Updated', allAvatarImages.length + avatarContainers.length, 'avatar elements');
     }
 
     // Centralized avatar rendering function - single source of truth
@@ -12119,11 +12144,11 @@ async function renderJobs(reset = false) {
       if (!container) {
         return;
       }
-      // Use smaller size for mobile-friendly profile photo (80px instead of 120px)
-      const avatarContent = renderUserAvatar(user, 80, { 
+      // Use smaller size for mobile-friendly profile photo (60px for compact mobile view)
+      const avatarContent = renderUserAvatar(user, 60, { 
         showBorder: true, 
         borderWidth: '2px',
-        style: 'box-shadow: 0 2px 8px rgba(0,0,0,0.1);'
+        style: 'box-shadow: 0 2px 6px rgba(0,0,0,0.1);'
       });
       
       const genderLabel = user.gender ? 
@@ -12133,10 +12158,10 @@ async function renderJobs(reset = false) {
          user.gender === 'prefer_not_to_say' ? 'Prefer not to say' : user.gender) : '';
       
       container.innerHTML = `
-        <div class="card" style="padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;">
-          <div style="display: flex; gap: 1.5rem; align-items: flex-start;">
+        <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;">
+          <div style="display: flex; gap: 1.25rem; align-items: flex-start;">
             <!-- Profile Photo -->
-            ${avatarContent.replace('width: 80px; height: 80px;', 'width: 80px; height: 80px;').replace('class=""', 'class="" style="flex-shrink: 0;"')}
+            ${avatarContent.replace('width: 60px; height: 60px;', 'width: 60px; height: 60px;').replace('class=""', 'class="" style="flex-shrink: 0;"')}
             
             <!-- Info -->
             <div style="flex: 1; min-width: 0;">
@@ -12188,8 +12213,8 @@ async function renderJobs(reset = false) {
           <div style="display: flex; gap: 1.5rem; align-items: flex-start;">
             <!-- Profile Photo with Upload -->
             <div style="flex-shrink: 0;">
-              <div id="basicInfoPhotoPreview" style="margin-bottom: 1rem; width: 80px; height: 80px;">
-                ${avatarContent.replace('width: 80px; height: 80px;', 'width: 80px; height: 80px;')}
+              <div id="basicInfoPhotoPreview" style="margin-bottom: 1rem; width: 60px; height: 60px;">
+                ${avatarContent.replace('width: 60px; height: 60px;', 'width: 60px; height: 60px;')}
               </div>
               <input type="file" id="basicInfoPhotoUpload" accept="image/*" style="display: none;" />
               <button class="btn btn-ghost" onclick="document.getElementById('basicInfoPhotoUpload').click();" style="width: 100%; padding: 0.5rem; font-size: 0.85rem;">Upload new photo</button>
@@ -12267,10 +12292,10 @@ async function renderJobs(reset = false) {
             photoPreview = event.target.result;
             newPhotoFile = file;
             const tempUserForPreview = { ...user, photoUrl: photoPreview };
-            photoPreviewDiv.innerHTML = renderUserAvatar(tempUserForPreview, 80, { 
+            photoPreviewDiv.innerHTML = renderUserAvatar(tempUserForPreview, 60, { 
               showBorder: true, 
               borderWidth: '2px',
-              style: 'box-shadow: 0 2px 8px rgba(0,0,0,0.1);'
+              style: 'box-shadow: 0 2px 6px rgba(0,0,0,0.1);'
             });
           };
           reader.readAsDataURL(file);
@@ -12650,9 +12675,11 @@ async function renderJobs(reset = false) {
       basicInfoSection.innerHTML = `
         <div class="card" style="padding: 2rem; margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;">
           <div style="display: flex; gap: 2rem; align-items: flex-start;">
-            <div style="width: 120px; height: 120px; border-radius: 50%; overflow: hidden; flex-shrink: 0; border: 3px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.1); background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 700; color: var(--primary);">
-              ${(user.name || 'U')[0].toUpperCase()}
-            </div>
+            ${renderUserAvatar(user, 60, { 
+              showBorder: true, 
+              borderWidth: '2px',
+              style: 'box-shadow: 0 2px 6px rgba(0,0,0,0.1); flex-shrink: 0;'
+            })}
             <div style="flex: 1; min-width: 0;">
               <h2 style="margin: 0; font-size: 1.75rem; font-weight: 700; color: var(--text-main);">${user.name || 'User'}</h2>
               <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
@@ -15155,7 +15182,10 @@ meta.textContent =
                   </div>
                   ${otherUser ? `
                   <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px;">
-                    ${otherUser.photoUrl ? `<img src="${otherUser.photoUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; cursor: pointer;" class="viewOtherUserProfile" data-user-id="${otherUser.id}">` : `<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); cursor: pointer;" class="viewOtherUserProfile" data-user-id="${otherUser.id}">${(otherUser.name || 'U')[0].toUpperCase()}</div>`}
+                    ${renderUserAvatar(otherUser, 40, {
+                      className: 'viewOtherUserProfile',
+                      style: 'cursor: pointer;'
+                    })}
                     <div style="flex: 1;">
                       <div style="font-size: 0.85rem; color: var(--text-muted);">${isCustomer ? 'Worked with' : 'Worked for'}</div>
                       <div style="font-weight: 600; color: var(--text-main); cursor: pointer;" class="viewOtherUserProfile" data-user-id="${otherUser.id}">${otherUser.name || 'Unknown'}</div>
@@ -15407,7 +15437,9 @@ meta.textContent =
                         background: white;
                       ">
                         <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-                          ${hustler.photoUrl ? `<img src="${hustler.photoUrl}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; flex-shrink: 0;">` : `<div style="width: 60px; height: 60px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); font-size: 1.5rem; flex-shrink: 0;">${(hustler.name || 'U')[0].toUpperCase()}</div>`}
+                          ${renderUserAvatar(hustler, 60, {
+                            style: 'flex-shrink: 0;'
+                          })}
                           <div style="flex: 1;">
                             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
                               <div style="font-weight: 700; color: var(--text-main); font-size: 1.1rem; cursor: pointer;" class="viewHustlerProfile" data-user-id="${hustler.id}">${hustler.name || 'Unknown'}</div>
@@ -17891,7 +17923,11 @@ meta.textContent =
             <div style="padding: 2rem;">
               <!-- Profile Header -->
               <div style="text-align: center; margin-bottom: 2rem;">
-                ${user.photoUrl ? `<img src="${user.photoUrl}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 1rem;">` : `<div style="width: 100px; height: 100px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); font-size: 2.5rem; margin: 0 auto 1rem;">${(user.name || 'U')[0].toUpperCase()}</div>`}
+                ${renderUserAvatar(user, 80, {
+                  showBorder: true,
+                  borderWidth: '3px',
+                  style: 'margin: 0 auto 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15);'
+                })}
                 <h2 style="font-size: 1.75rem; font-weight: 700; margin: 0 0 0.5rem 0; color: var(--text-main);">${user.name || 'Unknown'}</h2>
                 <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem;">
                   <span style="font-size: 1.25rem;">${'⭐'.repeat(Math.floor(user.ratingAvg || 0))}</span>
