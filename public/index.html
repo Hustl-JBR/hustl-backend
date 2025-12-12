@@ -3394,7 +3394,10 @@
 
           <div class="field">
             <label for="pickupAddress">Pickup address (optional)</label>
-            <input id="pickupAddress" type="text" placeholder="Street address (shared in chat or after accept)" />
+            <input id="pickupAddress" type="text" placeholder="Start typing address for autocomplete..." autocomplete="off" />
+            <div id="pickupAddressSuggestions" style="display: none; position: absolute; z-index: 1000; background: white; border: 1px solid #ddd; border-radius: 8px; max-height: 300px; overflow-y: auto; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+            <input type="hidden" id="pickupLat" />
+            <input type="hidden" id="pickupLng" />
           </div>
 
           <div class="field">
@@ -3422,7 +3425,10 @@
             </div>
             <div class="field">
               <label for="dropoffAddress">Dropoff address (optional)</label>
-              <input id="dropoffAddress" type="text" placeholder="Street address (shared in chat or after accept)" />
+              <input id="dropoffAddress" type="text" placeholder="Start typing address for autocomplete..." autocomplete="off" />
+              <div id="dropoffAddressSuggestions" style="display: none; position: absolute; z-index: 1000; background: white; border: 1px solid #ddd; border-radius: 8px; max-height: 300px; overflow-y: auto; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+              <input type="hidden" id="dropoffLat" />
+              <input type="hidden" id="dropoffLng" />
             </div>
           </div>
 
@@ -4898,12 +4904,140 @@ function showChangePasswordModal() {
       if (subTagsContainer) subTagsContainer.style.display = "none";
       if (subTagsGrid) subTagsGrid.innerHTML = "";
     }
+    // Initialize Mapbox Places Autocomplete
+    function initMapboxAutocomplete() {
+      // Get Mapbox token from environment or config
+      // Note: You'll need to set this in your environment or config
+      const MAPBOX_TOKEN = window.MAPBOX_TOKEN || 'pk.eyJ1IjoiaHVzdGxqb2JzIiwiYSI6ImNscm5xY2F0YjBkY2cya3B0c3V1d2N0d2wifQ.YourTokenHere';
+      
+      if (!MAPBOX_TOKEN || MAPBOX_TOKEN.includes('YourTokenHere')) {
+        console.warn('Mapbox token not configured. Address autocomplete will not work.');
+        return;
+      }
+      
+      // Helper function to extract address components from Mapbox result
+      function extractAddressComponents(feature) {
+        const context = feature.context || [];
+        let zip = null;
+        let city = null;
+        let state = null;
+        let neighborhood = null;
+        let street = feature.text || '';
+        
+        for (const item of context) {
+          const id = item.id || '';
+          if (id.startsWith('postcode')) {
+            zip = item.text;
+          } else if (id.startsWith('place')) {
+            city = item.text;
+          } else if (id.startsWith('region')) {
+            state = item.text;
+          } else if (id.startsWith('neighborhood') || id.startsWith('locality')) {
+            neighborhood = item.text;
+          }
+        }
+        
+        return { street, city, state, zip, neighborhood, fullAddress: feature.place_name };
+      }
+      
+      // Initialize pickup address autocomplete
+      const pickupAddressInput = document.getElementById('pickupAddress');
+      if (pickupAddressInput && typeof MapboxGeocoder !== 'undefined') {
+        const pickupGeocoder = new MapboxGeocoder({
+          accessToken: MAPBOX_TOKEN,
+          types: 'address',
+          countries: 'us',
+          placeholder: 'Start typing address...',
+          proximity: { longitude: -86.7816, latitude: 36.1627 }, // Nashville center
+        });
+        
+        pickupGeocoder.addTo('#pickupAddress');
+        
+        pickupGeocoder.on('result', (e) => {
+          const feature = e.result;
+          const [lng, lat] = feature.center;
+          const components = extractAddressComponents(feature);
+          
+          // Store coordinates
+          const latInput = document.getElementById('pickupLat');
+          const lngInput = document.getElementById('pickupLng');
+          if (latInput) latInput.value = lat;
+          if (lngInput) lngInput.value = lng;
+          
+          // Autofill fields
+          if (components.street) {
+            pickupAddressInput.value = components.street;
+          }
+          if (components.neighborhood) {
+            const areaInput = document.getElementById('pickupArea');
+            if (areaInput) areaInput.value = components.neighborhood;
+          }
+          if (components.city) {
+            const cityInput = document.getElementById('pickupCity');
+            if (cityInput) cityInput.value = components.city + (components.state ? ', ' + components.state : '');
+          }
+          if (components.zip) {
+            const zipInput = document.getElementById('pickupZip');
+            if (zipInput) zipInput.value = components.zip;
+          }
+        });
+      }
+      
+      // Initialize dropoff address autocomplete
+      const dropoffAddressInput = document.getElementById('dropoffAddress');
+      if (dropoffAddressInput && typeof MapboxGeocoder !== 'undefined') {
+        const dropoffGeocoder = new MapboxGeocoder({
+          accessToken: MAPBOX_TOKEN,
+          types: 'address',
+          countries: 'us',
+          placeholder: 'Start typing address...',
+          proximity: { longitude: -86.7816, latitude: 36.1627 }, // Nashville center
+        });
+        
+        dropoffGeocoder.addTo('#dropoffAddress');
+        
+        dropoffGeocoder.on('result', (e) => {
+          const feature = e.result;
+          const [lng, lat] = feature.center;
+          const components = extractAddressComponents(feature);
+          
+          // Store coordinates
+          const latInput = document.getElementById('dropoffLat');
+          const lngInput = document.getElementById('dropoffLng');
+          if (latInput) latInput.value = lat;
+          if (lngInput) lngInput.value = lng;
+          
+          // Autofill fields
+          if (components.street) {
+            dropoffAddressInput.value = components.street;
+          }
+          if (components.neighborhood) {
+            const areaInput = document.getElementById('dropoffArea');
+            if (areaInput) areaInput.value = components.neighborhood;
+          }
+          if (components.city) {
+            const cityInput = document.getElementById('dropoffCity');
+            if (cityInput) cityInput.value = components.city + (components.state ? ', ' + components.state : '');
+          }
+          if (components.zip) {
+            const zipInput = document.getElementById('dropoffZip');
+            if (zipInput) zipInput.value = components.zip;
+          }
+        });
+      }
+    }
+    
     function initJobsForm() {
       const jobOnSiteOnly = document.getElementById("jobOnSiteOnly");
       const dropoffFields = document.getElementById("dropoffFields");
       jobOnSiteOnly.addEventListener("change", () => {
         dropoffFields.style.display = jobOnSiteOnly.checked ? "none" : "block";
       });
+      
+      // Initialize Mapbox autocomplete after form is ready
+      setTimeout(() => {
+        initMapboxAutocomplete();
+      }, 500);
 
       // Pricing option toggle
       const pricingOptionSelect = document.getElementById("pricingOption");
@@ -5533,11 +5667,15 @@ function showChangePasswordModal() {
                 pickup_city: pickupCity,
                 pickup_zip: pickupZip,
                 pickup_address: pickupAddress,
+                pickup_lat: document.getElementById('pickupLat')?.value || null,
+                pickup_lng: document.getElementById('pickupLng')?.value || null,
                 on_site_only: onSiteOnly,
                 dropoff_area: onSiteOnly ? null : dropoffArea,
                 dropoff_city: onSiteOnly ? null : dropoffCity,
                 dropoff_zip: onSiteOnly ? null : dropoffZip,
                 dropoff_address: onSiteOnly ? null : dropoffAddress,
+                dropoff_lat: onSiteOnly ? null : (document.getElementById('dropoffLat')?.value || null),
+                dropoff_lng: onSiteOnly ? null : (document.getElementById('dropoffLng')?.value || null),
                 equipment_needed: equipmentNeeded.length > 0 ? equipmentNeeded : null,
                 sub_tags: subTags.length > 0 ? subTags : null,
                 notes: notes || null,
@@ -6176,37 +6314,68 @@ async function renderJobs(reset = false) {
       const dropoffZip = requirements.dropoff_zip;
       const onSiteOnly = requirements.on_site_only || requirements.onSiteOnly || job.onSiteOnly;
       
-      function calculateDistance(zip1, zip2) {
-        if (!zip1 || !zip2) return null;
-        const zip1Num = parseInt(zip1.replace(/\D/g, ''));
-        const zip2Num = parseInt(zip2.replace(/\D/g, ''));
-        if (isNaN(zip1Num) || isNaN(zip2Num)) return null;
-        const diff = Math.abs(zip1Num - zip2Num);
-        const miles = Math.round(diff * 0.1);
-        return miles > 0 ? miles : null;
+      // Helper function to calculate distance using Haversine formula (accurate)
+      function calculateDistance(lat1, lng1, lat2, lng2) {
+        if (!lat1 || !lng1 || !lat2 || !lng2) return null;
+        
+        const R = 3959; // Earth's radius in miles
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = 
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+          Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const miles = R * c;
+        
+        return Math.round(miles * 10) / 10; // Round to 1 decimal place
       }
       
       const pickupAddress = requirements.pickup_address || requirements.pickupAddress;
       const dropoffAddress = requirements.dropoff_address || requirements.dropoffAddress;
+      const pickupLat = requirements.pickup_lat || requirements.pickupLat;
+      const pickupLng = requirements.pickup_lng || requirements.pickupLng;
+      const dropoffLat = requirements.dropoff_lat || requirements.dropoffLat;
+      const dropoffLng = requirements.dropoff_lng || requirements.dropoffLng;
+      
+      // Check if user is hustler and job not accepted - hide full address
+      // Note: This is checked synchronously - if user is not loaded yet, default to showing full address
+      let showFullAddress = true;
+      try {
+        const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
+        if (user) {
+          const isHustler = user && !user.roles?.includes('CUSTOMER');
+          const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
+          showFullAddress = !isHustler || jobAccepted;
+        }
+      } catch (e) {
+        // If we can't determine user, default to showing full address
+        showFullAddress = true;
+      }
       
       if (onSiteOnly) {
-        if (pickupCity) {
+        if (showFullAddress && pickupAddress) {
+          locationText = pickupAddress;
+        } else if (pickupCity) {
           locationText = pickupCity;
           if (pickupZip) locationText += ` ${pickupZip}`;
         } else {
           locationText = job.address?.split(',')[0] || "Location TBD";
         }
       } else if (dropoffArea || dropoffCity || dropoffZip || dropoffAddress) {
-        let pickupStr = pickupCity || "Pickup";
-        let dropoffStr = dropoffCity || "Dropoff";
-        if (pickupZip && dropoffZip) {
-          const miles = calculateDistance(pickupZip, dropoffZip);
-          locationText = `${pickupStr} → ${dropoffStr}${miles ? ` (~${miles} mi)` : ''}`;
+        let pickupStr = showFullAddress && pickupAddress ? pickupAddress : (pickupCity || "Pickup");
+        let dropoffStr = showFullAddress && dropoffAddress ? dropoffAddress : (dropoffCity || "Dropoff");
+        // Use coordinates for accurate distance calculation
+        if (pickupLat && pickupLng && dropoffLat && dropoffLng) {
+          const miles = calculateDistance(parseFloat(pickupLat), parseFloat(pickupLng), parseFloat(dropoffLat), parseFloat(dropoffLng));
+          locationText = `${pickupStr} → ${dropoffStr}${miles ? ` (${miles} mi)` : ''}`;
         } else {
           locationText = `${pickupStr} → ${dropoffStr}`;
         }
       } else {
-        if (pickupCity) {
+        if (showFullAddress && pickupAddress) {
+          locationText = pickupAddress;
+        } else if (pickupCity) {
           locationText = pickupCity;
           if (pickupZip) locationText += ` ${pickupZip}`;
         } else {
@@ -18508,6 +18677,10 @@ try {
   
   <!-- Performance-optimized script loading -->
   <script src="https://js.stripe.com/v3/"></script>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+  <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css" />
   <script src="/app-core.js" defer></script>
   <script src="/mobile-core.js" defer></script>
 </body>

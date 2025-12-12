@@ -71,7 +71,46 @@ async function geocodeAddress(address, options = {}) {
       throw new Error('Address not found');
     }
 
-    const [lng, lat] = data.features[0].center;
+    const feature = data.features[0];
+    const [lng, lat] = feature.center;
+    
+    // Extract address components
+    const context = feature.context || [];
+    let zip = null;
+    let city = null;
+    let state = null;
+    let neighborhood = null;
+    
+    for (const item of context) {
+      if (item.id && item.id.startsWith('postcode')) {
+        zip = item.text;
+      } else if (item.id && item.id.startsWith('place')) {
+        city = item.text;
+      } else if (item.id && item.id.startsWith('region')) {
+        state = item.text;
+      } else if (item.id && item.id.startsWith('neighborhood') || item.id && item.id.startsWith('locality')) {
+        neighborhood = item.text;
+      }
+    }
+    
+    const result = {
+      lat,
+      lng,
+      address: feature.place_name,
+      street: feature.text || '',
+      zip,
+      city,
+      state,
+      neighborhood,
+      fullAddress: feature.place_name,
+    };
+    
+    // Cache the result
+    if (useCache) {
+      geocodeCache.set(address, { result, timestamp: Date.now() });
+    }
+    
+    return result;
   } catch (error) {
     console.error('[Mapbox Geocoding] Error:', error.message);
     
