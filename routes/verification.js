@@ -158,6 +158,9 @@ router.post('/job/:jobId/verify-start', authenticate, async (req, res) => {
     }
 
     // Mark start code as verified - job is now IN_PROGRESS
+    // ⚠️ IMPORTANT: For hourly jobs, this is when the hourly payment timer STARTS
+    // The customer authorized the max amount (hourlyRate × maxHours) when accepting the offer
+    // But the actual charge will be calculated based on actual hours worked (from startedAt to completion)
     // Store startedAt timestamp for hourly jobs to calculate actual hours worked
     const startedAt = new Date();
     const updatedJob = await prisma.job.update({

@@ -6776,16 +6776,74 @@ async function renderJobs(reset = false) {
             throw new Error(error.error || 'Failed to submit application');
           }
 
-          // Success - close modal and show toast
+          // Success - close application modal
           document.body.removeChild(modalOverlay);
           document.body.style.overflow = "";
           
-          showToast("✅ Application Submitted! You'll be notified if the customer accepts you.");
+          // Show success confirmation modal
+          const successOverlay = document.createElement("div");
+          successOverlay.className = "modal-overlay";
+          successOverlay.style.cssText = "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem;";
           
-          // Refresh job details if modal is open
-          if (document.getElementById("jobDetailModal")) {
-            openJobDetails(job.id);
-          }
+          const successModal = document.createElement("div");
+          successModal.style.cssText = "background: white; border-radius: 16px; max-width: 500px; width: 100%; padding: 2rem; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
+          
+          successModal.innerHTML = `
+            <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+            <h2 style="font-size: 1.75rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">Application Sent!</h2>
+            <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 2rem; line-height: 1.6;">
+              You've successfully applied to this job.<br>
+              The customer will review your proposal and respond soon.
+            </p>
+            <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 2rem;">
+              You can manage this application in:<br>
+              <strong style="color: var(--text-main);">Manage → Applied Jobs</strong>
+            </p>
+            <button class="btn btn-primary" id="gotItBtn" style="width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 600; border-radius: 12px;">
+              Got it
+            </button>
+          `;
+          
+          successOverlay.appendChild(successModal);
+          document.body.appendChild(successOverlay);
+          
+          // Handle "Got it" button - navigate to Applied Jobs tab
+          successOverlay.querySelector('#gotItBtn').addEventListener('click', () => {
+            document.body.removeChild(successOverlay);
+            document.body.style.overflow = "";
+            
+            // Navigate to Manage Jobs → Applied Jobs tab
+            setView('manage');
+            setTimeout(() => {
+              const appliedTab = document.getElementById('appliedJobsTab');
+              if (appliedTab) {
+                appliedTab.click();
+                // Load applied jobs
+                if (typeof loadAppliedJobs === 'function') {
+                  loadAppliedJobs();
+                }
+              }
+            }, 100);
+          });
+          
+          // Also allow clicking outside to close
+          successOverlay.addEventListener('click', (e) => {
+            if (e.target === successOverlay) {
+              document.body.removeChild(successOverlay);
+              document.body.style.overflow = "";
+              // Still navigate to Applied Jobs
+              setView('manage');
+              setTimeout(() => {
+                const appliedTab = document.getElementById('appliedJobsTab');
+                if (appliedTab) {
+                  appliedTab.click();
+                  if (typeof loadAppliedJobs === 'function') {
+                    loadAppliedJobs();
+                  }
+                }
+              }, 100);
+            }
+          });
           
           // Refresh jobs list
           renderJobs();
@@ -9059,14 +9117,64 @@ async function renderJobs(reset = false) {
               }
               
               console.log("Offer created successfully:", result);
-              // Show appropriate message based on job type
-              if (job.payType === "hourly" && proposedAmount) {
-                showToast(`✓ Application submitted with proposed hourly rate of $${proposedAmount.toFixed(2)}/hr!`);
-              } else if (proposedAmount) {
-                showToast(`✓ Application submitted with proposed amount of $${proposedAmount.toFixed(2)}!`);
-              } else {
-                showToast("✓ Application submitted!");
-              }
+              
+              // Show success confirmation modal
+              const successOverlay = document.createElement("div");
+              successOverlay.className = "modal-overlay";
+              successOverlay.style.cssText = "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem;";
+              
+              const successModal = document.createElement("div");
+              successModal.style.cssText = "background: white; border-radius: 16px; max-width: 500px; width: 100%; padding: 2rem; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
+              
+              successModal.innerHTML = `
+                <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+                <h2 style="font-size: 1.75rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">Application Sent!</h2>
+                <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 2rem; line-height: 1.6;">
+                  You've successfully applied to this job.<br>
+                  The customer will review your proposal and respond soon.
+                </p>
+                <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 2rem;">
+                  You can manage this application in:<br>
+                  <strong style="color: var(--text-main);">Manage → Applied Jobs</strong>
+                </p>
+                <button class="btn btn-primary" id="gotItBtn2" style="width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 600; border-radius: 12px;">
+                  Got it
+                </button>
+              `;
+              
+              successOverlay.appendChild(successModal);
+              document.body.appendChild(successOverlay);
+              
+              // Handle "Got it" button
+              successOverlay.querySelector('#gotItBtn2').addEventListener('click', () => {
+                document.body.removeChild(successOverlay);
+                setView('manage');
+                setTimeout(() => {
+                  const appliedTab = document.getElementById('appliedJobsTab');
+                  if (appliedTab) {
+                    appliedTab.click();
+                    if (typeof loadAppliedJobs === 'function') {
+                      loadAppliedJobs();
+                    }
+                  }
+                }, 100);
+              });
+              
+              successOverlay.addEventListener('click', (e) => {
+                if (e.target === successOverlay) {
+                  document.body.removeChild(successOverlay);
+                  setView('manage');
+                  setTimeout(() => {
+                    const appliedTab = document.getElementById('appliedJobsTab');
+                    if (appliedTab) {
+                      appliedTab.click();
+                      if (typeof loadAppliedJobs === 'function') {
+                        loadAppliedJobs();
+                      }
+                    }
+                  }, 100);
+                }
+              });
               
               // Small delay before closing to show success
               setTimeout(() => {
@@ -13668,13 +13776,15 @@ meta.textContent =
         console.log("🔵 Fetched all offers:", allOffers.length);
         
         // Filter to show only PENDING and ACCEPTED offers (not DECLINED)
-        // Only show ACCEPTED if job hasn't started yet (for hustler cancellation)
+        // ACCEPTED offers should auto-move to "Active Jobs" when job status becomes IN_PROGRESS
+        // So we only show ACCEPTED if job is SCHEDULED/ASSIGNED but not started yet
         const relevantOffers = allOffers.filter(offer => {
-          // Always show PENDING offers
+          // Always show PENDING offers (waiting for customer review)
           if (offer.status === 'PENDING') return true;
-          // Show ACCEPTED offers only if job is ASSIGNED but start code not verified (can still cancel)
+          // Show ACCEPTED offers only if job is SCHEDULED/ASSIGNED but start code not verified (can still cancel)
+          // Once start code is verified, job moves to IN_PROGRESS and should appear in Active Jobs, not Applied Jobs
           if (offer.status === 'ACCEPTED' && offer.job && (offer.job.status === 'SCHEDULED' || offer.job.status === 'ASSIGNED') && !offer.job.startCodeVerified) return true;
-          // Don't show DECLINED offers
+          // Don't show DECLINED offers or jobs that have started (those are in Active Jobs)
           return false;
         });
         
@@ -13699,10 +13809,60 @@ meta.textContent =
           const job = offer.job;
           if (!job) continue;
           
-          const statusBadge = offer.status === 'ACCEPTED' ? '✅ Accepted - Waiting to Start' : 
-                             '⏳ Pending Review';
-          const statusColor = offer.status === 'ACCEPTED' ? '#10b981' : 
-                            '#f59e0b';
+          // Determine status badge and color
+          let statusBadge = '';
+          let statusColor = '';
+          if (offer.status === 'ACCEPTED') {
+            statusBadge = '✅ Accepted';
+            statusColor = '#10b981';
+          } else if (offer.status === 'PENDING') {
+            statusBadge = '⏳ Pending Review';
+            statusColor = '#f59e0b';
+          } else {
+            statusBadge = '📋 ' + offer.status;
+            statusColor = '#6b7280';
+          }
+          
+          // Format pay display
+          const requirements = job.requirements || {};
+          const pricingOption = requirements.pricing_option;
+          let payDisplay = '';
+          if (pricingOption === 'hustlers_quote') {
+            payDisplay = 'Hustler suggests price';
+          } else if (job.payType === 'hourly' && job.hourlyRate && job.estHours) {
+            const hr = Number(job.hourlyRate);
+            const maxHrs = job.estHours;
+            payDisplay = `$${hr.toFixed(0)}/hr total (max ${maxHrs} hrs)`;
+          } else {
+            payDisplay = `$${Number(job.amount || 0).toFixed(0)} flat`;
+          }
+          
+          // Format original price
+          let originalPriceDisplay = '';
+          if (job.payType === 'hourly' && job.hourlyRate && job.estHours) {
+            originalPriceDisplay = `$${Number(job.hourlyRate).toFixed(0)}/hr total (max ${job.estHours} hrs)`;
+          } else {
+            originalPriceDisplay = `$${Number(job.amount || 0).toFixed(0)} flat`;
+          }
+          
+          // Format proposed price
+          let proposedPriceDisplay = '';
+          if (offer.proposedAmount) {
+            if (job.payType === 'hourly') {
+              proposedPriceDisplay = `$${Number(offer.proposedAmount).toFixed(0)}/hr`;
+            } else {
+              proposedPriceDisplay = `$${Number(offer.proposedAmount).toFixed(0)} flat`;
+            }
+          }
+          
+          // Format location
+          const pickupCity = requirements.pickup_city || requirements.pickupCity;
+          const pickupZip = requirements.pickup_zip;
+          let locationDisplay = job.address || 'Location TBD';
+          if (pickupCity) {
+            locationDisplay = pickupCity;
+            if (pickupZip) locationDisplay += ` ${pickupZip}`;
+          }
           
           const jobCard = document.createElement('div');
           jobCard.className = 'job-card';
@@ -13718,28 +13878,45 @@ meta.textContent =
           
           jobCard.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
-              <div>
+              <div style="flex: 1;">
                 <h3 style="font-size: 1.25rem; font-weight: 700; margin: 0 0 0.5rem 0; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
-                <div style="display: flex; gap: 1rem; color: var(--text-muted); font-size: 0.9rem;">
-                  <span>📍 ${job.address || 'Location TBD'}</span>
-                  <span>💰 $${job.amount || '0'}</span>
+                <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;">
+                  📍 ${locationDisplay}
+                </div>
+                <div style="color: var(--text-muted); font-size: 0.9rem;">
+                  💰 ${payDisplay}
                 </div>
               </div>
-              <div style="padding: 0.5rem 1rem; background: ${statusColor}20; color: ${statusColor}; border-radius: 8px; font-weight: 700; font-size: 0.85rem; border: 2px solid ${statusColor}40;">
+              <div style="padding: 0.5rem 1rem; background: ${statusColor}20; color: ${statusColor}; border-radius: 8px; font-weight: 700; font-size: 0.85rem; border: 2px solid ${statusColor}40; white-space: nowrap; margin-left: 1rem;">
                 ${statusBadge}
               </div>
             </div>
-            ${offer.note ? `
+            
             <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem;">
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Your Application Note:</div>
-              <div style="color: var(--text-main);">${offer.note}</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Status:</div>
+              <div style="color: var(--text-main); font-weight: 600; margin-bottom: 0.75rem;">${offer.status === 'PENDING' ? 'Waiting for customer review' : offer.status === 'ACCEPTED' ? 'Customer accepted your offer' : offer.status}</div>
+              
+              ${proposedPriceDisplay ? `
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Your offer:</div>
+              <div style="color: var(--primary); font-weight: 600; margin-bottom: 0.75rem;">${proposedPriceDisplay}</div>
+              ` : ''}
+              
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Their original price:</div>
+              <div style="color: var(--text-main); margin-bottom: ${offer.note ? '0.75rem' : '0'};">${originalPriceDisplay}</div>
+            </div>
+            
+            ${offer.note ? `
+            <div style="padding: 1rem; background: #f0fdf4; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #10b981;">
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">You wrote:</div>
+              <div style="color: var(--text-main); line-height: 1.5;">"${offer.note}"</div>
             </div>
             ` : ''}
-            <div style="display: flex; gap: 0.5rem;">
-              <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem 1.5rem; font-weight: 600; border-radius: 10px;">🔍 View Job Details</button>
+            
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 150px; padding: 0.75rem 1.5rem; font-weight: 600; border-radius: 10px;">View Full Job →</button>
               ${offer.status === 'PENDING' ? `
-              <button class="btn btn-ghost cancelApplicationBtn" data-offer-id="${offer.id}" style="padding: 0.75rem 1.5rem; font-weight: 600; border-radius: 10px;">❌ Cancel Application</button>
-              ` : offer.status === 'ACCEPTED' && job.status === 'ASSIGNED' && !job.startCodeVerified ? `
+              <button class="btn btn-ghost cancelApplicationBtn" data-offer-id="${offer.id}" style="padding: 0.75rem 1.5rem; font-weight: 600; border-radius: 10px; color: #dc2626; border-color: #fecaca;">Cancel Application</button>
+              ` : offer.status === 'ACCEPTED' && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified ? `
               <button class="btn btn-ghost cancelApplicationBtn" data-job-id="${job.id}" style="padding: 0.75rem 1.5rem; font-weight: 600; border-radius: 10px; color: #dc2626; border-color: #fecaca;">🚫 Cancel - Can't Do Job</button>
               ` : ''}
             </div>
@@ -16474,7 +16651,63 @@ meta.textContent =
           throw new Error(error.error || 'Failed to apply to job');
         }
         
-        showToast("✅ Application submitted! The customer will be notified via email.");
+        // Show success confirmation modal
+        const successOverlay = document.createElement("div");
+        successOverlay.className = "modal-overlay";
+        successOverlay.style.cssText = "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem;";
+        
+        const successModal = document.createElement("div");
+        successModal.style.cssText = "background: white; border-radius: 16px; max-width: 500px; width: 100%; padding: 2rem; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
+        
+        successModal.innerHTML = `
+          <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+          <h2 style="font-size: 1.75rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">Application Sent!</h2>
+          <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 2rem; line-height: 1.6;">
+            You've successfully applied to this job.<br>
+            The customer will review your proposal and respond soon.
+          </p>
+          <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 2rem;">
+            You can manage this application in:<br>
+            <strong style="color: var(--text-main);">Manage → Applied Jobs</strong>
+          </p>
+          <button class="btn btn-primary" id="gotItBtn3" style="width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 600; border-radius: 12px;">
+            Got it
+          </button>
+        `;
+        
+        successOverlay.appendChild(successModal);
+        document.body.appendChild(successOverlay);
+        
+        // Handle "Got it" button
+        successOverlay.querySelector('#gotItBtn3').addEventListener('click', () => {
+          document.body.removeChild(successOverlay);
+          setView('manage');
+          setTimeout(() => {
+            const appliedTab = document.getElementById('appliedJobsTab');
+            if (appliedTab) {
+              appliedTab.click();
+              if (typeof loadAppliedJobs === 'function') {
+                loadAppliedJobs();
+              }
+            }
+          }, 100);
+        });
+        
+        successOverlay.addEventListener('click', (e) => {
+          if (e.target === successOverlay) {
+            document.body.removeChild(successOverlay);
+            setView('manage');
+            setTimeout(() => {
+              const appliedTab = document.getElementById('appliedJobsTab');
+              if (appliedTab) {
+                appliedTab.click();
+                if (typeof loadAppliedJobs === 'function') {
+                  loadAppliedJobs();
+                }
+              }
+            }, 100);
+          }
+        });
         
         // Refresh the jobs list if we're on the jobs view
         if (typeof renderJobs === 'function') {
