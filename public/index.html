@@ -6049,8 +6049,14 @@ function showChangePasswordModal() {
 
     
 // Global filter state
-let activeCategoryFilter = 'all';
-let activeSortBy = 'newest';
+let activeCategoryFilter = 'all'; // Legacy - kept for compatibility
+let activeSortBy = 'newest'; // Legacy - kept for compatibility
+
+// New multi-select filter state
+let activeCategoryFilters = new Set(); // Multi-select categories
+let activePriceTypeFilters = new Set(); // flat, hourly, hustler_sets
+let activeTimeFilters = new Set(); // asap, tomorrow, this_week, scheduled, flexible
+let activeWorkersFilters = new Set(); // 1, 2, 3+
 
 async function renderJobs(reset = false) {
   console.log('🔵 NEW RENDERJOBS VERSION LOADED - v3.0');
