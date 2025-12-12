@@ -3590,12 +3590,7 @@
             </div>
             
             <!-- Status Pills -->
-            <div class="job-status-group" id="jobsStatusFilter" style="flex: 2; display: flex; gap: 0.25rem;">
-              <span data-status="all" class="job-status-tab active" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; background: var(--primary); color: white; font-weight: 600; border: 2px solid var(--primary); transition: all 0.2s;">All</span>
-              <span data-status="applied" class="job-status-tab" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; background: white; color: var(--text-main); border: 2px solid var(--border); transition: all 0.2s;">✓ Applied</span>
-              <span data-status="in_progress" class="job-status-tab" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; background: white; color: var(--text-main); border: 2px solid var(--border); transition: all 0.2s;">🟡 In Progress</span>
-              <span data-status="done" class="job-status-tab" style="padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; background: white; color: var(--text-main); border: 2px solid var(--border); transition: all 0.2s;">✅ Done</span>
-            </div>
+            <!-- Status filters removed - Browse Jobs only shows OPEN jobs -->
           </div>
           
           <!-- Location Filter -->
@@ -4087,7 +4082,8 @@ heart of Hustl.
     let activeView = "home";
     // Expose activeView on window for fallback access
     window.activeView = activeView;
-    let activeJobsStatusFilter = "all";
+    // Browse Jobs only shows OPEN jobs - no status filter needed
+    let activeJobsStatusFilter = "open";
     let activeConversationJobId = null;
     let activeConversationThreadId = null;
     let messagePollInterval = null;
