@@ -12306,10 +12306,14 @@ async function renderJobs(reset = false) {
               window.optimizedApi.invalidateCache('/users/me');
             }
             
-            // Update user object for re-render
+            // Update user object for re-render - ensure photoUrl is included
             Object.assign(user, updatedUser);
-            if (updates.photoUrl) {
-              photoPreview = updates.photoUrl;
+            if (cleanUpdates.photoUrl || updatedUser.photoUrl) {
+              const finalPhotoUrl = cleanUpdates.photoUrl || updatedUser.photoUrl;
+              user.photoUrl = finalPhotoUrl;
+              updatedUser.photoUrl = finalPhotoUrl;
+              photoPreview = finalPhotoUrl;
+              console.log('[PROFILE SAVE] Photo URL set:', finalPhotoUrl);
             }
             
             // Show success confirmation
@@ -12323,6 +12327,12 @@ async function renderJobs(reset = false) {
             if (!updatedUser.bio && bio.trim()) {
               updatedUser.bio = bio.trim();
             }
+            // Ensure photoUrl is in updatedUser
+            if (cleanUpdates.photoUrl && !updatedUser.photoUrl) {
+              updatedUser.photoUrl = cleanUpdates.photoUrl;
+            }
+            
+            console.log('[PROFILE SAVE] Updated user object:', updatedUser);
             
             // Update the user object used for rendering
             Object.assign(user, updatedUser);
