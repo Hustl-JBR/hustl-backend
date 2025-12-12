@@ -13378,12 +13378,14 @@ meta.textContent =
       if (currentView === "jobs") {
         console.log("🔵 Rendering jobs view");
         renderJobs();
+        startBackgroundPolling(); // Start polling for jobs
       } else if (currentView === "messages") {
         console.log("🔵 Rendering messages view");
         try {
           await renderMessagesView();
           // Start polling when messages view is rendered
           startMessagePolling();
+          startBackgroundPolling(); // Also start general polling
         } catch (err) {
           console.error("Error rendering messages:", err);
         }
@@ -13391,21 +13393,30 @@ meta.textContent =
         console.log("🔵 Rendering profile view");
         renderProfile();
         stopMessagePolling(); // Stop polling when leaving messages view
+        stopBackgroundPolling(); // Stop background polling
       } else if (currentView === "manage-jobs") {
         console.log("🔵 Rendering manage-jobs view - calling renderManageJobs");
         renderManageJobs();
         stopMessagePolling(); // Stop polling when leaving messages view
+        startBackgroundPolling(); // Start polling for manage jobs
       } else if (currentView === "owner") {
         console.log("🔵 Rendering owner view");
         renderOwnerView();
         stopMessagePolling(); // Stop polling when leaving messages view
+        stopBackgroundPolling(); // Stop background polling
       } else if (currentView === "home") {
         console.log("🔵 Rendering home view (no special rendering needed)");
         // Home view doesn't need special rendering - it's the default
         stopMessagePolling(); // Stop polling when leaving messages view
+        stopBackgroundPolling(); // Stop background polling
+      } else if (currentView === "post") {
+        console.log("🔵 Rendering post view");
+        stopMessagePolling();
+        stopBackgroundPolling(); // Don't poll on post job form
       } else {
         console.log("⚠️ renderAll - unknown view:", currentView);
         stopMessagePolling(); // Stop polling when leaving messages view
+        stopBackgroundPolling(); // Stop background polling
       }
       
       // Unread message count - function not implemented yet
