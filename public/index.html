@@ -18102,50 +18102,170 @@ meta.textContent =
       
       // Status filter removed - Browse Jobs only shows OPEN jobs
       
-      // Location filter handlers
-      const locationZipFilter = document.getElementById("locationZipFilter");
-      const locationRadiusFilter = document.getElementById("locationRadiusFilter");
-      const radiusValueDisplay = document.getElementById("radiusValueDisplay");
-      const clearLocationFilter = document.getElementById("clearLocationFilter");
+      // Location permission and distance filter handlers
+      const locationStatusContainer = document.getElementById("locationStatusContainer");
+      const locationStatusText = document.getElementById("locationStatusText");
+      const requestLocationBtn = document.getElementById("requestLocationBtn");
+      const distanceFilterContainer = document.getElementById("distanceFilterContainer");
       
-      if (locationRadiusFilter && radiusValueDisplay) {
-        locationRadiusFilter.addEventListener("input", (e) => {
-          radiusValueDisplay.textContent = e.target.value + " mi";
-        });
-        radiusValueDisplay.textContent = locationRadiusFilter.value + " mi";
+      // Check if location is already stored
+      function checkStoredLocation() {
+        try {
+          const stored = localStorage.getItem('userLocation');
+          if (stored) {
+            const location = JSON.parse(stored);
+            // Check if location is less than 1 hour old
+            if (location.timestamp && (Date.now() - location.timestamp < 60 * 60 * 1000)) {
+              userLocation = { lat: location.lat, lng: location.lng };
+              updateLocationUI(true);
+              return true;
+            }
+          }
+        } catch (e) {
+          console.warn('Error reading stored location:', e);
+        }
+        updateLocationUI(false);
+        return false;
       }
       
-      if (locationZipFilter) {
-        locationZipFilter.addEventListener("input", (e) => {
-          e.target.value = e.target.value.replace(/\D/g, '').slice(0, 5);
+      function updateLocationUI(hasLocation) {
+        if (locationStatusContainer) {
+          locationStatusContainer.style.display = 'block';
+        }
+        if (hasLocation && userLocation) {
+          if (locationStatusText) {
+            locationStatusText.textContent = '✅ Location set';
+            locationStatusText.style.color = '#10b981';
+          }
+          if (requestLocationBtn) {
+            requestLocationBtn.textContent = 'Update';
+            requestLocationBtn.style.background = '#6b7280';
+          }
+          if (distanceFilterContainer) {
+            distanceFilterContainer.style.display = 'block';
+          }
+        } else {
+          if (locationStatusText) {
+            locationStatusText.textContent = '📍 Location not set';
+            locationStatusText.style.color = 'var(--text-main)';
+          }
+          if (requestLocationBtn) {
+            requestLocationBtn.textContent = 'Get My Location';
+            requestLocationBtn.style.background = 'var(--primary)';
+          }
+          if (distanceFilterContainer) {
+            distanceFilterContainer.style.display = 'none';
+          }
+        }
+      }
+      
+      // Request location permission
+      if (requestLocationBtn) {
+        requestLocationBtn.addEventListener("click", () => {
+          if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser.');
+            return;
+          }
+          
+          requestLocationBtn.textContent = 'Getting location...';
+          requestLocationBtn.disabled = true;
+          
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              userLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+              };
+              
+              // Store in localStorage
+              localStorage.setItem('userLocation', JSON.stringify({
+                lat: userLocation.lat,
+                lng: userLocation.lng,
+                timestamp: Date.now()
+              }));
+              
+              updateLocationUI(true);
+              requestLocationBtn.disabled = false;
+              
+              // Show confirmation
+              if (typeof showToast === 'function') {
+                showToast('✅ Location confirmed! You can now filter by distance.');
+              }
+              
+              // Refresh jobs if distance filter is active
+              if (activeDistanceFilter && typeof renderJobs === 'function') {
+                renderJobs(true);
+              }
+            },
+            (error) => {
+              console.warn('Geolocation error:', error);
+              requestLocationBtn.textContent = 'Get My Location';
+              requestLocationBtn.disabled = false;
+              
+              let errorMsg = 'Could not get your location.';
+              if (error.code === error.PERMISSION_DENIED) {
+                errorMsg = 'Location permission denied. Please enable location access in your browser settings.';
+              } else if (error.code === error.POSITION_UNAVAILABLE) {
+                errorMsg = 'Location information unavailable.';
+              } else if (error.code === error.TIMEOUT) {
+                errorMsg = 'Location request timed out.';
+              }
+              
+              if (typeof showToast === 'function') {
+                showToast('❌ ' + errorMsg);
+              } else {
+                alert(errorMsg);
+              }
+            },
+            { timeout: 10000, maximumAge: 60000, enableHighAccuracy: false }
+          );
         });
-        locationZipFilter.addEventListener("change", () => {
+      }
+      
+      // Distance filter chip handlers
+      document.querySelectorAll('.distance-chip').forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (!userLocation) {
+            if (typeof showToast === 'function') {
+              showToast('📍 Please set your location first to filter by distance.');
+            }
+            return;
+          }
+          
+          const distance = btn.dataset.distance;
+          if (activeDistanceFilter === distance) {
+            activeDistanceFilter = null;
+            btn.style.background = "white";
+            btn.style.color = "var(--text-main)";
+          } else {
+            document.querySelectorAll('.distance-chip').forEach(b => {
+              b.style.background = "white";
+              b.style.color = "var(--text-main)";
+            });
+            activeDistanceFilter = distance;
+            btn.style.background = "var(--primary)";
+            btn.style.color = "white";
+          }
           if (typeof renderJobs === 'function') {
             renderJobs(true);
           }
         });
-      }
+      });
       
-      if (locationRadiusFilter) {
-        locationRadiusFilter.addEventListener("change", () => {
-          if (typeof renderJobs === 'function') {
-            renderJobs(true);
-          }
+      // Distance "View More" button
+      const distanceViewMoreBtn = document.getElementById("distanceViewMoreBtn");
+      const distanceMoreOptions = document.getElementById("distanceMoreOptions");
+      if (distanceViewMoreBtn && distanceMoreOptions) {
+        let showingMore = false;
+        distanceViewMoreBtn.addEventListener("click", () => {
+          showingMore = !showingMore;
+          distanceMoreOptions.style.display = showingMore ? "flex" : "none";
+          distanceViewMoreBtn.textContent = showingMore ? "View Less" : "View More";
         });
       }
       
-      if (clearLocationFilter) {
-        clearLocationFilter.addEventListener("click", () => {
-          if (locationZipFilter) locationZipFilter.value = "";
-          if (locationRadiusFilter) {
-            locationRadiusFilter.value = "25";
-            if (radiusValueDisplay) radiusValueDisplay.textContent = "25 mi";
-          }
-          if (typeof renderJobs === 'function') {
-            renderJobs(true);
-          }
-        });
-      }
+      // Check for stored location on page load
+      checkStoredLocation();
       
       // Category filter chips
       const categoryChipsContainer = document.getElementById("categoryFilterChips");
