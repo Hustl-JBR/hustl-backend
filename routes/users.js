@@ -10,6 +10,8 @@ const router = express.Router();
 router.get('/me', authenticate, async (req, res) => {
   try {
     let user;
+    // Since tools column doesn't exist, query without it from the start
+    // This avoids the error and retry cycle that could cause stale data
     try {
       user = await prisma.user.findUnique({
         where: { id: req.user.id },
@@ -28,9 +30,12 @@ router.get('/me', authenticate, async (req, res) => {
           createdAt: true,
           gender: true,
           bio: true,
-          tools: true,
+          // tools: true, // Removed - column doesn't exist in database
         },
       });
+      
+      // Set tools to null since column doesn't exist
+      user.tools = null;
     } catch (genderError) {
       // If gender/bio/tools columns don't exist, query without them
       // BUT ALWAYS include photoUrl
@@ -66,6 +71,8 @@ router.get('/me', authenticate, async (req, res) => {
       console.warn('[GET /users/me] photoUrl was undefined, setting to null');
       user.photoUrl = null;
     }
+    
+    console.log('[GET /users/me] Returning user with photoUrl:', user.photoUrl);
 
     res.json(user);
   } catch (error) {
