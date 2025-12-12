@@ -12082,24 +12082,25 @@ async function renderJobs(reset = false) {
         ${style}
       `.trim();
       
+      const userId = user?.id || '';
+      const dataUserIdAttr = userId ? `data-user-id="${userId}"` : '';
+      
       if (photoUrl) {
         // Add cache-busting if not already present
         const finalPhotoUrl = photoUrl.includes('?') ? photoUrl : `${photoUrl}?t=${Date.now()}`;
-        const userId = user?.id || '';
         
         return `
-          <div class="${className}" style="${baseStyle}" ${onClick ? `onclick="${onClick}"` : ''} data-user-id="${userId}">
+          <div class="${className}" style="${baseStyle}" ${onClick ? `onclick="${onClick}"` : ''} ${dataUserIdAttr}>
             <img 
               src="${finalPhotoUrl}" 
               alt="${user.name || 'User'}" 
-              data-user-id="${userId}"
+              ${dataUserIdAttr}
               style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;"
               onerror="this.parentElement.innerHTML='<div style=\\'width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: ${fontSize}; font-weight: 700; color: var(--primary); background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);\\'>${initial}</div>'"
             />
           </div>
         `;
       } else {
-        const dataUserIdAttr = user?.id ? `data-user-id="${user.id}"` : '';
         return `
           <div 
             class="${className}" 
