@@ -144,8 +144,13 @@ router.use(authenticate);
 router.patch('/me', authenticate, [
   body('name').optional().trim().notEmpty(),
   body('city').optional().trim().notEmpty(),
-  body('bio').optional().trim(),
-  body('gender').optional().isIn(['male', 'female', 'other', 'prefer_not_to_say']),
+  body('bio').optional().custom((value) => {
+    // Allow null, empty string, or any string value
+    if (value === null || value === undefined || value === '') return true;
+    if (typeof value === 'string' && value.trim().length <= 300) return true;
+    return false;
+  }).withMessage('Bio must be a string with max 300 characters'),
+  body('gender').optional().isIn(['male', 'female', 'other', 'prefer_not_to_say', null]),
   body('tools').optional().trim(),
 ], async (req, res) => {
   try {
@@ -171,7 +176,9 @@ router.patch('/me', authenticate, [
     // Always include bio if it's in the request (even if null) to ensure it's saved/cleared
     if (bio !== undefined) {
       // Allow empty string or null to clear bio
-      updateData.bio = (bio === '' || bio === null) ? null : bio.trim();
+      const trimmedBio = typeof bio === 'string' ? bio.trim() : bio;
+      updateData.bio = (trimmedBio === '' || trimmedBio === null) ? null : trimmedBio;
+      console.log('[PATCH /users/me] Bio processing - Original:', JSON.stringify(bio), 'Type:', typeof bio, 'Trimmed:', JSON.stringify(trimmedBio), 'Final:', JSON.stringify(updateData.bio));
     }
     if (gender !== undefined) {
       // Allow empty string to clear gender
@@ -239,7 +246,8 @@ router.patch('/me', authenticate, [
       }
     }
 
-    console.log('[PATCH /users/me] Successfully updated user:', user.id, 'Returning:', { name: user.name, bio: user.bio, gender: user.gender });
+    console.log('[PATCH /users/me] Successfully updated user:', user.id);
+    console.log('[PATCH /users/me] User data - name:', user.name, 'bio:', JSON.stringify(user.bio), 'bio type:', typeof user.bio, 'gender:', user.gender);
     res.json(user);
   } catch (error) {
     console.error('[PATCH /users/me] Update user error:', error);

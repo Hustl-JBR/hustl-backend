@@ -12385,7 +12385,7 @@ async function renderJobs(reset = false) {
               cleanUpdates.photoUrl = uploadedPhotoUrl.replace(/\?t=\d+$/, ''); // Remove cache buster for DB
             }
             
-            console.log('[PROFILE SAVE] Sending update to server:', cleanUpdates);
+            console.log('[PROFILE SAVE] Sending update to server:', JSON.stringify(cleanUpdates, null, 2));
             
             // Update profile - get the updated user from response
             // This is the single source of truth from the database
@@ -12395,14 +12395,18 @@ async function renderJobs(reset = false) {
               throw new Error("No user data returned from server");
             }
             
-            console.log('[PROFILE SAVE] Server response:', updatedUser);
+            console.log('[PROFILE SAVE] Server response:', JSON.stringify(updatedUser, null, 2));
             
             // Verify that the saved data is in the response
             if (cleanUpdates.name && updatedUser.name !== cleanUpdates.name) {
               console.warn('[PROFILE SAVE] Name mismatch! Sent:', cleanUpdates.name, 'Got:', updatedUser.name);
             }
-            if (cleanUpdates.bio !== undefined && updatedUser.bio !== cleanUpdates.bio) {
-              console.warn('[PROFILE SAVE] Bio mismatch! Sent:', cleanUpdates.bio, 'Got:', updatedUser.bio);
+            // Check bio - handle both null and empty string as equivalent
+            const sentBio = cleanUpdates.bio === null || cleanUpdates.bio === '' ? null : cleanUpdates.bio;
+            const receivedBio = updatedUser.bio === null || updatedUser.bio === '' ? null : updatedUser.bio;
+            if (cleanUpdates.bio !== undefined && sentBio !== receivedBio) {
+              console.warn('[PROFILE SAVE] Bio mismatch! Sent:', JSON.stringify(cleanUpdates.bio), 'Got:', JSON.stringify(updatedUser.bio));
+              console.warn('[PROFILE SAVE] Bio types - Sent type:', typeof cleanUpdates.bio, 'Got type:', typeof updatedUser.bio);
             }
             
             // Handle photoUrl from upload or response
