@@ -11680,6 +11680,39 @@ async function renderJobs(reset = false) {
       }
     }
 
+    // Initialize conversation tabs
+    function initConversationTabs() {
+      const tabs = document.querySelectorAll('.conversation-tab');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const tabType = tab.dataset.convTab;
+          window.activeConversationTab = tabType;
+          
+          // Update tab styles
+          tabs.forEach(t => {
+            t.classList.remove('active');
+            t.style.borderBottom = '2px solid transparent';
+            t.style.color = 'var(--text-muted)';
+            t.style.fontWeight = '500';
+          });
+          tab.classList.add('active');
+          tab.style.borderBottom = '2px solid var(--primary)';
+          tab.style.color = 'var(--primary)';
+          tab.style.fontWeight = '600';
+          
+          // Re-render conversations with new filter
+          if (typeof renderMessagesView === 'function') {
+            renderMessagesView();
+          }
+        });
+      });
+      
+      // Set default tab if not set
+      if (!window.activeConversationTab) {
+        window.activeConversationTab = 'active';
+      }
+    }
+    
     function initConversationInput() {
       const sendBtn = document.getElementById("conversationSendButton");
       const input = document.getElementById("conversationInput");
