@@ -18884,6 +18884,270 @@ meta.textContent =
           }
         });
       }
+      
+      // Background polling system
+      function startBackgroundPolling() {
+        stopBackgroundPolling();
+        
+        const currentView = window.activeView || activeView;
+        if (!POLLABLE_VIEWS.includes(currentView)) {
+          return;
+        }
+        
+        console.log('[POLLING] Starting background polling for view:', currentView);
+        
+        backgroundPollInterval = setInterval(async () => {
+          // Check if user is interacting (typing, etc.)
+          if (isUserInteracting) {
+            console.debug('[POLLING] Skipping poll - user is interacting');
+            return;
+          }
+          
+          const view = window.activeView || activeView;
+          if (!POLLABLE_VIEWS.includes(view)) {
+            stopBackgroundPolling();
+            return;
+          }
+          
+          // Prevent too frequent polling
+          const now = Date.now();
+          if (now - lastPollTime < 3000) {
+            return;
+          }
+          lastPollTime = now;
+          
+          try {
+            if (view === 'jobs') {
+              await silentUpdateBrowseJobs();
+            } else if (view === 'manage-jobs') {
+              await silentUpdateManageJobs();
+            } else if (view === 'messages') {
+              // Messages already has its own polling, skip
+            }
+          } catch (error) {
+            console.debug('[POLLING] Silent update error (ignored):', error);
+          }
+        }, POLL_INTERVAL);
+      }
+      
+      function stopBackgroundPolling() {
+        if (backgroundPollInterval) {
+          clearInterval(backgroundPollInterval);
+          backgroundPollInterval = null;
+          console.log('[POLLING] Stopped background polling');
+        }
+      }
+      
+      // Silent update for Browse Jobs - only updates data, preserves UI state
+      async function silentUpdateBrowseJobs() {
+        const jobsList = document.getElementById("jobsList");
+        if (!jobsList) return;
+        
+        try {
+          const filters = {
+            page: 1,
+            limit: 100, // Get enough to update existing
+            status: 'OPEN'
+          };
+          
+          let response;
+          if (window.hustlAPI && window.hustlAPI.jobs && typeof window.hustlAPI.jobs.list === 'function') {
+            response = await window.hustlAPI.jobs.list(filters);
+          } else {
+            const params = new URLSearchParams();
+            params.append('page', '1');
+            params.append('limit', '100');
+            const apiResponse = await fetch(`${API_BASE}/jobs?${params.toString()}`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' }
+            });
+            if (!apiResponse.ok) return;
+            response = await apiResponse.json();
+          }
+          
+          const newJobs = response?.jobs || response || [];
+          if (!Array.isArray(newJobs)) return;
+          
+          // Update existing job cards or add new ones
+          const existingJobIds = new Set();
+          jobsList.querySelectorAll('[data-job-id]').forEach(card => {
+            const jobId = card.dataset.jobId;
+            if (jobId) existingJobIds.add(jobId);
+          });
+          
+          // Update existing cards with new data
+          newJobs.forEach(job => {
+            const existingCard = jobsList.querySelector(`[data-job-id="${job.id}"]`);
+            if (existingCard) {
+              // Update status, price, etc. without full re-render
+              updateJobCardSilently(existingCard, job);
+            }
+          });
+          
+          // Update allLoadedJobs cache
+          const jobMap = new Map(allLoadedJobs.map(j => [j.id, j]));
+          newJobs.forEach(job => {
+            jobMap.set(job.id, job);
+          });
+          allLoadedJobs = Array.from(jobMap.values());
+          
+        } catch (error) {
+          console.debug('[POLLING] Browse Jobs update error (silent):', error);
+        }
+      }
+      
+      // Update a single job card silently without re-rendering
+      function updateJobCardSilently(card, job) {
+        // Only update dynamic content that might change:
+        // - Status badges
+        // - Applied indicators
+        // - Price if changed
+        // - Time ago text
+        
+        // Update status if visible
+        const statusEl = card.querySelector('.job-status');
+        if (statusEl && job.status) {
+          const statusLabels = {
+            'OPEN': 'Open',
+            'ASSIGNED': 'Assigned',
+            'SCHEDULED': 'Scheduled',
+            'IN_PROGRESS': 'In Progress',
+            'COMPLETED_BY_HUSTLER': 'Awaiting Confirmation',
+            'PAID': 'Completed',
+            'EXPIRED': 'Expired'
+          };
+          statusEl.textContent = statusLabels[job.status] || job.status;
+        }
+        
+        // Update "Applied" indicator if present
+        const appliedBadge = card.querySelector('.applied-badge');
+        if (appliedBadge) {
+          // Check if still applied
+          // This would need to check user's offers
+        }
+        
+        // Update time ago if present
+        const timeAgoEl = card.querySelector('.time-ago');
+        if (timeAgoEl && job.createdAt) {
+          const createdMs = new Date(job.createdAt).getTime();
+          timeAgoEl.textContent = timeAgo(createdMs);
+        }
+      }
+      
+      // Silent update for Manage Jobs
+      async function silentUpdateManageJobs() {
+        const currentTab = document.querySelector('.manage-tab.active')?.dataset?.manageTab;
+        if (!currentTab) return;
+        
+        try {
+          const token = localStorage.getItem('hustl_token');
+          if (!token) return;
+          
+          if (currentTab === 'posted') {
+            // Update posted jobs
+            const response = await fetch(`${API_BASE}/jobs/my-jobs`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) return;
+            const jobs = await response.json();
+            if (Array.isArray(jobs)) {
+              updateManageJobsList('managePostedJobsList', jobs.filter(j => j.status === 'OPEN'));
+            }
+          } else if (currentTab === 'active') {
+            // Update active jobs
+            const response = await fetch(`${API_BASE}/jobs/active`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) return;
+            const jobs = await response.json();
+            if (Array.isArray(jobs)) {
+              updateManageJobsList('manageActiveJobsList', jobs);
+            }
+          } else if (currentTab === 'completed') {
+            // Update completed jobs
+            const response = await fetch(`${API_BASE}/jobs/my-jobs`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) return;
+            const jobs = await response.json();
+            if (Array.isArray(jobs)) {
+              const completed = jobs.filter(j => 
+                j.status === 'PAID' || 
+                j.status === 'COMPLETED_BY_HUSTLER' ||
+                j.status === 'CANCELLED'
+              );
+              updateManageJobsList('manageCompletedJobsList', completed);
+            }
+          } else if (currentTab === 'applied') {
+            // Update applied jobs
+            const response = await fetch(`${API_BASE}/offers/user/me`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) return;
+            const offers = await response.json();
+            if (Array.isArray(offers)) {
+              const appliedJobs = offers
+                .filter(o => o.status === 'PENDING' || (o.status === 'ACCEPTED' && o.job && !o.job.startCodeVerified))
+                .map(o => o.job)
+                .filter(Boolean);
+              updateManageJobsList('manageAppliedJobsList', appliedJobs);
+            }
+          }
+        } catch (error) {
+          console.debug('[POLLING] Manage Jobs update error (silent):', error);
+        }
+      }
+      
+      // Update manage jobs list silently
+      function updateManageJobsList(listId, newJobs) {
+        const listEl = document.getElementById(listId);
+        if (!listEl) return;
+        
+        // Create a map of existing jobs
+        const existingMap = new Map();
+        listEl.querySelectorAll('[data-job-id]').forEach(card => {
+          const jobId = card.dataset.jobId;
+          if (jobId) existingMap.set(jobId, card);
+        });
+        
+        // Update existing or add new
+        newJobs.forEach(job => {
+          const existing = existingMap.get(job.id);
+          if (existing) {
+            updateJobCardSilently(existing, job);
+          }
+          // New jobs will be added on next full render
+        });
+      }
+      
+      // Track user interactions to pause polling
+      let interactionTimeout = null;
+      function markUserInteraction() {
+        isUserInteracting = true;
+        if (interactionTimeout) clearTimeout(interactionTimeout);
+        interactionTimeout = setTimeout(() => {
+          isUserInteracting = false;
+        }, 2000); // Resume polling 2 seconds after last interaction
+      }
+      
+      // Monitor for user typing/interactions
+      document.addEventListener('input', (e) => {
+        const target = e.target;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+          markUserInteraction();
+        }
+      });
+      
+      document.addEventListener('focus', (e) => {
+        const target = e.target;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+          markUserInteraction();
+        }
+      });
+      
+      // Make functions globally available
+      window.startBackgroundPolling = startBackgroundPolling;
+      window.stopBackgroundPolling = stopBackgroundPolling;
     }
     
     async function startPayment(jobId) {
