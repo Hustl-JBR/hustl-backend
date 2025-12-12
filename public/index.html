@@ -12161,7 +12161,7 @@ async function renderJobs(reset = false) {
         <div class="card" style="padding: 1rem; margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;">
           <div style="display: flex; gap: 1rem; align-items: flex-start;">
             <!-- Profile Photo -->
-            ${avatarContent.replace('width: 12px; height: 12px;', 'width: 12px; height: 12px;').replace('class=""', 'class="" style="flex-shrink: 0;"')}
+            <div style="flex-shrink: 0;">${avatarContent}</div>
             
             <!-- Info -->
             <div style="flex: 1; min-width: 0;">
