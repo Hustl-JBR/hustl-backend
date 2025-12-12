@@ -17016,11 +17016,9 @@ meta.textContent =
             return `
               <div style="padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 1rem; background: white;">
                 <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-                  <div style="width: 60px; height: 60px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; color: var(--primary);">
-                    ${renderUserAvatar(hustler, 60, {
-                      style: 'width: 100%; height: 100%;'
-                    })}
-                  </div>
+                  ${renderUserAvatar(hustler, 60, {
+                    style: 'flex-shrink: 0;'
+                  })}
                   <div style="flex: 1;">
                     <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.25rem;">${hustler.name || 'Hustler'}</div>
                     <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">
