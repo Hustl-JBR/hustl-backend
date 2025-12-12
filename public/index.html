@@ -12365,37 +12365,61 @@ async function renderJobs(reset = false) {
               }
             }
             
-            // Only include fields that have values (don't send empty strings for optional fields)
+            // Prepare updates - always send bio (even if empty/null) to ensure it's saved
             const cleanUpdates = {};
-            if (updates.name && updates.name.trim()) cleanUpdates.name = updates.name.trim();
-            if (updates.gender) cleanUpdates.gender = updates.gender;
-            if (updates.bio !== undefined) cleanUpdates.bio = updates.bio.trim() || null;
+            if (updates.name && updates.name.trim()) {
+              cleanUpdates.name = updates.name.trim();
+            }
+            if (updates.gender !== undefined && updates.gender !== '') {
+              cleanUpdates.gender = updates.gender;
+            } else if (updates.gender === '') {
+              // Explicitly clear gender if empty string
+              cleanUpdates.gender = null;
+            }
+            // Always send bio - send null if empty to clear it, or the trimmed value
+            cleanUpdates.bio = bio.trim() || null;
+            
             // Note: photoUrl is already saved by the upload endpoint, but we include it here
             // to ensure the PATCH response includes it
-            if (uploadedPhotoUrl) cleanUpdates.photoUrl = uploadedPhotoUrl.replace(/\?t=\d+$/, ''); // Remove cache buster for DB
+            if (uploadedPhotoUrl) {
+              cleanUpdates.photoUrl = uploadedPhotoUrl.replace(/\?t=\d+$/, ''); // Remove cache buster for DB
+            }
             
-            console.log('[PROFILE SAVE] Sending update:', cleanUpdates);
+            console.log('[PROFILE SAVE] Sending update to server:', cleanUpdates);
             
             // Update profile - get the updated user from response
-            // Even if photo was uploaded, we still update profile for other fields
+            // This is the single source of truth from the database
             const updatedUser = await window.hustlAPI.users.updateProfile(cleanUpdates);
             
             if (!updatedUser) {
               throw new Error("No user data returned from server");
             }
             
-            // Ensure photoUrl is in the response (it should be from the upload endpoint)
-            if (uploadedPhotoUrl && !updatedUser.photoUrl) {
-              // Remove cache buster for storage
-              updatedUser.photoUrl = uploadedPhotoUrl.replace(/\?t=\d+(&t=\d+)*$/, '');
-            } else if (uploadedPhotoUrl) {
-              // Use the uploaded photoUrl (with cache buster) for immediate display
-              const photoUrlWithCache = uploadedPhotoUrl;
-              updatedUser.photoUrl = photoUrlWithCache.replace(/\?t=\d+(&t=\d+)*$/, '');
+            console.log('[PROFILE SAVE] Server response:', updatedUser);
+            
+            // Verify that the saved data is in the response
+            if (cleanUpdates.name && updatedUser.name !== cleanUpdates.name) {
+              console.warn('[PROFILE SAVE] Name mismatch! Sent:', cleanUpdates.name, 'Got:', updatedUser.name);
+            }
+            if (cleanUpdates.bio !== undefined && updatedUser.bio !== cleanUpdates.bio) {
+              console.warn('[PROFILE SAVE] Bio mismatch! Sent:', cleanUpdates.bio, 'Got:', updatedUser.bio);
+            }
+            
+            // Handle photoUrl from upload or response
+            if (uploadedPhotoUrl) {
+              // Remove cache buster for storage, but keep it for display
+              const photoUrlClean = uploadedPhotoUrl.replace(/\?t=\d+(&t=\d+)*$/, '');
+              updatedUser.photoUrl = photoUrlClean;
+              
+              // Force update all avatars in the DOM with cache-busted URL for immediate display
+              updateAllAvatarsInDOM(uploadedPhotoUrl, user.id);
+            } else if (updatedUser.photoUrl) {
+              // If photoUrl came from the update response, use it
+              updateAllAvatarsInDOM(updatedUser.photoUrl, user.id);
             }
             
             // Update local storage with the complete user object from server
-            // This is the single source of truth
+            // This is the single source of truth - what's actually in the database
             localStorage.setItem('hustl_user', JSON.stringify(updatedUser));
             
             // Update cached user in auth object
@@ -12408,27 +12432,8 @@ async function renderJobs(reset = false) {
               window.optimizedApi.invalidateCache('/users/me');
             }
             
-            // Update user object for re-render - ensure photoUrl is included
+            // Update the local user object for consistency
             Object.assign(user, updatedUser);
-            
-            // If we uploaded a photo, ensure it's set everywhere
-            if (uploadedPhotoUrl) {
-              const photoUrlForDisplay = uploadedPhotoUrl; // Keep cache buster for immediate display
-              user.photoUrl = photoUrlForDisplay.replace(/\?t=\d+(&t=\d+)*$/, ''); // Store without cache buster
-              updatedUser.photoUrl = photoUrlForDisplay.replace(/\?t=\d+(&t=\d+)*$/, '');
-              photoPreview = photoUrlForDisplay;
-              
-              // Force update all avatars in the DOM
-              updateAllAvatarsInDOM(photoUrlForDisplay, user.id);
-              
-              console.log('[PROFILE SAVE] Photo URL saved and propagated:', updatedUser.photoUrl);
-            } else if (updatedUser.photoUrl) {
-              // If photoUrl came from the update response, use it
-              user.photoUrl = updatedUser.photoUrl;
-              photoPreview = updatedUser.photoUrl;
-              updateAllAvatarsInDOM(updatedUser.photoUrl, user.id);
-              console.log('[PROFILE SAVE] Photo URL from update response:', updatedUser.photoUrl);
-            }
             
             // Show success confirmation
             saveBtn.textContent = "Saved ✅";
@@ -12436,50 +12441,11 @@ async function renderJobs(reset = false) {
             saveBtn.style.color = "white";
             showToast("✅ Profile saved successfully!");
             
-            // Ensure updatedUser has all fields including bio
-            // If bio is missing from response but we saved it, add it
-            if (!updatedUser.bio && bio.trim()) {
-              updatedUser.bio = bio.trim();
-            }
-            // Ensure photoUrl is in updatedUser
-            if (cleanUpdates.photoUrl && !updatedUser.photoUrl) {
-              updatedUser.photoUrl = cleanUpdates.photoUrl;
-            }
-            
-            console.log('[PROFILE SAVE] Updated user object:', updatedUser);
-            
-            // Update the user object used for rendering
-            Object.assign(user, updatedUser);
-            
-            // Return to view mode with updated user immediately
+            // Return to view mode with updated user immediately - use the server response
             renderBasicInfoView(updatedUser, ratingAvg, ratingCount, container);
             
-            // Re-render profile to update other sections, but skip basic info section
-            // to avoid overwriting what we just saved
-            setTimeout(async () => {
-              // Fetch fresh data but preserve the basic info section we just updated
-              const currentBasicInfo = document.getElementById("profileBasicInfo");
-              const currentBasicInfoHTML = currentBasicInfo ? currentBasicInfo.innerHTML : null;
-              
-              // Force fresh fetch from server to ensure persistence
-              await renderProfile();
-              
-              // Restore the basic info section if it was overwritten
-              if (currentBasicInfoHTML && currentBasicInfo) {
-                const newBasicInfo = document.getElementById("profileBasicInfo");
-                if (newBasicInfo && newBasicInfo.innerHTML !== currentBasicInfoHTML) {
-                  // Only restore if it doesn't match (was overwritten)
-                  newBasicInfo.innerHTML = currentBasicInfoHTML;
-                  // Re-attach edit button handler
-                  const editBtn = document.getElementById("basicInfoEditBtn");
-                  if (editBtn) {
-                    editBtn.addEventListener("click", () => {
-                      renderBasicInfoEdit(updatedUser, ratingAvg, ratingCount, newBasicInfo);
-                    });
-                  }
-                }
-              }
-            }, 500);
+            // Don't re-fetch immediately - we already have the fresh data from the server
+            // The server response is the source of truth, so use it directly
             
             // Reset button after 2 seconds
             setTimeout(() => {
@@ -12511,35 +12477,48 @@ async function renderJobs(reset = false) {
     }
 
     async function renderProfile() {
-  // Use API to get current user - always fetch fresh data
+  // Use API to get current user - always fetch fresh data from server
   let user = null;
   try {
-    // Force fresh fetch by calling the API directly (bypass cache)
+    // Force fresh fetch by calling the API directly with cache-busting
+    // This ensures we get the latest data from the database, not stale cache
     const token = localStorage.getItem('hustl_token') || sessionStorage.getItem('hustl_token');
     if (token) {
-      const response = await fetch(`${API_BASE}/users/me`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      // Add cache-busting query parameter to force fresh fetch
+      const cacheBuster = `?t=${Date.now()}`;
+      const response = await fetch(`${API_BASE}/users/me${cacheBuster}`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
       });
       if (response.ok) {
         user = await response.json();
-        // Update cache with fresh data
+        console.log('[PROFILE RENDER] Fetched fresh user data from server:', user);
+        // Update cache with fresh data from server
         localStorage.setItem('hustl_user', JSON.stringify(user));
         if (window.hustlAPI && window.hustlAPI.auth) {
           window.hustlAPI.auth.currentUser = user;
         }
       } else {
-        // Fallback to cached method
+        const errorText = await response.text();
+        console.error('[PROFILE RENDER] Failed to fetch user:', response.status, errorText);
+        // Fallback to cached method only if server request fails
         user = await window.hustlAPI.auth.getCurrentUser();
       }
     } else {
       user = await window.hustlAPI.auth.getCurrentUser();
     }
   } catch (error) {
-    console.error("Error getting user for profile:", error);
-    // Try to use cached user as fallback
+    console.error("[PROFILE RENDER] Error getting user for profile:", error);
+    // Try to use cached user as fallback only if server fetch fails
     try {
       const cached = localStorage.getItem('hustl_user');
-      if (cached) user = JSON.parse(cached);
+      if (cached) {
+        user = JSON.parse(cached);
+        console.log('[PROFILE RENDER] Using cached user data as fallback');
+      }
     } catch (e) {
       console.error("Error parsing cached user:", e);
     }

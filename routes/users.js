@@ -157,6 +157,8 @@ router.patch('/me', authenticate, [
     const { name, city, zip, photoUrl, bio, gender, tools } = req.body;
     const updateData = {};
 
+    console.log('[PATCH /users/me] Received update request:', { name, city, zip, photoUrl, bio, gender, tools });
+
     if (name) updateData.name = name;
     if (city) updateData.city = city;
     if (zip !== undefined) {
@@ -166,18 +168,21 @@ router.patch('/me', authenticate, [
     if (photoUrl !== undefined) updateData.photoUrl = photoUrl;
     
     // Handle bio, gender, and tools - allow empty strings to clear values
+    // Always include bio if it's in the request (even if null) to ensure it's saved/cleared
     if (bio !== undefined) {
-      // Allow empty string to clear bio
-      updateData.bio = bio === '' ? null : bio;
+      // Allow empty string or null to clear bio
+      updateData.bio = (bio === '' || bio === null) ? null : bio.trim();
     }
     if (gender !== undefined) {
       // Allow empty string to clear gender
-      updateData.gender = gender === '' ? null : gender;
+      updateData.gender = (gender === '' || gender === null) ? null : gender;
     }
     if (tools !== undefined) {
       // Allow empty string to clear tools
-      updateData.tools = tools === '' ? null : tools;
+      updateData.tools = (tools === '' || tools === null) ? null : tools.trim();
     }
+
+    console.log('[PATCH /users/me] Prepared updateData:', updateData);
 
     let user;
     try {
@@ -234,10 +239,11 @@ router.patch('/me', authenticate, [
       }
     }
 
+    console.log('[PATCH /users/me] Successfully updated user:', user.id, 'Returning:', { name: user.name, bio: user.bio, gender: user.gender });
     res.json(user);
   } catch (error) {
-    console.error('Update user error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[PATCH /users/me] Update user error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
