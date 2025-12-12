@@ -6190,6 +6190,28 @@ async function renderJobs(reset = false) {
       });
     }
     
+    // Apply distance filter if location is set and filter is active
+    if (activeDistanceFilter && userLocation) {
+      const maxDistance = activeDistanceFilter === 'statewide' ? Infinity : parseInt(activeDistanceFilter);
+      filteredJobs = filteredJobs.filter((j) => {
+        if (activeDistanceFilter === 'statewide') return true;
+        if (!j.lat || !j.lng) return false;
+        
+        // Calculate distance using Haversine formula
+        const R = 3959; // Earth's radius in miles
+        const dLat = (j.lat - userLocation.lat) * Math.PI / 180;
+        const dLng = (j.lng - userLocation.lng) * Math.PI / 180;
+        const a = 
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(j.lat * Math.PI / 180) *
+          Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = R * c;
+        
+        return distance <= maxDistance;
+      });
+    }
+    
     // Final safety check
     if (!Array.isArray(filteredJobs)) {
       console.warn('filteredJobs is not an array, resetting to empty array');
