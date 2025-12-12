@@ -12144,11 +12144,11 @@ async function renderJobs(reset = false) {
       if (!container) {
         return;
       }
-      // Use smaller size for mobile-friendly profile photo (40px for compact mobile view)
-      const avatarContent = renderUserAvatar(user, 40, { 
+      // Use very small size for mobile-friendly profile photo (12px for compact mobile view)
+      const avatarContent = renderUserAvatar(user, 12, { 
         showBorder: true, 
-        borderWidth: '2px',
-        style: 'box-shadow: 0 1px 3px rgba(0,0,0,0.1);'
+        borderWidth: '1px',
+        style: 'box-shadow: 0 1px 2px rgba(0,0,0,0.1);'
       });
       
       const genderLabel = user.gender ? 
@@ -12161,7 +12161,7 @@ async function renderJobs(reset = false) {
         <div class="card" style="padding: 1rem; margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;">
           <div style="display: flex; gap: 1rem; align-items: flex-start;">
             <!-- Profile Photo -->
-            ${avatarContent.replace('width: 48px; height: 48px;', 'width: 48px; height: 48px;').replace('class=""', 'class="" style="flex-shrink: 0;"')}
+            ${avatarContent.replace('width: 12px; height: 12px;', 'width: 12px; height: 12px;').replace('class=""', 'class="" style="flex-shrink: 0;"')}
             
             <!-- Info -->
             <div style="flex: 1; min-width: 0;">
@@ -12292,10 +12292,10 @@ async function renderJobs(reset = false) {
             photoPreview = event.target.result;
             newPhotoFile = file;
             const tempUserForPreview = { ...user, photoUrl: photoPreview };
-            photoPreviewDiv.innerHTML = renderUserAvatar(tempUserForPreview, 40, { 
+            photoPreviewDiv.innerHTML = renderUserAvatar(tempUserForPreview, 12, { 
               showBorder: true, 
-              borderWidth: '2px',
-              style: 'box-shadow: 0 1px 3px rgba(0,0,0,0.1);'
+              borderWidth: '1px',
+              style: 'box-shadow: 0 1px 2px rgba(0,0,0,0.1);'
             });
           };
           reader.readAsDataURL(file);
@@ -12675,10 +12675,10 @@ async function renderJobs(reset = false) {
       basicInfoSection.innerHTML = `
         <div class="card" style="padding: 2rem; margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;">
           <div style="display: flex; gap: 2rem; align-items: flex-start;">
-            ${renderUserAvatar(user, 40, { 
+            ${renderUserAvatar(user, 12, { 
               showBorder: true, 
-              borderWidth: '2px',
-              style: 'box-shadow: 0 1px 3px rgba(0,0,0,0.1); flex-shrink: 0;'
+              borderWidth: '1px',
+              style: 'box-shadow: 0 1px 2px rgba(0,0,0,0.1); flex-shrink: 0;'
             })}
             <div style="flex: 1; min-width: 0;">
               <h2 style="margin: 0; font-size: 1.75rem; font-weight: 700; color: var(--text-main);">${user.name || 'User'}</h2>
