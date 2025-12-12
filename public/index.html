@@ -3593,20 +3593,33 @@
             <!-- Status filters removed - Browse Jobs only shows OPEN jobs -->
           </div>
           
-          <!-- Location Filter -->
+          <!-- Location Permission & Distance Filter -->
           <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-            <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">📍 Filter by Location</div>
-            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
-              <div style="flex: 1; min-width: 120px;">
-                <input type="text" id="locationZipFilter" placeholder="ZIP code (e.g., 37919)" maxlength="5" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: white;" />
-              </div>
-              <div style="flex: 1; min-width: 140px;">
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                  <input type="range" id="locationRadiusFilter" min="5" max="100" value="25" step="5" style="flex: 1;" />
-                  <span id="radiusValueDisplay" style="font-size: 0.85rem; color: var(--text-muted); min-width: 50px; text-align: right;">25 mi</span>
+            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">📍 Distance (from your location)</div>
+            
+            <!-- Location Status -->
+            <div id="locationStatusContainer" style="margin-bottom: 0.75rem; padding: 0.75rem; background: #f3f4f6; border-radius: 8px; display: none;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="font-size: 0.85rem; color: var(--text-main);">
+                  <span id="locationStatusText">📍 Location not set</span>
                 </div>
+                <button id="requestLocationBtn" style="padding: 0.4rem 0.75rem; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 0.8rem; cursor: pointer; white-space: nowrap;">Get My Location</button>
               </div>
-              <button id="clearLocationFilter" style="padding: 0.6rem 1rem; background: transparent; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; white-space: nowrap;">Clear</button>
+            </div>
+            
+            <!-- Distance Filter Chips (hidden until location is set) -->
+            <div id="distanceFilterContainer" style="display: none;">
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button class="filter-chip distance-chip" data-distance="5" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">5 mi</button>
+                <button class="filter-chip distance-chip" data-distance="10" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">10 mi</button>
+                <button class="filter-chip distance-chip" data-distance="20" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">20 mi</button>
+                <button id="distanceViewMoreBtn" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--primary); cursor: pointer; white-space: nowrap;">View More</button>
+              </div>
+              <div id="distanceMoreOptions" style="display: none; margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button class="filter-chip distance-chip" data-distance="30" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">30 mi</button>
+                <button class="filter-chip distance-chip" data-distance="50" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">50 mi</button>
+                <button class="filter-chip distance-chip" data-distance="statewide" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">Statewide</button>
+              </div>
             </div>
           </div>
         </div>
@@ -6150,6 +6163,28 @@ async function renderJobs(reset = false) {
     let filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => {
       return j.status === "OPEN" || j.status === "open";
     }) : [];
+    
+    // Apply distance filter if location is set and filter is active
+    if (activeDistanceFilter && userLocation) {
+      const maxDistance = activeDistanceFilter === 'statewide' ? Infinity : parseInt(activeDistanceFilter);
+      filteredJobs = filteredJobs.filter((j) => {
+        if (activeDistanceFilter === 'statewide') return true;
+        if (!j.lat || !j.lng) return false;
+        
+        // Calculate distance using Haversine formula
+        const R = 3959; // Earth's radius in miles
+        const dLat = (j.lat - userLocation.lat) * Math.PI / 180;
+        const dLng = (j.lng - userLocation.lng) * Math.PI / 180;
+        const a = 
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(j.lat * Math.PI / 180) *
+          Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = R * c;
+        
+        return distance <= maxDistance;
+      });
+    }
     
     // Final safety check
     if (!Array.isArray(filteredJobs)) {
