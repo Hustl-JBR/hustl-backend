@@ -3428,29 +3428,43 @@
 
           <!-- Dropoff Location -->
           <div id="dropoffFields" style="padding: 1rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
-            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem; font-size: 0.95rem;">Dropoff Location</div>
+            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem; font-size: 0.95rem;">📦 Dropoff Location (Only if the job type needs it)</div>
             
-            <div class="field-inline" style="margin-bottom: 0.75rem;">
-              <div class="field">
-                <label for="dropoffArea">Dropoff area / neighborhood</label>
-                <input id="dropoffArea" type="text" placeholder="Example: East Nashville" />
-              </div>
-              <div class="field">
-                <label for="dropoffCity">Dropoff city</label>
-                <input id="dropoffCity" type="text" placeholder="Example: Nashville, TN" />
-              </div>
-              <div class="field">
-                <label for="dropoffZip">Dropoff ZIP</label>
-                <input id="dropoffZip" type="text" placeholder="Example: 37206" maxlength="10" />
-              </div>
-            </div>
-            
-            <div class="field">
-              <label for="dropoffAddress">Dropoff address *</label>
-              <input id="dropoffAddress" type="text" placeholder="Start typing address..." autocomplete="off" required />
+            <div class="field" style="margin-bottom: 0.75rem;">
+              <label for="dropoffAddress">Street Address *</label>
+              <input id="dropoffAddress" type="text" placeholder="Start typing address..." autocomplete="off" />
               <div id="dropoffAddressSuggestions" style="display: none; position: absolute; z-index: 1000; background: white; border: 1px solid #ddd; border-radius: 8px; max-height: 300px; overflow-y: auto; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
               <input type="hidden" id="dropoffLat" />
               <input type="hidden" id="dropoffLng" />
+            </div>
+
+            <div class="field" style="margin-bottom: 0.75rem;">
+              <label for="dropoffApt">Apartment / Unit (optional)</label>
+              <input id="dropoffApt" type="text" placeholder="Apt 2B, Unit 5, Suite 100, etc." />
+            </div>
+
+            <div class="field" style="margin-bottom: 0.75rem;">
+              <label for="dropoffArea">Neighborhood / Area</label>
+              <input id="dropoffArea" type="text" placeholder="Example: East Nashville" />
+            </div>
+
+            <div class="field" style="margin-bottom: 0.75rem;">
+              <label for="dropoffCity">City</label>
+              <input id="dropoffCity" type="text" placeholder="Example: Nashville, TN" />
+            </div>
+
+            <div class="field" style="margin-bottom: 0.75rem;">
+              <label for="dropoffZip">ZIP Code</label>
+              <input id="dropoffZip" type="text" placeholder="Example: 37206" maxlength="10" />
+            </div>
+
+            <div class="field" style="margin-top: 0.75rem;">
+              <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" id="hideDropoffAddressUntilAssigned" style="margin-top: 0.25rem; cursor: pointer;" />
+                <div style="font-size: 0.9rem; color: var(--text-main);">
+                  <strong>Hide full address until hustler is assigned</strong>
+                </div>
+              </label>
             </div>
           </div>
 
@@ -5505,8 +5519,13 @@ function showChangePasswordModal() {
             .value.trim();
           const onSiteOnly =
             document.getElementById("jobOnSiteOnly").checked;
-          const hideAddressUntilAssigned =
-            document.getElementById("hideAddressUntilAssigned").checked;
+          const pickupApt = document
+            .getElementById("pickupApt")
+            .value.trim();
+          const hidePickupAddressUntilAssigned =
+            document.getElementById("hidePickupAddressUntilAssigned").checked;
+          const hideDropoffAddressUntilAssigned =
+            document.getElementById("hideDropoffAddressUntilAssigned")?.checked || false;
           const dropoffArea = document
             .getElementById("dropoffArea")
             .value.trim();
@@ -5519,6 +5538,9 @@ function showChangePasswordModal() {
           const dropoffAddress = onSiteOnly ? "" : document
             .getElementById("dropoffAddress")
             .value.trim();
+          const dropoffApt = onSiteOnly ? "" : (document
+            .getElementById("dropoffApt")
+            .value.trim() || "");
           // Pricing option
           const pricingOption = document.getElementById("pricingOption")?.value || "set_price";
           
@@ -5761,14 +5783,16 @@ function showChangePasswordModal() {
                 pickup_area: pickupArea,
                 pickup_city: pickupCity,
                 pickup_zip: pickupZip,
-                pickup_address: pickupAddress,
+                pickup_address: pickupAddress + (pickupApt ? ', ' + pickupApt : ''),
+                pickup_apt: pickupApt || null,
                 pickup_lat: document.getElementById('pickupLat')?.value || null,
                 pickup_lng: document.getElementById('pickupLng')?.value || null,
                 on_site_only: onSiteOnly,
                 dropoff_area: onSiteOnly ? null : dropoffArea,
                 dropoff_city: onSiteOnly ? null : dropoffCity,
                 dropoff_zip: onSiteOnly ? null : dropoffZip,
-                dropoff_address: onSiteOnly ? null : dropoffAddress,
+                dropoff_address: onSiteOnly ? null : (dropoffAddress + (dropoffApt ? ', ' + dropoffApt : '')),
+                dropoff_apt: onSiteOnly ? null : (dropoffApt || null),
                 dropoff_lat: onSiteOnly ? null : (document.getElementById('dropoffLat')?.value || null),
                 dropoff_lng: onSiteOnly ? null : (document.getElementById('dropoffLng')?.value || null),
                 hide_address_until_assigned: hideAddressUntilAssigned, // Privacy setting
