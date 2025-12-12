@@ -13938,12 +13938,71 @@ meta.textContent =
               : 'Are you sure you want to cancel this application?';
             
             if (confirm(confirmMessage)) {
-              if (offerId) {
-                await cancelApplication(offerId, true); // true = isOfferId
-              } else if (jobId) {
-                await cancelApplication(jobId, false); // false = isJobId
+              try {
+                const token = localStorage.getItem('hustl_token');
+                if (!token) {
+                  showToast('Please log in to cancel applications');
+                  return;
+                }
+                
+                if (offerId) {
+                  // Cancel pending application
+                  if (offer.status === 'PENDING') {
+                    const response = await fetch(`${API_BASE}/offers/${offerId}/cancel`, {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                      }
+                    });
+                    
+                    if (!response.ok) {
+                      const error = await response.json();
+                      throw new Error(error.error || 'Failed to cancel application');
+                    }
+                    
+                    showToast('✅ Application cancelled');
+                  } else if (offer.status === 'ACCEPTED') {
+                    // Cancel accepted offer (use hustler-cancel endpoint)
+                    const response = await fetch(`${API_BASE}/offers/${offerId}/hustler-cancel`, {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                      }
+                    });
+                    
+                    if (!response.ok) {
+                      const error = await response.json();
+                      throw new Error(error.error || 'Failed to cancel job');
+                    }
+                    
+                    showToast('✅ Job cancelled. The job is now open for other applicants.');
+                  }
+                } else if (jobId) {
+                  // Cancel via job ID (for accepted offers)
+                  const response = await fetch(`${API_BASE}/offers/${offer.id}/hustler-cancel`, {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json'
+                    }
+                  });
+                  
+                  if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to cancel job');
+                  }
+                  
+                  showToast('✅ Job cancelled. The job is now open for other applicants.');
+                }
+                
+                // Reload applied jobs
+                loadAppliedJobs();
+              } catch (error) {
+                console.error('Error cancelling application:', error);
+                showToast(error.message || 'Failed to cancel application');
               }
-              loadAppliedJobs();
             }
           });
           

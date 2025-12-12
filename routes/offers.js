@@ -576,6 +576,68 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
   }
 });
 
+// POST /offers/:id/cancel - Cancel a pending application (Hustler only)
+router.post('/:id/cancel', authenticate, requireRole('HUSTLER'), async (req, res) => {
+  try {
+    const offer = await prisma.offer.findUnique({
+      where: { id: req.params.id },
+      include: {
+        job: {
+          include: {
+            customer: { select: { id: true, email: true, name: true } },
+          },
+        },
+        hustler: { select: { id: true, email: true, name: true } },
+      },
+    });
+
+    if (!offer) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    // Verify hustler owns this offer
+    if (offer.hustlerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden - You can only cancel your own applications' });
+    }
+
+    // Only allow cancellation if offer is PENDING
+    if (offer.status !== 'PENDING') {
+      return res.status(400).json({ 
+        error: 'Can only cancel pending applications',
+        currentStatus: offer.status 
+      });
+    }
+
+    // Update offer status to DECLINED (hustler cancelled)
+    await prisma.offer.update({
+      where: { id: req.params.id },
+      data: { status: 'DECLINED' }
+    });
+
+    // Send notification email to customer (non-blocking)
+    try {
+      const emailService = require('../services/email');
+      // Note: You may want to add a specific email for hustler cancellation
+      // For now, we'll just log it
+      console.log(`[OFFER CANCELLED] Hustler ${req.user.id} cancelled application for job ${offer.job.id}`);
+    } catch (emailError) {
+      console.error('Error sending cancellation email (non-fatal):', emailError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Application cancelled successfully.',
+      offer: {
+        id: offer.id,
+        status: 'DECLINED',
+      },
+    });
+  } catch (error) {
+    console.error('Cancel application error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /offers/:id/decline - Decline an offer (Customer only)
 router.post('/:id/decline', authenticate, requireRole('CUSTOMER'), async (req, res) => {
   try {
