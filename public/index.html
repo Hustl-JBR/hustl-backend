@@ -3757,9 +3757,15 @@
               </h3>
               <span id="unreadBadge" class="unread-badge" style="display: none;">0</span>
             </div>
-            <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0.5rem 0 1rem; padding: 0 1rem;">
-              Each conversation is tied to a specific job.
-            </p>
+            <!-- Conversation Tabs -->
+            <div class="conversation-tabs" style="display: flex; border-bottom: 1px solid #e9ecef; padding: 0 0.75rem; background: white;">
+              <button class="conversation-tab active" data-conv-tab="active" style="flex: 1; padding: 0.75rem; background: transparent; border: none; border-bottom: 2px solid var(--primary); color: var(--primary); font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: all 0.2s;">
+                Active
+              </button>
+              <button class="conversation-tab" data-conv-tab="deleted" style="flex: 1; padding: 0.75rem; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-weight: 500; font-size: 0.875rem; cursor: pointer; transition: all 0.2s;">
+                Deleted
+              </button>
+            </div>
             <div class="conversations-list" id="conversationList"></div>
           </div>
           
@@ -11264,13 +11270,38 @@ async function renderJobs(reset = false) {
           return;
         }
 
+        // Get current tab (default to 'active')
+        const activeTab = window.activeConversationTab || 'active';
+        const deleted = JSON.parse(localStorage.getItem("deletedConversations") || "[]");
+        
+        // Filter threads by tab
+        const filteredThreads = threads.filter(thread => {
+          const isDeleted = deleted.includes(thread.job.id);
+          if (activeTab === 'active') {
+            return !isDeleted; // Show non-deleted in active tab
+          } else if (activeTab === 'deleted') {
+            return isDeleted; // Show deleted in deleted tab
+          }
+          return true;
+        });
+
         // If nothing is selected yet, auto-open the first thread
-        if (!activeConversationJobId && threads.length > 0) {
-          activeConversationJobId = threads[0].job.id;
-          activeConversationThreadId = threads[0].id;
+        if (!activeConversationJobId && filteredThreads.length > 0) {
+          activeConversationJobId = filteredThreads[0].job.id;
+          activeConversationThreadId = filteredThreads[0].id;
         }
 
-        threads.forEach((thread) => {
+        // Show empty state if no conversations in current tab
+        if (filteredThreads.length === 0) {
+          const emptyMessage = activeTab === 'deleted' 
+            ? "No deleted conversations. Deleted conversations will appear here."
+            : "No active conversations yet.<br>Messages will appear here once you have an assigned job.";
+          convList.innerHTML = `<div class='muted' style='padding: 2rem; text-align: center;'>${emptyMessage}</div>`;
+          await renderConversation();
+          return;
+        }
+
+        filteredThreads.forEach((thread) => {
           const otherUser = user.id === thread.userAId ? thread.userB : thread.userA;
           const job = thread.job;
 
@@ -11447,9 +11478,10 @@ async function renderJobs(reset = false) {
         });
         actionsRow.appendChild(archiveBtn);
         
-        // Delete/Restore button
-        const deleted = JSON.parse(localStorage.getItem("deletedConversations") || "[]");
+        // Delete/Restore button (only allow delete for completed jobs)
         const isDeleted = deleted.includes(job.id);
+        const isCompleted = job.status === 'PAID' || job.status === 'COMPLETED_BY_HUSTLER';
+        
         const deleteBtn = document.createElement("button");
         deleteBtn.className = "small-btn";
         deleteBtn.style.background = isDeleted ? "#fecaca" : "transparent";
@@ -11458,9 +11490,10 @@ async function renderJobs(reset = false) {
         deleteBtn.style.fontSize = "0.75rem";
         deleteBtn.style.border = "none";
         deleteBtn.style.borderRadius = "4px";
-        deleteBtn.style.cursor = "pointer";
+        deleteBtn.style.cursor = (isCompleted || isDeleted) ? "pointer" : "not-allowed";
+        deleteBtn.style.opacity = (isCompleted || isDeleted) ? "1" : "0.5";
         deleteBtn.textContent = isDeleted ? "↩" : "🗑";
-        deleteBtn.title = isDeleted ? "Restore" : "Delete";
+        deleteBtn.title = isDeleted ? "Restore" : (isCompleted ? "Delete" : "Delete (only available for completed jobs)");
         deleteBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           const deleted = JSON.parse(localStorage.getItem("deletedConversations") || "[]");
@@ -11473,6 +11506,11 @@ async function renderJobs(reset = false) {
               renderMessagesView();
             }
           } else {
+            // Only allow deletion for completed jobs
+            if (!isCompleted) {
+              showToast("You can only delete conversations for completed jobs.");
+              return;
+            }
             if (confirm("Delete this conversation? This will hide it from your messages list. You can restore it later.")) {
               if (!deleted.includes(job.id)) {
                 deleted.push(job.id);
