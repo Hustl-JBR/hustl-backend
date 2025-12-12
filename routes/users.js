@@ -189,10 +189,11 @@ router.patch('/me', authenticate, [
       updateData.tools = (tools === '' || tools === null) ? null : tools.trim();
     }
 
-    console.log('[PATCH /users/me] Prepared updateData:', updateData);
+    console.log('[PATCH /users/me] Prepared updateData:', JSON.stringify(updateData, null, 2));
 
     let user;
     try {
+      console.log('[PATCH /users/me] Attempting Prisma update with data:', JSON.stringify(updateData, null, 2));
       user = await prisma.user.update({
         where: { id: req.user.id },
         data: updateData,
@@ -214,15 +215,23 @@ router.patch('/me', authenticate, [
           tools: true,
         },
       });
+      console.log('[PATCH /users/me] Prisma update succeeded. User bio:', JSON.stringify(user.bio), 'gender:', user.gender);
     } catch (updateError) {
+      console.error('[PATCH /users/me] Prisma update error:', updateError);
+      console.error('[PATCH /users/me] Error message:', updateError.message);
+      console.error('[PATCH /users/me] Error code:', updateError.code);
+      
       // If gender/bio/tools columns don't exist, update without them
-      if (updateError.message && (updateError.message.includes('gender') || updateError.message.includes('tools'))) {
-        delete updateData.bio;
-        delete updateData.gender;
-        delete updateData.tools;
+      if (updateError.message && (updateError.message.includes('gender') || updateError.message.includes('tools') || updateError.message.includes('bio') || updateError.code === 'P2021')) {
+        console.warn('[PATCH /users/me] Database columns may not exist, attempting update without bio/gender/tools');
+        const fallbackUpdateData = { ...updateData };
+        delete fallbackUpdateData.bio;
+        delete fallbackUpdateData.gender;
+        delete fallbackUpdateData.tools;
+        
         user = await prisma.user.update({
           where: { id: req.user.id },
-          data: updateData,
+          data: fallbackUpdateData,
           select: {
             id: true,
             email: true,
@@ -241,6 +250,7 @@ router.patch('/me', authenticate, [
         user.gender = null;
         user.bio = null;
         user.tools = null;
+        console.warn('[PATCH /users/me] Updated without bio/gender/tools - these columns may not exist in database');
       } else {
         throw updateError;
       }
