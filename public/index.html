@@ -3547,41 +3547,19 @@
 
       <!-- JOBS VIEW -->
       <section id="view-jobs" style="display:none;">
-        <!-- Search & Filter Bar -->
-        <div class="card" style="margin-bottom: 1rem; padding: 2rem;">
-          <!-- Category Filter Chips -->
-          <div style="margin-bottom: 1.5rem; padding-top: 0.5rem;">
-            <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 1rem;">Filter by Category</div>
-            <div id="categoryFilterChips" style="display: flex; flex-wrap: wrap; gap: 0.75rem; min-height: 80px; align-items: center; padding-top: 0.5rem;">
-              <button class="filter-chip active" data-category="all" style="padding: 0.5rem 0.75rem; border: 1.5px solid var(--primary); background: var(--primary-soft); color: var(--primary); border-radius: 999px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
-                All Jobs
-              </button>
-              <button class="filter-chip" data-category="moving" style="padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); background: white; color: var(--text-main); border-radius: 999px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
-                🚚 Moving
-              </button>
-              <button class="filter-chip" data-category="yard-work" style="padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); background: white; color: var(--text-main); border-radius: 999px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
-                🌿 Yard Work
-              </button>
-              <button class="filter-chip" data-category="dump-run" style="padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); background: white; color: var(--text-main); border-radius: 999px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
-                🗑️ Dump Run
-              </button>
-              <button class="filter-chip" data-category="cleaning" style="padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); background: white; color: var(--text-main); border-radius: 999px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
-                🧹 Cleaning
-              </button>
-              <button class="filter-chip" data-category="power-washing" style="padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); background: white; color: var(--text-main); border-radius: 999px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
-                💦 Power Wash
-              </button>
-              <button class="filter-chip" data-category="handyman" style="padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); background: white; color: var(--text-main); border-radius: 999px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
-                🔧 Handyman
-              </button>
-            </div>
-          </div>
-          
-          <!-- Sort & Status Row -->
-          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+        <!-- Filter Button & Sort Row -->
+        <div class="card" style="margin-bottom: 1rem; padding: 1rem;">
+          <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <!-- Filters Button with Badge -->
+            <button id="filtersToggleBtn" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1rem; background: white; border: 1.5px solid var(--primary); border-radius: 8px; font-size: 0.9rem; font-weight: 600; color: var(--primary); cursor: pointer; position: relative;">
+              <span>Filters</span>
+              <span id="filtersBadge" style="display: none; background: var(--primary); color: white; border-radius: 12px; padding: 0.15rem 0.5rem; font-size: 0.75rem; font-weight: 600; min-width: 20px; text-align: center;">0</span>
+              <span>▾</span>
+            </button>
+            
             <!-- Sort Dropdown -->
             <div style="flex: 1; min-width: 150px;">
-              <select id="jobsSortSelect" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; background: white; cursor: pointer;">
+              <select id="jobsSortSelect" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: white; cursor: pointer;">
                 <option value="newest">Newest</option>
                 <option value="highest_paid">Highest Paid</option>
                 <option value="lowest_paid">Lowest Paid</option>
@@ -3590,86 +3568,97 @@
               </select>
             </div>
           </div>
-          
-          <!-- Category Filter -->
-          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">Category</div>
-            <div id="categoryFilterContainer" style="overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin;">
-              <div id="categoryFilterChips" style="display: flex; gap: 0.5rem; flex-wrap: nowrap; padding-bottom: 0.25rem;">
-                <!-- Categories will be populated dynamically -->
-              </div>
-            </div>
-            <button id="categoryViewMoreBtn" style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: transparent; border: none; font-size: 0.8rem; color: var(--primary); cursor: pointer; display: none;">View More</button>
+        </div>
+        
+        <!-- Slide-up Filter Panel -->
+        <div id="filtersPanel" style="position: fixed; bottom: -100%; left: 0; right: 0; background: white; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -4px 20px rgba(0,0,0,0.15); z-index: 1000; max-height: 85vh; overflow-y: auto; transition: bottom 0.3s ease-out; -webkit-overflow-scrolling: touch;">
+          <!-- Panel Header -->
+          <div style="position: sticky; top: 0; background: white; border-bottom: 1px solid var(--border); padding: 1rem; display: flex; justify-content: space-between; align-items: center; z-index: 10;">
+            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600; color: var(--text-main);">Filters</h3>
+            <button id="filtersCloseBtn" style="background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; padding: 0.25rem 0.5rem;">✕</button>
           </div>
           
-          <!-- Price Type Filter -->
-          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">Price Type</div>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="filter-chip price-chip" data-price-type="flat" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">Flat</button>
-              <button class="filter-chip price-chip" data-price-type="hourly" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">Hourly</button>
-              <button class="filter-chip price-chip" data-price-type="hustler_sets" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">Hustler Sets</button>
-            </div>
-          </div>
-          
-          <!-- Time Filter -->
-          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">Time</div>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="filter-chip time-chip" data-time="asap" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">ASAP/Today</button>
-              <button class="filter-chip time-chip" data-time="tomorrow" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">Tomorrow</button>
-              <button class="filter-chip time-chip" data-time="this_week" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">This Week</button>
-              <button id="timeViewMoreBtn" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--primary); cursor: pointer; white-space: nowrap;">View More</button>
-            </div>
-            <div id="timeMoreOptions" style="display: none; margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="filter-chip time-chip" data-time="scheduled" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">Scheduled</button>
-              <button class="filter-chip time-chip" data-time="flexible" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">Flexible</button>
-            </div>
-          </div>
-          
-          <!-- Workers Filter -->
-          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">Workers</div>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="filter-chip workers-chip" data-workers="1" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">1 worker</button>
-              <button class="filter-chip workers-chip" data-workers="2" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">2 workers</button>
-              <button id="workersViewMoreBtn" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--primary); cursor: pointer; white-space: nowrap;">View More</button>
-            </div>
-            <div id="workersMoreOptions" style="display: none; margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="filter-chip workers-chip" data-workers="3" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">3+ workers</button>
-            </div>
-          </div>
-          
-          <!-- Location Permission & Distance Filter -->
-          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">📍 Distance (from your location)</div>
-            
-            <!-- Location Status -->
-            <div id="locationStatusContainer" style="margin-bottom: 0.75rem; padding: 0.75rem; background: #f3f4f6; border-radius: 8px;">
-              <div style="display: flex; align-items: center; justify-content: space-between;">
-                <div style="font-size: 0.85rem; color: var(--text-main);">
-                  <span id="locationStatusText">📍 Location not set</span>
+          <!-- Panel Content -->
+          <div style="padding: 1.5rem;">
+            <!-- Category Filter -->
+            <div style="margin-bottom: 1.5rem;">
+              <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">Category</div>
+              <div id="categoryFilterContainer" style="overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin;">
+                <div id="categoryFilterChips" style="display: flex; gap: 0.5rem; flex-wrap: wrap; padding-bottom: 0.25rem;">
+                  <!-- Categories will be populated dynamically -->
                 </div>
-                <button id="requestLocationBtn" style="padding: 0.4rem 0.75rem; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 0.8rem; cursor: pointer; white-space: nowrap;">Get My Location</button>
               </div>
             </div>
             
-            <!-- Distance Filter Chips (hidden until location is set) -->
-            <div id="distanceFilterContainer" style="display: none;">
+            <!-- Price Type Filter -->
+            <div style="margin-bottom: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+              <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">Price Type</div>
               <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <button class="filter-chip distance-chip" data-distance="5" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">5 mi</button>
-                <button class="filter-chip distance-chip" data-distance="10" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">10 mi</button>
-                <button class="filter-chip distance-chip" data-distance="20" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">20 mi</button>
-                <button id="distanceViewMoreBtn" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--primary); cursor: pointer; white-space: nowrap;">View More</button>
+                <button class="filter-chip price-chip" data-price-type="flat" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">Flat</button>
+                <button class="filter-chip price-chip" data-price-type="hourly" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">Hourly</button>
+                <button class="filter-chip price-chip" data-price-type="hustler_sets" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">Hustler Sets</button>
               </div>
-              <div id="distanceMoreOptions" style="display: none; margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <button class="filter-chip distance-chip" data-distance="30" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">30 mi</button>
-                <button class="filter-chip distance-chip" data-distance="50" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">50 mi</button>
-                <button class="filter-chip distance-chip" data-distance="statewide" style="padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;">Statewide</button>
+            </div>
+            
+            <!-- Time Filter -->
+            <div style="margin-bottom: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+              <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">Time</div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button class="filter-chip time-chip" data-time="asap" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">ASAP/Today</button>
+                <button class="filter-chip time-chip" data-time="tomorrow" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">Tomorrow</button>
+                <button class="filter-chip time-chip" data-time="this_week" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">This Week</button>
+                <button class="filter-chip time-chip" data-time="scheduled" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">Scheduled</button>
+                <button class="filter-chip time-chip" data-time="flexible" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">Flexible</button>
               </div>
+            </div>
+            
+            <!-- Workers Filter -->
+            <div style="margin-bottom: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+              <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">Workers</div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button class="filter-chip workers-chip" data-workers="1" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">1 worker</button>
+                <button class="filter-chip workers-chip" data-workers="2" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">2 workers</button>
+                <button class="filter-chip workers-chip" data-workers="3" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">3+ workers</button>
+              </div>
+            </div>
+            
+            <!-- Location Permission & Distance Filter -->
+            <div style="margin-bottom: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+              <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">📍 Distance (from your location)</div>
+              
+              <!-- Location Status -->
+              <div id="locationStatusContainer" style="margin-bottom: 0.75rem; padding: 0.75rem; background: #f3f4f6; border-radius: 8px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                  <div style="font-size: 0.85rem; color: var(--text-main);">
+                    <span id="locationStatusText">📍 Location not set</span>
+                  </div>
+                  <button id="requestLocationBtn" style="padding: 0.5rem 1rem; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 0.85rem; cursor: pointer; white-space: nowrap;">Get My Location</button>
+                </div>
+              </div>
+              
+              <!-- Distance Filter Chips (hidden until location is set) -->
+              <div id="distanceFilterContainer" style="display: none;">
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                  <button class="filter-chip distance-chip" data-distance="5" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">5 mi</button>
+                  <button class="filter-chip distance-chip" data-distance="10" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">10 mi</button>
+                  <button class="filter-chip distance-chip" data-distance="20" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">20 mi</button>
+                  <button class="filter-chip distance-chip" data-distance="30" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">30 mi</button>
+                  <button class="filter-chip distance-chip" data-distance="50" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">50 mi</button>
+                  <button class="filter-chip distance-chip" data-distance="statewide" style="padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.85rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s;">Statewide</button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div style="position: sticky; bottom: 0; background: white; padding-top: 1.5rem; border-top: 1px solid var(--border); margin-top: 1rem; display: flex; gap: 0.75rem;">
+              <button id="clearFiltersBtn" style="flex: 1; padding: 0.9rem; background: white; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-weight: 600; color: var(--text-main); cursor: pointer;">Clear All</button>
+              <button id="applyFiltersBtn" style="flex: 2; padding: 0.9rem; background: var(--primary); border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; color: white; cursor: pointer;">Apply Filters</button>
             </div>
           </div>
         </div>
+        
+        <!-- Panel Overlay (for closing on backdrop click) -->
+        <div id="filtersOverlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; display: none; opacity: 0; transition: opacity 0.3s ease-out;"></div>
         
         <!-- Jobs Header -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; padding: 0 0.25rem;">
@@ -18366,7 +18355,7 @@ meta.textContent =
         });
       }
       
-      // Distance filter chip handlers
+      // Distance filter chip handlers (in panel - only toggle temp state)
       document.querySelectorAll('.distance-chip').forEach(btn => {
         btn.addEventListener("click", () => {
           if (!userLocation) {
@@ -18377,22 +18366,12 @@ meta.textContent =
           }
           
           const distance = btn.dataset.distance;
-          if (activeDistanceFilter === distance) {
-            activeDistanceFilter = null;
-            btn.style.background = "white";
-            btn.style.color = "var(--text-main)";
+          if (tempDistanceFilter === distance) {
+            tempDistanceFilter = null;
           } else {
-            document.querySelectorAll('.distance-chip').forEach(b => {
-              b.style.background = "white";
-              b.style.color = "var(--text-main)";
-            });
-            activeDistanceFilter = distance;
-            btn.style.background = "var(--primary)";
-            btn.style.color = "white";
+            tempDistanceFilter = distance;
           }
-          if (typeof renderJobs === 'function') {
-            renderJobs(true);
-          }
+          updateChipVisuals();
         });
       });
       
@@ -18411,29 +18390,216 @@ meta.textContent =
       // Check for stored location on page load
       checkStoredLocation();
       
-      // Category filter chips
-      const categoryChipsContainer = document.getElementById("categoryFilterChips");
-      if (categoryChipsContainer) {
-        categoryChipsContainer.querySelectorAll(".filter-chip").forEach(chip => {
-          chip.addEventListener("click", () => {
-            // Update active state
-            categoryChipsContainer.querySelectorAll(".filter-chip").forEach(c => {
-              c.classList.remove("active");
-              c.style.border = "1.5px solid var(--border)";
-              c.style.background = "white";
-              c.style.color = "var(--text-main)";
-            });
-            chip.classList.add("active");
+      // Filter Panel Control
+      const filtersPanel = document.getElementById("filtersPanel");
+      const filtersOverlay = document.getElementById("filtersOverlay");
+      const filtersToggleBtn = document.getElementById("filtersToggleBtn");
+      const filtersCloseBtn = document.getElementById("filtersCloseBtn");
+      const applyFiltersBtn = document.getElementById("applyFiltersBtn");
+      const clearFiltersBtn = document.getElementById("clearFiltersBtn");
+      const filtersBadge = document.getElementById("filtersBadge");
+      
+      // Temporary filter state (for panel editing)
+      let tempCategoryFilters = new Set();
+      let tempPriceTypeFilters = new Set();
+      let tempTimeFilters = new Set();
+      let tempWorkersFilters = new Set();
+      let tempDistanceFilter = null;
+      
+      // Function to count active filters
+      function countActiveFilters() {
+        let count = 0;
+        count += activeCategoryFilters.size;
+        count += activePriceTypeFilters.size;
+        count += activeTimeFilters.size;
+        count += activeWorkersFilters.size;
+        if (activeDistanceFilter) count += 1;
+        return count;
+      }
+      
+      // Function to update filter badge
+      function updateFilterBadge() {
+        const count = countActiveFilters();
+        if (filtersBadge) {
+          if (count > 0) {
+            filtersBadge.textContent = count;
+            filtersBadge.style.display = 'inline-block';
+          } else {
+            filtersBadge.style.display = 'none';
+          }
+        }
+      }
+      
+      // Function to sync temp state with active state
+      function syncTempToActive() {
+        tempCategoryFilters = new Set(activeCategoryFilters);
+        tempPriceTypeFilters = new Set(activePriceTypeFilters);
+        tempTimeFilters = new Set(activeTimeFilters);
+        tempWorkersFilters = new Set(activeWorkersFilters);
+        tempDistanceFilter = activeDistanceFilter;
+      }
+      
+      // Function to sync active state to temp state
+      function syncActiveToTemp() {
+        activeCategoryFilters = new Set(tempCategoryFilters);
+        activePriceTypeFilters = new Set(tempPriceTypeFilters);
+        activeTimeFilters = new Set(tempTimeFilters);
+        activeWorkersFilters = new Set(tempWorkersFilters);
+        activeDistanceFilter = tempDistanceFilter;
+      }
+      
+      // Function to update chip visual states based on temp state
+      function updateChipVisuals() {
+        // Category chips
+        document.querySelectorAll('.category-chip').forEach(chip => {
+          const cat = chip.dataset.category;
+          if (tempCategoryFilters.has(cat)) {
+            chip.style.background = "var(--primary)";
+            chip.style.color = "white";
             chip.style.border = "1.5px solid var(--primary)";
-            chip.style.background = "var(--primary-soft)";
-            chip.style.color = "var(--primary)";
-            
-            // Update filter and reload
-            activeCategoryFilter = chip.dataset.category;
-            if (typeof renderJobs === 'function') {
-              renderJobs(true);
-            }
-          });
+          } else {
+            chip.style.background = "white";
+            chip.style.color = "var(--text-main)";
+            chip.style.border = "1.5px solid var(--border)";
+          }
+        });
+        
+        // Price type chips
+        document.querySelectorAll('.price-chip').forEach(chip => {
+          const priceType = chip.dataset.priceType;
+          if (tempPriceTypeFilters.has(priceType)) {
+            chip.style.background = "var(--primary)";
+            chip.style.color = "white";
+            chip.style.border = "1.5px solid var(--primary)";
+          } else {
+            chip.style.background = "white";
+            chip.style.color = "var(--text-main)";
+            chip.style.border = "1.5px solid var(--border)";
+          }
+        });
+        
+        // Time chips
+        document.querySelectorAll('.time-chip').forEach(chip => {
+          const time = chip.dataset.time;
+          if (tempTimeFilters.has(time)) {
+            chip.style.background = "var(--primary)";
+            chip.style.color = "white";
+            chip.style.border = "1.5px solid var(--primary)";
+          } else {
+            chip.style.background = "white";
+            chip.style.color = "var(--text-main)";
+            chip.style.border = "1.5px solid var(--border)";
+          }
+        });
+        
+        // Workers chips
+        document.querySelectorAll('.workers-chip').forEach(chip => {
+          const workers = chip.dataset.workers;
+          if (tempWorkersFilters.has(workers)) {
+            chip.style.background = "var(--primary)";
+            chip.style.color = "white";
+            chip.style.border = "1.5px solid var(--primary)";
+          } else {
+            chip.style.background = "white";
+            chip.style.color = "var(--text-main)";
+            chip.style.border = "1.5px solid var(--border)";
+          }
+        });
+        
+        // Distance chips
+        document.querySelectorAll('.distance-chip').forEach(chip => {
+          const distance = chip.dataset.distance;
+          if (tempDistanceFilter === distance) {
+            chip.style.background = "var(--primary)";
+            chip.style.color = "white";
+            chip.style.border = "1.5px solid var(--primary)";
+          } else {
+            chip.style.background = "white";
+            chip.style.color = "var(--text-main)";
+            chip.style.border = "1.5px solid var(--border)";
+          }
+        });
+      }
+      
+      // Function to open filter panel
+      function openFiltersPanel() {
+        syncTempToActive();
+        updateChipVisuals();
+        if (filtersPanel) {
+          filtersPanel.style.bottom = '0';
+        }
+        if (filtersOverlay) {
+          filtersOverlay.style.display = 'block';
+          setTimeout(() => {
+            filtersOverlay.style.opacity = '1';
+          }, 10);
+        }
+        document.body.style.overflow = 'hidden';
+      }
+      
+      // Function to close filter panel
+      function closeFiltersPanel() {
+        if (filtersPanel) {
+          filtersPanel.style.bottom = '-100%';
+        }
+        if (filtersOverlay) {
+          filtersOverlay.style.opacity = '0';
+          setTimeout(() => {
+            filtersOverlay.style.display = 'none';
+          }, 300);
+        }
+        document.body.style.overflow = '';
+      }
+      
+      // Open panel handlers
+      if (filtersToggleBtn) {
+        filtersToggleBtn.addEventListener("click", openFiltersPanel);
+      }
+      
+      // Close panel handlers
+      if (filtersCloseBtn) {
+        filtersCloseBtn.addEventListener("click", closeFiltersPanel);
+      }
+      if (filtersOverlay) {
+        filtersOverlay.addEventListener("click", closeFiltersPanel);
+      }
+      
+      // Apply filters button
+      if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener("click", () => {
+          // Save scroll position
+          const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+          
+          // Apply temp state to active state
+          syncActiveToTemp();
+          
+          // Close panel
+          closeFiltersPanel();
+          
+          // Update badge
+          updateFilterBadge();
+          
+          // Apply filters and restore scroll position
+          if (typeof renderJobs === 'function') {
+            renderJobs(true).then(() => {
+              // Restore scroll position after a brief delay
+              setTimeout(() => {
+                window.scrollTo({ top: scrollPosition, behavior: 'instant' });
+              }, 100);
+            });
+          }
+        });
+      }
+      
+      // Clear all filters button
+      if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener("click", () => {
+          tempCategoryFilters.clear();
+          tempPriceTypeFilters.clear();
+          tempTimeFilters.clear();
+          tempWorkersFilters.clear();
+          tempDistanceFilter = null;
+          updateChipVisuals();
         });
       }
       
@@ -18485,18 +18651,12 @@ meta.textContent =
             chip.textContent = categoryNames[cat] || cat;
             chip.style.cssText = "padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;";
             chip.addEventListener("click", () => {
-              if (activeCategoryFilters.has(cat)) {
-                activeCategoryFilters.delete(cat);
-                chip.style.background = "white";
-                chip.style.color = "var(--text-main)";
+              if (tempCategoryFilters.has(cat)) {
+                tempCategoryFilters.delete(cat);
               } else {
-                activeCategoryFilters.add(cat);
-                chip.style.background = "var(--primary)";
-                chip.style.color = "white";
+                tempCategoryFilters.add(cat);
               }
-              if (typeof renderJobs === 'function') {
-                renderJobs(true);
-              }
+              updateChipVisuals();
             });
             categoryFilterChips.appendChild(chip);
           });
