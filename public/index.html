@@ -6146,78 +6146,10 @@ async function renderJobs(reset = false) {
       allLoadedJobs = [];
     }
     
-    let filteredJobs = allLoadedJobs;
-    const currentUser = getCurrentUser();
-    
-    if (activeJobsStatusFilter === "all") {
-      // All: Shows everything related to the user (jobs applied to, accepted, in progress, completed)
-      filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => {
-        if (!currentUser) return j.status === "OPEN" || j.status === "open";
-        // Show jobs user posted, applied to, accepted, or completed
-        const isPoster = j.postedByUserId === currentUser.id;
-        // Check if user has applied (using fetched offers or job.offers)
-        const hasApplied = userAppliedJobIds.has(j.id) || 
-                          (j.offers && Array.isArray(j.offers) && j.offers.some(offer => 
-                            offer.hustlerId === currentUser.id && 
-                            (offer.status === "PENDING" || offer.status === "ACCEPTED")
-                          ));
-        const isAssigned = j.hustlerId === currentUser.id;
-        return isPoster || hasApplied || isAssigned || j.status === "OPEN" || j.status === "open";
-      }) : [];
-    } else if (activeJobsStatusFilter === "applied") {
-      // Applied: Shows only jobs the hustler has applied for (still waiting on customer or accepted but not started)
-      filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => {
-        if (!currentUser) return false;
-        
-        // Check if user has applied using the offers we fetched
-        const hasAppliedOffer = userAppliedJobIds.has(j.id);
-        if (!hasAppliedOffer) {
-          // Fallback: check job.offers if available
-          const hasApplied = j.offers && Array.isArray(j.offers) && j.offers.some(offer => 
-            offer.hustlerId === currentUser.id && 
-            (offer.status === "PENDING" || offer.status === "ACCEPTED")
-          );
-          if (!hasApplied) return false;
-        }
-        
-        // Get offer status if available
-        const offer = userAppliedOffers.get(j.id) || (j.offers && Array.isArray(j.offers) ? j.offers.find(o => o.hustlerId === currentUser.id) : null);
-        
-        // Show PENDING offers (waiting for customer)
-        if (offer && offer.status === 'PENDING') {
-          return j.status === "OPEN" || j.status === "open";
-        }
-        
-        // Show ACCEPTED offers that haven't started yet (can still cancel)
-        if (offer && offer.status === 'ACCEPTED' && (j.status === 'SCHEDULED' || j.status === 'ASSIGNED') && !j.startCodeVerified) {
-          return true;
-        }
-        
-        return false;
-      }) : [];
-    } else if (activeJobsStatusFilter === "in_progress") {
-      // In Progress: Shows jobs where start code has been used (actively being worked on)
-      filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => {
-        if (!currentUser) return false;
-        // Must be assigned to user AND start code verified (job is active)
-        const isAssigned = j.hustlerId === currentUser.id || j.postedByUserId === currentUser.id;
-        const isActive = j.arrivalCodeVerified && !j.completionCodeVerified;
-        return isAssigned && isActive;
-      }) : [];
-    } else if (activeJobsStatusFilter === "done") {
-      // Done: Shows completed jobs (completion code entered, payment released)
-      filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => {
-        if (!currentUser) return false;
-        // Must be related to user AND completed
-        const isPoster = j.postedByUserId === currentUser.id;
-        const isHustler = j.hustlerId === currentUser.id;
-        const isCompleted = j.completionCodeVerified || j.status === "COMPLETED" || j.status === "PAID";
-        return (isPoster || isHustler) && isCompleted;
-      }) : [];
-    } else if (activeJobsStatusFilter) {
-      // Fallback for other status filters
-      filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => j.status === activeJobsStatusFilter) : [];
-    }
+    // Browse Jobs only shows OPEN jobs
+    let filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => {
+      return j.status === "OPEN" || j.status === "open";
+    }) : [];
     
     // Final safety check
     if (!Array.isArray(filteredJobs)) {
@@ -18107,39 +18039,7 @@ meta.textContent =
         });
       }
       
-      // Jobs status filter with improved highlighting
-      const jobsStatusFilter = document.getElementById("jobsStatusFilter");
-      if (jobsStatusFilter) {
-        const updateStatusTabStyles = () => {
-          jobsStatusFilter.querySelectorAll(".job-status-tab").forEach((el) => {
-            if (el.dataset.status === activeJobsStatusFilter) {
-              el.classList.add("active");
-              el.style.background = "var(--primary)";
-              el.style.color = "white";
-              el.style.fontWeight = "600";
-              el.style.border = "2px solid var(--primary)";
-            } else {
-              el.classList.remove("active");
-              el.style.background = "white";
-              el.style.color = "var(--text-main)";
-              el.style.fontWeight = "normal";
-              el.style.border = "2px solid var(--border)";
-            }
-          });
-        };
-        
-        updateStatusTabStyles();
-        
-        jobsStatusFilter.querySelectorAll(".job-status-tab").forEach((el) => {
-          el.addEventListener("click", () => {
-            activeJobsStatusFilter = el.dataset.status;
-            updateStatusTabStyles();
-            if (typeof renderJobs === 'function') {
-              renderJobs(true); // Reset pagination when filter changes
-            }
-          });
-        });
-      }
+      // Status filter removed - Browse Jobs only shows OPEN jobs
       
       // Location filter handlers
       const locationZipFilter = document.getElementById("locationZipFilter");
