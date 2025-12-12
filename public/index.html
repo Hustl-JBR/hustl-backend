@@ -3548,10 +3548,10 @@
       <!-- JOBS VIEW -->
       <section id="view-jobs" style="display:none;">
         <!-- Filter Button & Sort Row -->
-        <div class="card" style="margin-bottom: 1rem; padding: 1rem;">
+        <div class="card" style="margin-bottom: 0.75rem; padding: 0.75rem 1rem;">
           <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
             <!-- Filters Button with Badge -->
-            <button id="filtersToggleBtn" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1rem; background: white; border: 1.5px solid var(--primary); border-radius: 8px; font-size: 0.9rem; font-weight: 600; color: var(--primary); cursor: pointer; position: relative;">
+            <button id="filtersToggleBtn" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.9rem; background: white; border: 1.5px solid var(--primary); border-radius: 8px; font-size: 0.85rem; font-weight: 600; color: var(--primary); cursor: pointer; position: relative;">
               <span>Filters</span>
               <span id="filtersBadge" style="display: none; background: var(--primary); color: white; border-radius: 12px; padding: 0.15rem 0.5rem; font-size: 0.75rem; font-weight: 600; min-width: 20px; text-align: center;">0</span>
               <span>▾</span>
@@ -3559,7 +3559,7 @@
             
             <!-- Sort Dropdown -->
             <div style="flex: 1; min-width: 150px;">
-              <select id="jobsSortSelect" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: white; cursor: pointer;">
+              <select id="jobsSortSelect" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; background: white; cursor: pointer;">
                 <option value="newest">Newest</option>
                 <option value="highest_paid">Highest Paid</option>
                 <option value="lowest_paid">Lowest Paid</option>
@@ -3633,6 +3633,7 @@
                 <button class="filter-chip workers-chip" data-workers="1" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;">👤 1 worker</button>
                 <button class="filter-chip workers-chip" data-workers="2" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;">👥 2 workers</button>
                 <button class="filter-chip workers-chip" data-workers="3" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;">👥 3+ workers</button>
+                <button class="filter-chip workers-chip" data-workers="company" style="padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;">🏢 Company</button>
               </div>
             </div>
             
@@ -3678,12 +3679,12 @@
         <div id="filtersOverlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; display: none; opacity: 0; transition: opacity 0.3s ease-out;"></div>
         
         <!-- Jobs Header -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; padding: 0 0.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; padding: 0 0.25rem;">
           <div>
-            <h2 style="margin: 0; font-size: 1.25rem; color: var(--text-main);" id="jobsCardTitle">Jobs in Tennessee</h2>
-            <span class="muted" id="jobsFilterSummary" style="font-size: 0.85rem;"></span>
+            <h2 style="margin: 0; font-size: 1.1rem; color: var(--text-main); font-weight: 600;" id="jobsCardTitle">Jobs near you</h2>
+            <span class="muted" id="jobsFilterSummary" style="font-size: 0.8rem;"></span>
           </div>
-          <button id="refreshJobsBtn" style="padding: 0.5rem 0.75rem; background: transparent; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; color: var(--text-muted); cursor: pointer;">
+          <button id="refreshJobsBtn" style="padding: 0.4rem 0.65rem; background: transparent; border: 1px solid var(--border); border-radius: 8px; font-size: 0.8rem; color: var(--text-muted); cursor: pointer;">
             🔄 Refresh
           </button>
         </div>
@@ -18533,6 +18534,8 @@ meta.textContent =
             chip.style.border = "1.5px solid var(--border)";
           }
         });
+        
+        // Ensure all filter types support multi-select (no restrictions)
         
         // Distance chips
         document.querySelectorAll('.distance-chip').forEach(chip => {
