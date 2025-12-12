@@ -12366,9 +12366,14 @@ async function renderJobs(reset = false) {
             }, 2000);
           } catch (error) {
             console.error("Error saving profile:", error);
+            console.error("Error details:", error.details);
             
             // Show detailed error message
-            const errorMessage = error.message || "Error saving profile. Please try again.";
+            let errorMessage = error.message || "Error saving profile. Please try again.";
+            if (error.details && error.details.errors) {
+              const validationErrors = error.details.errors.map(e => e.msg || `${e.param}: ${e.msg}`).join(', ');
+              errorMessage = `Validation error: ${validationErrors}`;
+            }
             showToast(`❌ ${errorMessage}`);
             
             // Re-enable save button
