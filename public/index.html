@@ -6065,6 +6065,13 @@ let activePriceTypeFilters = new Set(); // flat, hourly, hustler_sets
 let activeTimeFilters = new Set(); // asap, tomorrow, this_week, scheduled, flexible
 let activeWorkersFilters = new Set(); // 1, 2, 3+
 
+// Background polling system
+let backgroundPollInterval = null;
+let isUserInteracting = false; // Track if user is typing/interacting
+let lastPollTime = 0;
+const POLL_INTERVAL = 4500; // 4.5 seconds (between 3-6 seconds)
+const POLLABLE_VIEWS = ['jobs', 'manage-jobs', 'messages'];
+
 async function renderJobs(reset = false) {
   console.log('🔵 NEW RENDERJOBS VERSION LOADED - v3.0');
   const jobsList = document.getElementById("jobsList");
