@@ -18879,9 +18879,7 @@ meta.textContent =
           if (typeof renderJobs === 'function') {
             renderJobs(true);
           }
-          if (typeof showToast === 'function') {
-            showToast("Jobs refreshed!");
-          }
+          // Removed toast notification - silent refresh
         });
       }
       
