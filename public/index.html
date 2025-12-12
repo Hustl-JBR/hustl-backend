@@ -12018,14 +12018,68 @@ async function renderJobs(reset = false) {
 
     /* ---------- Profile ---------- */
 
+    // Centralized avatar rendering function - single source of truth
+    function renderUserAvatar(user, size = 40, options = {}) {
+      const {
+        showBorder = false,
+        borderColor = 'var(--border)',
+        borderWidth = '2px',
+        className = '',
+        onClick = null,
+        style = ''
+      } = options;
+      
+      const sizePx = `${size}px`;
+      const fontSize = `${Math.max(size * 0.4, 14)}px`;
+      const initial = (user?.name || user?.email || 'U')[0].toUpperCase();
+      
+      const baseStyle = `
+        width: ${sizePx};
+        height: ${sizePx};
+        border-radius: 50%;
+        overflow: hidden;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        ${showBorder ? `border: ${borderWidth} solid ${borderColor};` : ''}
+        ${style}
+      `.trim();
+      
+      if (user?.photoUrl) {
+        return `
+          <div class="${className}" style="${baseStyle}" ${onClick ? `onclick="${onClick}"` : ''}>
+            <img 
+              src="${user.photoUrl}" 
+              alt="${user.name || 'User'}" 
+              style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;"
+              onerror="this.parentElement.innerHTML='<div style=\\'width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: ${fontSize}; font-weight: 700; color: var(--primary); background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);\\'>${initial}</div>'"
+            />
+          </div>
+        `;
+      } else {
+        return `
+          <div 
+            class="${className}" 
+            style="${baseStyle} background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%); font-size: ${fontSize}; font-weight: 700; color: var(--primary);"
+            ${onClick ? `onclick="${onClick}"` : ''}
+          >
+            ${initial}
+          </div>
+        `;
+      }
+    }
+
     // Render Basic Info Section - View Mode
     function renderBasicInfoView(user, ratingAvg, ratingCount, container) {
       if (!container) {
         return;
       }
-      const avatarContent = user.photoUrl 
-        ? `<img src="${user.photoUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">` 
-        : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 700; color: var(--primary); background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);">${(user.name || 'U')[0].toUpperCase()}</div>`;
+      const avatarContent = renderUserAvatar(user, 120, { 
+        showBorder: true, 
+        borderWidth: '3px',
+        style: 'box-shadow: 0 4px 12px rgba(0,0,0,0.1);'
+      });
       
       const genderLabel = user.gender ? 
         (user.gender === 'male' ? 'Male' : 
@@ -12037,9 +12091,7 @@ async function renderJobs(reset = false) {
         <div class="card" style="padding: 2rem; margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;">
           <div style="display: flex; gap: 2rem; align-items: flex-start;">
             <!-- Profile Photo -->
-            <div style="width: 120px; height: 120px; border-radius: 50%; overflow: hidden; flex-shrink: 0; border: 3px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-              ${avatarContent}
-            </div>
+            ${avatarContent.replace('width: 120px; height: 120px;', 'width: 120px; height: 120px;').replace('class=""', 'class="" style="flex-shrink: 0;"')}
             
             <!-- Info -->
             <div style="flex: 1; min-width: 0;">
