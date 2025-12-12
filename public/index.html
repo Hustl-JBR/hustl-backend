@@ -11998,6 +11998,53 @@ async function renderJobs(reset = false) {
 
     /* ---------- Profile ---------- */
 
+    // Helper function to get the latest user photoUrl from single source of truth
+    function getUserPhotoUrl(userId) {
+      // First check localStorage (most up-to-date)
+      try {
+        const cachedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
+        if (cachedUser.id === userId && cachedUser.photoUrl) {
+          return cachedUser.photoUrl;
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+      
+      // Check auth currentUser
+      if (window.hustlAPI && window.hustlAPI.auth && window.hustlAPI.auth.currentUser) {
+        if (window.hustlAPI.auth.currentUser.id === userId && window.hustlAPI.auth.currentUser.photoUrl) {
+          return window.hustlAPI.auth.currentUser.photoUrl;
+        }
+      }
+      
+      return null;
+    }
+    
+    // Function to update all avatars in the DOM for a specific user
+    function updateAllAvatarsInDOM(photoUrl, userId) {
+      if (!photoUrl || !userId) return;
+      
+      // Find all avatar images for this user
+      const allAvatars = document.querySelectorAll(`img[data-user-id="${userId}"], img[alt*="${userId}"]`);
+      allAvatars.forEach(img => {
+        if (img.src !== photoUrl) {
+          // Add cache-busting to force refresh
+          const separator = photoUrl.includes('?') ? '&' : '?';
+          img.src = `${photoUrl}${separator}t=${Date.now()}`;
+        }
+      });
+      
+      // Also update any avatar containers that might have user data
+      const avatarContainers = document.querySelectorAll(`[data-user-id="${userId}"]`);
+      avatarContainers.forEach(container => {
+        const img = container.querySelector('img');
+        if (img && img.src !== photoUrl) {
+          const separator = photoUrl.includes('?') ? '&' : '?';
+          img.src = `${photoUrl}${separator}t=${Date.now()}`;
+        }
+      });
+    }
+
     // Centralized avatar rendering function - single source of truth
     function renderUserAvatar(user, size = 40, options = {}) {
       const {
@@ -12013,6 +12060,15 @@ async function renderJobs(reset = false) {
       const fontSize = `${Math.max(size * 0.4, 14)}px`;
       const initial = (user?.name || user?.email || 'U')[0].toUpperCase();
       
+      // Get the latest photoUrl from single source of truth
+      let photoUrl = user?.photoUrl;
+      if (user?.id) {
+        const latestPhotoUrl = getUserPhotoUrl(user.id);
+        if (latestPhotoUrl) {
+          photoUrl = latestPhotoUrl;
+        }
+      }
+      
       const baseStyle = `
         width: ${sizePx};
         height: ${sizePx};
@@ -12026,12 +12082,17 @@ async function renderJobs(reset = false) {
         ${style}
       `.trim();
       
-      if (user?.photoUrl) {
+      if (photoUrl) {
+        // Add cache-busting if not already present
+        const finalPhotoUrl = photoUrl.includes('?') ? photoUrl : `${photoUrl}?t=${Date.now()}`;
+        const userId = user?.id || '';
+        
         return `
-          <div class="${className}" style="${baseStyle}" ${onClick ? `onclick="${onClick}"` : ''}>
+          <div class="${className}" style="${baseStyle}" ${onClick ? `onclick="${onClick}"` : ''} data-user-id="${userId}">
             <img 
-              src="${user.photoUrl}" 
+              src="${finalPhotoUrl}" 
               alt="${user.name || 'User'}" 
+              data-user-id="${userId}"
               style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;"
               onerror="this.parentElement.innerHTML='<div style=\\'width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: ${fontSize}; font-weight: 700; color: var(--primary); background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);\\'>${initial}</div>'"
             />
