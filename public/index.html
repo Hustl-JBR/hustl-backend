@@ -6374,6 +6374,11 @@ async function renderJobs(reset = false) {
         ? "No jobs yet." 
         : `Showing ${filteredJobs.length} job(s)${pagination.total ? ` of ${pagination.total}` : ''}`;
     }
+    
+    // Update filter badge (if function exists)
+    if (typeof window.updateFilterBadge === 'function') {
+      window.updateFilterBadge();
+    }
 
     if (filteredJobs.length === 0 && currentJobsPage === 1) {
       if (jobsList) {
@@ -18429,6 +18434,12 @@ meta.textContent =
           }
         }
       }
+      
+      // Make updateFilterBadge globally available
+      window.updateFilterBadge = updateFilterBadge;
+      
+      // Initial badge update
+      updateFilterBadge();
       
       // Function to sync temp state with active state
       function syncTempToActive() {
