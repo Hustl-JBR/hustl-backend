@@ -18656,28 +18656,56 @@ meta.textContent =
             });
           }
           
-          const categoryNames = {
-            'moving': 'Moving', 'yard-work': 'Yard Work', 'dump-run': 'Dump Run',
-            'cleaning': 'Cleaning', 'power-washing': 'Power Wash', 'furniture-assembly': 'Assembly',
-            'painting': 'Painting', 'handyman': 'Handyman', 'landscaping': 'Landscaping',
-            'pet-care': 'Pet Care', 'delivery': 'Delivery', 'car-cleaning': 'Car Clean',
-            'event-setup': 'Event Setup', 'snow-removal': 'Snow Removal', 'other': 'Other'
+          // Category definitions with emojis
+          const categoryDefs = {
+            'moving': { name: 'Moving', emoji: '🚚' },
+            'yard-work': { name: 'Yard Work', emoji: '🌿' },
+            'dump-run': { name: 'Dump Run', emoji: '🗑️' },
+            'cleaning': { name: 'Cleaning', emoji: '🧹' },
+            'power-washing': { name: 'Power Wash', emoji: '💦' },
+            'furniture-assembly': { name: 'Assembly', emoji: '🔧' },
+            'housekeeping': { name: 'Housekeeping', emoji: '🏡' },
+            'small-moves': { name: 'Small Moves', emoji: '📦' },
+            'heavy-lifting': { name: 'Heavy Lifting', emoji: '🎒' },
+            'furniture-help': { name: 'Furniture Help', emoji: '🪑' },
+            'painting': { name: 'Painting', emoji: '🎨' },
+            'handyman': { name: 'Handyman', emoji: '🔨' },
+            'landscaping': { name: 'Landscaping', emoji: '🌳' },
+            'pet-care': { name: 'Pet Care', emoji: '🐕' },
+            'delivery': { name: 'Delivery', emoji: '📦' },
+            'car-cleaning': { name: 'Car Clean', emoji: '🚿' },
+            'event-setup': { name: 'Event Setup', emoji: '🎪' },
+            'snow-removal': { name: 'Snow Removal', emoji: '❄️' },
+            'other': { name: 'Other', emoji: '➕' }
           };
           
-          const categoryArray = Array.from(categories);
-          const initialCategories = categoryArray.slice(0, 6);
-          const moreCategories = categoryArray.slice(6);
+          // All available categories (including ones not in jobs)
+          const allCategories = [
+            'moving', 'yard-work', 'dump-run', 'cleaning', 'power-washing',
+            'furniture-assembly', 'housekeeping', 'small-moves', 'heavy-lifting',
+            'furniture-help', 'painting', 'handyman', 'landscaping', 'pet-care',
+            'delivery', 'car-cleaning', 'event-setup', 'snow-removal', 'other'
+          ];
+          
+          // Filter to only show categories that exist in jobs OR show all
+          const categoriesToShow = Array.from(categories).length > 0 
+            ? Array.from(categories) 
+            : allCategories;
+          
+          const initialCategories = categoriesToShow.slice(0, 6);
+          const moreCategories = categoriesToShow.slice(6);
           
           // Clear existing chips
           categoryFilterChips.innerHTML = '';
           
           // Add initial categories
           initialCategories.forEach(cat => {
+            const def = categoryDefs[cat] || { name: cat, emoji: '⭐' };
             const chip = document.createElement("button");
             chip.className = "filter-chip category-chip";
             chip.dataset.category = cat;
-            chip.textContent = categoryNames[cat] || cat;
-            chip.style.cssText = "padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;";
+            chip.innerHTML = `<span>${def.emoji}</span> <span>${def.name}</span>`;
+            chip.style.cssText = "padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;";
             chip.addEventListener("click", () => {
               if (tempCategoryFilters.has(cat)) {
                 tempCategoryFilters.delete(cat);
@@ -18693,40 +18721,43 @@ meta.textContent =
           if (moreCategories.length > 0 && categoryViewMoreBtn) {
             categoryViewMoreBtn.style.display = "block";
             let showingMore = false;
-            const moreContainer = document.createElement("div");
-            moreContainer.id = "categoryMoreOptions";
-            moreContainer.style.cssText = "display: none; margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;";
+            let moreContainer = document.getElementById("categoryMoreOptions");
+            if (!moreContainer) {
+              moreContainer = document.createElement("div");
+              moreContainer.id = "categoryMoreOptions";
+              moreContainer.style.cssText = "display: none; margin-top: 0.75rem; display: flex; gap: 0.6rem; flex-wrap: wrap;";
+              categoryViewMoreBtn.parentNode.insertBefore(moreContainer, categoryViewMoreBtn.nextSibling);
+            } else {
+              moreContainer.innerHTML = ''; // Clear existing
+            }
             
             moreCategories.forEach(cat => {
+              const def = categoryDefs[cat] || { name: cat, emoji: '⭐' };
               const chip = document.createElement("button");
               chip.className = "filter-chip category-chip";
               chip.dataset.category = cat;
-              chip.textContent = categoryNames[cat] || cat;
-              chip.style.cssText = "padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap;";
+              chip.innerHTML = `<span>${def.emoji}</span> <span>${def.name}</span>`;
+              chip.style.cssText = "padding: 0.65rem 1.25rem; border: 1.5px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;";
               chip.addEventListener("click", () => {
-                if (activeCategoryFilters.has(cat)) {
-                  activeCategoryFilters.delete(cat);
-                  chip.style.background = "white";
-                  chip.style.color = "var(--text-main)";
+                if (tempCategoryFilters.has(cat)) {
+                  tempCategoryFilters.delete(cat);
                 } else {
-                  activeCategoryFilters.add(cat);
-                  chip.style.background = "var(--primary)";
-                  chip.style.color = "white";
+                  tempCategoryFilters.add(cat);
                 }
-                if (typeof renderJobs === 'function') {
-                  renderJobs(true);
-                }
+                updateChipVisuals();
               });
               moreContainer.appendChild(chip);
             });
             
-            categoryViewMoreBtn.parentNode.insertBefore(moreContainer, categoryViewMoreBtn.nextSibling);
-            
             categoryViewMoreBtn.addEventListener("click", () => {
               showingMore = !showingMore;
-              moreContainer.style.display = showingMore ? "flex" : "none";
-              categoryViewMoreBtn.textContent = showingMore ? "View Less" : "View More";
+              if (moreContainer) {
+                moreContainer.style.display = showingMore ? "flex" : "none";
+              }
+              categoryViewMoreBtn.textContent = showingMore ? "➖ Show Less" : "➕ Show More";
             });
+          } else if (categoryViewMoreBtn) {
+            categoryViewMoreBtn.style.display = "none";
           }
         }
         
