@@ -6283,9 +6283,12 @@ async function renderJobs(reset = false) {
     if (activeWorkersFilters.size > 0) {
       filteredJobs = filteredJobs.filter((j) => {
         const teamSize = j.teamSize || j.requirements?.teamSize || j.requirements?.team_size || 1;
-        if (activeWorkersFilters.has('1') && teamSize === 1) return true;
-        if (activeWorkersFilters.has('2') && teamSize === 2) return true;
-        if (activeWorkersFilters.has('3') && teamSize >= 3) return true;
+        const isCompany = j.requirements?.teamSize === 'company' || j.requirements?.team_size === 'company' || j.teamSize === 'company';
+        
+        if (activeWorkersFilters.has('1') && teamSize === 1 && !isCompany) return true;
+        if (activeWorkersFilters.has('2') && teamSize === 2 && !isCompany) return true;
+        if (activeWorkersFilters.has('3') && teamSize >= 3 && !isCompany) return true;
+        if (activeWorkersFilters.has('company') && isCompany) return true;
         return false;
       });
     }
@@ -6380,10 +6383,8 @@ async function renderJobs(reset = false) {
       console.error("Error getting user role:", e);
     }
     
-    // Update card title
+    // Update card title - always "Jobs near you"
     let cardTitle = "Jobs near you";
-    if (role === "CUSTOMER" || role === "customer") cardTitle = "Your jobs & local jobs";
-    if (role === "HUSTLER" || role === "hustler") cardTitle = "Jobs you can apply for";
     if (jobsCardTitle) jobsCardTitle.textContent = cardTitle;
 
     // Update summary
@@ -6400,7 +6401,13 @@ async function renderJobs(reset = false) {
 
     if (filteredJobs.length === 0 && currentJobsPage === 1) {
       if (jobsList) {
-        jobsList.innerHTML = "<div class='muted'>No jobs found.</div>";
+        jobsList.innerHTML = `
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 1.5rem; text-align: center; min-height: 300px;">
+            <div style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.5;">🔍</div>
+            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 600; color: var(--text-main);">No jobs found</h3>
+            <p style="margin: 0; font-size: 0.9rem; color: var(--text-muted); max-width: 400px;">Try adjusting your filters or check back later for new opportunities.</p>
+          </div>
+        `;
         jobsList.classList.remove('has-content'); // Remove scrollbar when empty
       }
       return;
