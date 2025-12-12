@@ -6151,98 +6151,15 @@ async function renderJobs(reset = false) {
         </div>
       `;
 
-      // Actions row
-      const actions = document.createElement("div");
-      actions.className = "job-card-actions";
-
-      const left = document.createElement("div");
-      const statusBadge = document.createElement("span");
-      statusBadge.className = "badge";
-
-      // Check if current user has applied to this job
-      const currentUser = getCurrentUser();
-      let hasApplied = userAppliedJobIds.has(job.id);
-      // Also check job.offers if available (fallback)
-      if (!hasApplied && currentUser && job.offers) {
-        hasApplied = Array.isArray(job.offers) 
-          ? job.offers.some(offer => offer.hustlerId === currentUser.id)
-          : false;
-      }
-
-      // Status badge with proper colors
-      const statusUpper = (job.status || "OPEN").toUpperCase();
-      if (hasApplied && (statusUpper === "OPEN")) {
-        statusBadge.classList.add("status-applied");
-        statusBadge.style.backgroundColor = "#10b981";
-        statusBadge.style.color = "#ffffff";
-        statusBadge.style.fontWeight = "700";
-        statusBadge.textContent = "✅ Applied";
-      } else if (statusUpper === "OPEN") {
-        statusBadge.classList.add("status-open");
-        statusBadge.style.backgroundColor = "#dcfce7";
-        statusBadge.style.color = "#059669";
-        statusBadge.textContent = "Open";
-      } else if (statusUpper === "SCHEDULED" || statusUpper === "ASSIGNED" || statusUpper === "PENDING_START") {
-        statusBadge.classList.add("status-assigned");
-        statusBadge.style.backgroundColor = "#fef3c7";
-        statusBadge.style.color = "#d97706";
-        statusBadge.textContent = statusUpper === "SCHEDULED" ? "Scheduled" : "Pending Start";
-      } else if (statusUpper === "IN_PROGRESS") {
-        statusBadge.classList.add("status-assigned");
-        statusBadge.style.backgroundColor = "#dbeafe";
-        statusBadge.style.color = "#2563eb";
-        statusBadge.textContent = "In Progress";
-      } else if (statusUpper === "COMPLETED" || statusUpper === "PAID") {
-        statusBadge.classList.add("status-completed");
-        statusBadge.style.backgroundColor = "#9333ea";
-        statusBadge.style.color = "#ffffff";
-        statusBadge.textContent = "✓ Completed";
-      } else {
-        statusBadge.style.backgroundColor = "#f3f4f6";
-        statusBadge.style.color = "#6b7280";
-        statusBadge.textContent = job.status || "Open";
-      }
-
-      left.appendChild(statusBadge);
-      actions.appendChild(left);
-
-      const right = document.createElement("div");
-      right.style.cssText = "display: flex; gap: 0.5rem; align-items: center;";
-      
-      // Add Apply button for hustlers on open jobs
-      const isHustler = currentUser && (currentUser.role === "HUSTLER" || currentUser.roles?.includes("HUSTLER"));
-      const isOpen = (statusUpper === "OPEN");
-      
-      if (isHustler && isOpen && !hasApplied) {
-        const applyBtn = document.createElement("button");
-        applyBtn.className = "small-btn primary";
-        applyBtn.textContent = "Apply";
-        applyBtn.style.cssText = "background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem;";
-        applyBtn.addEventListener("click", async (e) => {
+      // Add click handler to View button and whole card
+      const viewBtn = card.querySelector('button');
+      if (viewBtn) {
+        viewBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          e.preventDefault();
-          try {
-            await showApplyJobModal(job);
-          } catch (error) {
-            console.error("Error showing apply modal:", error);
-            showToast("Error opening apply form. Please try again.");
-          }
+          openJobDetails(job.id);
         });
-        right.appendChild(applyBtn);
       }
       
-      const viewBtn = document.createElement("button");
-      viewBtn.className = "small-btn outline";
-      viewBtn.textContent = "View";
-      viewBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        openJobDetails(job.id);
-      });
-      right.appendChild(viewBtn);
-      actions.appendChild(right);
-
-      card.appendChild(actions);
-
       // Clicking the whole card opens details
       card.addEventListener("click", () => openJobDetails(job.id));
 
