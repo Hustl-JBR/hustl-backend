@@ -6425,17 +6425,17 @@ async function renderJobs(reset = false) {
       const dropoffLat = requirements.dropoff_lat || requirements.dropoffLat;
       const dropoffLng = requirements.dropoff_lng || requirements.dropoffLng;
       
-      // Check if user is hustler and job not accepted - hide full address (OPTIONAL FEATURE)
-      // Set HIDE_ADDRESSES_FROM_HUSTLERS to false in config to disable this feature
-      const hideAddressesEnabled = window.HUSTL_CONFIG?.HIDE_ADDRESSES_FROM_HUSTLERS !== false; // Default: true (enabled)
+      // Check if address should be hidden based on customer preference
+      const hideAddressUntilAssigned = requirements.hide_address_until_assigned || requirements.hideAddressUntilAssigned;
       let showFullAddress = true;
       
-      if (hideAddressesEnabled) {
+      if (hideAddressUntilAssigned) {
         try {
           const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
           if (user) {
             const isHustler = user && !user.roles?.includes('CUSTOMER');
-            const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
+            const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS' || job.status === 'COMPLETED_BY_HUSTLER');
+            // Show address if: user is customer OR job is accepted/assigned
             showFullAddress = !isHustler || jobAccepted;
           }
         } catch (e) {
@@ -7642,16 +7642,17 @@ async function renderJobs(reset = false) {
         const detailsList = document.createElement("div");
         detailsList.style.cssText = "display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
         
-        // Check if user is hustler and job not accepted - hide full address (OPTIONAL FEATURE)
-        const hideAddressesEnabled = window.HUSTL_CONFIG?.HIDE_ADDRESSES_FROM_HUSTLERS !== false; // Default: true (enabled)
+        // Check if address should be hidden based on customer preference
+        const hideAddressUntilAssigned = job.requirements?.hide_address_until_assigned || job.requirements?.hideAddressUntilAssigned;
         let showFullAddressDetails = true;
         
-        if (hideAddressesEnabled) {
+        if (hideAddressUntilAssigned) {
           try {
             const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
             if (user) {
               const isHustler = user && !user.roles?.includes('CUSTOMER');
-              const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
+              const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS' || job.status === 'COMPLETED_BY_HUSTLER');
+              // Show address if: user is customer OR job is accepted/assigned
               showFullAddressDetails = !isHustler || jobAccepted;
             }
           } catch (e) {
@@ -7667,7 +7668,7 @@ async function renderJobs(reset = false) {
           } else {
             pickupText = `${job.requirements.pickup_area || ''} ${job.requirements.pickup_city || ''} ${job.requirements.pickup_zip || ''}`.trim();
             if (!showFullAddressDetails) {
-              pickupText += ' (Exact address shown after acceptance)';
+              pickupText += ' (Address will be provided after assignment)';
             }
           }
           pickupDetail.innerHTML = `<strong>Pickup:</strong> ${pickupText}`;
