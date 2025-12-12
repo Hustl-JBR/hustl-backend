@@ -14,9 +14,18 @@ async function createPaymentIntent({ amount, customerId, jobId, metadata }) {
   return paymentIntent;
 }
 
-async function capturePaymentIntent(paymentIntentId) {
-  const paymentIntent = await stripe.paymentIntents.capture(paymentIntentId);
-  return paymentIntent;
+async function capturePaymentIntent(paymentIntentId, amountToCapture = null) {
+  // If amountToCapture is provided, do partial capture
+  // Otherwise, capture the full authorized amount
+  if (amountToCapture !== null) {
+    const paymentIntent = await stripe.paymentIntents.capture(paymentIntentId, {
+      amount_to_capture: Math.round(amountToCapture * 100) // Convert to cents
+    });
+    return paymentIntent;
+  } else {
+    const paymentIntent = await stripe.paymentIntents.capture(paymentIntentId);
+    return paymentIntent;
+  }
 }
 
 async function voidPaymentIntent(paymentIntentId) {

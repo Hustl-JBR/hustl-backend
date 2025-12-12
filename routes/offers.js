@@ -410,7 +410,22 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     }
 
     // Calculate payment amounts
-    const jobAmount = parseFloat(offer.job.amount || 0);
+    // For hourly jobs: authorize max amount (hourlyRate × maxHours)
+    // For flat jobs: use the flat amount
+    let jobAmount = 0;
+    let maxAmount = 0; // For hourly jobs, this is the max possible charge
+    
+    if (offer.job.payType === 'hourly' && offer.job.hourlyRate && offer.job.estHours) {
+      const hourlyRate = parseFloat(offer.job.hourlyRate);
+      const maxHours = parseInt(offer.job.estHours);
+      maxAmount = hourlyRate * maxHours; // Max possible charge
+      jobAmount = maxAmount; // Authorize the max amount, but we'll capture actual amount later
+      console.log(`[HOURLY JOB] Authorizing max amount: $${maxAmount} ($${hourlyRate}/hr × ${maxHours} hrs)`);
+    } else {
+      jobAmount = parseFloat(offer.job.amount || 0);
+      maxAmount = jobAmount; // For flat jobs, max = actual
+    }
+    
     const tipPercent = Math.min(parseFloat(offer.job.tipPercent || 0), 25);
     const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50);
     const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10);

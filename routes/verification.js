@@ -158,12 +158,19 @@ router.post('/job/:jobId/verify-start', authenticate, async (req, res) => {
     }
 
     // Mark start code as verified - job is now IN_PROGRESS
+    // Store startedAt timestamp for hourly jobs to calculate actual hours worked
+    const startedAt = new Date();
     const updatedJob = await prisma.job.update({
       where: { id: jobId },
       data: { 
         startCodeVerified: true,
         status: 'IN_PROGRESS', // Job is now in progress
-        completionCode: completionCode // Ensure completion code exists
+        completionCode: completionCode, // Ensure completion code exists
+        // Store start time in requirements JSON for hourly calculation
+        requirements: {
+          ...(job.requirements || {}),
+          startedAt: startedAt.toISOString() // Store when job actually started
+        }
       }
     });
 
@@ -232,17 +239,74 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Incorrect code. Ask the hustler for the correct 6-digit completion code.' });
     }
 
-    // Calculate 12% platform fee
-    const platformFee = Number(job.payment.amount) * 0.12;
-    const hustlerPayout = Number(job.payment.amount) - platformFee;
+    // For hourly jobs: Calculate actual hours worked and actual charge
+    // For flat jobs: Use the pre-authorized amount
+    let actualJobAmount = 0;
+    let actualHours = 0;
+    const completionTime = new Date();
+    
+    if (job.payType === 'hourly' && job.hourlyRate) {
+      // Get start time from requirements
+      const requirements = job.requirements || {};
+      const startedAtStr = requirements.startedAt;
+      
+      if (!startedAtStr) {
+        return res.status(400).json({ 
+          error: 'Job start time not found. Cannot calculate hours worked.' 
+        });
+      }
+      
+      const startedAt = new Date(startedAtStr);
+      const timeDiffMs = completionTime - startedAt;
+      actualHours = timeDiffMs / (1000 * 60 * 60); // Convert to hours
+      
+      // Round to 2 decimal places (e.g., 1.67 hours)
+      actualHours = Math.round(actualHours * 100) / 100;
+      
+      // Calculate actual charge: actualHours × hourlyRate
+      const hourlyRate = Number(job.hourlyRate);
+      actualJobAmount = actualHours * hourlyRate;
+      
+      // Ensure we don't charge more than the max authorized amount
+      const maxAmount = Number(job.payment.amount);
+      if (actualJobAmount > maxAmount) {
+        console.warn(`[HOURLY JOB] Actual amount ($${actualJobAmount}) exceeds max ($${maxAmount}). Capping to max.`);
+        actualJobAmount = maxAmount;
+        actualHours = maxAmount / hourlyRate; // Recalculate hours based on cap
+      }
+      
+      console.log(`[HOURLY JOB] Worked ${actualHours} hrs × $${hourlyRate}/hr = $${actualJobAmount.toFixed(2)}`);
+    } else {
+      // Flat job: use the pre-authorized amount
+      actualJobAmount = Number(job.payment.amount);
+    }
+
+    // Calculate 12% platform fee on actual amount
+    const platformFee = actualJobAmount * 0.12;
+    const hustlerPayout = actualJobAmount - platformFee;
+    
+    // For hourly jobs with multiple workers, split evenly
+    const teamSize = job.teamSize || job.requirements?.teamSize || job.requirements?.team_size || 1;
+    let perWorkerPayout = 0;
+    if (teamSize > 1 && job.payType === 'hourly') {
+      perWorkerPayout = hustlerPayout / teamSize;
+      console.log(`[HOURLY JOB] ${teamSize} workers → $${perWorkerPayout.toFixed(2)} each (total: $${hustlerPayout.toFixed(2)})`);
+    }
 
     // Release payment to hustler (capture payment intent and transfer to hustler)
     const { capturePaymentIntent, transferToHustler } = require('../services/stripe');
     
     try {
-      // Capture the payment intent
+      // Capture the payment intent (partial capture for hourly jobs)
       if (job.payment.providerId) {
-        await capturePaymentIntent(job.payment.providerId);
+        if (job.payType === 'hourly') {
+          // Partial capture: only capture the actual amount worked
+          await capturePaymentIntent(job.payment.providerId, actualJobAmount);
+          console.log(`[HOURLY JOB] Captured $${actualJobAmount.toFixed(2)} (authorized $${Number(job.payment.amount).toFixed(2)})`);
+        } else {
+          // Full capture for flat jobs
+          await capturePaymentIntent(job.payment.providerId);
+        }
       }
 
       // Transfer to hustler's Stripe Connect account (minus 12% fee)
@@ -264,14 +328,29 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         );
       }
 
-      // Update payment record
+      // Update payment record with actual amount (for hourly jobs)
       await prisma.payment.update({
         where: { id: job.payment.id },
         data: {
           status: 'CAPTURED',
+          amount: actualJobAmount, // Update to actual amount charged
           feeHustler: platformFee,
         }
       });
+      
+      // Update job requirements with actual hours worked (for hourly jobs)
+      if (job.payType === 'hourly') {
+        await prisma.job.update({
+          where: { id: jobId },
+          data: {
+            requirements: {
+              ...(job.requirements || {}),
+              actualHours: actualHours,
+              completedAt: completionTime.toISOString()
+            }
+          }
+        });
+      }
 
       // Mark completion as verified and update job status to PAID (allows reviews)
       const updatedJob = await prisma.job.update({
@@ -288,7 +367,10 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         completionCodeVerified: true,
         jobStatus: updatedJob.status,
         paymentReleased: true,
+        actualJobAmount: actualJobAmount,
+        actualHours: job.payType === 'hourly' ? actualHours : null,
         hustlerPayout: hustlerPayout,
+        perWorkerPayout: teamSize > 1 && job.payType === 'hourly' ? perWorkerPayout : null,
         platformFee: platformFee,
         jobId: jobId,
         customerId: job.customerId,

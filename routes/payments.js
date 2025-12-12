@@ -252,7 +252,19 @@ router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER
     }
 
     // Calculate payment amounts
-    const jobAmount = Number(offer.job.amount);
+    // For hourly jobs: authorize max amount (hourlyRate × maxHours)
+    // For flat jobs: use the flat amount
+    let jobAmount = 0;
+    
+    if (offer.job.payType === 'hourly' && offer.job.hourlyRate && offer.job.estHours) {
+      const hourlyRate = Number(offer.job.hourlyRate);
+      const maxHours = parseInt(offer.job.estHours);
+      jobAmount = hourlyRate * maxHours; // Max possible charge (authorized, not charged yet)
+      console.log(`[PAYMENT INTENT] Hourly job - authorizing max: $${jobAmount} ($${hourlyRate}/hr × ${maxHours} hrs)`);
+    } else {
+      jobAmount = Number(offer.job.amount);
+    }
+    
     const tipPercent = Math.min(parseFloat(req.body.tipPercent || 0), 25);
     const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50);
     const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10);
@@ -287,9 +299,12 @@ router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER
     
     try {
       // Create Payment Intent
+      // For hourly jobs: use manual capture (authorize now, capture actual amount later)
+      // For flat jobs: also use manual capture (authorize now, capture on completion)
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(total * 100), // Convert to cents
         currency: 'usd',
+        capture_method: 'manual', // Pre-authorize, capture later (required for hourly jobs)
         automatic_payment_methods: {
           enabled: true, // Enable Apple Pay, Google Pay, etc.
         },
@@ -301,6 +316,7 @@ router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER
           amount: jobAmount.toString(),
           tip: tipAmount.toString(),
           customerFee: customerFee.toString(),
+          payType: offer.job.payType || 'flat', // Store pay type for reference
         },
       });
 
