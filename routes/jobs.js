@@ -7,6 +7,16 @@ const { geocodeAddress } = require('../services/mapbox');
 
 const router = express.Router();
 
+// GET /jobs/mapbox-token - Get Mapbox token for frontend (public endpoint)
+router.get('/mapbox-token', (req, res) => {
+  const token = process.env.MAPBOX_TOKEN;
+  if (!token) {
+    return res.status(404).json({ error: 'Mapbox token not configured' });
+  }
+  // Return only the public token (safe to expose)
+  res.json({ token });
+});
+
 // Optional auth middleware
 const optionalAuth = async (req, res, next) => {
   try {

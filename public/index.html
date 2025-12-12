@@ -4905,9 +4905,22 @@ function showChangePasswordModal() {
       if (subTagsGrid) subTagsGrid.innerHTML = "";
     }
     // Initialize Mapbox Places Autocomplete
-    function initMapboxAutocomplete() {
-      // Get Mapbox token from config or environment
-      const MAPBOX_TOKEN = window.HUSTL_CONFIG?.MAPBOX_TOKEN || window.MAPBOX_TOKEN || '';
+    async function initMapboxAutocomplete() {
+      // Get Mapbox token from config, window variable, or fetch from backend
+      let MAPBOX_TOKEN = window.HUSTL_CONFIG?.MAPBOX_TOKEN || window.MAPBOX_TOKEN || '';
+      
+      // If not in config, try to fetch from backend
+      if (!MAPBOX_TOKEN) {
+        try {
+          const response = await fetch(`${API_BASE}/jobs/mapbox-token`);
+          if (response.ok) {
+            const data = await response.json();
+            MAPBOX_TOKEN = data.token;
+          }
+        } catch (e) {
+          console.warn('Could not fetch Mapbox token from backend:', e);
+        }
+      }
       
       if (!MAPBOX_TOKEN) {
         console.warn('Mapbox token not configured. Address autocomplete will not work. See MAPBOX_SETUP.md for instructions.');
@@ -4942,6 +4955,13 @@ function showChangePasswordModal() {
       // Initialize pickup address autocomplete
       const pickupAddressInput = document.getElementById('pickupAddress');
       if (pickupAddressInput && typeof MapboxGeocoder !== 'undefined') {
+        // Create a container for the geocoder (it will replace the input)
+        const pickupContainer = document.createElement('div');
+        pickupContainer.id = 'pickupAddressContainer';
+        pickupContainer.style.cssText = 'position: relative; width: 100%;';
+        pickupAddressInput.parentNode.insertBefore(pickupContainer, pickupAddressInput);
+        pickupAddressInput.style.display = 'none'; // Hide original input
+        
         const pickupGeocoder = new MapboxGeocoder({
           accessToken: MAPBOX_TOKEN,
           types: 'address',
@@ -4950,7 +4970,7 @@ function showChangePasswordModal() {
           proximity: { longitude: -86.7816, latitude: 36.1627 }, // Nashville center
         });
         
-        pickupGeocoder.addTo('#pickupAddress');
+        pickupGeocoder.addTo('#pickupAddressContainer');
         
         pickupGeocoder.on('result', (e) => {
           const feature = e.result;
@@ -4963,7 +4983,7 @@ function showChangePasswordModal() {
           if (latInput) latInput.value = lat;
           if (lngInput) lngInput.value = lng;
           
-          // Autofill fields
+          // Autofill fields - update the hidden input and visible fields
           if (components.street) {
             pickupAddressInput.value = components.street;
           }
@@ -4980,11 +5000,25 @@ function showChangePasswordModal() {
             if (zipInput) zipInput.value = components.zip;
           }
         });
+        
+        // Handle clear event
+        pickupGeocoder.on('clear', () => {
+          pickupAddressInput.value = '';
+          document.getElementById('pickupLat').value = '';
+          document.getElementById('pickupLng').value = '';
+        });
       }
       
       // Initialize dropoff address autocomplete
       const dropoffAddressInput = document.getElementById('dropoffAddress');
       if (dropoffAddressInput && typeof MapboxGeocoder !== 'undefined') {
+        // Create a container for the geocoder (it will replace the input)
+        const dropoffContainer = document.createElement('div');
+        dropoffContainer.id = 'dropoffAddressContainer';
+        dropoffContainer.style.cssText = 'position: relative; width: 100%;';
+        dropoffAddressInput.parentNode.insertBefore(dropoffContainer, dropoffAddressInput);
+        dropoffAddressInput.style.display = 'none'; // Hide original input
+        
         const dropoffGeocoder = new MapboxGeocoder({
           accessToken: MAPBOX_TOKEN,
           types: 'address',
@@ -4993,7 +5027,7 @@ function showChangePasswordModal() {
           proximity: { longitude: -86.7816, latitude: 36.1627 }, // Nashville center
         });
         
-        dropoffGeocoder.addTo('#dropoffAddress');
+        dropoffGeocoder.addTo('#dropoffAddressContainer');
         
         dropoffGeocoder.on('result', (e) => {
           const feature = e.result;
@@ -5006,7 +5040,7 @@ function showChangePasswordModal() {
           if (latInput) latInput.value = lat;
           if (lngInput) lngInput.value = lng;
           
-          // Autofill fields
+          // Autofill fields - update the hidden input and visible fields
           if (components.street) {
             dropoffAddressInput.value = components.street;
           }
@@ -5022,6 +5056,13 @@ function showChangePasswordModal() {
             const zipInput = document.getElementById('dropoffZip');
             if (zipInput) zipInput.value = components.zip;
           }
+        });
+        
+        // Handle clear event
+        dropoffGeocoder.on('clear', () => {
+          dropoffAddressInput.value = '';
+          document.getElementById('dropoffLat').value = '';
+          document.getElementById('dropoffLng').value = '';
         });
       }
     }
@@ -7550,17 +7591,21 @@ async function renderJobs(reset = false) {
         const detailsList = document.createElement("div");
         detailsList.style.cssText = "display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
         
-        // Check if user is hustler and job not accepted - hide full address
+        // Check if user is hustler and job not accepted - hide full address (OPTIONAL FEATURE)
+        const hideAddressesEnabled = window.HUSTL_CONFIG?.HIDE_ADDRESSES_FROM_HUSTLERS !== false; // Default: true (enabled)
         let showFullAddressDetails = true;
-        try {
-          const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
-          if (user) {
-            const isHustler = user && !user.roles?.includes('CUSTOMER');
-            const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
-            showFullAddressDetails = !isHustler || jobAccepted;
+        
+        if (hideAddressesEnabled) {
+          try {
+            const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
+            if (user) {
+              const isHustler = user && !user.roles?.includes('CUSTOMER');
+              const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
+              showFullAddressDetails = !isHustler || jobAccepted;
+            }
+          } catch (e) {
+            showFullAddressDetails = true;
           }
-        } catch (e) {
-          showFullAddressDetails = true;
         }
         
         if (job.requirements.pickup_address || job.requirements.pickup_city) {
