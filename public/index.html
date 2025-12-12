@@ -7741,15 +7741,51 @@ async function renderJobs(reset = false) {
       locationText.textContent = fullAddress;
       locationSection.appendChild(locationText);
       
-      // Map preview (Google Maps embed)
-      if (fullAddress && fullAddress !== "Location TBD") {
+      // Map preview (Mapbox)
+      if (fullAddress && fullAddress !== "Location TBD" && job.lat && job.lng) {
         const mapContainer = document.createElement("div");
-        mapContainer.style.cssText = "width: 100%; height: 200px; border-radius: 8px; overflow: hidden; background: #e5e7eb;";
-        const mapIframe = document.createElement("iframe");
-        mapIframe.style.cssText = "width: 100%; height: 100%; border: none;";
-        mapIframe.src = `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6d-s6V4pcZaLjys&q=${encodeURIComponent(fullAddress)}`;
-        mapContainer.appendChild(mapIframe);
+        const mapId = `map-${job.id}-${Date.now()}`;
+        mapContainer.id = mapId;
+        mapContainer.style.cssText = "width: 100%; height: 200px; border-radius: 8px; overflow: hidden; background: #e5e7eb; margin-top: 0.75rem;";
         locationSection.appendChild(mapContainer);
+        
+        // Initialize Mapbox map after a short delay to ensure token is loaded
+        setTimeout(() => {
+          if (window.mapboxgl && window.MAPBOX_TOKEN) {
+            try {
+              mapboxgl.accessToken = window.MAPBOX_TOKEN;
+              const map = new mapboxgl.Map({
+                container: mapId,
+                style: 'mapbox://styles/mapbox/streets-v12',
+                center: [job.lng, job.lat],
+                zoom: 13,
+                interactive: false // Static preview
+              });
+              
+              // Add marker
+              new mapboxgl.Marker({ color: '#2563eb' })
+                .setLngLat([job.lng, job.lat])
+                .addTo(map);
+            } catch (mapError) {
+              console.warn('Could not initialize Mapbox map:', mapError);
+              // Fallback to Google Maps link
+              const mapLink = document.createElement("a");
+              mapLink.href = `https://maps.google.com/?q=${encodeURIComponent(fullAddress)}`;
+              mapLink.target = "_blank";
+              mapLink.style.cssText = "display: block; padding: 1rem; text-align: center; color: var(--primary); text-decoration: none; font-weight: 600;";
+              mapLink.textContent = "🗺️ View on Google Maps";
+              mapContainer.appendChild(mapLink);
+            }
+          } else {
+            // Fallback to Google Maps link if Mapbox not available
+            const mapLink = document.createElement("a");
+            mapLink.href = `https://maps.google.com/?q=${encodeURIComponent(fullAddress)}`;
+            mapLink.target = "_blank";
+            mapLink.style.cssText = "display: block; padding: 1rem; text-align: center; color: var(--primary); text-decoration: none; font-weight: 600;";
+            mapLink.textContent = "🗺️ View on Google Maps";
+            mapContainer.appendChild(mapLink);
+          }
+        }, 100);
       }
       
       contentSection.appendChild(locationSection);
