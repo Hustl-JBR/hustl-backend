@@ -62,6 +62,12 @@
         // Store full error data for better error handling
         error.details = data;
         error.status = response.status;
+        // Log validation errors for debugging
+        if (response.status === 400 && data.errors) {
+          console.error('[API] Validation errors:', data.errors);
+          const validationErrors = data.errors.map(e => `${e.param}: ${e.msg}`).join(', ');
+          error.message = `Validation failed: ${validationErrors}`;
+        }
         throw error;
       }
 
