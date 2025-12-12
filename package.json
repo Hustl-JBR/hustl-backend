@@ -1,7 +1,7 @@
 {
   "name": "hustl-backend",
   "version": "1.0.0",
-  "description": "Hustl backend with Express, Neon Postgres, Stripe, and more",
+  "description": "Hustl backend with Express, PostgreSQL, Stripe, and more",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {

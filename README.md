@@ -33,7 +33,7 @@ Server runs on `http://localhost:8080` and serves:
 ## Environment Variables
 
 See `.env.example` for all required variables:
-- `DATABASE_URL` - Neon Postgres connection string
+- `DATABASE_URL` - PostgreSQL connection string (Railway, Neon, Supabase, etc.)
 - `STRIPE_SECRET_KEY` - Stripe secret key
 - `STRIPE_WEBHOOK_SECRET` - Stripe webhook secret
 - `MAPBOX_TOKEN` - Mapbox API token
@@ -82,7 +82,7 @@ See `.env.example` for all required variables:
 
 ## Database
 
-Uses Prisma with Neon Postgres. Run migrations with:
+Uses Prisma with PostgreSQL. Run migrations with:
 ```bash
 npm run db:migrate
 ```
