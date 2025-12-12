@@ -6460,36 +6460,58 @@ async function renderJobs(reset = false) {
       const dropoffLng = requirements.dropoff_lng || requirements.dropoffLng;
       
       // Check if address should be hidden based on customer preference
-      const hideAddressUntilAssigned = requirements.hide_address_until_assigned || requirements.hideAddressUntilAssigned;
-      let showFullAddress = true;
+      const hidePickupAddressUntilAssigned = requirements.hide_pickup_address_until_assigned || requirements.hidePickupAddressUntilAssigned;
+      let showFullPickupAddress = true;
       
-      if (hideAddressUntilAssigned) {
+      if (hidePickupAddressUntilAssigned) {
         try {
           const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
           if (user) {
             const isHustler = user && !user.roles?.includes('CUSTOMER');
             const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS' || job.status === 'COMPLETED_BY_HUSTLER');
-            // Show address if: user is customer OR job is accepted/assigned
-            showFullAddress = !isHustler || jobAccepted;
+            showFullPickupAddress = !isHustler || jobAccepted;
           }
         } catch (e) {
-          // If we can't determine user, default to showing full address
-          showFullAddress = true;
+          showFullPickupAddress = true;
+        }
+      }
+      
+      const hideDropoffAddressUntilAssigned = requirements.hide_dropoff_address_until_assigned || requirements.hideDropoffAddressUntilAssigned;
+      let showFullDropoffAddress = true;
+      
+      if (hideDropoffAddressUntilAssigned) {
+        try {
+          const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
+          if (user) {
+            const isHustler = user && !user.roles?.includes('CUSTOMER');
+            const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS' || job.status === 'COMPLETED_BY_HUSTLER');
+            showFullDropoffAddress = !isHustler || jobAccepted;
+          }
+        } catch (e) {
+          showFullDropoffAddress = true;
         }
       }
       
       if (onSiteOnly) {
-        if (showFullAddress && pickupAddress) {
+        if (showFullPickupAddress && pickupAddress) {
           locationText = pickupAddress;
         } else if (pickupCity) {
-          locationText = pickupCity;
-          if (pickupZip) locationText += ` ${pickupZip}`;
+          locationText = `${pickupCity}${pickupZip ? ` ${pickupZip}` : ''}`;
+          if (!showFullPickupAddress) {
+            locationText += ' (Address after assignment)';
+          }
         } else {
           locationText = job.address?.split(',')[0] || "Location TBD";
         }
       } else if (dropoffArea || dropoffCity || dropoffZip || dropoffAddress) {
-        let pickupStr = showFullAddress && pickupAddress ? pickupAddress : (pickupCity || "Pickup");
-        let dropoffStr = showFullAddress && dropoffAddress ? dropoffAddress : (dropoffCity || "Dropoff");
+        let pickupStr = showFullPickupAddress && pickupAddress ? pickupAddress : (pickupCity || "Pickup");
+        if (!showFullPickupAddress && !pickupAddress) {
+          pickupStr = `${pickupCity || 'Pickup'}${pickupZip ? ` ${pickupZip}` : ''}`;
+        }
+        let dropoffStr = showFullDropoffAddress && dropoffAddress ? dropoffAddress : (dropoffCity || "Dropoff");
+        if (!showFullDropoffAddress && !dropoffAddress) {
+          dropoffStr = `${dropoffCity || 'Dropoff'}${dropoffZip ? ` ${dropoffZip}` : ''}`;
+        }
         // Use coordinates for accurate distance calculation
         if (pickupLat && pickupLng && dropoffLat && dropoffLng) {
           const miles = calculateDistance(parseFloat(pickupLat), parseFloat(pickupLng), parseFloat(dropoffLat), parseFloat(dropoffLng));
@@ -6497,12 +6519,17 @@ async function renderJobs(reset = false) {
         } else {
           locationText = `${pickupStr} → ${dropoffStr}`;
         }
+        if (!showFullPickupAddress || !showFullDropoffAddress) {
+          locationText += ' (Addresses after assignment)';
+        }
       } else {
-        if (showFullAddress && pickupAddress) {
+        if (showFullPickupAddress && pickupAddress) {
           locationText = pickupAddress;
         } else if (pickupCity) {
-          locationText = pickupCity;
-          if (pickupZip) locationText += ` ${pickupZip}`;
+          locationText = `${pickupCity}${pickupZip ? ` ${pickupZip}` : ''}`;
+          if (!showFullPickupAddress) {
+            locationText += ' (Address after assignment)';
+          }
         } else {
           locationText = job.address?.split(',')[0] || "Location TBD";
         }
