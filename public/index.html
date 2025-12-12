@@ -3598,7 +3598,7 @@
             <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">📍 Distance (from your location)</div>
             
             <!-- Location Status -->
-            <div id="locationStatusContainer" style="margin-bottom: 0.75rem; padding: 0.75rem; background: #f3f4f6; border-radius: 8px; display: none;">
+            <div id="locationStatusContainer" style="margin-bottom: 0.75rem; padding: 0.75rem; background: #f3f4f6; border-radius: 8px;">
               <div style="display: flex; align-items: center; justify-content: space-between;">
                 <div style="font-size: 0.85rem; color: var(--text-main);">
                   <span id="locationStatusText">📍 Location not set</span>
@@ -4097,6 +4097,10 @@ heart of Hustl.
     window.activeView = activeView;
     // Browse Jobs only shows OPEN jobs - no status filter needed
     let activeJobsStatusFilter = "open";
+    
+    // Location and filter state
+    let userLocation = null; // { lat, lng } for distance calculation
+    let activeDistanceFilter = null; // 5, 10, 20, 30, 50, statewide
     let activeConversationJobId = null;
     let activeConversationThreadId = null;
     let messagePollInterval = null;
