@@ -1697,16 +1697,16 @@
     }
     
     .profile-hero-avatar {
-      width: 24px;
-      height: 24px;
+      width: 56px;
+      height: 56px;
       border-radius: 50%;
       background: rgba(255,255,255,0.2);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.6rem;
+      font-size: 1.4rem;
       font-weight: 700;
-      border: 1px solid rgba(255,255,255,0.4);
+      border: 2px solid rgba(255,255,255,0.4);
       overflow: hidden;
       position: relative;
       cursor: pointer;
@@ -1970,10 +1970,10 @@
       }
       
       .profile-hero-avatar {
-        width: 24px;
-        height: 24px;
-        font-size: 0.6rem;
-        border: 1px solid rgba(255,255,255,0.4);
+        width: 48px;
+        height: 48px;
+        font-size: 1.2rem;
+        border: 2px solid rgba(255,255,255,0.4);
       }
       
       .profile-hero-name {
@@ -12144,11 +12144,11 @@ async function renderJobs(reset = false) {
       if (!container) {
         return;
       }
-      // Use very small size for mobile-friendly profile photo (12px for compact mobile view)
-      const avatarContent = renderUserAvatar(user, 12, { 
+      // Use compact size for mobile-friendly profile photo (48px for balanced view)
+      const avatarContent = renderUserAvatar(user, 48, { 
         showBorder: true, 
-        borderWidth: '1px',
-        style: 'box-shadow: 0 1px 2px rgba(0,0,0,0.1);'
+        borderWidth: '2px',
+        style: 'box-shadow: 0 1px 3px rgba(0,0,0,0.1);'
       });
       
       const genderLabel = user.gender ? 
@@ -12213,8 +12213,8 @@ async function renderJobs(reset = false) {
           <div style="display: flex; gap: 1.5rem; align-items: flex-start;">
             <!-- Profile Photo with Upload -->
             <div style="flex-shrink: 0;">
-              <div id="basicInfoPhotoPreview" style="margin-bottom: 1rem; width: 12px; height: 12px;">
-                ${avatarContent.replace('width: 12px; height: 12px;', 'width: 12px; height: 12px;')}
+              <div id="basicInfoPhotoPreview" style="margin-bottom: 1rem; width: 48px; height: 48px;">
+                ${avatarContent}
               </div>
               <input type="file" id="basicInfoPhotoUpload" accept="image/*" style="display: none;" />
               <button class="btn btn-ghost" onclick="document.getElementById('basicInfoPhotoUpload').click();" style="width: 100%; padding: 0.5rem; font-size: 0.85rem;">Upload new photo</button>
@@ -12292,10 +12292,10 @@ async function renderJobs(reset = false) {
             photoPreview = event.target.result;
             newPhotoFile = file;
             const tempUserForPreview = { ...user, photoUrl: photoPreview };
-            photoPreviewDiv.innerHTML = renderUserAvatar(tempUserForPreview, 12, { 
+            photoPreviewDiv.innerHTML = renderUserAvatar(tempUserForPreview, 48, { 
               showBorder: true, 
-              borderWidth: '1px',
-              style: 'box-shadow: 0 1px 2px rgba(0,0,0,0.1);'
+              borderWidth: '2px',
+              style: 'box-shadow: 0 1px 3px rgba(0,0,0,0.1);'
             });
           };
           reader.readAsDataURL(file);
@@ -12675,10 +12675,10 @@ async function renderJobs(reset = false) {
       basicInfoSection.innerHTML = `
         <div class="card" style="padding: 2rem; margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white;">
           <div style="display: flex; gap: 2rem; align-items: flex-start;">
-            ${renderUserAvatar(user, 12, { 
+            ${renderUserAvatar(user, 48, { 
               showBorder: true, 
-              borderWidth: '1px',
-              style: 'box-shadow: 0 1px 2px rgba(0,0,0,0.1); flex-shrink: 0;'
+              borderWidth: '2px',
+              style: 'box-shadow: 0 1px 3px rgba(0,0,0,0.1); flex-shrink: 0;'
             })}
             <div style="flex: 1; min-width: 0;">
               <h2 style="margin: 0; font-size: 1.75rem; font-weight: 700; color: var(--text-main);">${user.name || 'User'}</h2>
