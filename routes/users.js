@@ -334,7 +334,7 @@ router.patch('/me', authenticate, [
     }
 
     console.log('[PATCH /users/me] Successfully updated user:', user.id);
-    console.log('[PATCH /users/me] User data - name:', user.name, 'bio:', JSON.stringify(user.bio), 'bio type:', typeof user.bio, 'gender:', user.gender);
+    console.log('[PATCH /users/me] User data - name:', user.name, 'bio:', JSON.stringify(user.bio), 'bio type:', typeof user.bio, 'gender:', user.gender, 'photoUrl:', user.photoUrl);
     res.json(user);
   } catch (error) {
     console.error('[PATCH /users/me] Update user error:', error);
