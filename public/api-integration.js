@@ -249,10 +249,20 @@
     },
 
     async updateProfile(data) {
-      return apiRequest('/users/me', {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      });
+      try {
+        const response = await apiRequest('/users/me', {
+          method: 'PATCH',
+          body: JSON.stringify(data),
+        });
+        return response;
+      } catch (error) {
+        console.error('[API] updateProfile error:', error);
+        // Try to get more details from error
+        if (error.details && error.details.errors) {
+          console.error('[API] Validation errors:', error.details.errors);
+        }
+        throw error;
+      }
     },
 
     async getCurrentUser() {

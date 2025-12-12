@@ -12262,15 +12262,32 @@ async function renderJobs(reset = false) {
               
               if (uploadResponse.ok) {
                 const uploadData = await uploadResponse.json();
-                updates.photoUrl = uploadData.photoUrl || uploadData.user?.photoUrl;
+                const photoUrl = uploadData.photoUrl || uploadData.user?.photoUrl;
+                if (photoUrl) {
+                  updates.photoUrl = photoUrl;
+                  console.log('[PROFILE SAVE] Photo uploaded successfully:', photoUrl);
+                } else {
+                  console.warn('[PROFILE SAVE] Photo upload succeeded but no photoUrl in response');
+                }
               } else {
                 const errorData = await uploadResponse.json().catch(() => ({}));
+                const errorText = await uploadResponse.text().catch(() => '');
+                console.error('[PROFILE SAVE] Photo upload failed:', uploadResponse.status, errorData, errorText);
                 throw new Error(errorData.error || "Failed to upload photo");
               }
             }
             
+            // Only include fields that have values (don't send empty strings for optional fields)
+            const cleanUpdates = {};
+            if (updates.name && updates.name.trim()) cleanUpdates.name = updates.name.trim();
+            if (updates.gender) cleanUpdates.gender = updates.gender;
+            if (updates.bio !== undefined) cleanUpdates.bio = updates.bio.trim() || null;
+            if (updates.photoUrl) cleanUpdates.photoUrl = updates.photoUrl;
+            
+            console.log('[PROFILE SAVE] Sending update:', cleanUpdates);
+            
             // Update profile - get the updated user from response
-            const updatedUser = await window.hustlAPI.users.updateProfile(updates);
+            const updatedUser = await window.hustlAPI.users.updateProfile(cleanUpdates);
             
             if (!updatedUser) {
               throw new Error("No user data returned from server");
