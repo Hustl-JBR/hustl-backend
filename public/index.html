@@ -4906,12 +4906,11 @@ function showChangePasswordModal() {
     }
     // Initialize Mapbox Places Autocomplete
     function initMapboxAutocomplete() {
-      // Get Mapbox token from environment or config
-      // Note: You'll need to set this in your environment or config
-      const MAPBOX_TOKEN = window.MAPBOX_TOKEN || 'pk.eyJ1IjoiaHVzdGxqb2JzIiwiYSI6ImNscm5xY2F0YjBkY2cya3B0c3V1d2N0d2wifQ.YourTokenHere';
+      // Get Mapbox token from config or environment
+      const MAPBOX_TOKEN = window.HUSTL_CONFIG?.MAPBOX_TOKEN || window.MAPBOX_TOKEN || '';
       
-      if (!MAPBOX_TOKEN || MAPBOX_TOKEN.includes('YourTokenHere')) {
-        console.warn('Mapbox token not configured. Address autocomplete will not work.');
+      if (!MAPBOX_TOKEN) {
+        console.warn('Mapbox token not configured. Address autocomplete will not work. See MAPBOX_SETUP.md for instructions.');
         return;
       }
       
@@ -7551,15 +7550,46 @@ async function renderJobs(reset = false) {
         const detailsList = document.createElement("div");
         detailsList.style.cssText = "display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
         
+        // Check if user is hustler and job not accepted - hide full address
+        let showFullAddressDetails = true;
+        try {
+          const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
+          if (user) {
+            const isHustler = user && !user.roles?.includes('CUSTOMER');
+            const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
+            showFullAddressDetails = !isHustler || jobAccepted;
+          }
+        } catch (e) {
+          showFullAddressDetails = true;
+        }
+        
         if (job.requirements.pickup_address || job.requirements.pickup_city) {
           const pickupDetail = document.createElement("div");
-          pickupDetail.innerHTML = `<strong>Pickup:</strong> ${job.requirements.pickup_address || ''} ${job.requirements.pickup_city || ''} ${job.requirements.pickup_area || ''}`.trim();
+          let pickupText = '';
+          if (showFullAddressDetails && job.requirements.pickup_address) {
+            pickupText = `${job.requirements.pickup_address}, ${job.requirements.pickup_city || ''} ${job.requirements.pickup_zip || ''}`.trim();
+          } else {
+            pickupText = `${job.requirements.pickup_area || ''} ${job.requirements.pickup_city || ''} ${job.requirements.pickup_zip || ''}`.trim();
+            if (!showFullAddressDetails) {
+              pickupText += ' (Exact address shown after acceptance)';
+            }
+          }
+          pickupDetail.innerHTML = `<strong>Pickup:</strong> ${pickupText}`;
           detailsList.appendChild(pickupDetail);
         }
         
         if (job.requirements.dropoff_address && !job.requirements.on_site_only) {
           const dropoffDetail = document.createElement("div");
-          dropoffDetail.innerHTML = `<strong>Dropoff:</strong> ${job.requirements.dropoff_address || ''} ${job.requirements.dropoff_city || ''} ${job.requirements.dropoff_area || ''}`.trim();
+          let dropoffText = '';
+          if (showFullAddressDetails && job.requirements.dropoff_address) {
+            dropoffText = `${job.requirements.dropoff_address}, ${job.requirements.dropoff_city || ''} ${job.requirements.dropoff_zip || ''}`.trim();
+          } else {
+            dropoffText = `${job.requirements.dropoff_area || ''} ${job.requirements.dropoff_city || ''} ${job.requirements.dropoff_zip || ''}`.trim();
+            if (!showFullAddressDetails) {
+              dropoffText += ' (Exact address shown after acceptance)';
+            }
+          }
+          dropoffDetail.innerHTML = `<strong>Dropoff:</strong> ${dropoffText}`;
           detailsList.appendChild(dropoffDetail);
         }
         
