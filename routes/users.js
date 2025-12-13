@@ -144,8 +144,42 @@ router.get('/:id', optionalAuth, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    console.log(`[GET /users/:id] Returning profile for: ${user.name} (ID: ${user.id})`);
-    res.json(user);
+    // Get completed jobs count for this user
+    const completedJobsCount = await prisma.job.count({
+      where: {
+        AND: [
+          {
+            OR: [
+              { customerId: requestedUserId },
+              { hustlerId: requestedUserId }
+            ]
+          },
+          {
+            OR: [
+              { 
+                status: 'PAID',
+                completionCodeVerified: true
+              },
+              { 
+                status: 'COMPLETED_BY_HUSTLER',
+                completionCodeVerified: true
+              }
+            ]
+          },
+          {
+            payment: {
+              status: 'CAPTURED'
+            }
+          }
+        ]
+      }
+    });
+
+    console.log(`[GET /users/:id] Returning profile for: ${user.name} (ID: ${user.id}) with ${completedJobsCount} completed jobs`);
+    res.json({
+      ...user,
+      completedJobsCount
+    });
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Internal server error' });

@@ -13274,7 +13274,203 @@ async function renderJobs(reset = false) {
       return cardHTML;
     }
     
-    // Show user reviews modal (5 most recent completed jobs)
+    // Unified Profile Card Component - Shows user profile with completed jobs, bio, and reviews
+    async function showUserProfileCard(userId) {
+      try {
+        const token = localStorage.getItem('hustl_token') || sessionStorage.getItem('hustl_token');
+        
+        // Fetch user profile with completed jobs count
+        const userResponse = await fetch(`${API_BASE}/users/${userId}`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        
+        if (!userResponse.ok) {
+          showToast("Could not load profile.");
+          return;
+        }
+        
+        const user = await userResponse.json();
+        const completedJobsCount = user.completedJobsCount || 0;
+        
+        // Fetch reviews
+        const reviewsResponse = await fetch(`${API_BASE}/reviews?userId=${userId}`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        
+        let reviews = [];
+        if (reviewsResponse.ok) {
+          const reviewsData = await reviewsResponse.json();
+          reviews = Array.isArray(reviewsData) ? reviewsData : [];
+        }
+        
+        // Get last 5 reviews
+        const last5Reviews = reviews
+          .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+          .slice(0, 5);
+        
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'userProfileCardModal';
+        overlay.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0,0,0,0.5);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1rem;
+        `;
+        
+        // Create modal content
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+          background: white;
+          border-radius: 16px;
+          max-width: 500px;
+          width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
+          position: relative;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        `;
+        
+        // Build reviews HTML
+        let reviewsHTML = '';
+        if (last5Reviews.length === 0) {
+          reviewsHTML = '<div style="padding: 1rem; text-align: center; color: var(--text-muted);">No reviews yet.</div>';
+        } else {
+          reviewsHTML = last5Reviews.map(review => `
+            <div style="padding: 1rem; border-bottom: 1px solid var(--border);">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <span style="font-size: 1.1rem;">${'⭐'.repeat(review.stars || 5)}</span>
+                <span style="font-weight: 600; color: var(--text-main);">${review.stars || 5}/5</span>
+                ${review.reviewer ? `<span style="font-size: 0.85rem; color: var(--text-muted);">by ${review.reviewer.name || 'Anonymous'}</span>` : ''}
+              </div>
+              ${review.text ? `<div style="color: var(--text-main); margin-bottom: 0.5rem; line-height: 1.5;">${review.text}</div>` : ''}
+              ${review.job ? `<div style="font-size: 0.8rem; color: var(--text-muted);">${review.job.title || 'Untitled Job'}</div>` : ''}
+            </div>
+          `).join('');
+        }
+        
+        modal.innerHTML = `
+          <button class="closeProfileCardBtn" style="
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #f3f4f6;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+          " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">×</button>
+          
+          <div style="padding: 2rem;">
+            <!-- Header -->
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 2px solid var(--border);">
+              ${renderUserAvatar(user, 60)}
+              <div style="flex: 1;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 0.25rem 0; color: var(--text-main);">${user.name || 'User'}</h2>
+                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text-muted);">
+                  ${user.ratingAvg ? `<span>⭐ ${user.ratingAvg.toFixed(1)}</span>` : ''}
+                  ${user.ratingCount ? `<span>(${user.ratingCount} reviews)</span>` : '<span>No reviews yet</span>'}
+                </div>
+              </div>
+            </div>
+            
+            <!-- Completed Jobs -->
+            <div style="margin-bottom: 2rem; padding: 1rem; background: #f9fafb; border-radius: 8px;">
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">📋 Completed Jobs</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-main);">${completedJobsCount}</div>
+            </div>
+            
+            <!-- About this person -->
+            <div style="margin-bottom: 2rem;">
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; font-weight: 600;">About this person</div>
+              <div style="color: var(--text-main); line-height: 1.6; padding: 1rem; background: #f9fafb; border-radius: 8px; min-height: 60px;">
+                ${user.bio && user.bio.trim() ? user.bio : '<span style="color: var(--text-muted);">This person hasn\'t added anything about themselves yet.</span>'}
+              </div>
+            </div>
+            
+            <!-- Reviews Section -->
+            <div style="margin-bottom: 1rem;">
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; font-weight: 600;">Reviews</div>
+              <button id="viewLast5ReviewsBtn_${userId}" style="
+                width: 100%;
+                padding: 0.75rem 1rem;
+                background: var(--primary);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                font-size: 0.9rem;
+                transition: all 0.2s;
+              " onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                View last 5 reviews
+              </button>
+              <div id="reviewsDropdown_${userId}" style="
+                display: none;
+                margin-top: 1rem;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                overflow: hidden;
+                max-height: 400px;
+                overflow-y: auto;
+              ">
+                ${reviewsHTML}
+              </div>
+            </div>
+          </div>
+        `;
+        
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        document.body.style.overflow = 'hidden';
+        
+        // Close button handler
+        overlay.querySelector('.closeProfileCardBtn').addEventListener('click', () => {
+          overlay.remove();
+          document.body.style.overflow = '';
+        });
+        
+        // Overlay click to close
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) {
+            overlay.remove();
+            document.body.style.overflow = '';
+          }
+        });
+        
+        // View reviews button handler
+        const viewReviewsBtn = document.getElementById(`viewLast5ReviewsBtn_${userId}`);
+        const reviewsDropdown = document.getElementById(`reviewsDropdown_${userId}`);
+        
+        if (viewReviewsBtn && reviewsDropdown) {
+          viewReviewsBtn.addEventListener('click', () => {
+            const isVisible = reviewsDropdown.style.display !== 'none';
+            reviewsDropdown.style.display = isVisible ? 'none' : 'block';
+            viewReviewsBtn.textContent = isVisible ? 'View last 5 reviews' : 'Hide reviews';
+          });
+        }
+        
+      } catch (error) {
+        console.error("Error showing user profile card:", error);
+        showToast("Error loading profile. Please try again.");
+      }
+    }
+    
+    // Show user reviews modal (5 most recent completed jobs) - Legacy function, kept for compatibility
     async function showUserReviews(userId) {
       try {
         const token = localStorage.getItem('hustl_token') || sessionStorage.getItem('hustl_token');
@@ -16067,10 +16263,12 @@ meta.textContent =
             
             // View profile buttons
             card.querySelectorAll('.viewHustlerProfileBtn, .viewCustomerProfileBtn').forEach(btn => {
-              btn.addEventListener('click', (e) => {
+              btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                const userId = btn.dataset.userId;
-                showApplicantProfileModal(userId);
+                const userId = btn.dataset.userId || btn.closest('[data-user-id]')?.dataset.userId;
+                if (userId) {
+                  await showUserProfileCard(userId);
+                }
               });
             });
             
@@ -18042,12 +18240,30 @@ meta.textContent =
             });
           });
           
-          // View applicant profile
+          // View applicant profile - use unified profile card
           modalOverlay.querySelectorAll('.viewApplicantProfile, .viewApplicantProfileBtn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', async (e) => {
               e.stopPropagation();
               const userId = btn.dataset.userId;
-              showApplicantProfileModal(userId);
+              await showUserProfileCard(userId);
+            });
+          });
+          
+          // View customer profile - use unified profile card
+          modalOverlay.querySelectorAll('.viewCustomerProfile, .viewCustomerProfileBtn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const userId = btn.dataset.userId;
+              await showUserProfileCard(userId);
+            });
+          });
+          
+          // View hustler profile - use unified profile card
+          modalOverlay.querySelectorAll('.viewHustlerProfile, .viewHustlerProfileBtn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const userId = btn.dataset.userId;
+              await showUserProfileCard(userId);
             });
           });
           
@@ -21640,6 +21856,15 @@ try {
   
   // Initialize when DOM is ready
   if (document.readyState === 'loading') {
+    // Global event delegation for profile buttons - ensures all profile buttons work
+    document.addEventListener('click', async (e) => {
+      const profileBtn = e.target.closest('.viewCustomerProfileBtn, .viewHustlerProfileBtn, .viewApplicantProfileBtn, .viewCustomerProfile, .viewHustlerProfile, .viewApplicantProfile');
+      if (profileBtn && profileBtn.dataset.userId) {
+        e.stopPropagation();
+        await showUserProfileCard(profileBtn.dataset.userId);
+      }
+    });
+    
     document.addEventListener('DOMContentLoaded', initializeApp);
   } else {
     // DOM is already ready
