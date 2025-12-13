@@ -16347,6 +16347,43 @@ meta.textContent =
               loadActiveJobs();
             });
             
+            // Handle completion code input (only allow numbers)
+            const completionCodeInput = card.querySelector(`#completionCodeInput_${job.id}`);
+            if (completionCodeInput) {
+              completionCodeInput.addEventListener('click', (e) => {
+                e.stopPropagation();
+              });
+              completionCodeInput.addEventListener('focus', (e) => {
+                e.stopPropagation();
+              });
+              completionCodeInput.addEventListener('input', (e) => {
+                e.stopPropagation();
+                e.target.value = e.target.value.replace(/\D/g, ""); // Only numbers
+              });
+            }
+            
+            // Handle verify completion code button
+            card.querySelector('.verifyCompletionCodeBtn')?.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              const input = card.querySelector(`#completionCodeInput_${job.id}`);
+              if (!input) {
+                showToast('❌ Error: Completion code input not found');
+                return;
+              }
+              const code = input.value.trim();
+              if (!code || code.length !== 6) {
+                showToast('❌ Please enter a valid 6-digit completion code');
+                input.focus();
+                return;
+              }
+              const success = await verifyCompletionCode(job.id, code);
+              if (success) {
+                loadActiveJobs();
+                loadCompletedJobs();
+              }
+            });
+            
             card.querySelector('.markFinishedBtn')?.addEventListener('click', async (e) => {
               e.stopPropagation();
               await submitCompletionCode(job.id);
@@ -18800,6 +18837,155 @@ meta.textContent =
         showToast(error.message || "Error verifying start code. Please check the code and try again.");
         return false;
       }
+    }
+    
+    async function verifyCompletionCode(jobId, code) {
+      try {
+        const token = localStorage.getItem('hustl_token');
+        const response = await fetch(`${API_BASE}/verification/job/${jobId}/verify-completion`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ code })
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to verify completion code');
+        }
+        
+        const data = await response.json();
+        
+        // Show congratulations modal with review prompt
+        showCompletionSuccessModal(jobId, data);
+        
+        return true;
+      } catch (error) {
+        console.error("Error verifying completion code:", error);
+        showToast(error.message || "Error verifying completion code. Please check the code and try again.");
+        return false;
+      }
+    }
+    
+    // Show completion success modal with review prompt
+    function showCompletionSuccessModal(jobId, completionData) {
+      const user = getCurrentUser();
+      if (!user) return;
+      
+      // Determine if user is customer or hustler
+      const isCustomer = completionData.customerId === user.id;
+      const isHustler = completionData.hustlerId === user.id;
+      const otherUserId = isCustomer ? completionData.hustlerId : completionData.customerId;
+      
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 1rem;
+      `;
+      
+      modal.innerHTML = `
+        <div style="background: white; border-radius: 16px; padding: 2rem; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+          <div style="text-align: center; margin-bottom: 2rem;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">🎉</div>
+            <h2 style="font-size: 1.75rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.5rem 0;">Congratulations!</h2>
+            <p style="font-size: 1.1rem; color: var(--text-muted); margin: 0;">Job completed successfully!</p>
+          </div>
+          
+          <div style="background: #f0fdf4; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; border: 2px solid #16a34a;">
+            <div style="font-weight: 600; color: #166534; margin-bottom: 0.75rem; font-size: 1.1rem;">💰 Payment Released</div>
+            <div style="color: #166534;">
+              ${completionData.actualJobAmount ? `$${parseFloat(completionData.actualJobAmount).toFixed(2)} has been released.` : 'Payment has been processed.'}
+              ${completionData.actualHours ? `<div style="margin-top: 0.5rem; font-size: 0.9rem;">Hours worked: ${completionData.actualHours.toFixed(1)}</div>` : ''}
+            </div>
+          </div>
+          
+          <div style="background: #fef3c7; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; border: 2px solid #f59e0b;">
+            <div style="font-weight: 600; color: #92400e; margin-bottom: 0.75rem; font-size: 1.1rem;">⭐ Leave a Review</div>
+            <p style="color: #92400e; margin: 0 0 1rem 0; line-height: 1.5;">
+              Help build trust in the community! Rate ${isCustomer ? 'your hustler' : 'your customer'} and share your experience.
+            </p>
+            <button class="btn btn-primary" id="reviewNowBtn" style="width: 100%; padding: 0.75rem; font-weight: 600; background: #f59e0b; border: none;">
+              Write Review Now
+            </button>
+            <button class="btn btn-ghost" id="reviewLaterBtn" style="width: 100%; padding: 0.75rem; margin-top: 0.5rem; color: #92400e;">
+              I'll Review Later
+            </button>
+          </div>
+          
+          <div style="display: flex; gap: 0.75rem;">
+            <button class="btn btn-primary" id="viewCompletedJobBtn" style="flex: 1; padding: 0.75rem; font-weight: 600;">
+              View Completed Job
+            </button>
+            <button class="btn btn-ghost" id="closeCompletionModalBtn" style="flex: 1; padding: 0.75rem;">
+              Close
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      document.body.style.overflow = 'hidden';
+      
+      // Review now button
+      modal.querySelector('#reviewNowBtn')?.addEventListener('click', () => {
+        document.body.removeChild(modal);
+        document.body.style.overflow = '';
+        // Navigate to completed jobs and open review modal
+        setView('manage-jobs');
+        setTimeout(() => {
+          loadCompletedJobs();
+          setTimeout(() => {
+            // Open review modal for this job
+            if (typeof showReviewModal === 'function') {
+              showReviewModal(jobId, otherUserId);
+            } else {
+              showToast('Please go to Completed Jobs to write your review');
+            }
+          }, 500);
+        }, 100);
+      });
+      
+      // Review later button
+      modal.querySelector('#reviewLaterBtn')?.addEventListener('click', () => {
+        document.body.removeChild(modal);
+        document.body.style.overflow = '';
+        showToast('💡 You can write a review anytime from the Completed Jobs section');
+      });
+      
+      // View completed job button
+      modal.querySelector('#viewCompletedJobBtn')?.addEventListener('click', () => {
+        document.body.removeChild(modal);
+        document.body.style.overflow = '';
+        setView('manage-jobs');
+        setTimeout(() => {
+          loadCompletedJobs();
+        }, 100);
+      });
+      
+      // Close button
+      modal.querySelector('#closeCompletionModalBtn')?.addEventListener('click', () => {
+        document.body.removeChild(modal);
+        document.body.style.overflow = '';
+      });
+      
+      // Close on background click
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          document.body.removeChild(modal);
+          document.body.style.overflow = '';
+        }
+      });
     }
     
     async function submitCompletionCode(jobId) {
