@@ -14995,7 +14995,8 @@ meta.textContent =
             // Get requirements for additional fields
             const requirements = job.requirements || {};
             const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
-            const teamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
+            const rawTeamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
+            const teamSize = typeof rawTeamSize === 'string' ? parseInt(rawTeamSize, 10) : Number(rawTeamSize) || 1;
             const keepActiveFor = requirements.keepActiveFor;
             const expiresAt = requirements.expiresAt ? new Date(requirements.expiresAt) : null;
             const pricingOption = requirements.pricing_option;
