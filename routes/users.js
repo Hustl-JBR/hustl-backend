@@ -250,23 +250,44 @@ router.patch('/me', authenticate, [
           select: selectWithTools,
         });
         console.log('[PATCH /users/me] Prisma update succeeded. User bio:', JSON.stringify(user.bio), 'gender:', user.gender);
-      } catch (toolsError) {
-        // If tools column doesn't exist in SELECT, try without it
-        if (toolsError.code === 'P2022' && toolsError.message && toolsError.message.includes('tools')) {
-          console.warn('[PATCH /users/me] Tools column does not exist in database, retrying without tools in select');
-          // Remove tools from updateData if it was there (but keep bio and gender!)
+      } catch (firstError) {
+        // Check if it's a column error (tools, hometown, etc.)
+        const errorMessage = firstError.message || '';
+        const unknownArgMatch = errorMessage.match(/Unknown argument `([^`]+)`/);
+        const problematicColumn = unknownArgMatch ? unknownArgMatch[1] : null;
+        
+        // If it's a tools column error in SELECT, try without it
+        if (firstError.code === 'P2022' && errorMessage.includes('tools') && errorMessage.includes('select')) {
+          console.warn('[PATCH /users/me] Tools column does not exist in database (SELECT), retrying without tools in select');
           const updateDataWithoutTools = { ...updateData };
           delete updateDataWithoutTools.tools;
           
           user = await prisma.user.update({
             where: { id: req.user.id },
-            data: updateDataWithoutTools, // This still has bio and gender!
-            select: baseSelect, // This still has bio and gender!
+            data: updateDataWithoutTools,
+            select: baseSelect,
           });
-          user.tools = null; // Set to null since column doesn't exist
+          user.tools = null;
           console.log('[PATCH /users/me] Prisma update succeeded without tools. User bio:', JSON.stringify(user.bio), 'gender:', user.gender);
+        } else if (problematicColumn && (problematicColumn === 'hometown' || problematicColumn === 'tools' || problematicColumn === 'bio' || problematicColumn === 'gender')) {
+          // If it's a column error in the data (not SELECT), remove that column and retry
+          console.warn(`[PATCH /users/me] Column '${problematicColumn}' does not exist in database, retrying without it`);
+          const updateDataWithoutColumn = { ...updateData };
+          delete updateDataWithoutColumn[problematicColumn];
+          
+          // Also remove from select if it was there
+          const selectWithoutColumn = { ...selectWithTools };
+          delete selectWithoutColumn[problematicColumn];
+          
+          user = await prisma.user.update({
+            where: { id: req.user.id },
+            data: updateDataWithoutColumn,
+            select: selectWithoutColumn,
+          });
+          user[problematicColumn] = null; // Set to null since column doesn't exist
+          console.log(`[PATCH /users/me] Prisma update succeeded without ${problematicColumn}. User bio:`, JSON.stringify(user.bio), 'gender:', user.gender);
         } else {
-          throw toolsError; // Re-throw if it's a different error
+          throw firstError; // Re-throw if it's a different error
         }
       }
     } catch (updateError) {
