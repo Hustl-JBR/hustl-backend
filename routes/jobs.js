@@ -307,6 +307,16 @@ router.get('/completed', authenticate, async (req, res) => {
             status: true,
           },
         },
+        reviews: {
+          select: {
+            id: true,
+            reviewerId: true,
+            revieweeId: true,
+            stars: true,
+            text: true,
+            createdAt: true,
+          },
+        },
       },
       orderBy: { updatedAt: 'desc' },
     });
