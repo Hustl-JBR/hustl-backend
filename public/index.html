@@ -12147,16 +12147,17 @@ async function renderJobs(reset = false) {
       reader.readAsDataURL(file);
     }
     
-    // Show image cropper modal
+    // Show image cropper modal with circular crop overlay
     function showImageCropper(file, onCrop) {
       const overlay = document.createElement('div');
+      overlay.id = 'cropOverlay';
       overlay.style.cssText = `
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(0,0,0,0.8);
+        background: rgba(0,0,0,0.9);
         z-index: 10000;
         display: flex;
         align-items: center;
@@ -12167,78 +12168,165 @@ async function renderJobs(reset = false) {
       const modal = document.createElement('div');
       modal.style.cssText = `
         background: white;
-        border-radius: 12px;
-        max-width: 500px;
+        border-radius: 16px;
+        max-width: 600px;
         width: 100%;
-        padding: 1.5rem;
+        padding: 0;
         position: relative;
+        overflow: hidden;
       `;
       
       const reader = new FileReader();
       reader.onload = (e) => {
-        const img = document.createElement('img');
-        img.src = e.target.result;
-        img.style.cssText = `
-          width: 100%;
-          max-height: 400px;
-          object-fit: contain;
-          border-radius: 8px;
-          margin-bottom: 1rem;
-        `;
-        
-        const previewCanvas = document.createElement('canvas');
-        previewCanvas.width = 200;
-        previewCanvas.height = 200;
-        previewCanvas.style.cssText = `
-          width: 200px;
-          height: 200px;
-          border: 3px solid var(--primary);
-          border-radius: 50%;
-          margin: 0 auto 1rem;
-          display: block;
-          object-fit: cover;
-        `;
-        
-        const previewCtx = previewCanvas.getContext('2d');
-        
+        const img = new Image();
         img.onload = () => {
-          // Draw preview
-          const size = Math.min(img.width, img.height);
-          const x = (img.width - size) / 2;
-          const y = (img.height - size) / 2;
-          previewCtx.drawImage(img, x, y, size, size, 0, 0, 200, 200);
-        };
-        
-        modal.innerHTML = `
-          <h3 style="font-size: 1.25rem; font-weight: 700; margin: 0 0 1rem 0; text-align: center;">Crop Profile Photo</h3>
-          <p style="text-align: center; color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Photo will be cropped to a square (1:1 ratio)</p>
-          ${img.outerHTML}
-          <div style="text-align: center; margin-bottom: 1rem;">
-            <div style="font-weight: 600; margin-bottom: 0.5rem;">Preview:</div>
-            ${previewCanvas.outerHTML}
-          </div>
-          <div style="display: flex; gap: 0.75rem;">
-            <button id="cropCancelBtn" class="btn btn-ghost" style="flex: 1; padding: 0.75rem;">Cancel</button>
-            <button id="cropConfirmBtn" class="btn btn-primary" style="flex: 1; padding: 0.75rem;">Use This Photo</button>
-          </div>
-        `;
-        
-        overlay.appendChild(modal);
-        document.body.appendChild(overlay);
-        document.body.style.overflow = 'hidden';
-        
-        document.getElementById('cropCancelBtn').addEventListener('click', () => {
-          overlay.remove();
-          document.body.style.overflow = '';
-        });
-        
-        document.getElementById('cropConfirmBtn').addEventListener('click', () => {
-          cropImageToSquare(file, (croppedBlob) => {
-            onCrop(croppedBlob);
+          // Calculate crop dimensions (centered square)
+          const minDimension = Math.min(img.width, img.height);
+          const cropX = (img.width - minDimension) / 2;
+          const cropY = (img.height - minDimension) / 2;
+          
+          // Create container for image and overlay
+          const cropContainer = document.createElement('div');
+          cropContainer.style.cssText = `
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            background: #000;
+            overflow: hidden;
+          `;
+          
+          // Create canvas for displaying image with circular overlay
+          const displayCanvas = document.createElement('canvas');
+          const displayCtx = displayCanvas.getContext('2d');
+          
+          // Set canvas size (maintain aspect ratio, max 500px)
+          const maxDisplaySize = 500;
+          let displayWidth = img.width;
+          let displayHeight = img.height;
+          const scale = Math.min(maxDisplaySize / displayWidth, maxDisplaySize / displayHeight, 1);
+          displayWidth = displayWidth * scale;
+          displayHeight = displayHeight * scale;
+          
+          displayCanvas.width = displayWidth;
+          displayCanvas.height = displayHeight;
+          displayCanvas.style.cssText = `
+            width: 100%;
+            height: auto;
+            display: block;
+          `;
+          
+          // Draw image
+          displayCtx.drawImage(img, 0, 0, displayWidth, displayHeight);
+          
+          // Draw darkened overlay (everything outside circle)
+          const centerX = displayWidth / 2;
+          const centerY = displayHeight / 2;
+          const radius = Math.min(displayWidth, displayHeight) / 2;
+          
+          // Create gradient for darkening effect
+          displayCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          displayCtx.fillRect(0, 0, displayWidth, displayHeight);
+          
+          // Clear the circular area (show original image)
+          displayCtx.globalCompositeOperation = 'destination-out';
+          displayCtx.beginPath();
+          displayCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+          displayCtx.fill();
+          
+          // Draw circular border
+          displayCtx.globalCompositeOperation = 'source-over';
+          displayCtx.strokeStyle = '#ffffff';
+          displayCtx.lineWidth = 3;
+          displayCtx.beginPath();
+          displayCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+          displayCtx.stroke();
+          
+          // Create circular preview (what will be saved)
+          const previewCanvas = document.createElement('canvas');
+          previewCanvas.width = 200;
+          previewCanvas.height = 200;
+          const previewCtx = previewCanvas.getContext('2d');
+          
+          // Draw circular preview
+          previewCtx.beginPath();
+          previewCtx.arc(100, 100, 100, 0, Math.PI * 2);
+          previewCtx.clip();
+          previewCtx.drawImage(img, cropX, cropY, minDimension, minDimension, 0, 0, 200, 200);
+          
+          previewCanvas.style.cssText = `
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 4px solid var(--primary);
+            margin: 1rem auto;
+            display: block;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+          `;
+          
+          modal.innerHTML = `
+            <div style="padding: 1.5rem 1.5rem 0;">
+              <h3 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 0.5rem 0; text-align: center;">Crop Profile Photo</h3>
+              <p style="text-align: center; color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">Position your photo - this is how it will appear</p>
+            </div>
+            ${displayCanvas.outerHTML}
+            <div style="padding: 1.5rem; text-align: center; background: #f9fafb;">
+              <div style="font-weight: 600; margin-bottom: 0.75rem; color: var(--text-main);">Preview:</div>
+              ${previewCanvas.outerHTML}
+            </div>
+            <div style="padding: 1.5rem; display: flex; gap: 0.75rem; border-top: 1px solid var(--border);">
+              <button id="cropCancelBtn" class="btn btn-ghost" style="flex: 1; padding: 0.75rem; font-weight: 600;">Cancel</button>
+              <button id="cropConfirmBtn" class="btn btn-primary" style="flex: 1; padding: 0.75rem; font-weight: 600;">Use This Photo</button>
+            </div>
+          `;
+          
+          cropContainer.appendChild(displayCanvas);
+          modal.insertBefore(cropContainer, modal.querySelector('div'));
+          
+          overlay.appendChild(modal);
+          document.body.appendChild(overlay);
+          document.body.style.overflow = 'hidden';
+          
+          // Store crop data for later use
+          const cropData = {
+            img: img,
+            cropX: cropX,
+            cropY: cropY,
+            size: minDimension
+          };
+          
+          document.getElementById('cropCancelBtn').addEventListener('click', () => {
             overlay.remove();
             document.body.style.overflow = '';
           });
-        });
+          
+          document.getElementById('cropConfirmBtn').addEventListener('click', () => {
+            // Apply the crop
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = minDimension;
+            finalCanvas.height = minDimension;
+            const finalCtx = finalCanvas.getContext('2d');
+            
+            // Draw cropped circular image
+            finalCtx.beginPath();
+            finalCtx.arc(minDimension / 2, minDimension / 2, minDimension / 2, 0, Math.PI * 2);
+            finalCtx.clip();
+            finalCtx.drawImage(img, cropX, cropY, minDimension, minDimension, 0, 0, minDimension, minDimension);
+            
+            // Convert to blob
+            finalCanvas.toBlob((blob) => {
+              if (blob) {
+                onCrop(blob);
+              } else {
+                // Fallback to square crop if circular fails
+                cropImageToSquare(file, onCrop);
+              }
+              overlay.remove();
+              document.body.style.overflow = '';
+            }, 'image/jpeg', 0.92);
+          });
+        };
+        img.src = e.target.result;
       };
       reader.readAsDataURL(file);
     }
