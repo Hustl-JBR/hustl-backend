@@ -20464,23 +20464,42 @@ meta.textContent =
         5: 'Excellent'
       };
       
+      console.log('🔍 showRateWorkerModal - Stars found:', stars.length);
+      
       let hoverRating = 0; // Track hover state separately
+      
+      // Helper function to render stars
+      function renderStars() {
+        const displayRating = hoverRating > 0 ? hoverRating : selectedRating;
+        console.log('🎨 renderStars (rateWorker) - hoverRating:', hoverRating, 'selectedRating:', selectedRating, 'displayRating:', displayRating);
+        
+        stars.forEach((s, i) => {
+          const starNum = i + 1;
+          const isHighlighted = starNum <= displayRating;
+          
+          // Remove inline style and set new color
+          s.style.removeProperty('color');
+          if (isHighlighted) {
+            s.style.color = '#fbbf24';
+            console.log(`  ✅ Star ${starNum} highlighted`);
+          } else {
+            s.style.color = '#d1d5db';
+            console.log(`  ⚪ Star ${starNum} not highlighted`);
+          }
+        });
+        
+        if (displayRating > 0) {
+          ratingText.textContent = ratingTexts[displayRating] || '';
+        } else {
+          ratingText.textContent = 'Select a rating';
+        }
+      }
       
       stars.forEach(star => {
         star.addEventListener('mouseenter', (e) => {
           const rating = parseInt(e.target.dataset.rating);
           hoverRating = rating;
-          
-          // Show hover preview (only if no selection or different from selection)
-          stars.forEach((s, i) => {
-            const starNum = i + 1;
-            if (starNum <= hoverRating) {
-              s.style.color = '#fbbf24';
-            } else {
-              s.style.color = '#d1d5db';
-            }
-          });
-          ratingText.textContent = ratingTexts[hoverRating] || '';
+          renderStars();
         });
         
         star.addEventListener('click', (e) => {
@@ -20489,38 +20508,13 @@ meta.textContent =
           selectedRating = parseInt(e.target.dataset.rating);
           hoverRating = 0; // Clear hover on click
           console.log('⭐ Star clicked - Selected rating:', selectedRating);
-          
-          // Show selected rating
-          stars.forEach((s, i) => {
-            const starNum = i + 1;
-            if (starNum <= selectedRating) {
-              s.style.color = '#fbbf24';
-            } else {
-              s.style.color = '#d1d5db';
-            }
-          });
-          ratingText.textContent = ratingTexts[selectedRating] || '';
+          renderStars();
         });
       });
       
       modalOverlay.querySelector('#ratingStars').addEventListener('mouseleave', () => {
         hoverRating = 0; // Clear hover
-        
-        // Show selected rating if exists, otherwise show default
-        if (selectedRating === 0) {
-          stars.forEach(s => s.style.color = '#d1d5db');
-          ratingText.textContent = 'Select a rating';
-        } else {
-          stars.forEach((s, i) => {
-            const starNum = i + 1;
-            if (starNum <= selectedRating) {
-              s.style.color = '#fbbf24';
-            } else {
-              s.style.color = '#d1d5db';
-            }
-          });
-          ratingText.textContent = ratingTexts[selectedRating] || '';
-        }
+        renderStars();
       });
       
       modalOverlay.querySelector('.closeRateModal')?.addEventListener('click', () => {
@@ -20726,25 +20720,46 @@ meta.textContent =
         5: 'Excellent'
       };
       
+      console.log('🔍 showForcedReviewModal - Stars found:', stars.length);
+      
       let hoverRating = 0; // Track hover state separately
+      
+      // Helper function to render stars
+      function renderStars() {
+        const displayRating = hoverRating > 0 ? hoverRating : selectedRating;
+        console.log('🎨 renderStars (forcedReview) - hoverRating:', hoverRating, 'selectedRating:', selectedRating, 'displayRating:', displayRating);
+        
+        stars.forEach((s, i) => {
+          const starNum = i + 1;
+          const isHighlighted = starNum <= displayRating;
+          
+          // Remove inline style and set new color
+          s.style.removeProperty('color');
+          s.style.removeProperty('transform');
+          
+          if (isHighlighted) {
+            s.style.color = '#fbbf24';
+            s.style.transform = (hoverRating > 0 && selectedRating === 0) ? 'scale(1.1)' : 'scale(1)';
+            console.log(`  ✅ Star ${starNum} highlighted`);
+          } else {
+            s.style.color = '#d1d5db';
+            s.style.transform = 'scale(1)';
+            console.log(`  ⚪ Star ${starNum} not highlighted`);
+          }
+        });
+        
+        if (displayRating > 0) {
+          ratingText.textContent = ratingTexts[displayRating] || '';
+        } else {
+          ratingText.textContent = 'Select a rating';
+        }
+      }
       
       stars.forEach(star => {
         star.addEventListener('mouseenter', (e) => {
           const rating = parseInt(e.target.dataset.rating);
           hoverRating = rating;
-          
-          // Show hover preview
-          stars.forEach((s, i) => {
-            const starNum = i + 1;
-            if (starNum <= hoverRating) {
-              s.style.color = '#fbbf24';
-              s.style.transform = 'scale(1.1)';
-            } else {
-              s.style.color = '#d1d5db';
-              s.style.transform = 'scale(1)';
-            }
-          });
-          ratingText.textContent = ratingTexts[hoverRating] || '';
+          renderStars();
         });
         
         star.addEventListener('click', (e) => {
@@ -20752,46 +20767,14 @@ meta.textContent =
           e.preventDefault();
           selectedRating = parseInt(e.target.dataset.rating);
           hoverRating = 0; // Clear hover on click
-          console.log('⭐ Star clicked - Selected rating:', selectedRating);
-          
-          // Show selected rating
-          stars.forEach((s, i) => {
-            const starNum = i + 1;
-            if (starNum <= selectedRating) {
-              s.style.color = '#fbbf24';
-              s.style.transform = 'scale(1)'; // No scale on selected
-            } else {
-              s.style.color = '#d1d5db';
-              s.style.transform = 'scale(1)';
-            }
-          });
-          ratingText.textContent = ratingTexts[selectedRating] || '';
+          console.log('⭐ Star clicked (forcedReview) - Selected rating:', selectedRating);
+          renderStars();
         });
       });
       
       modalOverlay.querySelector('#ratingStars').addEventListener('mouseleave', () => {
         hoverRating = 0; // Clear hover
-        
-        // Show selected rating if exists, otherwise show default
-        if (selectedRating === 0) {
-          stars.forEach(s => {
-            s.style.color = '#d1d5db';
-            s.style.transform = 'scale(1)';
-          });
-          ratingText.textContent = 'Select a rating';
-        } else {
-          stars.forEach((s, i) => {
-            const starNum = i + 1;
-            if (starNum <= selectedRating) {
-              s.style.color = '#fbbf24';
-              s.style.transform = 'scale(1)';
-            } else {
-              s.style.color = '#d1d5db';
-              s.style.transform = 'scale(1)';
-            }
-          });
-          ratingText.textContent = ratingTexts[selectedRating] || '';
-        }
+        renderStars();
       });
       
       // Submit review (required)
