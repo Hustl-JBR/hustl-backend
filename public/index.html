@@ -12219,11 +12219,16 @@ async function renderJobs(reset = false) {
             position: absolute;
             width: ${img.width * displayScale * scale}px;
             height: ${img.height * displayScale * scale}px;
+            left: 0;
+            top: 0;
             transform: translate(${offsetX}px, ${offsetY}px);
             cursor: move;
             user-select: none;
             touch-action: none;
+            display: block;
+            object-fit: contain;
           `;
+          imgElement.setAttribute('draggable', 'false');
           
           // Create overlay with circular mask using CSS
           const overlayDiv = document.createElement('div');
