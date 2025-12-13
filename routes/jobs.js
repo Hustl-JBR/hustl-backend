@@ -178,6 +178,7 @@ router.get('/user-posted', authenticate, async (req, res) => {
 router.get('/active', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
+    console.log(`[GET /jobs/active] Fetching active jobs for user: ${userId}`);
     
     // Active jobs are:
     // 1. SCHEDULED - Hustler accepted, can message, waiting for Start Code (does NOT count toward 2-job limit)
@@ -229,10 +230,20 @@ router.get('/active', authenticate, async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
     
+    console.log(`[GET /jobs/active] Found ${jobs.length} active jobs for user ${userId}`);
     res.json(jobs);
   } catch (error) {
-    console.error('Get active jobs error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[GET /jobs/active] Error:', error);
+    console.error('[GET /jobs/active] Error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+      userId: req.user?.id
+    });
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message || 'Failed to fetch active jobs'
+    });
   }
 });
 

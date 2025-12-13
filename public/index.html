@@ -16464,7 +16464,19 @@ meta.textContent =
         }
       } catch (error) {
         console.error("Error loading active jobs:", error);
-        activeJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Error loading jobs.</div>";
+        console.error("Error details:", {
+          message: error.message,
+          stack: error.stack,
+          user: user?.id,
+          token: token ? 'present' : 'missing'
+        });
+        activeJobsList.innerHTML = `
+          <div style='text-align: center; padding: 2rem; color: var(--text-muted);'>
+            <div style="font-size: 1.1rem; font-weight: 600; color: #dc2626; margin-bottom: 0.5rem;">Error loading active jobs</div>
+            <div style="margin-bottom: 1rem; font-size: 0.9rem;">${error.message || 'Please refresh and try again.'}</div>
+            <button class="btn btn-primary" onclick="loadActiveJobs()" style="padding: 0.75rem 1.5rem;">Retry</button>
+          </div>
+        `;
       }
     }
     
