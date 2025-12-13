@@ -1049,6 +1049,155 @@ router.post('/:id/cancel', authenticate, requireRole('CUSTOMER'), async (req, re
   }
 });
 
+// PATCH /jobs/:id - Update a job (Customer only, only for OPEN jobs)
+router.patch('/:id', authenticate, requireRole('CUSTOMER'), [
+  body('title').optional().trim().isLength({ max: 200 }),
+  body('category').optional().trim(),
+  body('description').optional().trim(),
+  body('address').optional().trim(),
+  body('date').optional().isISO8601(),
+  body('startTime').optional().isISO8601(),
+  body('endTime').optional().isISO8601(),
+  body('payType').optional().isIn(['flat', 'hourly']),
+  body('amount').optional().isFloat({ min: 0 }),
+  body('hourlyRate').optional().isFloat({ min: 0 }),
+  body('estHours').optional().isInt({ min: 1 }),
+  body('teamSize').optional().isInt({ min: 0, max: 20 }),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        error: 'Validation failed',
+        details: errors.array() 
+      });
+    }
+
+    const job = await prisma.job.findUnique({
+      where: { id: req.params.id },
+      include: { payment: true }
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Only allow editing OPEN jobs
+    if (job.status !== 'OPEN') {
+      return res.status(400).json({ 
+        error: 'Can only edit jobs that are currently open' 
+      });
+    }
+
+    // Build update data
+    const updateData = {};
+    const {
+      title,
+      category,
+      description,
+      address,
+      date,
+      startTime,
+      endTime,
+      payType,
+      amount,
+      hourlyRate,
+      estHours,
+      teamSize,
+      keepActiveFor,
+      requirements
+    } = req.body;
+
+    if (title !== undefined) updateData.title = title;
+    if (category !== undefined) updateData.category = category;
+    if (description !== undefined) updateData.description = description;
+    if (address !== undefined) updateData.address = address;
+    if (date !== undefined) updateData.date = new Date(date);
+    if (startTime !== undefined) updateData.startTime = new Date(startTime);
+    if (endTime !== undefined) updateData.endTime = new Date(endTime);
+    if (payType !== undefined) updateData.payType = payType;
+    if (amount !== undefined) updateData.amount = parseFloat(amount);
+    if (hourlyRate !== undefined) updateData.hourlyRate = parseFloat(hourlyRate);
+    if (estHours !== undefined) updateData.estHours = parseInt(estHours);
+    if (teamSize !== undefined) updateData.teamSize = parseInt(teamSize);
+
+    // Handle requirements merge
+    if (requirements !== undefined) {
+      const existingRequirements = job.requirements || {};
+      updateData.requirements = {
+        ...existingRequirements,
+        ...requirements
+      };
+    }
+
+    // Handle keepActiveFor - recalculate expiration
+    if (keepActiveFor !== undefined) {
+      const days = parseInt(keepActiveFor) || 3;
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + days);
+      
+      const existingRequirements = updateData.requirements || job.requirements || {};
+      updateData.requirements = {
+        ...existingRequirements,
+        keepActiveFor: days,
+        expiresAt: expiresAt.toISOString()
+      };
+    }
+
+    // Geocode address if it changed
+    if (address && address !== job.address) {
+      try {
+        const { geocodeAddress } = require('../utils/geocoding');
+        const coords = await geocodeAddress(address);
+        updateData.lat = coords.lat;
+        updateData.lng = coords.lng;
+      } catch (geocodeError) {
+        console.error('Geocoding error during edit:', geocodeError);
+        // Continue without coordinates
+      }
+    }
+
+    const updated = await prisma.job.update({
+      where: { id: req.params.id },
+      data: updateData,
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+          },
+        },
+        hustler: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+          },
+        },
+        payment: {
+          select: {
+            id: true,
+            amount: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Update job error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /jobs/:id/close - Close a job (Customer only)
 router.post('/:id/close', authenticate, requireRole('CUSTOMER'), async (req, res) => {
   try {

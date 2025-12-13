@@ -5088,6 +5088,196 @@ function showChangePasswordModal() {
 
     /* ---------- Jobs ---------- */
 
+    // Global variable to track if we're editing a job
+    let editingJobId = null;
+    
+    // Load job data into form for editing
+    async function loadJobForEdit(jobId) {
+      try {
+        const token = localStorage.getItem('hustl_token');
+        const response = await fetch(`${API_BASE}/jobs/${jobId}`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch job');
+        }
+        
+        const job = await response.json();
+        
+        // Check if job is editable (must be OPEN)
+        if (job.status !== 'OPEN') {
+          showToast('Can only edit jobs that are currently open');
+          return;
+        }
+        
+        // Set editing mode
+        editingJobId = jobId;
+        
+        // Populate form fields
+        if (document.getElementById("jobTitle")) {
+          document.getElementById("jobTitle").value = job.title || "";
+        }
+        if (document.getElementById("jobCategory")) {
+          document.getElementById("jobCategory").value = job.category || "";
+        }
+        if (document.getElementById("jobDescription")) {
+          document.getElementById("jobDescription").value = job.description || "";
+        }
+        
+        // Populate address fields from requirements
+        const requirements = job.requirements || {};
+        if (document.getElementById("pickupArea")) {
+          document.getElementById("pickupArea").value = requirements.pickup_area || requirements.pickupArea || "";
+        }
+        if (document.getElementById("pickupCity")) {
+          document.getElementById("pickupCity").value = requirements.pickup_city || requirements.pickupCity || "";
+        }
+        if (document.getElementById("pickupZip")) {
+          document.getElementById("pickupZip").value = requirements.pickup_zip || "";
+        }
+        if (document.getElementById("pickupAddress")) {
+          document.getElementById("pickupAddress").value = requirements.pickup_address || "";
+        }
+        if (document.getElementById("pickupApt")) {
+          document.getElementById("pickupApt").value = requirements.pickup_apt || "";
+        }
+        if (document.getElementById("pickupLat")) {
+          document.getElementById("pickupLat").value = requirements.pickup_lat || "";
+        }
+        if (document.getElementById("pickupLng")) {
+          document.getElementById("pickupLng").value = requirements.pickup_lng || "";
+        }
+        
+        // Set on-site only
+        if (document.getElementById("jobOnSiteOnly")) {
+          document.getElementById("jobOnSiteOnly").checked = requirements.on_site_only || requirements.onSiteOnly || false;
+          // Trigger change event to show/hide dropoff fields
+          document.getElementById("jobOnSiteOnly").dispatchEvent(new Event('change'));
+        }
+        
+        // Populate dropoff fields
+        if (document.getElementById("dropoffArea")) {
+          document.getElementById("dropoffArea").value = requirements.dropoff_area || requirements.dropoffArea || "";
+        }
+        if (document.getElementById("dropoffCity")) {
+          document.getElementById("dropoffCity").value = requirements.dropoff_city || requirements.dropoffCity || "";
+        }
+        if (document.getElementById("dropoffZip")) {
+          document.getElementById("dropoffZip").value = requirements.dropoff_zip || "";
+        }
+        if (document.getElementById("dropoffAddress")) {
+          document.getElementById("dropoffAddress").value = requirements.dropoff_address || "";
+        }
+        if (document.getElementById("dropoffApt")) {
+          document.getElementById("dropoffApt").value = requirements.dropoff_apt || "";
+        }
+        if (document.getElementById("dropoffLat")) {
+          document.getElementById("dropoffLat").value = requirements.dropoff_lat || "";
+        }
+        if (document.getElementById("dropoffLng")) {
+          document.getElementById("dropoffLng").value = requirements.dropoff_lng || "";
+        }
+        
+        // Set payment type and amount
+        if (document.getElementById("paymentType")) {
+          document.getElementById("paymentType").value = job.payType || "flat";
+          document.getElementById("paymentType").dispatchEvent(new Event('change'));
+        }
+        if (document.getElementById("flatAmount")) {
+          document.getElementById("flatAmount").value = job.amount || "80";
+        }
+        if (document.getElementById("hourlyRate")) {
+          document.getElementById("hourlyRate").value = job.hourlyRate || "20";
+        }
+        if (document.getElementById("maxHours")) {
+          document.getElementById("maxHours").value = job.estHours || "3";
+        }
+        
+        // Set workers needed
+        const teamSize = job.teamSize || 1;
+        if (document.getElementById("workersNeeded")) {
+          if (teamSize === 0) {
+            document.getElementById("workersNeeded").value = "company";
+          } else if (teamSize >= 1 && teamSize <= 5) {
+            document.getElementById("workersNeeded").value = String(teamSize);
+          } else {
+            document.getElementById("workersNeeded").value = "custom";
+            if (document.getElementById("customWorkersCount")) {
+              document.getElementById("customWorkersCount").value = String(teamSize);
+            }
+          }
+          document.getElementById("workersNeeded").dispatchEvent(new Event('change'));
+        }
+        
+        // Set date and time
+        if (job.date) {
+          const jobDate = new Date(job.date);
+          const dateStr = jobDate.toISOString().split('T')[0];
+          if (document.getElementById("jobDate")) {
+            document.getElementById("jobDate").value = dateStr;
+          }
+        }
+        if (job.startTime) {
+          const startTime = new Date(job.startTime);
+          const timeStr = startTime.toTimeString().slice(0, 5);
+          if (document.getElementById("jobStartTime")) {
+            document.getElementById("jobStartTime").value = timeStr;
+          }
+        }
+        if (job.endTime) {
+          const endTime = new Date(job.endTime);
+          const timeStr = endTime.toTimeString().slice(0, 5);
+          if (document.getElementById("jobEndTime")) {
+            document.getElementById("jobEndTime").value = timeStr;
+          }
+        }
+        
+        // Set deadline preference
+        const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
+        if (document.getElementById("deadlinePreference")) {
+          document.getElementById("deadlinePreference").value = deadlinePreference || "flexible";
+          document.getElementById("deadlinePreference").dispatchEvent(new Event('change'));
+        }
+        
+        // Set equipment checkboxes
+        const equipmentNeeded = requirements.equipment_needed || [];
+        document.querySelectorAll('input[name="equipment"]').forEach(cb => {
+          cb.checked = equipmentNeeded.includes(cb.value);
+        });
+        
+        // Set notes
+        if (document.getElementById("jobNotes")) {
+          document.getElementById("jobNotes").value = requirements.notes || "";
+        }
+        
+        // Set keep active for
+        if (requirements.keepActiveFor && document.getElementById("jobDuration")) {
+          document.getElementById("jobDuration").value = String(requirements.keepActiveFor);
+        }
+        
+        // Update form title and button
+        const formTitle = document.querySelector('#jobFormCard .card-title');
+        if (formTitle) {
+          formTitle.textContent = 'Edit Job';
+        }
+        const postButton = document.getElementById("postJobButton");
+        if (postButton) {
+          postButton.textContent = "💾 Update Job";
+        }
+        
+        // Navigate to post view
+        setView('post');
+        
+        // Scroll to top
+        window.scrollTo(0, 0);
+        
+      } catch (error) {
+        console.error("Error loading job for edit:", error);
+        showToast("Error loading job. Please try again.");
+      }
+    }
+    
     function clearJobForm() {
       document.getElementById("jobTitle").value = "";
       document.getElementById("jobCategory").value = "";
@@ -15284,9 +15474,9 @@ meta.textContent =
               showViewJobModal(job.id, 'customer');
             });
             
-            jobCard.querySelector('.editJobBtn')?.addEventListener('click', (e) => {
+            jobCard.querySelector('.editJobBtn')?.addEventListener('click', async (e) => {
               e.stopPropagation();
-              showToast("Edit job feature coming soon");
+              await loadJobForEdit(job.id);
             });
             
             jobCard.querySelector('.cancelJobBtn')?.addEventListener('click', async (e) => {
@@ -17040,9 +17230,12 @@ meta.textContent =
           workersDisplay = `${teamSize} workers`;
         }
         
-        // Format expiration
+        // Format expiration - check if keepOpenUntilAccepted is enabled
+        const isKeepOpenEnabled = requirements.keepOpenUntilAccepted === true;
         let expirationDisplay = '';
-        if (expiresAt && expiresAt > new Date()) {
+        if (isKeepOpenEnabled) {
+          expirationDisplay = 'Stays open until hustler assigned';
+        } else if (expiresAt && expiresAt > new Date()) {
           const daysLeft = Math.ceil((expiresAt - new Date()) / (1000 * 60 * 60 * 24));
           expirationDisplay = `Expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
         } else if (expiresAt && expiresAt <= new Date()) {
@@ -17135,12 +17328,22 @@ meta.textContent =
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">📍 Location</div>
                     <div style="font-weight: 600; color: var(--text-main); font-size: 0.9rem;">${locationDisplay}</div>
                   </div>
-                  ${expirationDisplay ? `
-                  <div style="padding: 1rem; background: ${expiresAt && expiresAt <= new Date() ? '#fee2e2' : '#fef3c7'}; border-radius: 8px; border: 1px solid ${expiresAt && expiresAt <= new Date() ? '#fca5a5' : '#fbbf24'};">
+                  ${(() => {
+                    const requirements = job.requirements || {};
+                    const isKeepOpenEnabled = requirements.keepOpenUntilAccepted === true;
+                    const displayText = isKeepOpenEnabled ? 'Stays open until hustler assigned' : (expirationDisplay || '');
+                    const displayColor = isKeepOpenEnabled ? '#1e40af' : (expiresAt && expiresAt <= new Date() ? '#dc2626' : '#d97706');
+                    const bgColor = isKeepOpenEnabled ? '#dbeafe' : (expiresAt && expiresAt <= new Date() ? '#fee2e2' : '#fef3c7');
+                    const borderColor = isKeepOpenEnabled ? '#3b82f6' : (expiresAt && expiresAt <= new Date() ? '#fca5a5' : '#fbbf24');
+                    
+                    if (!displayText && !isKeepOpenEnabled) return '';
+                    return `
+                  <div style="padding: 1rem; background: ${bgColor}; border-radius: 8px; border: 1px solid ${borderColor};">
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">⏳ Visibility</div>
-                    <div style="font-weight: 600; color: ${expiresAt && expiresAt <= new Date() ? '#dc2626' : '#d97706'};">${expirationDisplay}</div>
+                    <div id="expirationDisplay_${job.id}" data-expiration-display style="font-weight: 600; color: ${displayColor};">${displayText}</div>
                   </div>
-                  ` : ''}
+                  `;
+                  })()}
                 </div>
                 
                 ${requirements.notes ? `
@@ -17622,18 +17825,55 @@ meta.textContent =
           });
           
           // Edit/Close/Repost job
-          modalOverlay.querySelector('.editJobBtn')?.addEventListener('click', (e) => {
+          modalOverlay.querySelector('.editJobBtn')?.addEventListener('click', async (e) => {
             e.stopPropagation();
             document.body.removeChild(modalOverlay);
-            // Navigate to edit job (could be a separate view or modal)
-            showToast("Edit job feature coming soon");
+            await loadJobForEdit(job.id);
           });
+          
+          // Update expiration display when checkbox changes
+          const keepOpenCheckbox = modalOverlay.querySelector('#keepOpenUntilAccepted');
+          const expirationDisplayElement = modalOverlay.querySelector(`#expirationDisplay_${job.id}`);
+          const expirationContainer = expirationDisplayElement?.parentElement;
+          
+          if (keepOpenCheckbox && expirationDisplayElement && expirationContainer) {
+            keepOpenCheckbox.addEventListener('change', (e) => {
+              const isChecked = e.target.checked;
+              if (isChecked) {
+                expirationDisplayElement.textContent = 'Stays open until hustler assigned';
+                expirationDisplayElement.style.color = '#1e40af';
+                expirationContainer.style.background = '#dbeafe';
+                expirationContainer.style.borderColor = '#3b82f6';
+              } else {
+                // Recalculate expiration based on expiresAt
+                const requirements = job.requirements || {};
+                const expiresAt = requirements.expiresAt ? new Date(requirements.expiresAt) : null;
+                if (expiresAt && expiresAt > new Date()) {
+                  const daysLeft = Math.ceil((expiresAt - new Date()) / (1000 * 60 * 60 * 24));
+                  expirationDisplayElement.textContent = `Expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
+                  expirationDisplayElement.style.color = '#d97706';
+                  expirationContainer.style.background = '#fef3c7';
+                  expirationContainer.style.borderColor = '#fbbf24';
+                } else if (expiresAt && expiresAt <= new Date()) {
+                  expirationDisplayElement.textContent = 'Expired — Repost?';
+                  expirationDisplayElement.style.color = '#dc2626';
+                  expirationContainer.style.background = '#fee2e2';
+                  expirationContainer.style.borderColor = '#fca5a5';
+                } else {
+                  expirationDisplayElement.textContent = '';
+                }
+              }
+            });
+          }
           
           // Save keep open setting button
           modalOverlay.querySelector('.saveKeepOpenSettingBtn')?.addEventListener('click', async (e) => {
             e.stopPropagation();
             const keepOpenUntilAccepted = modalOverlay.querySelector('#keepOpenUntilAccepted')?.checked || false;
             await cancelJob(job.id, keepOpenUntilAccepted, true); // true = just updating setting, not canceling
+            // Refresh the modal to show updated expiration
+            document.body.removeChild(modalOverlay);
+            showViewJobModal(job.id, 'customer');
           });
           
           modalOverlay.querySelector('.cancelJobBtn')?.addEventListener('click', async (e) => {
