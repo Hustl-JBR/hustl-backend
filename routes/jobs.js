@@ -127,7 +127,7 @@ router.get('/user-posted', authenticate, async (req, res) => {
       where: {
         customerId: userId,
         status: {
-          notIn: ['PAID', 'CANCELLED', 'EXPIRED']
+          notIn: ['PAID', 'CANCELLED', 'EXPIRED', 'ASSIGNED', 'SCHEDULED']
         },
         // Exclude jobs where completion code has been verified (these are completed)
         completionCodeVerified: false

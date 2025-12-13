@@ -15592,11 +15592,25 @@ meta.textContent =
           });
         }
         
-        // The API endpoint already filters for customer's posted jobs, but add client-side filter for completed jobs (safety check)
-        const postedJobs = jobs.filter(job => 
-          job.status !== 'PAID' && 
-          !(job.status === 'COMPLETED_BY_HUSTLER' && job.completionCodeVerified)
-        );
+        // Filter out jobs that should not appear in "Posted Jobs":
+        // - ASSIGNED or SCHEDULED jobs (they should only appear in "Active Jobs")
+        // - CANCELLED jobs (deleted as a whole)
+        // - PAID or completed jobs (they should appear in "Completed Jobs")
+        const postedJobs = jobs.filter(job => {
+          // Exclude cancelled jobs (deleted as a whole)
+          if (job.status === 'CANCELLED') return false;
+          
+          // Exclude assigned or scheduled jobs (they go to Active Jobs tab)
+          if (job.status === 'ASSIGNED' || job.status === 'SCHEDULED') return false;
+          
+          // Exclude paid or completed jobs (they go to Completed Jobs tab)
+          if (job.status === 'PAID') return false;
+          if (job.status === 'COMPLETED_BY_HUSTLER' && job.completionCodeVerified) return false;
+          
+          // Only show OPEN, REQUESTED, or IN_PROGRESS jobs in Posted Jobs
+          // (IN_PROGRESS can stay here if needed, or move to Active - but let's keep it for now)
+          return true;
+        });
         
         if (postedJobs.length === 0) {
           postedJobsList.innerHTML = `
