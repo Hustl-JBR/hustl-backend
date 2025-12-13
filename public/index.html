@@ -12301,24 +12301,21 @@ async function renderJobs(reset = false) {
           });
           
           document.getElementById('cropConfirmBtn').addEventListener('click', () => {
-            // Apply the crop
+            // Apply the crop - save as square (1:1) which will display as circle
             const finalCanvas = document.createElement('canvas');
             finalCanvas.width = minDimension;
             finalCanvas.height = minDimension;
             const finalCtx = finalCanvas.getContext('2d');
             
-            // Draw cropped circular image
-            finalCtx.beginPath();
-            finalCtx.arc(minDimension / 2, minDimension / 2, minDimension / 2, 0, Math.PI * 2);
-            finalCtx.clip();
+            // Draw the square cropped image (centered crop from original)
             finalCtx.drawImage(img, cropX, cropY, minDimension, minDimension, 0, 0, minDimension, minDimension);
             
-            // Convert to blob
+            // Convert to blob (square image - will be displayed as circle with CSS)
             finalCanvas.toBlob((blob) => {
               if (blob) {
                 onCrop(blob);
               } else {
-                // Fallback to square crop if circular fails
+                // Fallback to square crop if conversion fails
                 cropImageToSquare(file, onCrop);
               }
               overlay.remove();
