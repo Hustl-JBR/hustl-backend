@@ -4282,6 +4282,164 @@ heart of Hustl.
                           : 'https://hustl-production.up.railway.app');
     // API base for direct fetch calls (no /api prefix needed)
     const API_BASE = BACKEND_URL;
+    
+    // ============================================
+    // CENTRALIZED REVIEW SYSTEM - Single Source of Truth
+    // ============================================
+    // All reviews come from backend API - never stored locally
+    // This ensures consistency across all displays
+    
+    /**
+     * Load reviews for a user with pagination support
+     * @param {string} userId - User ID to load reviews for
+     * @param {number} limit - Number of reviews to load (default: 6)
+     * @param {number} offset - Offset for pagination (default: 0)
+     * @returns {Promise<{reviews: Array, total: number, hasMore: boolean}>}
+     */
+    window.loadUserReviews = async function(userId, limit = 6, offset = 0) {
+      try {
+        const token = localStorage.getItem('hustl_token');
+        const response = await fetch(`${API_BASE}/reviews/user/${userId}?limit=${limit}&offset=${offset}`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to load reviews');
+        }
+        
+        const data = await response.json();
+        
+        // Handle both old format (array) and new format (object with reviews array)
+        if (Array.isArray(data)) {
+          return {
+            reviews: data,
+            total: data.length,
+            hasMore: data.length >= limit,
+          };
+        }
+        
+        return {
+          reviews: data.reviews || [],
+          total: data.total || 0,
+          hasMore: data.hasMore || false,
+        };
+      } catch (error) {
+        console.error('[REVIEWS] Error loading reviews:', error);
+        return {
+          reviews: [],
+          total: 0,
+          hasMore: false,
+        };
+      }
+    };
+    
+    /**
+     * Render reviews list HTML with "Load more" support
+     * @param {Array} reviews - Array of review objects
+     * @param {string} containerId - ID of container element
+     * @param {string} userId - User ID for loading more reviews
+     * @param {number} currentOffset - Current offset for pagination
+     * @param {number} total - Total number of reviews
+     * @param {boolean} hasMore - Whether more reviews are available
+     */
+    window.renderReviewsList = function(reviews, containerId, userId, currentOffset = 0, total = 0, hasMore = false) {
+      const container = document.getElementById(containerId);
+      if (!container) {
+        console.error(`[REVIEWS] Container ${containerId} not found`);
+        return;
+      }
+      
+      if (reviews.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">No reviews yet. Complete jobs to get reviews!</div>';
+        return;
+      }
+      
+      let html = reviews.map(review => `
+        <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 1px solid var(--border);">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+            <div>
+              <div style="font-weight: 600; color: var(--text-main);">${review.reviewer?.name || 'Anonymous'}</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">${new Date(review.createdAt).toLocaleDateString()}</div>
+            </div>
+            <div style="font-size: 1.25rem;">${'★'.repeat(review.stars || 5)}</div>
+          </div>
+          ${review.text ? `<div style="color: var(--text-main); line-height: 1.5; margin-bottom: 0.5rem;">${review.text}</div>` : ''}
+          ${review.job ? `<div style="font-size: 0.8rem; color: var(--text-muted);">${review.job.title || 'Untitled Job'}</div>` : ''}
+        </div>
+      `).join('');
+      
+      // Add "Load more" button if there are more reviews
+      if (hasMore) {
+        html += `
+          <button id="loadMoreReviewsBtn" class="btn btn-ghost" style="width: 100%; padding: 0.75rem; margin-top: 1rem;">
+            Load More Reviews (${total - currentOffset - reviews.length} remaining)
+          </button>
+        `;
+      }
+      
+      container.innerHTML = html;
+      
+      // Attach "Load more" handler
+      if (hasMore) {
+        const loadMoreBtn = document.getElementById('loadMoreReviewsBtn');
+        if (loadMoreBtn) {
+          loadMoreBtn.addEventListener('click', async () => {
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.textContent = 'Loading...';
+            
+            const nextOffset = currentOffset + reviews.length;
+            const result = await window.loadUserReviews(userId, 6, nextOffset);
+            
+            // Append new reviews
+            const newReviews = result.reviews;
+            if (newReviews.length > 0) {
+              const newHtml = newReviews.map(review => `
+                <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 1px solid var(--border);">
+                  <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                    <div>
+                      <div style="font-weight: 600; color: var(--text-main);">${review.reviewer?.name || 'Anonymous'}</div>
+                      <div style="font-size: 0.85rem; color: var(--text-muted);">${new Date(review.createdAt).toLocaleDateString()}</div>
+                    </div>
+                    <div style="font-size: 1.25rem;">${'★'.repeat(review.stars || 5)}</div>
+                  </div>
+                  ${review.text ? `<div style="color: var(--text-main); line-height: 1.5; margin-bottom: 0.5rem;">${review.text}</div>` : ''}
+                  ${review.job ? `<div style="font-size: 0.8rem; color: var(--text-muted);">${review.job.title || 'Untitled Job'}</div>` : ''}
+                </div>
+              `).join('');
+              
+              loadMoreBtn.insertAdjacentHTML('beforebegin', newHtml);
+              
+              // Update button or remove if no more
+              if (result.hasMore) {
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.textContent = `Load More Reviews (${result.total - nextOffset - newReviews.length} remaining)`;
+              } else {
+                loadMoreBtn.remove();
+              }
+            } else {
+              loadMoreBtn.remove();
+            }
+          });
+        }
+      }
+    };
+    
+    /**
+     * Get user rating display (avg rating + count)
+     * Always uses backend data (ratingAvg, ratingCount) - single source of truth
+     * @param {Object} user - User object with ratingAvg and ratingCount
+     * @returns {string} HTML string for rating display
+     */
+    window.getUserRatingDisplay = function(user) {
+      const ratingAvg = user.ratingAvg || 0;
+      const ratingCount = user.ratingCount || 0;
+      
+      if (ratingCount === 0) {
+        return '<span style="color: var(--text-muted);">⭐ No reviews yet</span>';
+      }
+      
+      return `⭐ <strong>${Number(ratingAvg).toFixed(1)}</strong> <span style="color: var(--text-muted);">(${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})</span>`;
+    };
 
     // 🔔 Auto-complete after 72 hours of no customer response
     const AUTO_COMPLETE_HOURS = 72;
@@ -8420,15 +8578,10 @@ async function renderJobs(reset = false) {
         posterName.textContent = poster.name || poster.username || poster.email?.split('@')[0] || "Unknown";
         posterInfo.appendChild(posterName);
         
+        // Use centralized rating display - always from backend (single source of truth)
         const posterRating = document.createElement("div");
         posterRating.style.cssText = "font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.25rem;";
-        const ratingValue = poster.ratingAvg || poster.rating || 0;
-        const ratingCount = poster.ratingCount || poster.reviewCount || 0;
-        if (ratingCount > 0) {
-          posterRating.innerHTML = `⭐ ${Number(ratingValue).toFixed(1)} (${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})`;
-        } else {
-          posterRating.textContent = "⭐ No reviews yet";
-        }
+        posterRating.innerHTML = window.getUserRatingDisplay(poster);
         posterInfo.appendChild(posterRating);
         
         postedByRow.appendChild(posterInfo);
@@ -11327,12 +11480,11 @@ async function renderJobs(reset = false) {
             name.addEventListener("click", () => openUserProfile(hustler.id));
             nameRating.appendChild(name);
 
+            // Use centralized rating display - always from backend (single source of truth)
             const rating = document.createElement("div");
             rating.style.cssText = "display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
-            const ratingValue = hustler.ratingAvg || hustler.rating || 5.0;
-            const ratingCount = hustler.ratingCount || hustler.reviewCount || 0;
-            rating.innerHTML = `⭐ ${Number(ratingValue).toFixed(1)}`;
-            if (ratingCount > 0) {
+            rating.innerHTML = window.getUserRatingDisplay(hustler);
+            if (hustler.ratingCount > 0) {
               rating.innerHTML += ` <span>(${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})</span>`;
             } else {
               rating.innerHTML += ` <span style='color: #9ca3af;'>(No reviews yet)</span>`;
@@ -14318,49 +14470,31 @@ async function renderJobs(reset = false) {
         const ratingsContent = document.getElementById("profileRatingsContent");
         if (ratingsContent) {
           try {
-            // Fetch reviews for this user
-            const token = localStorage.getItem('hustl_token');
-            const reviewsResponse = await fetch(`${API_BASE}/reviews/user/${user.id}`, {
-              headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-            });
-            
-            let reviews = [];
-            if (reviewsResponse.ok) {
-              const reviewsData = await reviewsResponse.json();
-              reviews = Array.isArray(reviewsData) ? reviewsData : (reviewsData.reviews || []);
-            }
+            // Use centralized review loading function - single source of truth
+            const result = await window.loadUserReviews(user.id, 6, 0);
+            const reviews = result.reviews;
             
             const ratingValue = document.getElementById("profileRatingValue");
             const ratingCount = document.getElementById("profileRatingCount");
             const reviewsList = document.getElementById("profileReviewsList");
             
+            // Always use backend data (ratingAvg, ratingCount) - single source of truth
             if (ratingValue) {
-              ratingValue.textContent = user.ratingAvg ? user.ratingAvg.toFixed(1) : '5.0';
+              ratingValue.textContent = user.ratingAvg ? user.ratingAvg.toFixed(1) : (user.ratingCount > 0 ? '0.0' : '5.0');
             }
             if (ratingCount) {
-              ratingCount.textContent = `Based on ${user.ratingCount || 0} ${user.ratingCount === 1 ? 'review' : 'reviews'}`;
+              const count = user.ratingCount || 0;
+              ratingCount.textContent = count === 0 
+                ? 'No reviews yet' 
+                : `Based on ${count} ${count === 1 ? 'review' : 'reviews'}`;
             }
             
+            // Use centralized render function with pagination support
             if (reviewsList) {
-              if (reviews.length === 0) {
-                reviewsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>No reviews yet. Complete jobs to get reviews!</div>";
-              } else {
-                reviewsList.innerHTML = reviews.map(review => `
-                  <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 1px solid var(--border);">
-                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
-                      <div>
-                        <div style="font-weight: 600; color: var(--text-main);">${review.reviewer?.name || 'Anonymous'}</div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted);">${new Date(review.createdAt).toLocaleDateString()}</div>
-                      </div>
-                      <div style="font-size: 1.25rem;">${'⭐'.repeat(review.stars)}</div>
-                    </div>
-                    <div style="color: var(--text-main); line-height: 1.5;">${review.text || ''}</div>
-                  </div>
-                `).join('');
-              }
+              window.renderReviewsList(reviews, 'profileReviewsList', user.id, 0, result.total, result.hasMore);
             }
           } catch (error) {
-            console.error("Error loading ratings:", error);
+            console.error("[REVIEWS] Error loading ratings:", error);
             const reviewsList = document.getElementById("profileReviewsList");
             if (reviewsList) {
               reviewsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Error loading reviews.</div>";
@@ -20830,9 +20964,16 @@ meta.textContent =
           showToast("✅ Review submitted! Thank you for your feedback.");
           document.body.removeChild(modalOverlay);
           
-          // Refresh jobs
+          // CRITICAL: Refresh all review displays after submission
           if (typeof loadActiveJobs === 'function') loadActiveJobs();
           if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
+          if (typeof renderProfile === 'function') renderProfile();
+          if (typeof renderJobs === 'function') renderJobs();
+          
+          // Trigger global review refresh event
+          window.dispatchEvent(new CustomEvent('reviewSubmitted', { 
+            detail: { revieweeId, jobId } 
+          }));
           
           // Navigate to completed jobs
           if (typeof setView === 'function') {

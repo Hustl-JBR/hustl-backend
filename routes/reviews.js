@@ -6,6 +6,7 @@ const { authenticate, optionalAuth } = require('../middleware/auth');
 const router = express.Router();
 
 // GET /reviews - Get reviews with optional userId query parameter
+// Single source of truth for reviews - used everywhere in the app
 router.get('/', optionalAuth, async (req, res) => {
   try {
     const { userId } = req.query;
@@ -14,7 +15,10 @@ router.get('/', optionalAuth, async (req, res) => {
       return res.status(400).json({ error: 'userId query parameter is required' });
     }
 
-    const { limit = 50, offset = 0 } = req.query;
+    // Default to 6 reviews for initial load, allow up to 50
+    const { limit = 6, offset = 0 } = req.query;
+    const limitNum = Math.min(parseInt(limit) || 6, 50);
+    const offsetNum = parseInt(offset) || 0;
 
     const reviews = await prisma.review.findMany({
       where: {
@@ -41,11 +45,25 @@ router.get('/', optionalAuth, async (req, res) => {
       orderBy: {
         createdAt: 'desc',
       },
-      take: parseInt(limit),
-      skip: parseInt(offset),
+      take: limitNum,
+      skip: offsetNum,
     });
 
-    res.json(reviews);
+    // Return reviews with total count for pagination
+    const totalCount = await prisma.review.count({
+      where: {
+        revieweeId: userId,
+        isHidden: false,
+      },
+    });
+
+    res.json({
+      reviews,
+      total: totalCount,
+      limit: limitNum,
+      offset: offsetNum,
+      hasMore: offsetNum + limitNum < totalCount,
+    });
   } catch (error) {
     console.error('Get reviews error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -180,58 +198,15 @@ router.post('/', authenticate, [
   }
 });
 
-// GET /reviews - Get reviews with optional userId query parameter
-router.get('/', async (req, res) => {
-  try {
-    const { userId } = req.query;
-    
-    if (!userId) {
-      return res.status(400).json({ error: 'userId query parameter is required' });
-    }
-
-    const { limit = 50, offset = 0 } = req.query;
-
-    const reviews = await prisma.review.findMany({
-      where: {
-        revieweeId: userId,
-        isHidden: false,
-      },
-      include: {
-        reviewer: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            photoUrl: true,
-          },
-        },
-        job: {
-          select: {
-            id: true,
-            title: true,
-            category: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: parseInt(limit),
-      skip: parseInt(offset),
-    });
-
-    res.json(reviews);
-  } catch (error) {
-    console.error('Get reviews error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
 // GET /reviews/user/:userId - Get all reviews for a user (alternative route)
+// Same as GET /reviews?userId=:userId but with path parameter
 router.get('/user/:userId', optionalAuth, async (req, res) => {
   try {
     const { userId } = req.params;
-    const { limit = 50, offset = 0 } = req.query;
+    // Default to 6 reviews for initial load, allow up to 50
+    const { limit = 6, offset = 0 } = req.query;
+    const limitNum = Math.min(parseInt(limit) || 6, 50);
+    const offsetNum = parseInt(offset) || 0;
 
     const reviews = await prisma.review.findMany({
       where: {
@@ -258,11 +233,25 @@ router.get('/user/:userId', optionalAuth, async (req, res) => {
       orderBy: {
         createdAt: 'desc',
       },
-      take: parseInt(limit),
-      skip: parseInt(offset),
+      take: limitNum,
+      skip: offsetNum,
     });
 
-    res.json(reviews);
+    // Return reviews with total count for pagination
+    const totalCount = await prisma.review.count({
+      where: {
+        revieweeId: userId,
+        isHidden: false,
+      },
+    });
+
+    res.json({
+      reviews,
+      total: totalCount,
+      limit: limitNum,
+      offset: offsetNum,
+      hasMore: offsetNum + limitNum < totalCount,
+    });
   } catch (error) {
     console.error('Get reviews error:', error);
     res.status(500).json({ error: 'Internal server error' });
