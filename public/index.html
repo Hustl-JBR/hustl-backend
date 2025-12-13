@@ -19069,6 +19069,13 @@ meta.textContent =
       const charCount = modal.querySelector('#charCount');
       const starContainer = modal.querySelector('#starRating');
       
+      console.log('🔍 Star rating modal initialized - stars found:', stars.length);
+      if (stars.length === 0) {
+        console.error('❌ CRITICAL: No stars found in modal!');
+      } else {
+        console.log('✅ Stars found:', stars.length, 'First star:', stars[0], 'Initial color:', stars[0].style.color || 'not set');
+      }
+      
       const ratingLabels = {
         1: 'Poor',
         2: 'Fair',
