@@ -16300,7 +16300,15 @@ meta.textContent =
             // Handle start code input (only allow numbers)
             const startCodeInput = card.querySelector(`#startCodeInput_${job.id}`);
             if (startCodeInput) {
+              // Prevent card click from opening modal when clicking input
+              startCodeInput.addEventListener('click', (e) => {
+                e.stopPropagation();
+              });
+              startCodeInput.addEventListener('focus', (e) => {
+                e.stopPropagation();
+              });
               startCodeInput.addEventListener('input', (e) => {
+                e.stopPropagation();
                 e.target.value = e.target.value.replace(/\D/g, ""); // Only numbers
               });
             }
@@ -16308,13 +16316,22 @@ meta.textContent =
             // Handle verify start code button
             card.querySelector('.verifyStartCodeBtn')?.addEventListener('click', async (e) => {
               e.stopPropagation();
+              e.preventDefault();
               const input = card.querySelector(`#startCodeInput_${job.id}`);
-              if (!input || !input.value || input.value.length !== 6) {
-                showToast('Please enter a valid 6-digit start code');
+              if (!input) {
+                showToast('❌ Error: Start code input not found');
                 return;
               }
-              await verifyStartCode(job.id, input.value);
-              loadActiveJobs();
+              const code = input.value.trim();
+              if (!code || code.length !== 6) {
+                showToast('❌ Please enter a valid 6-digit start code');
+                input.focus();
+                return;
+              }
+              const success = await verifyStartCode(job.id, code);
+              if (success) {
+                loadActiveJobs();
+              }
             });
             
             card.querySelector('.markStartedBtn')?.addEventListener('click', async (e) => {
@@ -16369,7 +16386,12 @@ meta.textContent =
             
             // Make entire card clickable
             card.addEventListener('click', (e) => {
-              if (!e.target.closest('button') && !e.target.closest('img') && !e.target.closest('.viewHustlerProfileBtn') && !e.target.closest('.viewCustomerProfileBtn')) {
+              if (!e.target.closest('button') && 
+                  !e.target.closest('img') && 
+                  !e.target.closest('.viewHustlerProfileBtn') && 
+                  !e.target.closest('.viewCustomerProfileBtn') &&
+                  !e.target.closest('input') &&
+                  !e.target.closest(`#startCodeInput_${job.id}`)) {
                 showViewJobModal(job.id, isCustomer ? 'customer' : 'hustler');
               }
             });
