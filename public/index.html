@@ -19192,6 +19192,9 @@ meta.textContent =
             throw new Error(error.error || 'Failed to submit review');
           }
           
+          const result = await response.json();
+          console.log('✅ Review submitted successfully:', result);
+          
           showToast('✅ Review submitted successfully!');
           document.body.removeChild(modal);
           document.body.style.overflow = '';
@@ -19201,7 +19204,7 @@ meta.textContent =
             loadCompletedJobs();
           }
         } catch (error) {
-          console.error('Error submitting review:', error);
+          console.error('❌ Error submitting review:', error);
           showToast(error.message || 'Error submitting review. Please try again.');
           submitBtn.disabled = false;
           submitBtn.textContent = 'Submit Review';
