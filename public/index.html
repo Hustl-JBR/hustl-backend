@@ -5220,6 +5220,20 @@ function showChangePasswordModal() {
         pickupAddressInput.parentNode.insertBefore(pickupContainer, pickupAddressInput);
         pickupAddressInput.style.display = 'none'; // Hide original input
         
+        // Add CSS to add space before the search icon in Mapbox geocoder input
+        const geocoderStyle = document.createElement('style');
+        geocoderStyle.textContent = `
+          #pickupAddressContainer .mapboxgl-ctrl-geocoder input,
+          #dropoffAddressContainer .mapboxgl-ctrl-geocoder input {
+            padding-left: 2.5rem !important;
+          }
+          #pickupAddressContainer .mapboxgl-ctrl-geocoder .mapboxgl-ctrl-geocoder--icon-search,
+          #dropoffAddressContainer .mapboxgl-ctrl-geocoder .mapboxgl-ctrl-geocoder--icon-search {
+            left: 0.75rem !important;
+          }
+        `;
+        document.head.appendChild(geocoderStyle);
+        
         const pickupGeocoder = new MapboxGeocoder({
           accessToken: MAPBOX_TOKEN,
           types: 'address',
@@ -20045,7 +20059,10 @@ meta.textContent =
           // Show "View More" if there are more categories
           if (moreCategories.length > 0 && categoryViewMoreBtn) {
             categoryViewMoreBtn.style.display = "block";
+            // Start with collapsed state (showingMore = false)
             let showingMore = false;
+            // Ensure the button text starts as "Show More" and container is hidden
+            categoryViewMoreBtn.textContent = "➕ Show More";
             let moreContainer = document.getElementById("categoryMoreOptions");
             if (!moreContainer) {
               moreContainer = document.createElement("div");
