@@ -15262,6 +15262,8 @@ meta.textContent =
                   </button>
                   ${job.status === 'OPEN' ? `
                   <button class="btn btn-ghost editJobBtn" data-job-id="${job.id}" style="padding: 1rem 1.5rem; font-weight: 600; border-radius: 10px;">✏️ Edit</button>
+                  ` : ''}
+                  ${(job.status === 'OPEN' || ((job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified)) ? `
                   <button class="btn btn-ghost cancelJobBtn" data-job-id="${job.id}" style="padding: 1rem 1.5rem; font-weight: 600; border-radius: 10px; color: #dc2626; border-color: #fecaca;">🚫 Cancel</button>
                   ` : ''}
                 </div>
@@ -15541,11 +15543,18 @@ meta.textContent =
                     </div>
                   </div>
                 </div>
+                ${(job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && job.startCode && !job.startCodeVerified ? `
+                <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
+                  <div style="font-weight: 700; font-size: 0.95rem; color: #1e40af; margin-bottom: 0.5rem;">🔐 Enter Start Code</div>
+                  <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.75rem;">Ask the customer for the 6-digit start code to begin the job.</div>
+                  <input type="text" id="startCodeInput_${job.id}" placeholder="Enter 6-digit code" maxlength="6" style="width: 100%; padding: 0.75rem; font-size: 1.25rem; text-align: center; letter-spacing: 0.3em; border: 2px solid #3b82f6; border-radius: 8px; font-family: 'Courier New', monospace; font-weight: 600; margin-bottom: 0.75rem;" />
+                  <button class="btn btn-primary verifyStartCodeBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.75rem; font-weight: 600;">Verify & Start Job</button>
+                </div>
+                ` : ''}
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
                   <button class="btn btn-primary messageBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">💬 Message</button>
                   <button class="btn btn-ghost viewJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem;">🔍 View Job</button>
                   <button class="btn btn-ghost mapBtn" data-address="${locationDisplay || job.address || ''}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">🗺️ Map</button>
-                  ${job.status === 'ASSIGNED' && !job.startCodeVerified ? `<button class="btn btn-primary markStartedBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-weight: 600; background: #10b981; font-size: 0.9rem;">✅ Mark Started</button>` : ''}
                   ${job.status === 'ASSIGNED' && job.startCodeVerified ? `<button class="btn btn-primary markFinishedBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-weight: 600; background: #10b981; font-size: 0.9rem;">✅ Mark Finished</button>` : ''}
                   ${(job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && !job.startCodeVerified ? `<button class="btn btn-ghost cancelApplicationBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">Cancel</button>` : ''}
                 </div>
@@ -15584,6 +15593,26 @@ meta.textContent =
                 loadActiveJobs();
                 loadPostedJobs();
               }
+            });
+            
+            // Handle start code input (only allow numbers)
+            const startCodeInput = card.querySelector(`#startCodeInput_${job.id}`);
+            if (startCodeInput) {
+              startCodeInput.addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/\D/g, ""); // Only numbers
+              });
+            }
+            
+            // Handle verify start code button
+            card.querySelector('.verifyStartCodeBtn')?.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const input = card.querySelector(`#startCodeInput_${job.id}`);
+              if (!input || !input.value || input.value.length !== 6) {
+                showToast('Please enter a valid 6-digit start code');
+                return;
+              }
+              await verifyStartCode(job.id, input.value);
+              loadActiveJobs();
             });
             
             card.querySelector('.markStartedBtn')?.addEventListener('click', async (e) => {
@@ -17780,9 +17809,16 @@ meta.textContent =
     window.showViewJobModal = showViewJobModal;
     
     // Helper functions for job actions
-    async function verifyStartCode(jobId) {
+    async function verifyStartCode(jobId, codeParam = null) {
       try {
-        const code = document.getElementById('startCodeInput')?.value.trim();
+        // Try to get code from parameter, or from various input field IDs
+        let code = codeParam;
+        if (!code) {
+          code = document.getElementById('startCodeInput')?.value.trim() ||
+                 document.getElementById(`startCodeInput_${jobId}`)?.value.trim() ||
+                 document.getElementById('hustlerStartCodeInput')?.value.trim();
+        }
+        
         if (!code || code.length !== 6) {
           showToast("Please enter a valid 6-digit start code.");
           return;
