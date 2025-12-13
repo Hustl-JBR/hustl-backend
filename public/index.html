@@ -12460,12 +12460,37 @@ async function renderJobs(reset = false) {
           
           document.getElementById('cropConfirmBtn').addEventListener('click', () => {
             cleanup();
+            
+            // Ensure image is fully loaded before cropping
+            if (!img.complete || img.naturalWidth === 0) {
+              console.error('[CROP] Image not fully loaded');
+              showToast('Image not ready. Please try again.');
+              return;
+            }
+            
             // Get crop coordinates - this must match exactly what's visible
             const crop = getCropCoordinates();
             
-            console.log('[CROP] Final crop coordinates:', crop);
-            console.log('[CROP] Image dimensions:', img.width, 'x', img.height);
-            console.log('[CROP] Crop size:', crop.size);
+            console.log('[CROP] ===== CROP DEBUG INFO =====');
+            console.log('[CROP] Source image dimensions:', img.width, 'x', img.height);
+            console.log('[CROP] Display scale:', displayScale);
+            console.log('[CROP] Current zoom scale:', scale);
+            console.log('[CROP] Image offset:', offsetX, offsetY);
+            console.log('[CROP] Crop container size:', cropSize);
+            console.log('[CROP] Calculated crop coordinates:', crop);
+            console.log('[CROP] Crop bounds check:', {
+              xValid: crop.x >= 0 && crop.x < img.width,
+              yValid: crop.y >= 0 && crop.y < img.height,
+              sizeValid: crop.size > 0 && crop.x + crop.size <= img.width && crop.y + crop.size <= img.height
+            });
+            
+            // Validate crop coordinates
+            if (crop.x < 0 || crop.y < 0 || crop.size <= 0 || 
+                crop.x + crop.size > img.width || crop.y + crop.size > img.height) {
+              console.error('[CROP] Invalid crop coordinates:', crop);
+              showToast('Crop calculation error. Please try again.');
+              return;
+            }
             
             // Apply crop - create square image that will display as circle
             const finalCanvas = document.createElement('canvas');
@@ -12475,21 +12500,48 @@ async function renderJobs(reset = false) {
             finalCanvas.height = outputSize;
             const finalCtx = finalCanvas.getContext('2d');
             
+            // Set high-quality rendering
+            finalCtx.imageSmoothingEnabled = true;
+            finalCtx.imageSmoothingQuality = 'high';
+            
             // Draw the cropped portion, scaled to output size
             // This ensures the saved image matches what was shown
-            finalCtx.drawImage(
-              img, 
-              crop.x, crop.y, crop.size, crop.size,  // Source: crop from original
-              0, 0, outputSize, outputSize            // Destination: full canvas
-            );
+            try {
+              finalCtx.drawImage(
+                img, 
+                crop.x, crop.y, crop.size, crop.size,  // Source: crop from original image
+                0, 0, outputSize, outputSize            // Destination: full canvas at output size
+              );
+              
+              console.log('[CROP] Canvas drawImage completed successfully');
+              console.log('[CROP] Canvas dimensions:', finalCanvas.width, 'x', finalCanvas.height);
+              
+              // Verify canvas has content
+              const imageData = finalCtx.getImageData(0, 0, Math.min(10, outputSize), Math.min(10, outputSize));
+              const hasContent = imageData.data.some(pixel => pixel !== 0);
+              console.log('[CROP] Canvas has content:', hasContent);
+              
+              if (!hasContent) {
+                console.error('[CROP] Canvas appears empty after drawImage');
+                showToast('Crop failed. Please try again.');
+                return;
+              }
+            } catch (drawError) {
+              console.error('[CROP] Error drawing to canvas:', drawError);
+              showToast('Crop error. Please try again.');
+              return;
+            }
             
             finalCanvas.toBlob((blob) => {
-              if (blob) {
-                console.log('[CROP] Cropped image created, size:', blob.size, 'bytes');
+              if (blob && blob.size > 0) {
+                console.log('[CROP] ✅ Cropped image created successfully');
+                console.log('[CROP] Blob size:', blob.size, 'bytes');
+                console.log('[CROP] Blob type:', blob.type);
                 onCrop(blob);
               } else {
-                console.error('[CROP] Failed to create blob, using fallback');
-                cropImageToSquare(file, onCrop);
+                console.error('[CROP] ❌ Failed to create blob or blob is empty');
+                console.error('[CROP] Blob:', blob);
+                showToast('Failed to create cropped image. Please try again.');
               }
               overlay.remove();
               document.body.style.overflow = '';
