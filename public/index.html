@@ -5244,71 +5244,6 @@ function showChangePasswordModal() {
         });
       }
       
-      // Initialize hometown autocomplete (city/state only, no street addresses)
-      const hometownInput = document.getElementById('basicInfoHometown');
-      if (hometownInput && typeof MapboxGeocoder !== 'undefined') {
-        // Create a container for the geocoder (it will replace the input)
-        const hometownContainer = document.getElementById('basicInfoHometownContainer');
-        if (hometownContainer && hometownContainer.parentElement) {
-          // Hide original input and show geocoder
-          hometownInput.style.display = 'none';
-          
-          const hometownGeocoder = new MapboxGeocoder({
-            accessToken: MAPBOX_TOKEN,
-            types: 'place', // Only cities/places, no street addresses
-            countries: 'us',
-            bbox: [-90.3, 34.98, -81.65, 36.68], // Tennessee bounding box (west, south, east, north)
-            placeholder: 'Start typing location...',
-            proximity: { longitude: -86.7816, latitude: 36.1627 }, // Nashville center
-          });
-          
-          hometownGeocoder.addTo('#basicInfoHometownContainer');
-          
-          hometownGeocoder.on('result', (e) => {
-            const feature = e.result;
-            const components = extractAddressComponents(feature);
-            
-            // Format as "City, State" only (no street address)
-            let hometownValue = '';
-            if (components.city) {
-              hometownValue = components.city;
-              if (components.state) {
-                hometownValue += ', ' + components.state;
-              }
-            } else if (feature.text) {
-              // Fallback to feature text if no city component
-              hometownValue = feature.text;
-              if (components.state) {
-                hometownValue += ', ' + components.state;
-              }
-            } else {
-              // Last resort: use place_name and extract city/state
-              const placeName = feature.place_name || '';
-              const parts = placeName.split(',');
-              if (parts.length >= 2) {
-                // Usually format is "City, State, Country"
-                hometownValue = parts[0].trim() + ', ' + parts[1].trim();
-              } else {
-                hometownValue = placeName;
-              }
-            }
-            
-            // Update the hidden input
-            hometownInput.value = hometownValue;
-            
-            // Also update the geocoder input to show the formatted value
-            const geocoderInput = hometownContainer.querySelector('input');
-            if (geocoderInput) {
-              geocoderInput.value = hometownValue;
-            }
-          });
-          
-          // Handle clear event
-          hometownGeocoder.on('clear', () => {
-            hometownInput.value = '';
-          });
-        }
-      }
     }
     
     function initJobsForm() {
@@ -12943,11 +12878,8 @@ async function renderJobs(reset = false) {
               
               <div style="margin-bottom: 1rem;">
                 <label style="display: block; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; font-size: 0.9rem;">Hometown (City + State) <span style="color: #dc2626;">*</span></label>
-                <div style="position: relative;">
-                  <input type="text" id="basicInfoHometown" value="${(user.hometown || '').replace(/"/g, '&quot;')}" placeholder="Start typing location..." autocomplete="off" required style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; background: white;" />
-                  <div id="basicInfoHometownContainer" style="position: relative; width: 100%;"></div>
-                </div>
-                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">✔ Autocomplete fills fields automatically</div>
+                <input type="text" id="basicInfoHometown" value="${(user.hometown || '').replace(/"/g, '&quot;')}" placeholder="e.g., Brentwood" required style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; background: white;" />
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">Enter your city (e.g., Brentwood) — ", TN" will be added automatically</div>
               </div>
               
               <div style="margin-bottom: 1rem;">
