@@ -20669,7 +20669,11 @@ meta.textContent =
           return;
         }
         
-        const comment = document.getElementById('reviewCommentInput')?.value.trim() || null;
+        const comment = document.getElementById('reviewCommentInput')?.value.trim() || '';
+        
+        // Backend requires text to be at least 10 characters
+        // If no comment provided, use default text
+        const reviewText = comment.length >= 10 ? comment : 'Great job!';
         
         try {
           const token = localStorage.getItem('hustl_token');
@@ -20682,12 +20686,15 @@ meta.textContent =
             body: JSON.stringify({
               jobId: jobId,
               revieweeId: userId,
-              rating: selectedRating,
-              comment: comment
+              stars: selectedRating, // Backend expects 'stars', not 'rating'
+              text: reviewText, // Backend expects 'text', not 'comment', and requires min 10 chars
             })
           });
           
-          if (!response.ok) throw new Error('Failed to submit rating');
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to submit rating');
+          }
           
           showToast("✅ Rating submitted! Thank you for your feedback.");
           document.body.removeChild(modalOverlay);
