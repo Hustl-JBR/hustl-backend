@@ -276,11 +276,13 @@ router.patch('/me', authenticate, [
       
       // Check which specific column is causing the error
       const errorMessage = updateError.message || '';
-      const isToolsError = errorMessage.includes('tools');
-      const isBioError = errorMessage.includes('bio');
-      const isGenderError = errorMessage.includes('gender');
-      const isHometownError = errorMessage.includes('hometown');
-      const isColumnError = updateError.code === 'P2021' || updateError.code === 'P2022';
+      const isToolsError = errorMessage.includes('tools') || errorMessage.includes('Unknown argument `tools`');
+      const isBioError = errorMessage.includes('bio') || errorMessage.includes('Unknown argument `bio`');
+      const isGenderError = errorMessage.includes('gender') || errorMessage.includes('Unknown argument `gender`');
+      const isHometownError = errorMessage.includes('hometown') || errorMessage.includes('Unknown argument `hometown`');
+      // P2021 = table does not exist, P2022 = column does not exist
+      // Also catch "Unknown argument" errors which occur when column doesn't exist
+      const isColumnError = updateError.code === 'P2021' || updateError.code === 'P2022' || errorMessage.includes('Unknown argument');
       
       // If it's a column error, try updating without the problematic column(s)
       if (isColumnError && (isToolsError || isBioError || isGenderError || isHometownError)) {
