@@ -15609,7 +15609,7 @@ meta.textContent =
                       ${expirationDisplay ? `
                       <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <span>⏳</span>
-                        <span style="color: ${expiresAt && expiresAt <= new Date() ? '#dc2626' : '#d97706'}; font-weight: 600;">${expirationDisplay}</span>
+                        <span style="color: ${isKeepOpenEnabled ? '#1e40af' : (expiresAt && expiresAt <= new Date() ? '#dc2626' : '#d97706')}; font-weight: 600;">${expirationDisplay}</span>
                       </div>
                       ` : ''}
                       <div style="display: flex; align-items: center; gap: 0.5rem;">
