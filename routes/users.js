@@ -110,9 +110,12 @@ router.get('/:id', optionalAuth, async (req, res) => {
           createdAt: true,
           gender: true,
           bio: true,
-          tools: true,
+          // tools: true, // Removed - column doesn't exist in database
         },
       });
+      
+      // Set tools to null since column doesn't exist
+      user.tools = null;
     } catch (genderError) {
       // If gender/bio/tools columns don't exist, query without them
       if (genderError.message && (genderError.message.includes('gender') || genderError.message.includes('tools'))) {
