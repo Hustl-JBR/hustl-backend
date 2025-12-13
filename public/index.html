@@ -5278,7 +5278,224 @@ function showChangePasswordModal() {
       }
     }
     
+    // Update job function
+    async function updateJob(jobId) {
+      try {
+        // Collect all form data (same as post job)
+        const title = document.getElementById("jobTitle").value.trim();
+        const category = document.getElementById("jobCategory").value;
+        const desc = document.getElementById("jobDescription").value.trim();
+        const pickupArea = document.getElementById("pickupArea").value.trim();
+        const pickupCity = document.getElementById("pickupCity").value.trim();
+        const pickupZip = document.getElementById("pickupZip").value.trim();
+        const pickupAddress = document.getElementById("pickupAddress").value.trim();
+        const pickupApt = document.getElementById("pickupApt")?.value.trim() || "";
+        const onSiteOnly = document.getElementById("jobOnSiteOnly").checked;
+        const dropoffArea = onSiteOnly ? "" : document.getElementById("dropoffArea").value.trim();
+        const dropoffCity = onSiteOnly ? "" : document.getElementById("dropoffCity").value.trim();
+        const dropoffZip = onSiteOnly ? "" : document.getElementById("dropoffZip").value.trim();
+        const dropoffAddress = onSiteOnly ? "" : document.getElementById("dropoffAddress").value.trim();
+        const dropoffApt = onSiteOnly ? "" : (document.getElementById("dropoffApt")?.value.trim() || "");
+        const paymentType = document.getElementById("paymentType").value;
+        const flatAmount = parseFloat(document.getElementById("flatAmount").value) || 0;
+        const hourlyRate = parseFloat(document.getElementById("hourlyRate").value) || 0;
+        const maxHours = parseInt(document.getElementById("maxHours").value) || 0;
+        const pricingOption = document.getElementById("pricingOption")?.value || "set_price";
+        const notes = document.getElementById("jobNotes").value.trim();
+        const workersNeededValue = document.getElementById("workersNeeded")?.value || "1";
+        let workersNeeded = 1;
+        if (workersNeededValue === "custom") {
+          const customCount = Number(document.getElementById("customWorkersCount")?.value || 1);
+          workersNeeded = Math.max(1, Math.min(20, customCount));
+        } else if (workersNeededValue === "company") {
+          workersNeeded = 0;
+        } else {
+          workersNeeded = Number(workersNeededValue) || 1;
+        }
+        const jobDuration = document.getElementById("jobDuration")?.value || "3";
+        const keepActiveFor = parseInt(jobDuration) || 3;
+        
+        // Collect equipment
+        const equipmentNeeded = [];
+        document.querySelectorAll('input[name="equipment"]:checked').forEach(cb => {
+          equipmentNeeded.push(cb.value);
+        });
+        
+        // Build address
+        const addressParts = [];
+        if (pickupAddress) addressParts.push(pickupAddress);
+        if (pickupCity) addressParts.push(pickupCity);
+        if (pickupZip) addressParts.push(pickupZip);
+        const address = addressParts.join(', ').trim();
+        
+        // Get date/time
+        const jobWhen = document.getElementById("jobWhen")?.value || document.getElementById("deadlinePreference")?.value || "today_asap";
+        const now = new Date();
+        let date, startTime, endTime, deadlinePreference;
+        
+        if (jobWhen === "no_deadline") {
+          const futureDate = new Date(now);
+          futureDate.setFullYear(futureDate.getFullYear() + 1);
+          date = futureDate.toISOString().split('T')[0];
+          startTime = new Date(futureDate);
+          startTime.setHours(9, 0, 0, 0);
+          endTime = new Date(futureDate);
+          endTime.setHours(17, 0, 0, 0);
+          deadlinePreference = "no_deadline";
+        } else if (jobWhen === "flexible_week") {
+          const endOfWeek = new Date(now);
+          endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()));
+          date = endOfWeek.toISOString().split('T')[0];
+          startTime = new Date(now);
+          startTime.setHours(9, 0, 0, 0);
+          endTime = new Date(endOfWeek);
+          endTime.setHours(17, 0, 0, 0);
+          deadlinePreference = "flexible_week";
+        } else if (jobWhen === "specific_date") {
+          const customDate = document.getElementById("customDate")?.value;
+          const customTime = document.getElementById("customTime")?.value || "morning";
+          if (!customDate) {
+            return showToast("Please select a date for your specific deadline.");
+          }
+          date = customDate;
+          const selectedDate = new Date(customDate);
+          if (customTime === "morning") {
+            startTime = new Date(selectedDate);
+            startTime.setHours(8, 0, 0, 0);
+            endTime = new Date(selectedDate);
+            endTime.setHours(12, 0, 0, 0);
+          } else if (customTime === "afternoon") {
+            startTime = new Date(selectedDate);
+            startTime.setHours(12, 0, 0, 0);
+            endTime = new Date(selectedDate);
+            endTime.setHours(17, 0, 0, 0);
+          } else if (customTime === "evening") {
+            startTime = new Date(selectedDate);
+            startTime.setHours(17, 0, 0, 0);
+            endTime = new Date(selectedDate);
+            endTime.setHours(21, 0, 0, 0);
+          } else {
+            startTime = new Date(selectedDate);
+            startTime.setHours(21, 0, 0, 0);
+            endTime = new Date(selectedDate);
+            endTime.setHours(23, 0, 0, 0);
+          }
+          deadlinePreference = "specific_date";
+        } else if (jobWhen === "tomorrow") {
+          const targetDate = new Date(now);
+          targetDate.setDate(targetDate.getDate() + 1);
+          date = targetDate.toISOString().split('T')[0];
+          startTime = new Date(targetDate);
+          startTime.setHours(8, 0, 0, 0);
+          endTime = new Date(targetDate);
+          endTime.setHours(21, 0, 0, 0);
+          deadlinePreference = "tomorrow";
+        } else {
+          date = now.toISOString().split('T')[0];
+          startTime = new Date(now);
+          startTime.setHours(now.getHours(), 0, 0, 0);
+          endTime = new Date(now);
+          endTime.setHours(23, 59, 59, 0);
+          deadlinePreference = "today_asap";
+        }
+        
+        // Build payment data
+        const payType = paymentType || 'flat';
+        let amount = 0;
+        let hourlyRateValue = null;
+        let estHoursValue = null;
+        
+        if (pricingOption === "set_price") {
+          if (payType === 'flat') {
+            amount = flatAmount;
+          } else {
+            amount = hourlyRate * maxHours;
+            hourlyRateValue = hourlyRate;
+            estHoursValue = maxHours;
+          }
+        } else {
+          amount = 50;
+        }
+        
+        // Build update data
+        const updateData = {
+          title,
+          category,
+          description: desc,
+          address,
+          date,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          payType,
+          amount,
+          teamSize: workersNeeded || 1,
+          keepActiveFor,
+          requirements: {
+            pickup_area: pickupArea,
+            pickup_city: pickupCity,
+            pickup_zip: pickupZip,
+            pickup_address: pickupAddress + (pickupApt ? ', ' + pickupApt : ''),
+            pickup_apt: pickupApt || null,
+            pickup_lat: document.getElementById('pickupLat')?.value || null,
+            pickup_lng: document.getElementById('pickupLng')?.value || null,
+            on_site_only: onSiteOnly,
+            dropoff_area: onSiteOnly ? null : dropoffArea,
+            dropoff_city: onSiteOnly ? null : dropoffCity,
+            dropoff_zip: onSiteOnly ? null : dropoffZip,
+            dropoff_address: onSiteOnly ? null : (dropoffAddress + (dropoffApt ? ', ' + dropoffApt : '')),
+            dropoff_apt: onSiteOnly ? null : (dropoffApt || null),
+            dropoff_lat: onSiteOnly ? null : (document.getElementById('dropoffLat')?.value || null),
+            dropoff_lng: onSiteOnly ? null : (document.getElementById('dropoffLng')?.value || null),
+            equipment_needed: equipmentNeeded.length > 0 ? equipmentNeeded : null,
+            notes: notes || null,
+            pricing_option: pricingOption,
+            deadline_preference: deadlinePreference || jobWhen,
+          },
+        };
+        
+        if (hourlyRateValue && hourlyRateValue > 0) {
+          updateData.hourlyRate = hourlyRateValue;
+        }
+        if (estHoursValue && estHoursValue > 0) {
+          updateData.estHours = estHoursValue;
+        }
+        
+        // Call update API (PATCH, not POST)
+        const result = await window.hustlAPI.jobs.update(jobId, updateData);
+        
+        showToast("✅ Job updated successfully!");
+        
+        // Reset editing mode
+        editingJobId = null;
+        clearJobForm();
+        
+        // Update form title and button
+        const formTitle = document.querySelector('#jobFormCard .card-title');
+        if (formTitle) {
+          formTitle.textContent = 'Post a job';
+        }
+        const postButton = document.getElementById("postJobButton");
+        if (postButton) {
+          postButton.textContent = "Post job to Hustl";
+        }
+        
+        // Navigate to manage jobs
+        setView('manage-jobs');
+        // Reload posted jobs to show updated job
+        setTimeout(() => {
+          loadPostedJobs();
+        }, 100);
+        
+      } catch (error) {
+        console.error("Error updating job:", error);
+        showToast(error.message || "Error updating job. Please try again.");
+      }
+    }
+    
     function clearJobForm() {
+      // Reset editing mode
+      editingJobId = null;
+      
       document.getElementById("jobTitle").value = "";
       document.getElementById("jobCategory").value = "";
       document.getElementById("jobDescription").value = "";
@@ -5926,6 +6143,12 @@ function showChangePasswordModal() {
           const user = await window.hustlAPI.auth.getCurrentUser();
           if (!user)
             return showToast("Please log in to post a job.");
+          
+          // Check if we're editing an existing job
+          if (editingJobId) {
+            await updateJob(editingJobId);
+            return;
+          }
 
           const title = document.getElementById("jobTitle").value.trim();
           const category = document.getElementById("jobCategory").value;
@@ -15264,9 +15487,12 @@ meta.textContent =
               workersDisplay = `${teamSize} workers`;
             }
             
-            // Format expiration
+            // Format expiration - check if keepOpenUntilAccepted is enabled
+            const isKeepOpenEnabled = requirements.keepOpenUntilAccepted === true;
             let expirationDisplay = '';
-            if (expiresAt && expiresAt > new Date()) {
+            if (isKeepOpenEnabled) {
+              expirationDisplay = 'Stays open until hustler assigned';
+            } else if (expiresAt && expiresAt > new Date()) {
               const daysLeft = Math.ceil((expiresAt - new Date()) / (1000 * 60 * 60 * 24));
               expirationDisplay = `Expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
             } else if (expiresAt && expiresAt <= new Date()) {
