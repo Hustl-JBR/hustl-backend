@@ -16257,7 +16257,14 @@ meta.textContent =
                   <button class="btn btn-primary messageBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">💬 Message</button>
                   <button class="btn btn-ghost viewJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem;">🔍 View Job</button>
                   <button class="btn btn-ghost mapBtn" data-address="${locationDisplay || job.address || ''}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">🗺️ Map</button>
-                  ${job.status === 'ASSIGNED' && job.startCodeVerified ? `<button class="btn btn-primary markFinishedBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-weight: 600; background: #10b981; font-size: 0.9rem;">✅ Mark Finished</button>` : ''}
+                  ${job.status === 'IN_PROGRESS' && job.startCodeVerified && !job.completionCodeVerified ? `
+                  <div style="padding: 1rem; background: #dcfce7; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #16a34a;">
+                    <div style="font-weight: 700; font-size: 0.95rem; color: #166534; margin-bottom: 0.5rem;">🔐 Enter Completion Code</div>
+                    <div style="font-size: 0.85rem; color: #166534; margin-bottom: 0.75rem;">Ask the customer for the 6-digit completion code to finish the job.</div>
+                    <input type="text" id="completionCodeInput_${job.id}" placeholder="Enter 6-digit code" maxlength="6" style="width: 100%; padding: 0.75rem; font-size: 1.25rem; text-align: center; letter-spacing: 0.3em; border: 2px solid #16a34a; border-radius: 8px; font-family: 'Courier New', monospace; font-weight: 600; margin-bottom: 0.75rem;" />
+                    <button class="btn btn-primary verifyCompletionCodeBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.75rem; font-weight: 600; background: #10b981;">✅ Verify & Complete Job</button>
+                  </div>
+                  ` : ''}
                   ${(job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && !job.startCodeVerified ? `<button class="btn btn-ghost cancelApplicationBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">Cancel</button>` : ''}
                 </div>
               `;
@@ -16391,7 +16398,8 @@ meta.textContent =
                   !e.target.closest('.viewHustlerProfileBtn') && 
                   !e.target.closest('.viewCustomerProfileBtn') &&
                   !e.target.closest('input') &&
-                  !e.target.closest(`#startCodeInput_${job.id}`)) {
+                  !e.target.closest(`#startCodeInput_${job.id}`) &&
+                  !e.target.closest(`#completionCodeInput_${job.id}`)) {
                 showViewJobModal(job.id, isCustomer ? 'customer' : 'hustler');
               }
             });
