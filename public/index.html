@@ -16078,6 +16078,9 @@ meta.textContent =
               continue;
             }
             
+            // Define customerId in outer scope so it's accessible later
+            const customerId = job.customer?.id || job.customerId;
+            
             // Get requirements for additional fields
             const requirements = job.requirements || {};
             const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
@@ -16216,7 +16219,7 @@ meta.textContent =
             } else if (isHustler) {
               // Hustler View: Shows customer who hired them - using profile card format
               const customer = job.customer || {};
-              const customerId = customer.id;
+              // customerId is already defined in outer scope above
               
               // Fetch customer profile data for completed jobs and reviews
               let customerProfileData = { completedJobsCount: 0, reviews: [] };
@@ -16475,11 +16478,12 @@ meta.textContent =
         }
       } catch (error) {
         console.error("Error loading active jobs:", error);
+        const currentUser = await window.hustlAPI.auth.getCurrentUser().catch(() => null);
         console.error("Error details:", {
           message: error.message,
           stack: error.stack,
-          user: user?.id,
-          token: token ? 'present' : 'missing'
+          user: currentUser?.id,
+          token: localStorage.getItem('hustl_token') ? 'present' : 'missing'
         });
         activeJobsList.innerHTML = `
           <div style='text-align: center; padding: 2rem; color: var(--text-muted);'>
