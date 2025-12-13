@@ -13379,7 +13379,7 @@ async function renderJobs(reset = false) {
           <div style="padding: 2rem;">
             <!-- Header -->
             <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 2px solid var(--border);">
-              ${renderUserAvatar(user, 60)}
+              ${renderUserAvatar(user, 80, { enableLightbox: true })}
               <div style="flex: 1;">
                 <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 0.25rem 0; color: var(--text-main);">${user.name || 'User'}</h2>
                 <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text-muted);">
