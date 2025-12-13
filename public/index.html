@@ -16067,6 +16067,17 @@ meta.textContent =
             const isCustomer = job.customerId === user.id;
             const isHustler = job.hustlerId === user.id;
             
+            // Skip jobs where user is neither customer nor hustler (data integrity check)
+            if (!isCustomer && !isHustler) {
+              console.warn('Job found in active jobs but user is neither customer nor hustler:', {
+                jobId: job.id,
+                jobCustomerId: job.customerId,
+                jobHustlerId: job.hustlerId,
+                userId: user.id
+              });
+              continue;
+            }
+            
             // Get requirements for additional fields
             const requirements = job.requirements || {};
             const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
