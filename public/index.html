@@ -12248,59 +12248,42 @@ async function renderJobs(reset = false) {
           
           // Function to calculate crop coordinates (used for final crop)
           // This must match exactly what's visible in the circular crop area
+          // Function to calculate crop coordinates (used for final crop)
+          // This must match exactly what's visible in the circular crop area
+          // The circle is centered at (cropSize/2, cropSize/2) with radius cropSize/2
+          // We crop a square that fits inside this circle
           const getCropCoordinates = () => {
-            // Image display dimensions in pixels
+            // Image display dimensions in pixels (what's shown on screen)
             const imgDisplayWidth = img.width * displayScale * scale;
             const imgDisplayHeight = img.height * displayScale * scale;
             
-            // Crop circle center and radius (in container coordinates)
+            // Scale factor: how many source pixels per display pixel
+            const scaleFactor = displayScale * scale;
+            
+            // Crop circle center (always at center of container)
             const cropCenterX = cropSize / 2;
             const cropCenterY = cropSize / 2;
-            const cropRadius = cropSize / 2;
             
-            // Image position in container (accounting for centering + offset)
+            // Image position in container coordinates
+            // Image is centered in container, then offset by user drag
             const imgLeft = (cropSize - imgDisplayWidth) / 2 + offsetX;
             const imgTop = (cropSize - imgDisplayHeight) / 2 + offsetY;
             
-            // Calculate what part of the image is visible in the crop circle
-            // Convert from display coordinates to source image coordinates
-            const scaleFactor = displayScale * scale;
+            // The visible square in the crop circle (in container coordinates)
+            // For a 1:1 square crop, we use the full cropSize as the square side
+            const squareSize = cropSize; // Full diameter = square side for 1:1 crop
+            const squareLeft = cropCenterX - squareSize / 2;
+            const squareTop = cropCenterY - squareSize / 2;
             
-            // The crop circle bounds in image display coordinates
-            const cropLeft = cropCenterX - cropRadius;
-            const cropTop = cropCenterY - cropRadius;
-            const cropRight = cropCenterX + cropRadius;
-            const cropBottom = cropCenterY + cropRadius;
-            
-            // Find intersection of crop circle with image
-            // Image bounds in container coordinates
-            const imgRight = imgLeft + imgDisplayWidth;
-            const imgBottom = imgTop + imgDisplayHeight;
-            
-            // Clamp crop area to image bounds
-            const visibleLeft = Math.max(cropLeft, imgLeft);
-            const visibleTop = Math.max(cropTop, imgTop);
-            const visibleRight = Math.min(cropRight, imgRight);
-            const visibleBottom = Math.min(cropBottom, imgBottom);
-            
-            // Convert to source image coordinates
-            const sourceX = (visibleLeft - imgLeft) / scaleFactor;
-            const sourceY = (visibleTop - imgTop) / scaleFactor;
-            const sourceWidth = (visibleRight - visibleLeft) / scaleFactor;
-            const sourceHeight = (visibleBottom - visibleTop) / scaleFactor;
-            
-            // Use the smaller dimension to ensure square crop
-            const sourceSize = Math.min(sourceWidth, sourceHeight);
-            
-            // Center the square crop in the visible area
-            const centerX = sourceX + sourceWidth / 2;
-            const centerY = sourceY + sourceHeight / 2;
-            const finalX = centerX - sourceSize / 2;
-            const finalY = centerY - sourceSize / 2;
+            // Find what part of the source image this square corresponds to
+            // Convert from container coordinates to source image coordinates
+            const sourceX = (squareLeft - imgLeft) / scaleFactor;
+            const sourceY = (squareTop - imgTop) / scaleFactor;
+            const sourceSize = squareSize / scaleFactor;
             
             // Clamp to image bounds
-            const clampedX = Math.max(0, Math.min(img.width - sourceSize, finalX));
-            const clampedY = Math.max(0, Math.min(img.height - sourceSize, finalY));
+            const clampedX = Math.max(0, Math.min(img.width - sourceSize, sourceX));
+            const clampedY = Math.max(0, Math.min(img.height - sourceSize, sourceY));
             const clampedSize = Math.min(sourceSize, img.width - clampedX, img.height - clampedY);
             
             return { x: clampedX, y: clampedY, size: clampedSize };
