@@ -18209,32 +18209,44 @@ meta.textContent =
         });
         
         // Profile button event listeners - work for both customer and hustler views
-        modalOverlay.querySelectorAll('.viewCustomerProfile, .viewCustomerProfileBtn, .viewHustlerProfile, .viewHustlerProfileBtn, .viewApplicantProfile, .viewApplicantProfileBtn').forEach(btn => {
-          btn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            e.preventDefault();
+        // Use setTimeout to ensure modal is fully rendered
+        setTimeout(() => {
+          const profileButtons = modalOverlay.querySelectorAll('.viewCustomerProfile, .viewCustomerProfileBtn, .viewHustlerProfile, .viewHustlerProfileBtn, .viewApplicantProfile, .viewApplicantProfileBtn');
+          console.log('🔵 Found profile buttons:', profileButtons.length);
+          profileButtons.forEach(btn => {
             const userId = btn.dataset.userId || btn.getAttribute('data-user-id');
-            console.log('🔵 Profile button clicked, userId:', userId, 'Button:', btn);
-            if (userId && typeof showUserProfileCard === 'function') {
-              console.log('🔵 Calling showUserProfileCard with userId:', userId);
-              await showUserProfileCard(userId);
-            } else {
-              console.error('❌ showUserProfileCard not available or userId missing. userId:', userId, 'showUserProfileCard type:', typeof showUserProfileCard);
-              showToast('Error: Could not load profile');
-            }
+            console.log('🔵 Attaching listener to button with userId:', userId, 'Classes:', btn.className);
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              const clickedUserId = btn.dataset.userId || btn.getAttribute('data-user-id');
+              console.log('🔵 Profile button clicked, userId:', clickedUserId, 'Button:', btn, 'showUserProfileCard available:', typeof window.showUserProfileCard);
+              if (clickedUserId && typeof window.showUserProfileCard === 'function') {
+                console.log('🔵 Calling showUserProfileCard with userId:', clickedUserId);
+                await window.showUserProfileCard(clickedUserId);
+              } else {
+                console.error('❌ showUserProfileCard not available or userId missing. userId:', clickedUserId, 'showUserProfileCard type:', typeof window.showUserProfileCard);
+                showToast('Error: Could not load profile');
+              }
+            });
           });
-        });
+        }, 100);
         
         // Also attach to any dynamically added profile buttons using event delegation on the modal
         modalOverlay.addEventListener('click', async (e) => {
           const profileBtn = e.target.closest('.viewCustomerProfileBtn, .viewHustlerProfileBtn, .viewApplicantProfileBtn, .viewCustomerProfile, .viewHustlerProfile, .viewApplicantProfile');
-          if (profileBtn && profileBtn.dataset.userId) {
-            e.stopPropagation();
-            e.preventDefault();
-            const userId = profileBtn.dataset.userId;
-            console.log('🔵 Profile button clicked (delegation), userId:', userId);
-            if (typeof showUserProfileCard === 'function') {
-              await showUserProfileCard(userId);
+          if (profileBtn) {
+            const userId = profileBtn.dataset.userId || profileBtn.getAttribute('data-user-id');
+            if (userId) {
+              e.stopPropagation();
+              e.preventDefault();
+              console.log('🔵 Profile button clicked (delegation), userId:', userId, 'showUserProfileCard available:', typeof window.showUserProfileCard);
+              if (typeof window.showUserProfileCard === 'function') {
+                await window.showUserProfileCard(userId);
+              } else {
+                console.error('❌ showUserProfileCard not available');
+                showToast('Error: Could not load profile');
+              }
             }
           }
         });
