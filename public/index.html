@@ -19157,7 +19157,9 @@ meta.textContent =
       
       // Submit review
       submitBtn.addEventListener('click', async () => {
-        if (selectedStars === 0) {
+        console.log('📤 Submitting review with rating:', selectedRating);
+        
+        if (selectedRating === 0) {
           showToast('Please select a rating');
           return;
         }
@@ -19173,18 +19175,22 @@ meta.textContent =
         
         try {
           const token = localStorage.getItem('hustl_token');
+          const reviewData = {
+            jobId,
+            revieweeId,
+            stars: selectedRating,
+            text: text
+          };
+          
+          console.log('📤 Review data being submitted:', reviewData);
+          
           const response = await fetch(`${API_BASE}/reviews`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-              jobId,
-              revieweeId,
-              stars: selectedStars,
-              text: text
-            })
+            body: JSON.stringify(reviewData)
           });
           
           if (!response.ok) {
