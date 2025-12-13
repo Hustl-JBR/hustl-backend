@@ -254,8 +254,8 @@ router.get('/completed', authenticate, async (req, res) => {
     
     // Only show jobs that are truly completed:
     // 1. Status is PAID (escrow released) OR COMPLETED_BY_HUSTLER with completion code verified
-    // 2. Payment status is CAPTURED (escrow released)
-    // 3. completionCodeVerified is true (completion code submitted)
+    // 2. completionCodeVerified is true (completion code submitted)
+    // Note: Payment status check is optional - jobs can be completed even if payment processing is delayed
     const jobs = await prisma.job.findMany({
       where: {
         AND: [
@@ -276,11 +276,6 @@ router.get('/completed', authenticate, async (req, res) => {
                 completionCodeVerified: true
               }
             ]
-          },
-          {
-            payment: {
-              status: 'CAPTURED' // Escrow must be released
-            }
           }
         ]
       },
