@@ -6477,8 +6477,10 @@ async function renderJobs(reset = false) {
     // Apply workers filters
     if (activeWorkersFilters.size > 0) {
       filteredJobs = filteredJobs.filter((j) => {
-        const teamSize = j.teamSize || j.requirements?.teamSize || j.requirements?.team_size || 1;
-        const isCompany = j.requirements?.teamSize === 'company' || j.requirements?.team_size === 'company' || j.teamSize === 'company';
+        // Get teamSize and convert to number for comparison
+        const rawTeamSize = j.teamSize || j.requirements?.teamSize || j.requirements?.team_size || 1;
+        const teamSize = typeof rawTeamSize === 'string' ? parseInt(rawTeamSize, 10) : Number(rawTeamSize) || 1;
+        const isCompany = j.requirements?.teamSize === 'company' || j.requirements?.team_size === 'company' || j.teamSize === 'company' || teamSize === 0;
         
         if (activeWorkersFilters.has('1') && teamSize === 1 && !isCompany) return true;
         if (activeWorkersFilters.has('2') && teamSize === 2 && !isCompany) return true;
@@ -8121,7 +8123,10 @@ async function renderJobs(reset = false) {
         }
         
         // Team Size / Workers Needed - VERY IMPORTANT
-        const teamSize = job.teamSize || job.workersNeeded || job.requirements?.team_size || 1;
+        // Get teamSize from multiple possible locations and ensure it's a number
+        const rawTeamSize = job.teamSize || job.workersNeeded || job.requirements?.teamSize || job.requirements?.team_size || 1;
+        const teamSize = typeof rawTeamSize === 'string' ? parseInt(rawTeamSize, 10) : Number(rawTeamSize) || 1;
+        
         if (teamSize && teamSize > 0) {
           const teamSizeDetail = document.createElement("div");
           teamSizeDetail.style.cssText = "font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-top: 0.5rem; padding: 0.75rem; background: #eff6ff; border-radius: 6px; border-left: 3px solid #3b82f6;";
