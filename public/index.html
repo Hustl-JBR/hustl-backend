@@ -18988,6 +18988,225 @@ meta.textContent =
       });
     }
     
+    // Show review modal with star rating
+    window.showReviewModal = function(jobId, revieweeId, revieweeName = 'User') {
+      const modal = document.createElement('div');
+      modal.id = 'reviewModal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 1rem;
+      `;
+      
+      let selectedStars = 0;
+      
+      modal.innerHTML = `
+        <div style="background: white; border-radius: 16px; padding: 2rem; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+          <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin: 0 0 1rem 0;">Rate ${revieweeName}</h2>
+          
+          <div style="margin-bottom: 1.5rem;">
+            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">Your Rating</div>
+            <div id="starRating" style="display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 0.5rem;">
+              ${[1, 2, 3, 4, 5].map(i => `
+                <span class="star" data-rating="${i}" style="
+                  font-size: 2.5rem;
+                  cursor: pointer;
+                  color: #d1d5db;
+                  transition: all 0.2s;
+                  user-select: none;
+                ">★</span>
+              `).join('')}
+            </div>
+            <div id="ratingText" style="text-align: center; color: var(--text-muted); font-size: 0.9rem; min-height: 1.5rem;">
+              Tap a star to rate
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">
+              Your Review (optional but recommended)
+            </label>
+            <textarea id="reviewText" placeholder="Share your experience... (minimum 10 characters)" style="
+              width: 100%;
+              min-height: 120px;
+              padding: 0.75rem;
+              border: 2px solid var(--border);
+              border-radius: 8px;
+              font-family: inherit;
+              font-size: 0.95rem;
+              resize: vertical;
+            "></textarea>
+            <div id="charCount" style="text-align: right; font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">0 / 1000</div>
+          </div>
+          
+          <div style="display: flex; gap: 0.75rem;">
+            <button id="submitReviewBtn" class="btn btn-primary" style="flex: 1; padding: 0.75rem; font-weight: 600;" disabled>
+              Submit Review
+            </button>
+            <button id="cancelReviewBtn" class="btn btn-ghost" style="flex: 1; padding: 0.75rem;">
+              Cancel
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      document.body.style.overflow = 'hidden';
+      
+      const stars = modal.querySelectorAll('.star');
+      const ratingText = modal.querySelector('#ratingText');
+      const submitBtn = modal.querySelector('#submitReviewBtn');
+      const reviewText = modal.querySelector('#reviewText');
+      const charCount = modal.querySelector('#charCount');
+      
+      const ratingLabels = {
+        1: 'Poor',
+        2: 'Fair',
+        3: 'Good',
+        4: 'Very Good',
+        5: 'Excellent'
+      };
+      
+      // Star click handler
+      stars.forEach((star, index) => {
+        star.addEventListener('click', () => {
+          selectedStars = index + 1;
+          updateStars();
+          updateSubmitButton();
+        });
+        
+        star.addEventListener('mouseenter', () => {
+          highlightStars(index + 1);
+        });
+      });
+      
+      // Reset stars on mouse leave
+      modal.querySelector('#starRating').addEventListener('mouseleave', () => {
+        updateStars();
+      });
+      
+      function highlightStars(rating) {
+        stars.forEach((star, index) => {
+          if (index < rating) {
+            star.style.color = '#fbbf24'; // Gold
+            star.style.transform = 'scale(1.1)';
+          } else {
+            star.style.color = '#d1d5db'; // Gray
+            star.style.transform = 'scale(1)';
+          }
+        });
+        ratingText.textContent = ratingLabels[rating] || 'Tap a star to rate';
+      }
+      
+      function updateStars() {
+        stars.forEach((star, index) => {
+          if (index < selectedStars) {
+            star.style.color = '#fbbf24'; // Gold
+            star.style.transform = 'scale(1)';
+          } else {
+            star.style.color = '#d1d5db'; // Gray
+            star.style.transform = 'scale(1)';
+          }
+        });
+        ratingText.textContent = selectedStars > 0 ? ratingLabels[selectedStars] : 'Tap a star to rate';
+      }
+      
+      function updateSubmitButton() {
+        const text = reviewText.value.trim();
+        const hasText = text.length >= 10;
+        submitBtn.disabled = selectedStars === 0 || !hasText;
+      }
+      
+      // Character count
+      reviewText.addEventListener('input', (e) => {
+        const text = e.target.value;
+        charCount.textContent = `${text.length} / 1000`;
+        if (text.length > 1000) {
+          charCount.style.color = '#dc2626';
+          e.target.value = text.substring(0, 1000);
+          charCount.textContent = '1000 / 1000';
+        } else {
+          charCount.style.color = 'var(--text-muted)';
+        }
+        updateSubmitButton();
+      });
+      
+      // Submit review
+      submitBtn.addEventListener('click', async () => {
+        if (selectedStars === 0) {
+          showToast('Please select a rating');
+          return;
+        }
+        
+        const text = reviewText.value.trim();
+        if (text.length < 10) {
+          showToast('Please write at least 10 characters in your review');
+          return;
+        }
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+        
+        try {
+          const token = localStorage.getItem('hustl_token');
+          const response = await fetch(`${API_BASE}/reviews`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              jobId,
+              revieweeId,
+              stars: selectedStars,
+              text: text
+            })
+          });
+          
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to submit review');
+          }
+          
+          showToast('✅ Review submitted successfully!');
+          document.body.removeChild(modal);
+          document.body.style.overflow = '';
+          
+          // Refresh completed jobs to show the review
+          if (typeof loadCompletedJobs === 'function') {
+            loadCompletedJobs();
+          }
+        } catch (error) {
+          console.error('Error submitting review:', error);
+          showToast(error.message || 'Error submitting review. Please try again.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit Review';
+        }
+      });
+      
+      // Cancel button
+      modal.querySelector('#cancelReviewBtn')?.addEventListener('click', () => {
+        document.body.removeChild(modal);
+        document.body.style.overflow = '';
+      });
+      
+      // Close on background click
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          document.body.removeChild(modal);
+          document.body.style.overflow = '';
+        }
+      });
+    };
+    
     async function submitCompletionCode(jobId) {
       try {
         const token = localStorage.getItem('hustl_token');
