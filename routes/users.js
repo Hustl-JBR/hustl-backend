@@ -329,6 +329,11 @@ router.patch('/me', authenticate, [
           fallbackSelect.gender = true;
         }
         
+        if (isHometownError) {
+          delete fallbackUpdateData.hometown;
+          console.warn('[PATCH /users/me] Removing hometown from update (column does not exist)');
+        }
+        
         // Try the update again without the problematic column(s)
         try {
           user = await prisma.user.update({
