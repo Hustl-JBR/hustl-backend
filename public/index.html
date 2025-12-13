@@ -19078,14 +19078,18 @@ meta.textContent =
       };
       
       // Render stars based on displayRating (hoverRating ?? selectedRating)
+      // Use hoverRating if actively hovering, otherwise use selectedRating
       function renderStars() {
-        const displayRating = hoverRating || selectedRating;
+        const displayRating = hoverRating > 0 ? hoverRating : selectedRating;
         
         stars.forEach((star, index) => {
           const starNumber = index + 1;
-          if (starNumber <= displayRating) {
+          const isHighlighted = starNumber <= displayRating;
+          
+          if (isHighlighted) {
             star.style.color = '#fbbf24'; // Gold
-            star.style.transform = hoverRating && !selectedRating ? 'scale(1.1)' : 'scale(1)';
+            // Only show scale effect when hovering and no selection yet
+            star.style.transform = (hoverRating > 0 && selectedRating === 0) ? 'scale(1.1)' : 'scale(1)';
           } else {
             star.style.color = '#d1d5db'; // Gray
             star.style.transform = 'scale(1)';
@@ -19106,6 +19110,7 @@ meta.textContent =
         
         star.addEventListener('click', (e) => {
           e.stopPropagation();
+          e.preventDefault();
           selectedRating = starNumber;
           hoverRating = 0; // Clear hover on click
           console.log('⭐ Star clicked - Selected rating:', selectedRating);
@@ -19115,6 +19120,7 @@ meta.textContent =
         
         star.addEventListener('mouseenter', (e) => {
           e.stopPropagation();
+          // Always allow hover preview (will be cleared on mouseleave, showing selectedRating)
           hoverRating = starNumber;
           renderStars();
         });
@@ -19156,8 +19162,9 @@ meta.textContent =
       });
       
       // Submit review
-      submitBtn.addEventListener('click', async () => {
+        submitBtn.addEventListener('click', async () => {
         console.log('📤 Submitting review with rating:', selectedRating);
+        console.log('📤 Review text length:', reviewText.value.trim().length);
         
         if (selectedRating === 0) {
           showToast('Please select a rating');
@@ -20438,23 +20445,36 @@ meta.textContent =
         5: 'Excellent'
       };
       
+      let hoverRating = 0; // Track hover state separately
+      
       stars.forEach(star => {
         star.addEventListener('mouseenter', (e) => {
           const rating = parseInt(e.target.dataset.rating);
+          hoverRating = rating;
+          
+          // Show hover preview (only if no selection or different from selection)
           stars.forEach((s, i) => {
-            if (i < rating) {
+            const starNum = i + 1;
+            if (starNum <= hoverRating) {
               s.style.color = '#fbbf24';
             } else {
               s.style.color = '#d1d5db';
             }
           });
-          ratingText.textContent = ratingTexts[rating] || '';
+          ratingText.textContent = ratingTexts[hoverRating] || '';
         });
         
         star.addEventListener('click', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
           selectedRating = parseInt(e.target.dataset.rating);
+          hoverRating = 0; // Clear hover on click
+          console.log('⭐ Star clicked - Selected rating:', selectedRating);
+          
+          // Show selected rating
           stars.forEach((s, i) => {
-            if (i < selectedRating) {
+            const starNum = i + 1;
+            if (starNum <= selectedRating) {
               s.style.color = '#fbbf24';
             } else {
               s.style.color = '#d1d5db';
@@ -20465,17 +20485,22 @@ meta.textContent =
       });
       
       modalOverlay.querySelector('#ratingStars').addEventListener('mouseleave', () => {
+        hoverRating = 0; // Clear hover
+        
+        // Show selected rating if exists, otherwise show default
         if (selectedRating === 0) {
           stars.forEach(s => s.style.color = '#d1d5db');
           ratingText.textContent = 'Select a rating';
         } else {
           stars.forEach((s, i) => {
-            if (i < selectedRating) {
+            const starNum = i + 1;
+            if (starNum <= selectedRating) {
               s.style.color = '#fbbf24';
             } else {
               s.style.color = '#d1d5db';
             }
           });
+          ratingText.textContent = ratingTexts[selectedRating] || '';
         }
       });
       
@@ -20488,6 +20513,8 @@ meta.textContent =
       });
       
       modalOverlay.querySelector('.submitRatingBtn')?.addEventListener('click', async () => {
+        console.log('📤 Submitting rating with selectedRating:', selectedRating);
+        
         if (selectedRating === 0) {
           showToast("Please select a rating.");
           return;
@@ -20680,11 +20707,17 @@ meta.textContent =
         5: 'Excellent'
       };
       
+      let hoverRating = 0; // Track hover state separately
+      
       stars.forEach(star => {
         star.addEventListener('mouseenter', (e) => {
           const rating = parseInt(e.target.dataset.rating);
+          hoverRating = rating;
+          
+          // Show hover preview
           stars.forEach((s, i) => {
-            if (i < rating) {
+            const starNum = i + 1;
+            if (starNum <= hoverRating) {
               s.style.color = '#fbbf24';
               s.style.transform = 'scale(1.1)';
             } else {
@@ -20692,15 +20725,22 @@ meta.textContent =
               s.style.transform = 'scale(1)';
             }
           });
-          ratingText.textContent = ratingTexts[rating] || '';
+          ratingText.textContent = ratingTexts[hoverRating] || '';
         });
         
         star.addEventListener('click', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
           selectedRating = parseInt(e.target.dataset.rating);
+          hoverRating = 0; // Clear hover on click
+          console.log('⭐ Star clicked - Selected rating:', selectedRating);
+          
+          // Show selected rating
           stars.forEach((s, i) => {
-            if (i < selectedRating) {
+            const starNum = i + 1;
+            if (starNum <= selectedRating) {
               s.style.color = '#fbbf24';
-              s.style.transform = 'scale(1.1)';
+              s.style.transform = 'scale(1)'; // No scale on selected
             } else {
               s.style.color = '#d1d5db';
               s.style.transform = 'scale(1)';
@@ -20711,6 +20751,9 @@ meta.textContent =
       });
       
       modalOverlay.querySelector('#ratingStars').addEventListener('mouseleave', () => {
+        hoverRating = 0; // Clear hover
+        
+        // Show selected rating if exists, otherwise show default
         if (selectedRating === 0) {
           stars.forEach(s => {
             s.style.color = '#d1d5db';
@@ -20719,25 +20762,30 @@ meta.textContent =
           ratingText.textContent = 'Select a rating';
         } else {
           stars.forEach((s, i) => {
-            if (i < selectedRating) {
+            const starNum = i + 1;
+            if (starNum <= selectedRating) {
               s.style.color = '#fbbf24';
-              s.style.transform = 'scale(1.1)';
+              s.style.transform = 'scale(1)';
             } else {
               s.style.color = '#d1d5db';
               s.style.transform = 'scale(1)';
             }
           });
+          ratingText.textContent = ratingTexts[selectedRating] || '';
         }
       });
       
       // Submit review (required)
       modalOverlay.querySelector('.submitForcedReviewBtn')?.addEventListener('click', async () => {
+        console.log('📤 Submitting forced review with selectedRating:', selectedRating);
+        
         if (selectedRating === 0) {
           showToast("Please select a rating before submitting.");
           return;
         }
         
         const comment = document.getElementById('reviewCommentInput')?.value.trim() || '';
+        console.log('📤 Review text length:', comment.length);
         
         // Validate comment length if provided (API requires min 10 chars)
         if (comment && comment.length < 10) {
