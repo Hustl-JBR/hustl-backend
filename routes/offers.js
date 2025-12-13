@@ -11,41 +11,85 @@ router.get('/user/me', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
     
-    const offers = await prisma.offer.findMany({
-      where: { hustlerId: userId },
-      include: {
-        job: {
-          include: {
-            customer: {
-              select: {
-                id: true,
-                name: true,
-                username: true,
-                photoUrl: true,
-                ratingAvg: true,
-                ratingCount: true,
+    let offers;
+    try {
+      offers = await prisma.offer.findMany({
+        where: { hustlerId: userId },
+        include: {
+          job: {
+            include: {
+              customer: {
+                select: {
+                  id: true,
+                  name: true,
+                  username: true,
+                  photoUrl: true,
+                  ratingAvg: true,
+                  ratingCount: true,
+                },
               },
-            },
-            hustler: {
-              select: {
-                id: true,
-                name: true,
-                username: true,
-                photoUrl: true,
+              hustler: {
+                select: {
+                  id: true,
+                  name: true,
+                  username: true,
+                  photoUrl: true,
+                },
               },
-            },
-            payment: {
-              select: {
-                id: true,
-                amount: true,
-                status: true,
+              payment: {
+                select: {
+                  id: true,
+                  amount: true,
+                  status: true,
+                },
               },
             },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+      });
+    } catch (error) {
+      // If tools column error, retry without it
+      if (error.message && error.message.includes('tools')) {
+        offers = await prisma.offer.findMany({
+          where: { hustlerId: userId },
+          include: {
+            job: {
+              include: {
+                customer: {
+                  select: {
+                    id: true,
+                    name: true,
+                    username: true,
+                    photoUrl: true,
+                    ratingAvg: true,
+                    ratingCount: true,
+                  },
+                },
+                hustler: {
+                  select: {
+                    id: true,
+                    name: true,
+                    username: true,
+                    photoUrl: true,
+                  },
+                },
+                payment: {
+                  select: {
+                    id: true,
+                    amount: true,
+                    status: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+      } else {
+        throw error;
+      }
+    }
     
     res.json(offers);
   } catch (error) {
