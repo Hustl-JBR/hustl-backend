@@ -12139,6 +12139,197 @@ async function renderJobs(reset = false) {
       }
     }
 
+    // Shared ProfileCard Component - Standardized profile card for job details, applicant lists, messages
+    function renderProfileCard(user, options = {}) {
+      const {
+        showViewReviews = false,
+        avatarSize = 40,
+        onClick = null,
+        ratingAvg = 0,
+        ratingCount = 0
+      } = options;
+      
+      if (!user) return '';
+      
+      // Format name (first and last)
+      const nameParts = (user.name || '').trim().split(/\s+/);
+      const displayName = nameParts.length > 0 ? nameParts[0] + (nameParts.length > 1 ? ' ' + nameParts[nameParts.length - 1] : '') : (user.name || 'User');
+      
+      // Format location (city + state, no exact address)
+      const locationParts = [];
+      if (user.city) locationParts.push(user.city);
+      if (user.state) locationParts.push(user.state);
+      else if (user.zip) {
+        // Try to extract state from zip if available, or just show city
+        locationParts.push(user.zip);
+      }
+      const location = locationParts.length > 0 ? locationParts.join(', ') : '';
+      
+      // Rating display
+      const ratingDisplay = ratingCount > 0 
+        ? `⭐ ${ratingAvg.toFixed(1)} (${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})`
+        : 'New';
+      
+      const cardId = `profileCard_${user.id}_${Date.now()}`;
+      const viewReviewsId = `viewReviews_${user.id}_${Date.now()}`;
+      
+      let cardHTML = `
+        <div class="profile-card" data-user-id="${user.id}" style="
+          display: flex;
+          gap: 0.75rem;
+          align-items: center;
+          padding: 0.75rem;
+          border-radius: 8px;
+          background: white;
+          border: 1px solid var(--border);
+          ${onClick ? 'cursor: pointer;' : ''}
+        " ${onClick ? `onclick="${onClick}"` : ''}>
+          ${renderUserAvatar(user, avatarSize, {
+            showBorder: true,
+            borderWidth: '2px',
+            style: 'flex-shrink: 0;'
+          })}
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-weight: 600; color: var(--text-main); font-size: 0.95rem; margin-bottom: 0.25rem;">
+              ${displayName}
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; font-size: 0.85rem; color: var(--text-muted);">
+              <span>${ratingDisplay}</span>
+            </div>
+            ${location ? `<div style="font-size: 0.8rem; color: var(--text-muted);">${location}</div>` : ''}
+            ${showViewReviews && ratingCount > 0 ? `
+              <button id="${viewReviewsId}" class="btn btn-ghost" style="
+                padding: 0.25rem 0.5rem;
+                margin-top: 0.5rem;
+                font-size: 0.75rem;
+                border: 1px solid var(--border);
+              ">View Reviews</button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+      
+      // Add event listener for view reviews if enabled
+      if (showViewReviews && ratingCount > 0) {
+        setTimeout(() => {
+          const viewReviewsBtn = document.getElementById(viewReviewsId);
+          if (viewReviewsBtn) {
+            viewReviewsBtn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              await showUserReviews(user.id);
+            });
+          }
+        }, 100);
+      }
+      
+      return cardHTML;
+    }
+    
+    // Show user reviews modal (5 most recent completed jobs)
+    async function showUserReviews(userId) {
+      try {
+        const token = localStorage.getItem('hustl_token') || sessionStorage.getItem('hustl_token');
+        const reviewsResponse = await fetch(`${API_BASE}/reviews/user/${userId}`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        
+        if (!reviewsResponse.ok) {
+          showToast("Could not load reviews.");
+          return;
+        }
+        
+        const reviewsData = await reviewsResponse.json();
+        const reviews = Array.isArray(reviewsData) ? reviewsData : (reviewsData.reviews || []);
+        
+        // Get 5 most recent reviews
+        const recentReviews = reviews
+          .filter(r => r.job && r.job.status === 'completed')
+          .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+          .slice(0, 5);
+        
+        const user = state.users.find(u => u.id === userId) || {};
+        
+        // Create modal
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0,0,0,0.5);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1rem;
+        `;
+        
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+          background: white;
+          border-radius: 12px;
+          max-width: 500px;
+          width: 100%;
+          max-height: 80vh;
+          overflow-y: auto;
+          position: relative;
+        `;
+        
+        modal.innerHTML = `
+          <button onclick="this.closest('[style*=\\'position: fixed\\']').remove(); document.body.style.overflow = '';" style="
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #f3f4f6;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 10;
+          ">×</button>
+          <div style="padding: 2rem;">
+            <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 1rem 0;">Reviews for ${user.name || 'User'}</h2>
+            ${recentReviews.length === 0 ? `
+              <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                No completed job reviews yet.
+              </div>
+            ` : recentReviews.map(review => `
+              <div style="
+                padding: 1rem;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                margin-bottom: 1rem;
+              ">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                  <span style="font-size: 1.2rem;">${'⭐'.repeat(review.stars || 5)}</span>
+                  <span style="font-weight: 600;">${review.stars || 5}/5</span>
+                </div>
+                ${review.comment ? `<div style="color: var(--text-main); margin-bottom: 0.5rem;">${review.comment}</div>` : ''}
+                ${review.job ? `<div style="font-size: 0.85rem; color: var(--text-muted);">Job: ${review.job.title || 'Untitled'}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        `;
+        
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        document.body.style.overflow = 'hidden';
+        
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) {
+            overlay.remove();
+            document.body.style.overflow = '';
+          }
+        });
+      } catch (error) {
+        console.error("Error showing user reviews:", error);
+        showToast("Could not load reviews.");
+      }
+    }
+
     // Render Basic Info Section - View Mode
     function renderBasicInfoView(user, ratingAvg, ratingCount, container) {
       if (!container) {
@@ -12246,6 +12437,16 @@ async function renderJobs(reset = false) {
                 </div>
               </div>
               
+              <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; font-size: 0.9rem;">Hometown (Optional)</label>
+                <input type="text" id="basicInfoHometown" value="${(user.hometown || '').replace(/"/g, '&quot;')}" placeholder="e.g., Nashville, TN" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; background: white;" />
+              </div>
+              
+              <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; font-size: 0.9rem;">Tools / Equipment (Optional)</label>
+                <textarea id="basicInfoTools" placeholder="List any tools or equipment you have (e.g., truck, trailer, power tools)" rows="3" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; font-family: inherit; resize: vertical; background: white;">${(user.tools || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+              </div>
+              
               <!-- Rating Display (read-only) -->
               <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px;">
                 <span style="font-size: 1.1rem;">⭐</span>
@@ -12317,10 +12518,14 @@ async function renderJobs(reset = false) {
           const nameInput = document.getElementById("basicInfoName");
           const genderSelect = document.getElementById("basicInfoGender");
           const bioInput = document.getElementById("basicInfoBio");
+          const hometownInput = document.getElementById("basicInfoHometown");
+          const toolsInput = document.getElementById("basicInfoTools");
           
           const name = nameInput?.value.trim() || '';
           const gender = genderSelect?.value || '';
           const bio = bioInput?.value.trim() || '';
+          const hometown = hometownInput?.value.trim() || '';
+          const tools = toolsInput?.value.trim() || '';
           
           if (!name) {
             showToast("Please enter your name.");
@@ -12339,7 +12544,7 @@ async function renderJobs(reset = false) {
           saveBtn.textContent = "Saving...";
           
           try {
-            const updates = { name, gender, bio };
+            const updates = { name, gender, bio, hometown, tools };
             
             // Upload photo if new one selected
             let uploadedPhotoUrl = null;
@@ -12414,6 +12619,16 @@ async function renderJobs(reset = false) {
             }
             // Always send bio - send null if empty to clear it, or the trimmed value
             cleanUpdates.bio = bio.trim() || null;
+            
+            // Hometown - optional, send null if empty
+            if (updates.hometown !== undefined) {
+              cleanUpdates.hometown = hometown.trim() || null;
+            }
+            
+            // Tools - optional, send null if empty
+            if (updates.tools !== undefined) {
+              cleanUpdates.tools = tools.trim() || null;
+            }
             
             // Note: photoUrl is already saved by the upload endpoint, but we include it here
             // to ensure the PATCH response includes it
