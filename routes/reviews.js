@@ -102,13 +102,15 @@ router.post('/', authenticate, [
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    // Check if job is paid (PAID status) or completed (COMPLETED_BY_HUSTLER with captured payment)
+    // Allow reviews for completed jobs - payment capture is not required for review
+    // Jobs can be completed (COMPLETED_BY_HUSTLER with completion code verified) even if payment processing is delayed
     const isPaid = job.status === 'PAID' && job.payment && job.payment.status === 'CAPTURED';
-    const isCompleted = job.status === 'COMPLETED_BY_HUSTLER' && job.payment && job.payment.status === 'CAPTURED';
+    const isCompleted = job.status === 'COMPLETED_BY_HUSTLER'; // Allow reviews for completed jobs regardless of payment status
+    const isAwaitingConfirm = job.status === 'AWAITING_CUSTOMER_CONFIRM'; // Also allow reviews when awaiting customer confirmation
     
-    if (!isPaid && !isCompleted) {
+    if (!isPaid && !isCompleted && !isAwaitingConfirm) {
       return res.status(400).json({ 
-        error: 'Can only review jobs that have been completed and paid' 
+        error: 'Can only review jobs that have been completed. Job status must be PAID, COMPLETED_BY_HUSTLER, or AWAITING_CUSTOMER_CONFIRM' 
       });
     }
 
