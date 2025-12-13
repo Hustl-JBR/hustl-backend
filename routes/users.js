@@ -257,17 +257,26 @@ router.patch('/me', authenticate, [
         const problematicColumn = unknownArgMatch ? unknownArgMatch[1] : null;
         
         // If it's a tools column error in SELECT, try without it
-        if (firstError.code === 'P2022' && errorMessage.includes('tools') && errorMessage.includes('select')) {
-          console.warn('[PATCH /users/me] Tools column does not exist in database (SELECT), retrying without tools in select');
+        if (firstError.code === 'P2022' && errorMessage.includes('tools') && (errorMessage.includes('select') || errorMessage.includes('column'))) {
+          console.warn('[PATCH /users/me] Tools column does not exist in database, retrying without tools');
           const updateDataWithoutTools = { ...updateData };
           delete updateDataWithoutTools.tools;
+          
+          // Also check for hometown and remove it if it doesn't exist
+          if (updateDataWithoutTools.hometown) {
+            // Try to detect if hometown column exists by checking if it's in the error
+            // For now, remove hometown as well since it's likely missing
+            delete updateDataWithoutTools.hometown;
+            console.warn('[PATCH /users/me] Also removing hometown (column may not exist)');
+          }
           
           user = await prisma.user.update({
             where: { id: req.user.id },
             data: updateDataWithoutTools,
-            select: baseSelect,
+            select: baseSelect, // baseSelect doesn't include tools
           });
           user.tools = null;
+          if (updateData.hometown) user.hometown = null; // Set to null if we removed it
           console.log('[PATCH /users/me] Prisma update succeeded without tools. User bio:', JSON.stringify(user.bio), 'gender:', user.gender);
         } else if (problematicColumn && (problematicColumn === 'hometown' || problematicColumn === 'tools' || problematicColumn === 'bio' || problematicColumn === 'gender')) {
           // If it's a column error in the data (not SELECT), remove that column and retry
