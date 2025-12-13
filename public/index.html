@@ -12071,6 +12071,178 @@ async function renderJobs(reset = false) {
     }
 
     // Centralized avatar rendering function - single source of truth
+    // Show profile photo in lightbox
+    function showProfilePhotoLightbox(photoUrl, userName) {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.9);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        cursor: pointer;
+      `;
+      
+      const img = document.createElement('img');
+      img.src = photoUrl;
+      img.style.cssText = `
+        max-width: 90vw;
+        max-height: 90vh;
+        width: auto;
+        height: auto;
+        border-radius: 8px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        object-fit: contain;
+      `;
+      img.alt = userName || 'Profile photo';
+      
+      overlay.appendChild(img);
+      document.body.appendChild(overlay);
+      document.body.style.overflow = 'hidden';
+      
+      overlay.addEventListener('click', () => {
+        overlay.remove();
+        document.body.style.overflow = '';
+      });
+    }
+    
+    // Crop image to 1:1 square using canvas
+    function cropImageToSquare(file, callback) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Calculate square crop (center crop)
+          const size = Math.min(img.width, img.height);
+          const x = (img.width - size) / 2;
+          const y = (img.height - size) / 2;
+          
+          // Set canvas to square size
+          canvas.width = size;
+          canvas.height = size;
+          
+          // Draw cropped image
+          ctx.drawImage(img, x, y, size, size, 0, 0, size, size);
+          
+          // Convert to blob
+          canvas.toBlob((blob) => {
+            if (blob) {
+              callback(blob);
+            } else {
+              callback(file); // Fallback to original if conversion fails
+            }
+          }, 'image/jpeg', 0.92);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+    
+    // Show image cropper modal
+    function showImageCropper(file, onCrop) {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.8);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+      `;
+      
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        max-width: 500px;
+        width: 100%;
+        padding: 1.5rem;
+        position: relative;
+      `;
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.style.cssText = `
+          width: 100%;
+          max-height: 400px;
+          object-fit: contain;
+          border-radius: 8px;
+          margin-bottom: 1rem;
+        `;
+        
+        const previewCanvas = document.createElement('canvas');
+        previewCanvas.width = 200;
+        previewCanvas.height = 200;
+        previewCanvas.style.cssText = `
+          width: 200px;
+          height: 200px;
+          border: 3px solid var(--primary);
+          border-radius: 50%;
+          margin: 0 auto 1rem;
+          display: block;
+          object-fit: cover;
+        `;
+        
+        const previewCtx = previewCanvas.getContext('2d');
+        
+        img.onload = () => {
+          // Draw preview
+          const size = Math.min(img.width, img.height);
+          const x = (img.width - size) / 2;
+          const y = (img.height - size) / 2;
+          previewCtx.drawImage(img, x, y, size, size, 0, 0, 200, 200);
+        };
+        
+        modal.innerHTML = `
+          <h3 style="font-size: 1.25rem; font-weight: 700; margin: 0 0 1rem 0; text-align: center;">Crop Profile Photo</h3>
+          <p style="text-align: center; color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Photo will be cropped to a square (1:1 ratio)</p>
+          ${img.outerHTML}
+          <div style="text-align: center; margin-bottom: 1rem;">
+            <div style="font-weight: 600; margin-bottom: 0.5rem;">Preview:</div>
+            ${previewCanvas.outerHTML}
+          </div>
+          <div style="display: flex; gap: 0.75rem;">
+            <button id="cropCancelBtn" class="btn btn-ghost" style="flex: 1; padding: 0.75rem;">Cancel</button>
+            <button id="cropConfirmBtn" class="btn btn-primary" style="flex: 1; padding: 0.75rem;">Use This Photo</button>
+          </div>
+        `;
+        
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        document.body.style.overflow = 'hidden';
+        
+        document.getElementById('cropCancelBtn').addEventListener('click', () => {
+          overlay.remove();
+          document.body.style.overflow = '';
+        });
+        
+        document.getElementById('cropConfirmBtn').addEventListener('click', () => {
+          cropImageToSquare(file, (croppedBlob) => {
+            onCrop(croppedBlob);
+            overlay.remove();
+            document.body.style.overflow = '';
+          });
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+
     function renderUserAvatar(user, size = 40, options = {}) {
       const {
         showBorder = false,
@@ -12078,7 +12250,8 @@ async function renderJobs(reset = false) {
         borderWidth = '2px',
         className = '',
         onClick = null,
-        style = ''
+        style = '',
+        enableLightbox = true
       } = options;
       
       const sizePx = `${size}px`;
@@ -12114,13 +12287,17 @@ async function renderJobs(reset = false) {
         // Add cache-busting if not already present
         const finalPhotoUrl = photoUrl.includes('?') ? photoUrl : `${photoUrl}?t=${Date.now()}`;
         
+        // Add lightbox click handler if enabled
+        const lightboxClick = enableLightbox && !onClick ? `onclick="window.showProfilePhotoLightbox('${finalPhotoUrl}', '${(user.name || 'User').replace(/'/g, "\\'")}')" style="cursor: pointer;"` : '';
+        
         return `
           <div class="${className}" style="${baseStyle}" ${onClick ? `onclick="${onClick}"` : ''} ${dataUserIdAttr}>
             <img 
               src="${finalPhotoUrl}" 
               alt="${user.name || 'User'}" 
               ${dataUserIdAttr}
-              style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;"
+              ${lightboxClick}
+              style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; ${enableLightbox && !onClick ? 'cursor: pointer;' : ''}"
               onerror="this.parentElement.innerHTML='<div style=\\'width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: ${fontSize}; font-weight: 700; color: var(--primary); background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);\\'>${initial}</div>'"
             />
           </div>
@@ -12155,15 +12332,16 @@ async function renderJobs(reset = false) {
       const nameParts = (user.name || '').trim().split(/\s+/);
       const displayName = nameParts.length > 0 ? nameParts[0] + (nameParts.length > 1 ? ' ' + nameParts[nameParts.length - 1] : '') : (user.name || 'User');
       
-      // Format location (city + state, no exact address)
-      const locationParts = [];
-      if (user.city) locationParts.push(user.city);
-      if (user.state) locationParts.push(user.state);
-      else if (user.zip) {
-        // Try to extract state from zip if available, or just show city
-        locationParts.push(user.zip);
+      // Format location - use hometown if available, otherwise city + state (never show street address)
+      let location = '';
+      if (user.hometown) {
+        location = user.hometown;
+      } else {
+        const locationParts = [];
+        if (user.city) locationParts.push(user.city);
+        if (user.state) locationParts.push(user.state);
+        location = locationParts.length > 0 ? locationParts.join(', ') : '';
       }
-      const location = locationParts.length > 0 ? locationParts.join(', ') : '';
       
       // Rating display
       const ratingDisplay = ratingCount > 0 
@@ -12438,8 +12616,8 @@ async function renderJobs(reset = false) {
               </div>
               
               <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; font-size: 0.9rem;">Hometown (Optional)</label>
-                <input type="text" id="basicInfoHometown" value="${(user.hometown || '').replace(/"/g, '&quot;')}" placeholder="e.g., Nashville, TN" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; background: white;" />
+                <label style="display: block; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem; font-size: 0.9rem;">Hometown (City + State) <span style="color: #dc2626;">*</span></label>
+                <input type="text" id="basicInfoHometown" value="${(user.hometown || '').replace(/"/g, '&quot;')}" placeholder="e.g., Nashville, TN" required style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; background: white;" />
               </div>
               
               <div style="margin-bottom: 1rem;">
@@ -12487,19 +12665,26 @@ async function renderJobs(reset = false) {
             return;
           }
           
-          // Show preview
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            photoPreview = event.target.result;
-            newPhotoFile = file;
-            const tempUserForPreview = { ...user, photoUrl: photoPreview };
-            photoPreviewDiv.innerHTML = renderUserAvatar(tempUserForPreview, 48, { 
-              showBorder: true, 
-              borderWidth: '2px',
-              style: 'box-shadow: 0 1px 3px rgba(0,0,0,0.1);'
-            });
-          };
-          reader.readAsDataURL(file);
+          // Show cropper modal
+          showImageCropper(file, (croppedBlob) => {
+            // Create a new file from the cropped blob
+            const croppedFile = new File([croppedBlob], file.name, { type: 'image/jpeg' });
+            newPhotoFile = croppedFile;
+            
+            // Show preview of cropped image
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              photoPreview = event.target.result;
+              const tempUserForPreview = { ...user, photoUrl: photoPreview };
+              photoPreviewDiv.innerHTML = renderUserAvatar(tempUserForPreview, 48, { 
+                showBorder: true, 
+                borderWidth: '2px',
+                style: 'box-shadow: 0 1px 3px rgba(0,0,0,0.1);',
+                enableLightbox: false
+              });
+            };
+            reader.readAsDataURL(croppedBlob);
+          });
         });
       }
       
@@ -12533,6 +12718,12 @@ async function renderJobs(reset = false) {
             return;
           }
           
+          if (!hometown) {
+            showToast("Please enter your hometown (City + State).");
+            if (hometownInput) hometownInput.focus();
+            return;
+          }
+          
           if (bio.length > 300) {
             showToast("Description must be 300 characters or less.");
             if (bioInput) bioInput.focus();
@@ -12546,7 +12737,7 @@ async function renderJobs(reset = false) {
           try {
             const updates = { name, gender, bio, hometown, tools };
             
-            // Upload photo if new one selected
+            // Upload photo if new one selected (already cropped)
             let uploadedPhotoUrl = null;
             if (newPhotoFile) {
               const formData = new FormData();
@@ -12620,9 +12811,9 @@ async function renderJobs(reset = false) {
             // Always send bio - send null if empty to clear it, or the trimmed value
             cleanUpdates.bio = bio.trim() || null;
             
-            // Hometown - optional, send null if empty
-            if (updates.hometown !== undefined) {
-              cleanUpdates.hometown = hometown.trim() || null;
+            // Hometown - required, must have value
+            if (hometown.trim()) {
+              cleanUpdates.hometown = hometown.trim();
             }
             
             // Tools - optional, send null if empty

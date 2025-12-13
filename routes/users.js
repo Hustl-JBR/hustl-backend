@@ -167,7 +167,7 @@ router.patch('/me', authenticate, [
   }).withMessage('Bio must be a string with max 300 characters'),
   body('gender').optional().isIn(['male', 'female', 'other', 'prefer_not_to_say', null]),
   body('tools').optional().trim(),
-  body('hometown').optional().trim(),
+  body('hometown').trim().notEmpty().withMessage('Hometown (City + State) is required'),
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -197,9 +197,12 @@ router.patch('/me', authenticate, [
       console.log('[PATCH /users/me] Bio processing - Original:', JSON.stringify(bio), 'Type:', typeof bio, 'Trimmed:', JSON.stringify(trimmedBio), 'Final:', JSON.stringify(updateData.bio));
     }
     if (hometown !== undefined) {
-      // Allow empty string to clear hometown
+      // Hometown is required - must have a value
       const trimmedHometown = typeof hometown === 'string' ? hometown.trim() : hometown;
-      updateData.hometown = (trimmedHometown === '' || trimmedHometown === null) ? null : trimmedHometown;
+      if (!trimmedHometown || trimmedHometown === '') {
+        return res.status(400).json({ error: 'Hometown (City + State) is required' });
+      }
+      updateData.hometown = trimmedHometown;
     }
     if (gender !== undefined) {
       // Allow empty string to clear gender
