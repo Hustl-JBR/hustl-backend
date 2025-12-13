@@ -12471,26 +12471,40 @@ async function renderJobs(reset = false) {
           
           document.getElementById('cropConfirmBtn').addEventListener('click', () => {
             cleanup();
-            // Get crop coordinates
+            // Get crop coordinates - this must match exactly what's visible
             const crop = getCropCoordinates();
             
-            // Apply crop
+            console.log('[CROP] Final crop coordinates:', crop);
+            console.log('[CROP] Image dimensions:', img.width, 'x', img.height);
+            console.log('[CROP] Crop size:', crop.size);
+            
+            // Apply crop - create square image that will display as circle
             const finalCanvas = document.createElement('canvas');
-            finalCanvas.width = crop.size;
-            finalCanvas.height = crop.size;
+            // Use a standard size for consistency (e.g., 400x400 or 800x800)
+            const outputSize = 800; // High quality output
+            finalCanvas.width = outputSize;
+            finalCanvas.height = outputSize;
             const finalCtx = finalCanvas.getContext('2d');
             
-            finalCtx.drawImage(img, crop.x, crop.y, crop.size, crop.size, 0, 0, crop.size, crop.size);
+            // Draw the cropped portion, scaled to output size
+            // This ensures the saved image matches what was shown
+            finalCtx.drawImage(
+              img, 
+              crop.x, crop.y, crop.size, crop.size,  // Source: crop from original
+              0, 0, outputSize, outputSize            // Destination: full canvas
+            );
             
             finalCanvas.toBlob((blob) => {
               if (blob) {
+                console.log('[CROP] Cropped image created, size:', blob.size, 'bytes');
                 onCrop(blob);
               } else {
+                console.error('[CROP] Failed to create blob, using fallback');
                 cropImageToSquare(file, onCrop);
               }
               overlay.remove();
               document.body.style.overflow = '';
-            }, 'image/jpeg', 0.92);
+            }, 'image/jpeg', 0.95); // Higher quality
           });
         };
         img.src = e.target.result;
