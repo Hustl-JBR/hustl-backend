@@ -13139,15 +13139,26 @@ async function renderJobs(reset = false) {
       const initial = (user?.name || user?.email || 'U')[0].toUpperCase();
       
       // Get the latest photoUrl from single source of truth
-      // ALWAYS check getUserPhotoUrl first (most up-to-date from localStorage/auth)
-      // Then fall back to user.photoUrl if available
+      // Priority: 1) getUserPhotoUrl (localStorage/auth/state - most up-to-date)
+      //           2) user.photoUrl (from API response)
+      //           3) null (fallback to initial)
       let photoUrl = null;
       if (user?.id) {
         photoUrl = getUserPhotoUrl(user.id);
       }
-      // If getUserPhotoUrl didn't find it, try user.photoUrl
+      // If getUserPhotoUrl didn't find it, use user.photoUrl from API response
+      // This is important for other users (customers/hustlers) who aren't in localStorage
       if (!photoUrl && user?.photoUrl) {
         photoUrl = user.photoUrl;
+        // Store in state.users for future lookups
+        if (window.state && window.state.users && !window.state.users.find(u => u && u.id === user.id)) {
+          window.state.users.push({ id: user.id, photoUrl: user.photoUrl, name: user.name });
+        } else if (window.state && window.state.users) {
+          const existingUser = window.state.users.find(u => u && u.id === user.id);
+          if (existingUser) {
+            existingUser.photoUrl = user.photoUrl;
+          }
+        }
       }
       
       const baseStyle = `
