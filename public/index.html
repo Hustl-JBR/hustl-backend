@@ -19006,7 +19006,8 @@ meta.textContent =
         padding: 1rem;
       `;
       
-      let selectedStars = 0;
+      let selectedRating = 0; // The actual selected rating (persists)
+      let hoverRating = 0; // Temporary hover preview (clears on mouse leave)
       
       modal.innerHTML = `
         <div style="background: white; border-radius: 16px; padding: 2rem; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
@@ -19066,6 +19067,7 @@ meta.textContent =
       const submitBtn = modal.querySelector('#submitReviewBtn');
       const reviewText = modal.querySelector('#reviewText');
       const charCount = modal.querySelector('#charCount');
+      const starContainer = modal.querySelector('#starRating');
       
       const ratingLabels = {
         1: 'Poor',
@@ -19075,54 +19077,68 @@ meta.textContent =
         5: 'Excellent'
       };
       
-      // Star click handler
+      // Render stars based on displayRating (hoverRating ?? selectedRating)
+      function renderStars() {
+        const displayRating = hoverRating || selectedRating;
+        
+        stars.forEach((star, index) => {
+          const starNumber = index + 1;
+          if (starNumber <= displayRating) {
+            star.style.color = '#fbbf24'; // Gold
+            star.style.transform = hoverRating && !selectedRating ? 'scale(1.1)' : 'scale(1)';
+          } else {
+            star.style.color = '#d1d5db'; // Gray
+            star.style.transform = 'scale(1)';
+          }
+        });
+        
+        // Update text based on display rating
+        if (displayRating > 0) {
+          ratingText.textContent = ratingLabels[displayRating] || `${displayRating}/5`;
+        } else {
+          ratingText.textContent = 'Tap a star to rate';
+        }
+      }
+      
+      // Star click handler - sets selectedRating
       stars.forEach((star, index) => {
-        star.addEventListener('click', () => {
-          selectedStars = index + 1;
-          updateStars();
+        const starNumber = index + 1;
+        
+        star.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectedRating = starNumber;
+          hoverRating = 0; // Clear hover on click
+          console.log('⭐ Star clicked - Selected rating:', selectedRating);
+          renderStars();
           updateSubmitButton();
         });
         
-        star.addEventListener('mouseenter', () => {
-          highlightStars(index + 1);
+        star.addEventListener('mouseenter', (e) => {
+          e.stopPropagation();
+          hoverRating = starNumber;
+          renderStars();
         });
       });
       
-      // Reset stars on mouse leave
-      modal.querySelector('#starRating').addEventListener('mouseleave', () => {
-        updateStars();
+      // Clear hover when mouse leaves star container
+      starContainer.addEventListener('mouseleave', () => {
+        hoverRating = 0;
+        renderStars();
       });
-      
-      function highlightStars(rating) {
-        stars.forEach((star, index) => {
-          if (index < rating) {
-            star.style.color = '#fbbf24'; // Gold
-            star.style.transform = 'scale(1.1)';
-          } else {
-            star.style.color = '#d1d5db'; // Gray
-            star.style.transform = 'scale(1)';
-          }
-        });
-        ratingText.textContent = ratingLabels[rating] || 'Tap a star to rate';
-      }
-      
-      function updateStars() {
-        stars.forEach((star, index) => {
-          if (index < selectedStars) {
-            star.style.color = '#fbbf24'; // Gold
-            star.style.transform = 'scale(1)';
-          } else {
-            star.style.color = '#d1d5db'; // Gray
-            star.style.transform = 'scale(1)';
-          }
-        });
-        ratingText.textContent = selectedStars > 0 ? ratingLabels[selectedStars] : 'Tap a star to rate';
-      }
       
       function updateSubmitButton() {
         const text = reviewText.value.trim();
         const hasText = text.length >= 10;
-        submitBtn.disabled = selectedStars === 0 || !hasText;
+        const hasRating = selectedRating > 0;
+        submitBtn.disabled = !hasRating || !hasText;
+        
+        console.log('Submit button state:', {
+          hasRating,
+          hasText,
+          selectedRating,
+          textLength: text.length,
+          disabled: submitBtn.disabled
+        });
       }
       
       // Character count
