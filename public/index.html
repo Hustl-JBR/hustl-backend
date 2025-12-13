@@ -12288,52 +12288,26 @@ async function renderJobs(reset = false) {
           
           overlayDiv.appendChild(svg);
           
-          // Preview canvas
-          const previewCanvas = document.createElement('canvas');
-          previewCanvas.width = 200;
-          previewCanvas.height = 200;
-          previewCanvas.id = 'cropPreview';
-          previewCanvas.style.cssText = `
-            width: 200px;
-            height: 200px;
-            border-radius: 50%;
-            border: 4px solid var(--primary);
-            margin: 1rem auto;
-            display: block;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-          `;
-          
-          // Update preview function
-          const updatePreview = () => {
-            const previewCtx = previewCanvas.getContext('2d');
-            previewCtx.clearRect(0, 0, 200, 200);
-            
-            // Calculate crop area in image coordinates
+          // Function to calculate crop coordinates (used for final crop)
+          const getCropCoordinates = () => {
             const imgDisplayWidth = img.width * displayScale * scale;
             const imgDisplayHeight = img.height * displayScale * scale;
             const cropCenterX = cropSize / 2;
             const cropCenterY = cropSize / 2;
             const cropRadius = cropSize / 2;
             
-            // Image position relative to container
             const imgLeft = (cropSize - imgDisplayWidth) / 2 + offsetX;
             const imgTop = (cropSize - imgDisplayHeight) / 2 + offsetY;
             
-            // Calculate source crop coordinates
             const sourceX = (cropCenterX - cropRadius - imgLeft) / (displayScale * scale);
             const sourceY = (cropCenterY - cropRadius - imgTop) / (displayScale * scale);
             const sourceSize = (cropRadius * 2) / (displayScale * scale);
             
-            // Clamp to image bounds
             const clampedX = Math.max(0, Math.min(img.width - sourceSize, sourceX));
             const clampedY = Math.max(0, Math.min(img.height - sourceSize, sourceY));
             const clampedSize = Math.min(sourceSize, img.width - clampedX, img.height - clampedY);
             
-            // Draw circular preview
-            previewCtx.beginPath();
-            previewCtx.arc(100, 100, 100, 0, Math.PI * 2);
-            previewCtx.clip();
-            previewCtx.drawImage(img, clampedX, clampedY, clampedSize, clampedSize, 0, 0, 200, 200);
+            return { x: clampedX, y: clampedY, size: clampedSize };
           };
           
           // Drag handlers
@@ -12361,7 +12335,6 @@ async function renderJobs(reset = false) {
             offsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, offsetY));
             
             imgElement.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
-            updatePreview();
           };
           
           const handleEnd = () => {
@@ -12427,9 +12400,14 @@ async function renderJobs(reset = false) {
             offsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, offsetX));
             offsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, offsetY));
             imgElement.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
-            
-            updatePreview();
           });
+          
+          // Center image initially
+          const imgDisplayWidth = img.width * displayScale * scale;
+          const imgDisplayHeight = img.height * displayScale * scale;
+          offsetX = (cropSize - imgDisplayWidth) / 2;
+          offsetY = (cropSize - imgDisplayHeight) / 2;
+          imgElement.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
           
           cropContainer.appendChild(imgElement);
           cropContainer.appendChild(overlayDiv);
@@ -12439,30 +12417,23 @@ async function renderJobs(reset = false) {
               <h3 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 0.5rem 0; text-align: center;">Crop Profile Photo</h3>
               <p style="text-align: center; color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">Drag to position • Pinch/scroll to zoom</p>
             </div>
-            ${cropContainer.outerHTML}
-            <div style="padding: 1.5rem; text-align: center; background: #f9fafb;">
-              <div style="font-weight: 600; margin-bottom: 0.75rem; color: var(--text-main);">Preview:</div>
-              ${previewCanvas.outerHTML}
-            </div>
-            <div style="padding: 1.5rem; display: flex; gap: 0.75rem; border-top: 1px solid var(--border);">
-              <button id="cropCancelBtn" class="btn btn-ghost" style="flex: 1; padding: 0.75rem; font-weight: 600;">Cancel</button>
-              <button id="cropConfirmBtn" class="btn btn-primary" style="flex: 1; padding: 0.75rem; font-weight: 600;">Use This Photo</button>
-            </div>
           `;
           
-          // Insert crop container
-          const insertedContainer = modal.querySelector('#cropContainer');
-          if (insertedContainer) {
-            insertedContainer.appendChild(imgElement);
-            insertedContainer.appendChild(overlayDiv);
-          }
+          // Append crop container directly
+          modal.appendChild(cropContainer);
+          
+          // Add buttons
+          const buttonDiv = document.createElement('div');
+          buttonDiv.style.cssText = 'padding: 1.5rem; display: flex; gap: 0.75rem; border-top: 1px solid var(--border);';
+          buttonDiv.innerHTML = `
+            <button id="cropCancelBtn" class="btn btn-ghost" style="flex: 1; padding: 0.75rem; font-weight: 600;">Cancel</button>
+            <button id="cropConfirmBtn" class="btn btn-primary" style="flex: 1; padding: 0.75rem; font-weight: 600;">Use This Photo</button>
+          `;
+          modal.appendChild(buttonDiv);
           
           overlay.appendChild(modal);
           document.body.appendChild(overlay);
           document.body.style.overflow = 'hidden';
-          
-          // Initial preview
-          updatePreview();
           
           document.getElementById('cropCancelBtn').addEventListener('click', () => {
             overlay.remove();
@@ -12470,32 +12441,16 @@ async function renderJobs(reset = false) {
           });
           
           document.getElementById('cropConfirmBtn').addEventListener('click', () => {
-            // Calculate final crop coordinates
-            const imgDisplayWidth = img.width * displayScale * scale;
-            const imgDisplayHeight = img.height * displayScale * scale;
-            const cropCenterX = cropSize / 2;
-            const cropCenterY = cropSize / 2;
-            const cropRadius = cropSize / 2;
-            
-            const imgLeft = (cropSize - imgDisplayWidth) / 2 + offsetX;
-            const imgTop = (cropSize - imgDisplayHeight) / 2 + offsetY;
-            
-            const sourceX = (cropCenterX - cropRadius - imgLeft) / (displayScale * scale);
-            const sourceY = (cropCenterY - cropRadius - imgTop) / (displayScale * scale);
-            const sourceSize = (cropRadius * 2) / (displayScale * scale);
-            
-            // Clamp to image bounds
-            const clampedX = Math.max(0, Math.min(img.width - sourceSize, sourceX));
-            const clampedY = Math.max(0, Math.min(img.height - sourceSize, sourceY));
-            const clampedSize = Math.min(sourceSize, img.width - clampedX, img.height - clampedY);
+            // Get crop coordinates
+            const crop = getCropCoordinates();
             
             // Apply crop
             const finalCanvas = document.createElement('canvas');
-            finalCanvas.width = clampedSize;
-            finalCanvas.height = clampedSize;
+            finalCanvas.width = crop.size;
+            finalCanvas.height = crop.size;
             const finalCtx = finalCanvas.getContext('2d');
             
-            finalCtx.drawImage(img, clampedX, clampedY, clampedSize, clampedSize, 0, 0, clampedSize, clampedSize);
+            finalCtx.drawImage(img, crop.x, crop.y, crop.size, crop.size, 0, 0, crop.size, crop.size);
             
             finalCanvas.toBlob((blob) => {
               if (blob) {
