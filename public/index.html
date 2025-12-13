@@ -12225,7 +12225,7 @@ async function renderJobs(reset = false) {
             touch-action: none;
           `;
           
-          // Create overlay with circular mask
+          // Create overlay with circular mask using CSS
           const overlayDiv = document.createElement('div');
           overlayDiv.style.cssText = `
             position: absolute;
@@ -12235,58 +12235,11 @@ async function renderJobs(reset = false) {
             height: 100%;
             pointer-events: none;
             z-index: 2;
+            border-radius: 50%;
+            box-shadow: 
+              0 0 0 9999px rgba(0, 0, 0, 0.7),
+              inset 0 0 0 3px white;
           `;
-          
-          // Create SVG mask for circular crop
-          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-          svg.setAttribute('width', cropSize);
-          svg.setAttribute('height', cropSize);
-          svg.style.cssText = 'position: absolute; top: 0; left: 0;';
-          
-          // Dark overlay
-          const darkRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-          darkRect.setAttribute('width', cropSize);
-          darkRect.setAttribute('height', cropSize);
-          darkRect.setAttribute('fill', 'rgba(0,0,0,0.7)');
-          svg.appendChild(darkRect);
-          
-          // Circular mask (clear area)
-          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          circle.setAttribute('cx', cropSize / 2);
-          circle.setAttribute('cy', cropSize / 2);
-          circle.setAttribute('r', cropSize / 2);
-          circle.setAttribute('fill', 'white');
-          circle.setAttribute('mask', 'url(#cropMask)');
-          
-          const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-          const mask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
-          mask.setAttribute('id', 'cropMask');
-          const maskRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-          maskRect.setAttribute('width', cropSize);
-          maskRect.setAttribute('height', cropSize);
-          maskRect.setAttribute('fill', 'black');
-          const maskCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          maskCircle.setAttribute('cx', cropSize / 2);
-          maskCircle.setAttribute('cy', cropSize / 2);
-          maskCircle.setAttribute('r', cropSize / 2);
-          maskCircle.setAttribute('fill', 'white');
-          mask.appendChild(maskRect);
-          mask.appendChild(maskCircle);
-          defs.appendChild(mask);
-          svg.appendChild(defs);
-          svg.appendChild(circle);
-          
-          // White border
-          const borderCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          borderCircle.setAttribute('cx', cropSize / 2);
-          borderCircle.setAttribute('cy', cropSize / 2);
-          borderCircle.setAttribute('r', cropSize / 2);
-          borderCircle.setAttribute('fill', 'none');
-          borderCircle.setAttribute('stroke', 'white');
-          borderCircle.setAttribute('stroke-width', '3');
-          svg.appendChild(borderCircle);
-          
-          overlayDiv.appendChild(svg);
           
           // Function to calculate crop coordinates (used for final crop)
           const getCropCoordinates = () => {
@@ -12408,9 +12361,19 @@ async function renderJobs(reset = false) {
           offsetX = (cropSize - imgDisplayWidth) / 2;
           offsetY = (cropSize - imgDisplayHeight) / 2;
           imgElement.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+          imgElement.style.left = '0';
+          imgElement.style.top = '0';
           
           cropContainer.appendChild(imgElement);
           cropContainer.appendChild(overlayDiv);
+          
+          // Make sure image loads
+          imgElement.onload = () => {
+            console.log('Crop image loaded');
+          };
+          imgElement.onerror = (err) => {
+            console.error('Crop image error:', err);
+          };
           
           modal.innerHTML = `
             <div style="padding: 1.5rem 1.5rem 0;">
