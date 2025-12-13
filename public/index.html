@@ -6682,7 +6682,8 @@ async function renderJobs(reset = false) {
       } else if (job.payType === "hourly") {
         const hr = Number(job.hourlyRate) || 0;
         const maxHrs = job.estHours || "";
-        const teamSize = job.teamSize || 1;
+        const rawTeamSize = job.teamSize || 1;
+        const teamSize = typeof rawTeamSize === 'string' ? parseInt(rawTeamSize, 10) : Number(rawTeamSize) || 1;
         if (teamSize > 1) {
           const perPerson = hr / teamSize;
           pay.textContent = `💰 $${hr.toFixed(0)}/hr (max ${maxHrs || '?'} hrs)\n👥 ${teamSize} → $${perPerson.toFixed(0)}/hr each`;
@@ -7063,7 +7064,8 @@ async function renderJobs(reset = false) {
       // Get requirements for additional fields
       const requirements = job.requirements || {};
       const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
-      const teamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
+      const rawTeamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
+      const teamSize = typeof rawTeamSize === 'string' ? parseInt(rawTeamSize, 10) : Number(rawTeamSize) || 1;
       const pricingOption = requirements.pricing_option;
       
       // Format location
