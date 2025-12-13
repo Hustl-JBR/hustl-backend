@@ -196,12 +196,13 @@ router.patch('/me', authenticate, [
       updateData.bio = (trimmedBio === '' || trimmedBio === null) ? null : trimmedBio;
       console.log('[PATCH /users/me] Bio processing - Original:', JSON.stringify(bio), 'Type:', typeof bio, 'Trimmed:', JSON.stringify(trimmedBio), 'Final:', JSON.stringify(updateData.bio));
     }
+    // Note: hometown column may not exist in database - handle gracefully
     if (hometown !== undefined) {
-      // Hometown is required - must have a value
       const trimmedHometown = typeof hometown === 'string' ? hometown.trim() : hometown;
       if (!trimmedHometown || trimmedHometown === '') {
         return res.status(400).json({ error: 'Hometown (City + State) is required' });
       }
+      // Only add hometown if column exists (will be caught in try/catch if it doesn't)
       updateData.hometown = trimmedHometown;
     }
     if (gender !== undefined) {
@@ -278,14 +279,16 @@ router.patch('/me', authenticate, [
       const isToolsError = errorMessage.includes('tools');
       const isBioError = errorMessage.includes('bio');
       const isGenderError = errorMessage.includes('gender');
+      const isHometownError = errorMessage.includes('hometown');
       const isColumnError = updateError.code === 'P2021' || updateError.code === 'P2022';
       
       // If it's a column error, try updating without the problematic column(s)
-      if (isColumnError && (isToolsError || isBioError || isGenderError)) {
+      if (isColumnError && (isToolsError || isBioError || isGenderError || isHometownError)) {
         console.warn('[PATCH /users/me] Database column error detected. Problematic columns:', {
           tools: isToolsError,
           bio: isBioError,
-          gender: isGenderError
+          gender: isGenderError,
+          hometown: isHometownError
         });
         
         const fallbackUpdateData = { ...updateData };

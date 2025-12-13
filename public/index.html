@@ -12299,67 +12299,6 @@ async function renderJobs(reset = false) {
             isDragging = false;
           };
           
-          // Mouse events
-          imgElement.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            handleStart(e.clientX, e.clientY);
-          });
-          
-          document.addEventListener('mousemove', (e) => {
-            if (isDragging) handleMove(e.clientX, e.clientY);
-          });
-          
-          document.addEventListener('mouseup', handleEnd);
-          
-          // Touch events
-          imgElement.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            handleStart(touch.clientX, touch.clientY);
-          });
-          
-          document.addEventListener('touchmove', (e) => {
-            if (isDragging) {
-              e.preventDefault();
-              const touch = e.touches[0];
-              handleMove(touch.clientX, touch.clientY);
-            }
-          });
-          
-          document.addEventListener('touchend', handleEnd);
-          
-          // Zoom with wheel
-          cropContainer.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const delta = e.deltaY > 0 ? 0.9 : 1.1;
-            const newScale = Math.max(0.5, Math.min(3, scale * delta));
-            
-            // Zoom towards center
-            const rect = cropContainer.getBoundingClientRect();
-            const centerX = cropSize / 2;
-            const centerY = cropSize / 2;
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-            
-            const scaleChange = newScale / scale;
-            offsetX = (mouseX - centerX) - (mouseX - centerX - offsetX) * scaleChange;
-            offsetY = (mouseY - centerY) - (mouseY - centerY - offsetY) * scaleChange;
-            
-            scale = newScale;
-            imgElement.style.width = `${img.width * displayScale * scale}px`;
-            imgElement.style.height = `${img.height * displayScale * scale}px`;
-            imgElement.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
-            
-            // Re-constrain after zoom
-            const imgDisplayWidth = img.width * displayScale * scale;
-            const imgDisplayHeight = img.height * displayScale * scale;
-            const maxOffsetX = (imgDisplayWidth - cropSize) / 2;
-            const maxOffsetY = (imgDisplayHeight - cropSize) / 2;
-            offsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, offsetX));
-            offsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, offsetY));
-            imgElement.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
-          });
-          
           // Center image initially
           const imgDisplayWidth = img.width * displayScale * scale;
           const imgDisplayHeight = img.height * displayScale * scale;
@@ -12371,6 +12310,89 @@ async function renderJobs(reset = false) {
           
           cropContainer.appendChild(imgElement);
           cropContainer.appendChild(overlayDiv);
+          
+          // Mouse events - attach to container for better drag handling
+          cropContainer.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleStart(e.clientX, e.clientY);
+          });
+          
+          const mouseMoveHandler = (e) => {
+            if (isDragging) {
+              e.preventDefault();
+              handleMove(e.clientX, e.clientY);
+            }
+          };
+          
+          const mouseUpHandler = () => {
+            handleEnd();
+          };
+          
+          document.addEventListener('mousemove', mouseMoveHandler);
+          document.addEventListener('mouseup', mouseUpHandler);
+          
+          // Touch events
+          cropContainer.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const touch = e.touches[0];
+            handleStart(touch.clientX, touch.clientY);
+          });
+          
+          const touchMoveHandler = (e) => {
+            if (isDragging) {
+              e.preventDefault();
+              const touch = e.touches[0];
+              handleMove(touch.clientX, touch.clientY);
+            }
+          };
+          
+          const touchEndHandler = () => {
+            handleEnd();
+          };
+          
+          document.addEventListener('touchmove', touchMoveHandler, { passive: false });
+          document.addEventListener('touchend', touchEndHandler);
+          
+          // Zoom with wheel
+          cropContainer.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            const newScale = Math.max(0.5, Math.min(3, scale * delta));
+            
+            // Zoom towards mouse position
+            const rect = cropContainer.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            const scaleChange = newScale / scale;
+            offsetX = mouseX - (mouseX - offsetX) * scaleChange;
+            offsetY = mouseY - (mouseY - offsetY) * scaleChange;
+            
+            scale = newScale;
+            imgElement.style.width = `${img.width * displayScale * scale}px`;
+            imgElement.style.height = `${img.height * displayScale * scale}px`;
+            
+            // Re-constrain after zoom
+            const newImgDisplayWidth = img.width * displayScale * scale;
+            const newImgDisplayHeight = img.height * displayScale * scale;
+            const maxOffsetX = (newImgDisplayWidth - cropSize) / 2;
+            const maxOffsetY = (newImgDisplayHeight - cropSize) / 2;
+            offsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, offsetX));
+            offsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, offsetY));
+            
+            imgElement.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+          }, { passive: false });
+          
+          // Cleanup event listeners when modal closes
+          const cleanup = () => {
+            document.removeEventListener('mousemove', mouseMoveHandler);
+            document.removeEventListener('mouseup', mouseUpHandler);
+            document.removeEventListener('touchmove', touchMoveHandler);
+            document.removeEventListener('touchend', touchEndHandler);
+          };
           
           // Make sure image loads
           imgElement.onload = () => {
@@ -12404,11 +12426,13 @@ async function renderJobs(reset = false) {
           document.body.style.overflow = 'hidden';
           
           document.getElementById('cropCancelBtn').addEventListener('click', () => {
+            cleanup();
             overlay.remove();
             document.body.style.overflow = '';
           });
           
           document.getElementById('cropConfirmBtn').addEventListener('click', () => {
+            cleanup();
             // Get crop coordinates
             const crop = getCropCoordinates();
             
