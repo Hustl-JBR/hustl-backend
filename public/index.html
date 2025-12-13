@@ -6116,6 +6116,32 @@ function showChangePasswordModal() {
             `;
             document.body.appendChild(congratsModal);
             
+            // Handle "Got it!" button - navigate to Manage Jobs
+            const gotItBtn = congratsModal.querySelector('#congratsGotItBtn');
+            if (gotItBtn) {
+              gotItBtn.addEventListener('click', () => {
+                congratsModal.remove();
+                // Navigate to Manage Jobs view
+                if (typeof setView === 'function') {
+                  setView('manage-jobs');
+                } else if (window.setView && typeof window.setView === 'function') {
+                  window.setView('manage-jobs');
+                }
+              });
+            }
+            
+            // Also close modal when clicking outside and navigate to Manage Jobs
+            congratsModal.addEventListener('click', (e) => {
+              if (e.target === congratsModal) {
+                congratsModal.remove();
+                if (typeof setView === 'function') {
+                  setView('manage-jobs');
+                } else if (window.setView && typeof window.setView === 'function') {
+                  window.setView('manage-jobs');
+                }
+              }
+            });
+            
             showToast(successMessage);
             
             // Show job stats on the post page
