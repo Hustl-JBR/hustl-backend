@@ -12977,10 +12977,31 @@ async function renderJobs(reset = false) {
         });
       }
       
-      // Initialize hometown autocomplete when edit form is rendered
-      setTimeout(async () => {
-        await initMapboxAutocomplete();
-      }, 300);
+      // Auto-append ", TN" to hometown input
+      const hometownInput = document.getElementById("basicInfoHometown");
+      if (hometownInput) {
+        // Format existing value if it doesn't already have ", TN"
+        const currentValue = hometownInput.value.trim();
+        if (currentValue && !currentValue.endsWith(', TN') && !currentValue.endsWith(', Tennessee')) {
+          // Remove any existing state suffix and add ", TN"
+          const cityOnly = currentValue.replace(/,\s*(TN|Tennessee)$/i, '').trim();
+          if (cityOnly) {
+            hometownInput.value = cityOnly + ', TN';
+          }
+        }
+        
+        // Auto-append ", TN" on blur (when user finishes typing)
+        hometownInput.addEventListener('blur', () => {
+          let value = hometownInput.value.trim();
+          if (value) {
+            // Remove any existing state suffix
+            value = value.replace(/,\s*(TN|Tennessee)$/i, '').trim();
+            if (value) {
+              hometownInput.value = value + ', TN';
+            }
+          }
+        });
+      }
       
       // Save button handler
       const saveBtn = document.getElementById("basicInfoSaveBtn");
