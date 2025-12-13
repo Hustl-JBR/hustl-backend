@@ -1654,22 +1654,26 @@
       object-position: center;
     }
     
-    /* Desktop: Limit avatar sizes */
+    /* Desktop: Limit avatar sizes - reduced to prevent zoom */
     @media (min-width: 769px) {
       .profile-avatar {
-        max-width: 80px;
-        max-height: 80px;
+        max-width: 72px !important;
+        max-height: 72px !important;
+        width: auto !important;
+        height: auto !important;
       }
       
       /* Ensure all avatars respect max size */
       [data-user-id] {
-        max-width: 80px !important;
-        max-height: 80px !important;
+        max-width: 72px !important;
+        max-height: 72px !important;
       }
       
       [data-user-id] img {
-        max-width: 80px !important;
-        max-height: 80px !important;
+        max-width: 72px !important;
+        max-height: 72px !important;
+        width: 100% !important;
+        height: 100% !important;
         object-fit: cover !important;
         object-position: center !important;
       }
