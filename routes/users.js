@@ -275,18 +275,27 @@ router.patch('/me', authenticate, [
       console.error('[PATCH /users/me] Error code:', updateError.code);
       
       // Check which specific column is causing the error
+      // Look for the exact column name in the error message
       const errorMessage = updateError.message || '';
-      const isToolsError = errorMessage.includes('tools') || errorMessage.includes('Unknown argument `tools`');
-      const isBioError = errorMessage.includes('bio') || errorMessage.includes('Unknown argument `bio`');
-      const isGenderError = errorMessage.includes('gender') || errorMessage.includes('Unknown argument `gender`');
-      const isHometownError = errorMessage.includes('hometown') || errorMessage.includes('Unknown argument `hometown`');
+      
+      // Check for "Unknown argument `columnname`" pattern - this is the most specific
+      const unknownArgMatch = errorMessage.match(/Unknown argument `([^`]+)`/);
+      const problematicColumn = unknownArgMatch ? unknownArgMatch[1] : null;
+      
+      // Also check for column name in error message (for P2022 errors)
+      const isToolsError = problematicColumn === 'tools' || (errorMessage.includes('tools') && errorMessage.includes('column'));
+      const isBioError = problematicColumn === 'bio' || (errorMessage.includes('bio') && errorMessage.includes('column'));
+      const isGenderError = problematicColumn === 'gender' || (errorMessage.includes('gender') && errorMessage.includes('column'));
+      const isHometownError = problematicColumn === 'hometown' || (errorMessage.includes('hometown') && errorMessage.includes('column'));
+      
       // P2021 = table does not exist, P2022 = column does not exist
       // Also catch "Unknown argument" errors which occur when column doesn't exist
       const isColumnError = updateError.code === 'P2021' || updateError.code === 'P2022' || errorMessage.includes('Unknown argument');
       
-      // If it's a column error, try updating without the problematic column(s)
+      // If it's a column error, try updating without ONLY the problematic column(s)
       if (isColumnError && (isToolsError || isBioError || isGenderError || isHometownError)) {
-        console.warn('[PATCH /users/me] Database column error detected. Problematic columns:', {
+        console.warn('[PATCH /users/me] Database column error detected. Problematic column:', problematicColumn || 'unknown');
+        console.warn('[PATCH /users/me] Error details:', {
           tools: isToolsError,
           bio: isBioError,
           gender: isGenderError,
@@ -309,7 +318,7 @@ router.patch('/me', authenticate, [
           updatedAt: true,
         };
         
-        // Only remove the column(s) that are causing the error
+        // Only remove the column(s) that are ACTUALLY causing the error
         if (isToolsError) {
           delete fallbackUpdateData.tools;
           console.warn('[PATCH /users/me] Removing tools from update (column does not exist)');
