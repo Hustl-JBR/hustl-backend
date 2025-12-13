@@ -12247,22 +12247,60 @@ async function renderJobs(reset = false) {
           `;
           
           // Function to calculate crop coordinates (used for final crop)
+          // This must match exactly what's visible in the circular crop area
           const getCropCoordinates = () => {
+            // Image display dimensions in pixels
             const imgDisplayWidth = img.width * displayScale * scale;
             const imgDisplayHeight = img.height * displayScale * scale;
+            
+            // Crop circle center and radius (in container coordinates)
             const cropCenterX = cropSize / 2;
             const cropCenterY = cropSize / 2;
             const cropRadius = cropSize / 2;
             
+            // Image position in container (accounting for centering + offset)
             const imgLeft = (cropSize - imgDisplayWidth) / 2 + offsetX;
             const imgTop = (cropSize - imgDisplayHeight) / 2 + offsetY;
             
-            const sourceX = (cropCenterX - cropRadius - imgLeft) / (displayScale * scale);
-            const sourceY = (cropCenterY - cropRadius - imgTop) / (displayScale * scale);
-            const sourceSize = (cropRadius * 2) / (displayScale * scale);
+            // Calculate what part of the image is visible in the crop circle
+            // Convert from display coordinates to source image coordinates
+            const scaleFactor = displayScale * scale;
             
-            const clampedX = Math.max(0, Math.min(img.width - sourceSize, sourceX));
-            const clampedY = Math.max(0, Math.min(img.height - sourceSize, sourceY));
+            // The crop circle bounds in image display coordinates
+            const cropLeft = cropCenterX - cropRadius;
+            const cropTop = cropCenterY - cropRadius;
+            const cropRight = cropCenterX + cropRadius;
+            const cropBottom = cropCenterY + cropRadius;
+            
+            // Find intersection of crop circle with image
+            // Image bounds in container coordinates
+            const imgRight = imgLeft + imgDisplayWidth;
+            const imgBottom = imgTop + imgDisplayHeight;
+            
+            // Clamp crop area to image bounds
+            const visibleLeft = Math.max(cropLeft, imgLeft);
+            const visibleTop = Math.max(cropTop, imgTop);
+            const visibleRight = Math.min(cropRight, imgRight);
+            const visibleBottom = Math.min(cropBottom, imgBottom);
+            
+            // Convert to source image coordinates
+            const sourceX = (visibleLeft - imgLeft) / scaleFactor;
+            const sourceY = (visibleTop - imgTop) / scaleFactor;
+            const sourceWidth = (visibleRight - visibleLeft) / scaleFactor;
+            const sourceHeight = (visibleBottom - visibleTop) / scaleFactor;
+            
+            // Use the smaller dimension to ensure square crop
+            const sourceSize = Math.min(sourceWidth, sourceHeight);
+            
+            // Center the square crop in the visible area
+            const centerX = sourceX + sourceWidth / 2;
+            const centerY = sourceY + sourceHeight / 2;
+            const finalX = centerX - sourceSize / 2;
+            const finalY = centerY - sourceSize / 2;
+            
+            // Clamp to image bounds
+            const clampedX = Math.max(0, Math.min(img.width - sourceSize, finalX));
+            const clampedY = Math.max(0, Math.min(img.height - sourceSize, finalY));
             const clampedSize = Math.min(sourceSize, img.width - clampedX, img.height - clampedY);
             
             return { x: clampedX, y: clampedY, size: clampedSize };
@@ -12514,7 +12552,7 @@ async function renderJobs(reset = false) {
               alt="${user.name || 'User'}" 
               ${dataUserIdAttr}
               ${lightboxClick}
-              style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; ${enableLightbox && !onClick ? 'cursor: pointer;' : ''}"
+              style="width: 100%; height: 100%; object-fit: cover; object-position: center; border-radius: 50%; display: block; ${enableLightbox && !onClick ? 'cursor: pointer;' : ''}"
               onerror="this.parentElement.innerHTML='<div style=\\'width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: ${fontSize}; font-weight: 700; color: var(--primary); background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);\\'>${initial}</div>'"
             />
           </div>
