@@ -16385,6 +16385,20 @@ meta.textContent =
             });
             
             // View profile buttons
+            // Handle reviews dropdown toggle for customer profile in job card
+            if (isHustler && customerId) {
+              const viewReviewsBtn = card.querySelector(`.viewLast5ReviewsBtn_${customerId}`);
+              const reviewsDropdown = card.querySelector(`.reviewsDropdown_${customerId}`);
+              if (viewReviewsBtn && reviewsDropdown) {
+                viewReviewsBtn.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  const isVisible = reviewsDropdown.style.display !== 'none';
+                  reviewsDropdown.style.display = isVisible ? 'none' : 'block';
+                  viewReviewsBtn.textContent = isVisible ? 'View last 5 reviews' : 'Hide reviews';
+                });
+              }
+            }
+            
             card.querySelectorAll('.viewHustlerProfileBtn, .viewCustomerProfileBtn').forEach(btn => {
               btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
