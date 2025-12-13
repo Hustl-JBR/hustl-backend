@@ -126,6 +126,13 @@ router.post('/', authenticate, [
       ? job.hustlerId 
       : job.customerId;
     
+    // Check if job has both parties (customer and hustler)
+    if (!expectedRevieweeId) {
+      return res.status(400).json({ 
+        error: 'Job must have both customer and hustler assigned before reviews can be submitted' 
+      });
+    }
+    
     if (expectedRevieweeId !== revieweeId) {
       return res.status(400).json({ 
         error: 'Invalid reviewee' 
@@ -183,7 +190,10 @@ router.post('/', authenticate, [
       select: { stars: true },
     });
 
-    const avgRating = allReviews.reduce((sum, r) => sum + r.stars, 0) / allReviews.length;
+    // Calculate average rating (handle division by zero)
+    const avgRating = allReviews.length > 0
+      ? allReviews.reduce((sum, r) => sum + r.stars, 0) / allReviews.length
+      : 0;
     
     await prisma.user.update({
       where: { id: revieweeId },
@@ -196,7 +206,15 @@ router.post('/', authenticate, [
     res.status(201).json(review);
   } catch (error) {
     console.error('Create review error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
   }
 });
 
