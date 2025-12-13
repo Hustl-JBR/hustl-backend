@@ -20434,7 +20434,7 @@ meta.textContent =
           <div style="margin-bottom: 1.5rem;">
             <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">Rating</div>
             <div id="ratingStars" style="display: flex; gap: 0.5rem; font-size: 2rem; cursor: pointer;">
-              ${[1,2,3,4,5].map(i => `<span class="ratingStar" data-rating="${i}" style="color: #d1d5db; transition: color 0.2s;">⭐</span>`).join('')}
+              ${[1,2,3,4,5].map(i => `<span class="ratingStar" data-rating="${i}" style="color: #d1d5db; transition: color 0.2s;">★</span>`).join('')}
             </div>
             <div id="ratingText" style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-muted);">Select a rating</div>
           </div>
@@ -20477,14 +20477,16 @@ meta.textContent =
           const starNum = i + 1;
           const isHighlighted = starNum <= displayRating;
           
-          // Remove inline style and set new color
+          // Force remove inline style and set new color with !important via setProperty
           s.style.removeProperty('color');
+          s.style.cssText = s.style.cssText.replace(/color\s*:[^;]+;?/gi, ''); // Remove any color from cssText
+          
           if (isHighlighted) {
-            s.style.color = '#fbbf24';
-            console.log(`  ✅ Star ${starNum} highlighted`);
+            s.style.setProperty('color', '#fbbf24', 'important');
+            console.log(`  ✅ Star ${starNum} highlighted - computed color: ${window.getComputedStyle(s).color}`);
           } else {
-            s.style.color = '#d1d5db';
-            console.log(`  ⚪ Star ${starNum} not highlighted`);
+            s.style.setProperty('color', '#d1d5db', 'important');
+            console.log(`  ⚪ Star ${starNum} not highlighted - computed color: ${window.getComputedStyle(s).color}`);
           }
         });
         
@@ -20686,7 +20688,7 @@ meta.textContent =
           <div style="margin-bottom: 2rem;">
             <div style="font-size: 1rem; font-weight: 600; color: var(--text-main); margin-bottom: 1rem; text-align: center;">Rating *</div>
             <div id="ratingStars" style="display: flex; gap: 0.75rem; font-size: 3rem; cursor: pointer; justify-content: center;">
-              ${[1,2,3,4,5].map(i => `<span class="ratingStar" data-rating="${i}" style="color: #d1d5db; transition: all 0.2s; user-select: none;">⭐</span>`).join('')}
+              ${[1,2,3,4,5].map(i => `<span class="ratingStar" data-rating="${i}" style="color: #d1d5db; transition: all 0.2s; user-select: none;">★</span>`).join('')}
             </div>
             <div id="ratingText" style="margin-top: 0.75rem; font-size: 1rem; color: var(--text-muted); text-align: center; min-height: 1.5rem;">Select a rating</div>
           </div>
@@ -20733,18 +20735,19 @@ meta.textContent =
           const starNum = i + 1;
           const isHighlighted = starNum <= displayRating;
           
-          // Remove inline style and set new color
+          // Force remove inline style and set new color with !important
           s.style.removeProperty('color');
           s.style.removeProperty('transform');
+          s.style.cssText = s.style.cssText.replace(/color\s*:[^;]+;?/gi, ''); // Remove any color from cssText
           
           if (isHighlighted) {
-            s.style.color = '#fbbf24';
+            s.style.setProperty('color', '#fbbf24', 'important');
             s.style.transform = (hoverRating > 0 && selectedRating === 0) ? 'scale(1.1)' : 'scale(1)';
-            console.log(`  ✅ Star ${starNum} highlighted`);
+            console.log(`  ✅ Star ${starNum} highlighted - computed: ${window.getComputedStyle(s).color}`);
           } else {
-            s.style.color = '#d1d5db';
+            s.style.setProperty('color', '#d1d5db', 'important');
             s.style.transform = 'scale(1)';
-            console.log(`  ⚪ Star ${starNum} not highlighted`);
+            console.log(`  ⚪ Star ${starNum} not highlighted - computed: ${window.getComputedStyle(s).color}`);
           }
         });
         
