@@ -167,6 +167,7 @@ router.patch('/me', authenticate, [
   }).withMessage('Bio must be a string with max 300 characters'),
   body('gender').optional().isIn(['male', 'female', 'other', 'prefer_not_to_say', null]),
   body('tools').optional().trim(),
+  body('hometown').optional().trim(),
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -174,7 +175,7 @@ router.patch('/me', authenticate, [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { name, city, zip, photoUrl, bio, gender, tools } = req.body;
+    const { name, city, zip, photoUrl, bio, gender, tools, hometown } = req.body;
     const updateData = {};
 
     console.log('[PATCH /users/me] Received update request:', { name, city, zip, photoUrl, bio, gender, tools });
@@ -194,6 +195,11 @@ router.patch('/me', authenticate, [
       const trimmedBio = typeof bio === 'string' ? bio.trim() : bio;
       updateData.bio = (trimmedBio === '' || trimmedBio === null) ? null : trimmedBio;
       console.log('[PATCH /users/me] Bio processing - Original:', JSON.stringify(bio), 'Type:', typeof bio, 'Trimmed:', JSON.stringify(trimmedBio), 'Final:', JSON.stringify(updateData.bio));
+    }
+    if (hometown !== undefined) {
+      // Allow empty string to clear hometown
+      const trimmedHometown = typeof hometown === 'string' ? hometown.trim() : hometown;
+      updateData.hometown = (trimmedHometown === '' || trimmedHometown === null) ? null : trimmedHometown;
     }
     if (gender !== undefined) {
       // Allow empty string to clear gender
