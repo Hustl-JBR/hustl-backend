@@ -12254,8 +12254,6 @@ async function renderJobs(reset = false) {
           
           // Function to calculate crop coordinates (used for final crop)
           // This must match exactly what's visible in the circular crop area
-          // Function to calculate crop coordinates (used for final crop)
-          // This must match exactly what's visible in the circular crop area
           // The circle is centered at (cropSize/2, cropSize/2) with radius cropSize/2
           // We crop a square that fits inside this circle
           const getCropCoordinates = () => {
@@ -12271,9 +12269,10 @@ async function renderJobs(reset = false) {
             const cropCenterY = cropSize / 2;
             
             // Image position in container coordinates
-            // Image is centered in container, then offset by user drag
-            const imgLeft = (cropSize - imgDisplayWidth) / 2 + offsetX;
-            const imgTop = (cropSize - imgDisplayHeight) / 2 + offsetY;
+            // The image element is positioned with left:0, top:0 and then translated
+            // So the actual position is just the transform offset
+            const imgLeft = offsetX;
+            const imgTop = offsetY;
             
             // The visible square in the crop circle (in container coordinates)
             // For a 1:1 square crop, we use the full cropSize as the square side
@@ -12283,9 +12282,29 @@ async function renderJobs(reset = false) {
             
             // Find what part of the source image this square corresponds to
             // Convert from container coordinates to source image coordinates
-            const sourceX = (squareLeft - imgLeft) / scaleFactor;
-            const sourceY = (squareTop - imgTop) / scaleFactor;
+            // The image is centered, so we need to account for that
+            const imgCenterX = imgLeft + imgDisplayWidth / 2;
+            const imgCenterY = imgTop + imgDisplayHeight / 2;
+            
+            // The square's center relative to the image center
+            const squareCenterX = squareLeft + squareSize / 2;
+            const squareCenterY = squareTop + squareSize / 2;
+            
+            // Offset from image center to square center (in container pixels)
+            const offsetFromCenterX = squareCenterX - imgCenterX;
+            const offsetFromCenterY = squareCenterY - imgCenterY;
+            
+            // Convert to source image coordinates
+            // The source image center is at (img.width/2, img.height/2)
+            const sourceCenterX = img.width / 2;
+            const sourceCenterY = img.height / 2;
+            const sourceOffsetX = offsetFromCenterX / scaleFactor;
+            const sourceOffsetY = offsetFromCenterY / scaleFactor;
+            
+            // Calculate the crop square in source coordinates
             const sourceSize = squareSize / scaleFactor;
+            const sourceX = sourceCenterX - sourceSize / 2 + sourceOffsetX;
+            const sourceY = sourceCenterY - sourceSize / 2 + sourceOffsetY;
             
             // Clamp to image bounds
             const clampedX = Math.max(0, Math.min(img.width - sourceSize, sourceX));
