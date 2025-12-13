@@ -15860,7 +15860,7 @@ meta.textContent =
               </div>
               
               <!-- Assigned Hustler (if job is in progress or assigned) -->
-              ${(job.status === 'IN_PROGRESS' || job.status === 'ASSIGNED') && job.hustler ? `
+              ${(job.status === 'IN_PROGRESS' || job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && job.hustler ? `
               <div style="padding: 1.5rem; background: #dbeafe; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #3b82f640;">
                 <div style="font-size: 0.9rem; color: #1e40af; font-weight: 600; margin-bottom: 0.75rem;">✅ Assigned Hustler</div>
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -15872,6 +15872,26 @@ meta.textContent =
                     <div style="font-weight: 700; color: var(--text-main); cursor: pointer;" class="viewHustlerProfileBtn" data-user-id="${job.hustler.id}">${job.hustler.name || 'Unknown'}</div>
                     <div style="font-size: 0.85rem; color: var(--text-muted);">${job.hustler.city || ''} ${job.hustler.zip || ''}</div>
                   </div>
+                </div>
+              </div>
+              ` : ''}
+              
+              <!-- Start Code Section (Customer) - CRUCIAL: Display prominently in job card -->
+              ${job.hustlerId && job.startCode && !job.startCodeVerified && (job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && job.status !== 'PAID' ? `
+              <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 3px solid #fbbf24;">
+                <div style="font-weight: 700; font-size: 1rem; color: #92400e; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                  <span>🔐</span>
+                  <span>Start Code (Give to Hustler)</span>
+                </div>
+                <div style="font-size: 1.75rem; font-weight: 700; letter-spacing: 0.3em; color: #92400e; text-align: center; padding: 1rem; background: white; border-radius: 8px; font-family: 'Courier New', monospace; margin-bottom: 0.75rem; border: 2px solid #fbbf24;">
+                  ${job.startCode}
+                </div>
+                <div style="padding: 0.75rem; background: #fee2e2; border-left: 4px solid #dc2626; border-radius: 6px; margin-bottom: 0.75rem;">
+                  <div style="font-weight: 600; color: #991b1b; margin-bottom: 0.25rem; font-size: 0.85rem;">⚠️ Safety Warning</div>
+                  <div style="font-size: 0.8rem; color: #991b1b;">Do not give the Start Code until the hustler is physically there and ready to begin the job.</div>
+                </div>
+                <div style="font-size: 0.85rem; color: #92400e; text-align: center;">
+                  Share this 6-digit code with your hustler when they arrive.
                 </div>
               </div>
               ` : ''}
@@ -17972,7 +17992,7 @@ meta.textContent =
                 </div>
                 
                 <!-- Start Code Section (Customer) - NOT for completed jobs -->
-                ${job.hustlerId && job.startCode && !job.startCodeVerified && job.status === 'ASSIGNED' && job.status !== 'PAID' ? `
+                ${job.hustlerId && job.startCode && !job.startCodeVerified && (job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && job.status !== 'PAID' ? `
                 <div style="border-top: 2px solid var(--border); padding-top: 2rem; margin-bottom: 2rem;">
                   <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; border: 2px solid #fbbf24;">
                     <div style="font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 0.75rem;">🔐 Start Code (Give to Hustler)</div>
