@@ -1128,6 +1128,7 @@ router.patch('/:id', authenticate, requireRole('CUSTOMER'), [
     // Handle requirements merge
     if (requirements !== undefined) {
       const existingRequirements = job.requirements || {};
+      // Deep merge to preserve nested properties
       updateData.requirements = {
         ...existingRequirements,
         ...requirements
@@ -1140,6 +1141,7 @@ router.patch('/:id', authenticate, requireRole('CUSTOMER'), [
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + days);
       
+      // Get existing requirements (either from updateData or job)
       const existingRequirements = updateData.requirements || job.requirements || {};
       updateData.requirements = {
         ...existingRequirements,
@@ -1147,11 +1149,13 @@ router.patch('/:id', authenticate, requireRole('CUSTOMER'), [
         expiresAt: expiresAt.toISOString()
       };
     }
+    
+    // Log update data for debugging
+    console.log('[PATCH /jobs/:id] Update data:', JSON.stringify(updateData, null, 2));
 
     // Geocode address if it changed
     if (address && address !== job.address) {
       try {
-        const { geocodeAddress } = require('../utils/geocoding');
         const coords = await geocodeAddress(address);
         updateData.lat = coords.lat;
         updateData.lng = coords.lng;
@@ -1194,7 +1198,17 @@ router.patch('/:id', authenticate, requireRole('CUSTOMER'), [
     res.json(updated);
   } catch (error) {
     console.error('Update job error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Update job error stack:', error.stack);
+    console.error('Update job error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta
+    });
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message || 'Unknown error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
