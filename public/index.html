@@ -1657,14 +1657,19 @@
     /* Desktop: Limit avatar sizes */
     @media (min-width: 769px) {
       .profile-avatar {
-        max-width: 120px;
-        max-height: 120px;
+        max-width: 80px;
+        max-height: 80px;
       }
       
       /* Ensure all avatars respect max size */
+      [data-user-id] {
+        max-width: 80px !important;
+        max-height: 80px !important;
+      }
+      
       [data-user-id] img {
-        max-width: 120px !important;
-        max-height: 120px !important;
+        max-width: 80px !important;
+        max-height: 80px !important;
         object-fit: cover !important;
         object-position: center !important;
       }
@@ -12645,7 +12650,7 @@ async function renderJobs(reset = false) {
               alt="${user.name || 'User'}" 
               ${dataUserIdAttr}
               ${lightboxClick}
-              style="width: 100%; height: 100%; object-fit: cover; object-position: center; border-radius: 50%; display: block; ${enableLightbox && !onClick ? 'cursor: pointer;' : ''}"
+              style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: cover; object-position: center; border-radius: 50%; display: block; ${enableLightbox && !onClick ? 'cursor: pointer;' : ''}"
               onerror="this.parentElement.innerHTML='<div style=\\'width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: ${fontSize}; font-weight: 700; color: var(--primary); background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);\\'>${initial}</div>'"
             />
           </div>
