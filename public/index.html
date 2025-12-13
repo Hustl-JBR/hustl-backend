@@ -6102,13 +6102,7 @@ function showChangePasswordModal() {
                 <p style="color: var(--text-muted); margin: 0 0 1.5rem 0; line-height: 1.6;">
                   Your job has been posted successfully! Hustlers nearby will begin applying soon.
                 </p>
-                <button onclick="
-                  const modal = this.closest('div[style*=\"position: fixed\"]');
-                  if (modal) modal.remove();
-                  if (window.setView && typeof window.setView === 'function') {
-                    window.setView('manage-jobs');
-                  }
-                " style="
+                <button id="congratsGotItBtn" style="
                   padding: 0.75rem 2rem;
                   background: var(--primary);
                   color: white;
