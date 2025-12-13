@@ -1121,9 +1121,14 @@ router.patch('/:id', authenticate, requireRole('CUSTOMER'), [
     if (endTime !== undefined) updateData.endTime = new Date(endTime);
     if (payType !== undefined) updateData.payType = payType;
     if (amount !== undefined) updateData.amount = parseFloat(amount);
-    if (hourlyRate !== undefined) updateData.hourlyRate = parseFloat(hourlyRate);
-    if (estHours !== undefined) updateData.estHours = parseInt(estHours);
-    if (teamSize !== undefined) updateData.teamSize = parseInt(teamSize);
+    if (hourlyRate !== undefined) {
+      updateData.hourlyRate = hourlyRate ? parseFloat(hourlyRate) : null;
+    }
+    if (estHours !== undefined) {
+      updateData.estHours = estHours ? parseInt(estHours) : null;
+    }
+    // teamSize is stored in requirements, not as a direct field
+    // We'll handle it in the requirements merge below
 
     // Handle requirements merge
     if (requirements !== undefined) {
@@ -1132,6 +1137,15 @@ router.patch('/:id', authenticate, requireRole('CUSTOMER'), [
       updateData.requirements = {
         ...existingRequirements,
         ...requirements
+      };
+    }
+    
+    // Handle teamSize - it's stored in requirements, not as a direct field
+    if (teamSize !== undefined) {
+      const existingRequirements = updateData.requirements || job.requirements || {};
+      updateData.requirements = {
+        ...existingRequirements,
+        teamSize: parseInt(teamSize) || 1
       };
     }
 

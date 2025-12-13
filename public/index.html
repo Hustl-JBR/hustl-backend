@@ -5428,9 +5428,10 @@ function showChangePasswordModal() {
           endTime: endTime.toISOString(),
           payType,
           amount,
-          teamSize: workersNeeded || 1,
+          teamSize: workersNeeded || 1, // Backend will move this to requirements
           keepActiveFor,
           requirements: {
+            teamSize: workersNeeded || 1, // Also include in requirements
             pickup_area: pickupArea,
             pickup_city: pickupCity,
             pickup_zip: pickupZip,
