@@ -18207,6 +18207,17 @@ meta.textContent =
           }
         });
         
+        // Profile button event listeners - work for both customer and hustler views
+        modalOverlay.querySelectorAll('.viewCustomerProfile, .viewCustomerProfileBtn, .viewHustlerProfile, .viewHustlerProfileBtn, .viewApplicantProfile, .viewApplicantProfileBtn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const userId = btn.dataset.userId;
+            if (userId) {
+              await showUserProfileCard(userId);
+            }
+          });
+        });
+        
         // Event listeners for customer view
         if (actualRole === 'customer') {
           // Accept/Decline applicants
@@ -18237,33 +18248,6 @@ meta.textContent =
               const offerId = btn.dataset.offerId;
               const jobId = btn.dataset.jobId;
               showNegotiatePriceModal(offerId, jobId, modalOverlay);
-            });
-          });
-          
-          // View applicant profile - use unified profile card
-          modalOverlay.querySelectorAll('.viewApplicantProfile, .viewApplicantProfileBtn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-              e.stopPropagation();
-              const userId = btn.dataset.userId;
-              await showUserProfileCard(userId);
-            });
-          });
-          
-          // View customer profile - use unified profile card
-          modalOverlay.querySelectorAll('.viewCustomerProfile, .viewCustomerProfileBtn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-              e.stopPropagation();
-              const userId = btn.dataset.userId;
-              await showUserProfileCard(userId);
-            });
-          });
-          
-          // View hustler profile - use unified profile card
-          modalOverlay.querySelectorAll('.viewHustlerProfile, .viewHustlerProfileBtn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-              e.stopPropagation();
-              const userId = btn.dataset.userId;
-              await showUserProfileCard(userId);
             });
           });
           
