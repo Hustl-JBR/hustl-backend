@@ -12837,8 +12837,11 @@ async function renderJobs(reset = false) {
     
     // Render Basic Info Section - Edit Mode
     function renderBasicInfoEdit(user, ratingAvg, ratingCount, container) {
+      // Store original photo URL for revert on cancel
+      const originalPhotoUrl = user.photoUrl || null;
       let photoPreview = user.photoUrl || null;
       let newPhotoFile = null;
+      let hasUnsavedPhoto = false;
       
       // Use renderUserAvatar for consistency (80px for mobile-friendly size)
       const avatarContent = renderUserAvatar(user, 80, { 
