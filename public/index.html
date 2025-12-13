@@ -1632,6 +1632,8 @@
     .profile-avatar {
       width: 60px;
       height: 60px;
+      max-width: 72px;
+      max-height: 72px;
       border-radius: 999px;
       background: #e5e7eb;
       display: flex;
@@ -1646,7 +1648,39 @@
     .profile-avatar img {
       width: 100%;
       height: 100%;
+      max-width: 100%;
+      max-height: 100%;
       object-fit: cover;
+      object-position: center;
+    }
+    
+    /* Desktop: Limit avatar sizes */
+    @media (min-width: 769px) {
+      .profile-avatar {
+        max-width: 120px;
+        max-height: 120px;
+      }
+      
+      /* Ensure all avatars respect max size */
+      [data-user-id] img {
+        max-width: 120px !important;
+        max-height: 120px !important;
+        object-fit: cover !important;
+        object-position: center !important;
+      }
+    }
+    
+    /* Mobile: Keep smaller size */
+    @media (max-width: 768px) {
+      .profile-avatar {
+        max-width: 72px;
+        max-height: 72px;
+      }
+      
+      [data-user-id] img {
+        max-width: 72px !important;
+        max-height: 72px !important;
+      }
     }
 
     .profile-row {
@@ -15072,6 +15106,23 @@ meta.textContent =
                   </div>
                 </div>
               </div>
+              
+              <!-- Assigned Hustler (if job is in progress or assigned) -->
+              ${(job.status === 'IN_PROGRESS' || job.status === 'ASSIGNED') && job.hustler ? `
+              <div style="padding: 1.5rem; background: #dbeafe; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #3b82f640;">
+                <div style="font-size: 0.9rem; color: #1e40af; font-weight: 600; margin-bottom: 0.75rem;">✅ Assigned Hustler</div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  ${renderUserAvatar(job.hustler, 48, { 
+                    className: 'viewHustlerProfileBtn',
+                    style: 'cursor: pointer;'
+                  })}
+                  <div style="flex: 1;">
+                    <div style="font-weight: 700; color: var(--text-main); cursor: pointer;" class="viewHustlerProfileBtn" data-user-id="${job.hustler.id}">${job.hustler.name || 'Unknown'}</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">${job.hustler.city || ''} ${job.hustler.zip || ''}</div>
+                  </div>
+                </div>
+              </div>
+              ` : ''}
               
               <!-- Metrics Section - Prominent Applicant Count -->
               <div style="padding: 1.5rem; background: white;">
