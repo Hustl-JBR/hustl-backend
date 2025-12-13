@@ -12688,7 +12688,8 @@ async function renderJobs(reset = false) {
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; font-size: 0.85rem; color: var(--text-muted);">
               <span>${ratingDisplay}</span>
             </div>
-            ${location ? `<div style="font-size: 0.8rem; color: var(--text-muted);">${location}</div>` : ''}
+            ${location ? `<div style="font-size: 0.8rem; color: var(--text-muted);">📍 ${location}</div>` : ''}
+            ${user.tools && user.tools.trim() ? `<div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">🔧 ${user.tools}</div>` : ''}
             ${showViewReviews && ratingCount > 0 ? `
               <button id="${viewReviewsId}" class="btn btn-ghost" style="
                 padding: 0.25rem 0.5rem;
