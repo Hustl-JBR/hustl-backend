@@ -6832,9 +6832,17 @@ async function renderJobs(reset = false) {
       allLoadedJobs = [];
     }
     
-    // Browse Jobs only shows OPEN jobs
+    // Browse Jobs only shows OPEN jobs that the user hasn't applied to
     let filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => {
-      return j.status === "OPEN" || j.status === "open";
+      // Only show OPEN jobs
+      if (j.status !== "OPEN" && j.status !== "open") return false;
+      
+      // Filter out jobs the user has already applied to
+      if (userAppliedJobIds && userAppliedJobIds.has(j.id)) {
+        return false;
+      }
+      
+      return true;
     }) : [];
     
     // Apply category filters
@@ -18655,9 +18663,15 @@ meta.textContent =
               return;
             }
             
-            await applyToJob(job.id, note, proposedPrice);
+            const result = await applyToJob(job.id, note, proposedPrice);
             document.body.removeChild(modalOverlay);
-            showToast("Application submitted!");
+            // Refresh jobs list to remove the applied job from Browse Jobs
+            if (typeof renderJobs === 'function') {
+              // Reset the jobs list and reload
+              allLoadedJobs = [];
+              await renderJobs(true);
+            }
+            // showToast is handled inside applyToJob function
           });
           
           // Cancel application
