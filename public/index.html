@@ -17610,6 +17610,20 @@ meta.textContent =
             }
           });
         } else {
+          // Handle reviews dropdown toggle in customer profile card (hustler view)
+          if (job.customer && job.customer.id) {
+            const viewReviewsBtn = modalOverlay.querySelector(`.viewLast5ReviewsBtn_modal_${job.customer.id}`);
+            const reviewsDropdown = modalOverlay.querySelector(`.reviewsDropdown_modal_${job.customer.id}`);
+            if (viewReviewsBtn && reviewsDropdown) {
+              viewReviewsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isVisible = reviewsDropdown.style.display !== 'none';
+                reviewsDropdown.style.display = isVisible ? 'none' : 'block';
+                viewReviewsBtn.textContent = isVisible ? 'View last 5 reviews' : 'Hide reviews';
+              });
+            }
+          }
+          
           modalOverlay.querySelectorAll('.messageCustomerBtn').forEach(btn => {
             btn.addEventListener('click', () => {
               // Set the active conversation to this job
