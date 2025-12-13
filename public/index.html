@@ -20698,7 +20698,17 @@ meta.textContent =
           
           showToast("✅ Rating submitted! Thank you for your feedback.");
           document.body.removeChild(modalOverlay);
-          loadCompletedJobs();
+          
+          // CRITICAL: Refresh completed jobs to hide the "Rate Worker" button
+          // This ensures the UI reflects that a review was already submitted
+          if (typeof loadCompletedJobs === 'function') {
+            loadCompletedJobs();
+          }
+          
+          // Trigger global review refresh event
+          window.dispatchEvent(new CustomEvent('reviewSubmitted', { 
+            detail: { revieweeId: userId, jobId } 
+          }));
         } catch (error) {
           console.error("Error submitting rating:", error);
           showToast("Error submitting rating. Please try again.");
