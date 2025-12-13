@@ -377,21 +377,59 @@ router.patch('/me', authenticate, [
         
         // Try the update again without the problematic column(s)
         try {
+          // Make sure fallbackSelect doesn't include tools if tools column doesn't exist
+          const finalSelect = { ...fallbackSelect };
+          if (isToolsError) {
+            delete finalSelect.tools;
+          }
+          
           user = await prisma.user.update({
             where: { id: req.user.id },
             data: fallbackUpdateData,
-            select: fallbackSelect,
+            select: finalSelect,
           });
           
           // Set null for columns that don't exist
-          if (isToolsError && !user.tools) user.tools = null;
-          if (isBioError && !user.bio) user.bio = null;
-          if (isGenderError && !user.gender) user.gender = null;
+          if (isToolsError) user.tools = null;
+          if (isBioError) user.bio = null;
+          if (isGenderError) user.gender = null;
+          if (isHometownError) user.hometown = null;
           
           console.log('[PATCH /users/me] Update succeeded after removing problematic columns');
         } catch (retryError) {
           console.error('[PATCH /users/me] Retry also failed:', retryError);
-          throw updateError; // Throw original error
+          const retryErrorMessage = retryError.message || '';
+          const retryUnknownArgMatch = retryErrorMessage.match(/Unknown argument `([^`]+)`/);
+          const retryProblematicColumn = retryUnknownArgMatch ? retryUnknownArgMatch[1] : null;
+          const isRetryToolsError = retryErrorMessage.includes('tools') && (retryErrorMessage.includes('column') || retryError.code === 'P2022');
+          
+          // If retry failed due to another missing column, remove that too and try once more
+          if ((retryProblematicColumn && (retryProblematicColumn === 'hometown' || retryProblematicColumn === 'tools' || retryProblematicColumn === 'bio' || retryProblematicColumn === 'gender')) || isRetryToolsError) {
+            const columnToRemove = retryProblematicColumn || 'tools';
+            console.warn(`[PATCH /users/me] Retry failed due to missing column: ${columnToRemove}, removing it and retrying once more`);
+            const finalUpdateData = { ...fallbackUpdateData };
+            delete finalUpdateData[columnToRemove];
+            
+            const finalSelect = { ...fallbackSelect };
+            delete finalSelect[columnToRemove];
+            if (isToolsError || columnToRemove === 'tools') delete finalSelect.tools;
+            
+            user = await prisma.user.update({
+              where: { id: req.user.id },
+              data: finalUpdateData,
+              select: finalSelect,
+            });
+            
+            // Set null for all removed columns
+            if (isToolsError || columnToRemove === 'tools') user.tools = null;
+            if (isBioError || columnToRemove === 'bio') user.bio = null;
+            if (isGenderError || columnToRemove === 'gender') user.gender = null;
+            if (isHometownError || columnToRemove === 'hometown') user.hometown = null;
+            
+            console.log('[PATCH /users/me] Update succeeded after second retry');
+          } else {
+            throw updateError; // Throw original error
+          }
         }
       } else {
         throw updateError;
