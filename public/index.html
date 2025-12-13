@@ -5101,12 +5101,17 @@ function showChangePasswordModal() {
         let neighborhood = null;
         let street = feature.text || '';
         
+        // For place types (cities), the main text is often the city name
+        if (feature.place_type && feature.place_type.includes('place')) {
+          city = feature.text || '';
+        }
+        
         for (const item of context) {
           const id = item.id || '';
           if (id.startsWith('postcode')) {
             zip = item.text;
           } else if (id.startsWith('place')) {
-            city = item.text;
+            city = item.text || city;
           } else if (id.startsWith('region')) {
             state = item.text;
           } else if (id.startsWith('neighborhood') || id.startsWith('locality')) {
