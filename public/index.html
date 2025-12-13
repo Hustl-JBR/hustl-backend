@@ -19081,18 +19081,26 @@ meta.textContent =
       // Use hoverRating if actively hovering, otherwise use selectedRating
       function renderStars() {
         const displayRating = hoverRating > 0 ? hoverRating : selectedRating;
+        console.log('🎨 renderStars called - hoverRating:', hoverRating, 'selectedRating:', selectedRating, 'displayRating:', displayRating, 'stars.length:', stars.length);
+        
+        if (!stars || stars.length === 0) {
+          console.error('❌ No stars found!');
+          return;
+        }
         
         stars.forEach((star, index) => {
           const starNumber = index + 1;
           const isHighlighted = starNumber <= displayRating;
           
           if (isHighlighted) {
-            star.style.color = '#fbbf24'; // Gold
+            star.style.color = '#fbbf24'; // Gold - direct assignment overrides inline styles
             // Only show scale effect when hovering and no selection yet
             star.style.transform = (hoverRating > 0 && selectedRating === 0) ? 'scale(1.1)' : 'scale(1)';
+            console.log(`  ✅ Star ${starNumber} highlighted (color: ${star.style.color})`);
           } else {
             star.style.color = '#d1d5db'; // Gray
             star.style.transform = 'scale(1)';
+            console.log(`  ⚪ Star ${starNumber} not highlighted (color: ${star.style.color})`);
           }
         });
         
@@ -19104,6 +19112,9 @@ meta.textContent =
         }
       }
       
+      // Initialize stars on load
+      renderStars();
+      
       // Star click handler - sets selectedRating
       stars.forEach((star, index) => {
         const starNumber = index + 1;
@@ -19113,7 +19124,8 @@ meta.textContent =
           e.preventDefault();
           selectedRating = starNumber;
           hoverRating = 0; // Clear hover on click
-          console.log('⭐ Star clicked - Selected rating:', selectedRating);
+          console.log('⭐ Star clicked - Selected rating:', selectedRating, 'starNumber:', starNumber);
+          console.log('⭐ Stars found:', stars.length, 'star element:', star);
           renderStars();
           updateSubmitButton();
         });
