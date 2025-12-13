@@ -12922,6 +12922,9 @@ async function renderJobs(reset = false) {
         });
       }
       
+      // Store original values in closure for cancel handler
+      const originalUser = { ...user };
+      
       // Photo upload handler
       const photoUpload = document.getElementById("basicInfoPhotoUpload");
       const photoPreviewDiv = document.getElementById("basicInfoPhotoPreview");
@@ -12972,12 +12975,13 @@ async function renderJobs(reset = false) {
       if (cancelBtn) {
         cancelBtn.addEventListener("click", () => {
           // Revert to original photo if user had unsaved photo changes
-          if (hasUnsavedPhoto && originalPhotoUrl) {
+          if (hasUnsavedPhoto) {
             newPhotoFile = null;
             hasUnsavedPhoto = false;
             photoPreview = originalPhotoUrl;
           }
-          renderBasicInfoView(user, ratingAvg, ratingCount, container);
+          // Use original user data
+          renderBasicInfoView(originalUser, ratingAvg, ratingCount, container);
         });
       }
       
