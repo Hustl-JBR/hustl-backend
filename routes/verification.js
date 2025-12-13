@@ -151,6 +151,23 @@ router.post('/job/:jobId/verify-start', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Incorrect code. Ask the customer for the correct 6-digit start code.' });
     }
 
+    // BUSINESS RULE: Hustler lock - can only have ONE job in progress at a time
+    // Check if hustler already has a job in progress
+    const activeJobCount = await prisma.job.count({
+      where: {
+        hustlerId: userId,
+        status: 'IN_PROGRESS',
+        id: { not: jobId } // Exclude current job
+      }
+    });
+
+    if (activeJobCount >= 1) {
+      return res.status(400).json({ 
+        error: 'You already have a job in progress. Complete that job before starting another.',
+        hasActiveJob: true
+      });
+    }
+
     // Generate completion code if it doesn't exist
     let completionCode = job.completionCode;
     if (!completionCode) {

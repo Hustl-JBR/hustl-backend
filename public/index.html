@@ -7806,12 +7806,17 @@ async function renderJobs(reset = false) {
       if (job.status === "OPEN" || job.status === "open") {
         statusText = "Open";
         statusColor = "#059669";
-      } else if (job.status === "ASSIGNED" || job.status === "assigned") {
-        statusText = "Assigned";
+      } else if (job.status === "ASSIGNED" || job.status === "assigned" || job.status === "SCHEDULED" || job.status === "scheduled") {
+        // SCHEDULED/ASSIGNED = Hustler accepted, waiting for start code (not active yet)
+        statusText = job.status === "SCHEDULED" || job.status === "scheduled" ? "Scheduled" : "Assigned";
         statusColor = "#2563eb";
-      } else if (job.status === "PAID" || job.status === "paid") {
+      } else if (job.status === "IN_PROGRESS" || job.status === "in_progress") {
+        // IN_PROGRESS = Start code entered, job is actively being worked on
         statusText = "In Progress";
         statusColor = "#7c3aed";
+      } else if (job.status === "PAID" || job.status === "paid") {
+        statusText = "Completed";
+        statusColor = "#9333ea";
       } else if (job.status === "COMPLETED" || job.status === "completed") {
         statusText = "Completed";
         statusColor = "#9333ea";
@@ -11476,12 +11481,10 @@ async function renderJobs(reset = false) {
           } else if (job.status === 'IN_PROGRESS') {
             statusText = "🟡 In Progress";
             statusColor = "#ca8a04";
-          } else if (job.status === 'SCHEDULED') {
-            statusText = "📅 Scheduled";
+          } else if (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') {
+            // SCHEDULED/ASSIGNED = Hustler accepted, waiting for start code (not active yet)
+            statusText = job.status === 'SCHEDULED' ? "📅 Scheduled" : "📅 Assigned";
             statusColor = "#2563eb";
-          } else if (job.status === 'ASSIGNED') {
-            statusText = "✅ Assigned";
-            statusColor = "#059669";
           }
           
           if (statusText) {
@@ -13759,9 +13762,9 @@ async function renderJobs(reset = false) {
                 
                 const statusLabels = {
                   'OPEN': 'Open',
-                  'SCHEDULED': 'Scheduled',
-                  'ASSIGNED': 'Assigned',
-                  'IN_PROGRESS': 'In Progress',
+                  'SCHEDULED': 'Scheduled', // Hustler accepted, waiting for start code
+                  'ASSIGNED': 'Assigned', // Backwards compatibility - same as Scheduled
+                  'IN_PROGRESS': 'In Progress', // Start code entered, job actively being worked on
                   'COMPLETED_BY_HUSTLER': 'Awaiting Confirmation',
                   'AWAITING_CUSTOMER_CONFIRM': 'Awaiting Confirmation',
                   'PAID': 'Completed',
@@ -15106,8 +15109,13 @@ meta.textContent =
               statusBadge = 'Open for Applications';
               statusColor = '#10b981';
             } else if (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'REQUESTED') {
-              statusBadge = job.status === 'SCHEDULED' ? 'Scheduled' : 'Hustler Assigned';
+              // SCHEDULED/ASSIGNED = Hustler accepted, waiting for start code (not active yet)
+              statusBadge = job.status === 'SCHEDULED' ? 'Scheduled' : (job.status === 'ASSIGNED' ? 'Assigned' : 'Hustler Assigned');
               statusColor = job.status === 'SCHEDULED' ? '#f59e0b' : '#3b82f6';
+            } else if (job.status === 'IN_PROGRESS') {
+              // IN_PROGRESS = Start code entered, job actively being worked on
+              statusBadge = 'In Progress';
+              statusColor = '#7c3aed';
             } else if (job.status === 'COMPLETED_BY_HUSTLER') {
               statusBadge = 'Awaiting Completion';
               statusColor = '#f59e0b';
@@ -15519,7 +15527,7 @@ meta.textContent =
                   <button class="btn btn-ghost mapBtn" data-address="${locationDisplay || job.address || ''}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">🗺️ Map</button>
                   ${job.status === 'ASSIGNED' && !job.startCodeVerified ? `<button class="btn btn-primary markStartedBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-weight: 600; background: #10b981; font-size: 0.9rem;">✅ Mark Started</button>` : ''}
                   ${job.status === 'ASSIGNED' && job.startCodeVerified ? `<button class="btn btn-primary markFinishedBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-weight: 600; background: #10b981; font-size: 0.9rem;">✅ Mark Finished</button>` : ''}
-                  ${job.status === 'ASSIGNED' && !job.startCodeVerified ? `<button class="btn btn-ghost cancelApplicationBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">Cancel</button>` : ''}
+                  ${(job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && !job.startCodeVerified ? `<button class="btn btn-ghost cancelApplicationBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">Cancel</button>` : ''}
                 </div>
               `;
             }
@@ -15572,7 +15580,12 @@ meta.textContent =
             
             card.querySelector('.cancelApplicationBtn')?.addEventListener('click', async (e) => {
               e.stopPropagation();
-              if (confirm('Are you sure you want to cancel your application? This cannot be undone.')) {
+              // BUSINESS RULE: Can only cancel before start code is entered
+              if (job.startCodeVerified) {
+                showToast('Cannot cancel: Job has already started. Once the start code is entered, the job must be completed.');
+                return;
+              }
+              if (confirm('Are you sure you want to cancel this job? The job will be reopened for other applicants.')) {
                 await cancelApplication(job.id);
                 loadActiveJobs();
               }

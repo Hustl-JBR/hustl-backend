@@ -404,18 +404,19 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
     
     const isHustler = user && user.roles && user.roles.includes('HUSTLER');
     if (isHustler) {
+      // BUSINESS RULE: Hustlers can only have ONE job in progress at a time
+      // A job is only "in progress" when start code is entered (status = IN_PROGRESS)
+      // SCHEDULED/ASSIGNED jobs (waiting for start code) do NOT count toward this limit
       const activeJobsCount = await prisma.job.count({
         where: {
           hustlerId: req.user.id,
-          status: {
-            in: ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED_BY_HUSTLER', 'AWAITING_CUSTOMER_CONFIRM'],
-          },
+          status: 'IN_PROGRESS', // Only jobs where start code has been entered
         },
       });
       
-      if (activeJobsCount >= 2) {
+      if (activeJobsCount >= 1) {
         return res.status(400).json({ 
-          error: 'You can only have 2 active jobs at a time. Please complete or cancel an existing job before posting a new one.',
+          error: 'You can only have one job in progress at a time. Complete your current job before starting another.',
           field: 'activeJobs'
         });
       }
@@ -919,13 +920,14 @@ router.post('/:id/cancel', authenticate, requireRole('CUSTOMER'), async (req, re
       });
     }
 
-    // BUSINESS RULE: Customer cannot cancel after Hustler is assigned (SCHEDULED, IN_PROGRESS, or completed states)
-    // Allow cancellation for OPEN/REQUESTED jobs regardless of date
-    // Also allow ASSIGNED for backwards compatibility during migration
-    if (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS' || 
-        job.status === 'COMPLETED_BY_HUSTLER' || job.status === 'AWAITING_CUSTOMER_CONFIRM') {
+    // BUSINESS RULE: Customer cannot cancel after start code is entered
+    // Customers can cancel OPEN/REQUESTED jobs, and SCHEDULED/ASSIGNED jobs (before start code)
+    // But once start code is entered (IN_PROGRESS), job must be completed
+    if (job.startCodeVerified || job.status === 'IN_PROGRESS' || 
+        job.status === 'COMPLETED_BY_HUSTLER' || job.status === 'AWAITING_CUSTOMER_CONFIRM' ||
+        job.status === 'PAID') {
       return res.status(400).json({ 
-        error: 'Cannot cancel job that is in progress. The hustler is already assigned or working. Please contact support if there is an emergency.' 
+        error: 'Cannot cancel job that is in progress. Once the start code is entered, the job must be completed. Please contact support if there is an emergency.' 
       });
     }
     

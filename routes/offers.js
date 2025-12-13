@@ -797,7 +797,7 @@ router.post('/:id/hustler-cancel', authenticate, requireRole('HUSTLER'), async (
       return res.status(403).json({ error: 'Forbidden - You can only cancel your own offers' });
     }
 
-    // Only allow cancellation if offer is ACCEPTED and job is ASSIGNED
+    // Only allow cancellation if offer is ACCEPTED
     if (offer.status !== 'ACCEPTED') {
       return res.status(400).json({ 
         error: 'Can only cancel accepted offers',
@@ -805,17 +805,19 @@ router.post('/:id/hustler-cancel', authenticate, requireRole('HUSTLER'), async (
       });
     }
 
-    if (offer.job.status !== 'ASSIGNED') {
+    // Allow cancellation if job is SCHEDULED or ASSIGNED (before start code entered)
+    // BUSINESS RULE: Hustlers can cancel accepted jobs BEFORE start code is entered
+    if (offer.job.status !== 'SCHEDULED' && offer.job.status !== 'ASSIGNED') {
       return res.status(400).json({ 
-        error: 'Can only cancel if job is assigned to you',
+        error: 'Can only cancel scheduled jobs (before start code is entered)',
         jobStatus: offer.job.status 
       });
     }
 
-    // Check if start code has been used - cannot cancel if job has started
+    // BUSINESS RULE: Cannot cancel after start code is entered - job must be completed
     if (offer.job.startCodeVerified) {
       return res.status(400).json({ 
-        error: 'Cannot cancel: Job has already started. Please contact support if you need to cancel an active job.',
+        error: 'Cannot cancel: Job has already started. Once the start code is entered, the job must be completed.',
         jobStarted: true
       });
     }
