@@ -7497,11 +7497,7 @@ async function renderJobs(reset = false) {
         textContent.appendChild(desc);
       }
 
-      // Location line (simplified)
-      const loc = document.createElement("div");
-      loc.className = "job-meta";
-      loc.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted); cursor: pointer;";
-
+      // Calculate locationText first
       let locationText = "";
       const pickupArea = requirements.pickup_area || requirements.pickupArea;
       const pickupCity = requirements.pickup_city || requirements.pickupCity;
