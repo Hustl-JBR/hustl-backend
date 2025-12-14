@@ -137,14 +137,16 @@ async function cleanup72HourJobs() {
 
 /**
  * Clean up jobs that have passed their expiration date (based on keepActiveFor)
- * Checks requirements.expiresAt and sets status to EXPIRED if date has passed
+ * Checks expiresAt field and requirements.expiresAt, sets status to EXPIRED if date has passed
+ * Also sends email warnings 1 hour before expiration
  */
 async function cleanupExpiredJobs() {
   try {
     const now = new Date();
+    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
     
-    // Find OPEN jobs where expiresAt has passed
-    // We need to check the requirements JSON field for expiresAt
+    // Find OPEN jobs where expiresAt has passed or is within 1 hour
+    // Check both the expiresAt field and requirements.expiresAt for backward compatibility
     const allOpenJobs = await prisma.job.findMany({
       where: {
         status: 'OPEN',
@@ -152,6 +154,7 @@ async function cleanupExpiredJobs() {
       select: {
         id: true,
         title: true,
+        expiresAt: true, // Check the new expiresAt field
         requirements: true,
         customer: {
           select: {
@@ -163,24 +166,87 @@ async function cleanupExpiredJobs() {
       },
     });
 
-    // Filter jobs where expiresAt has passed
-    const expiredJobs = allOpenJobs.filter(job => {
+    // Helper function to get expiration date from job
+    const getExpirationDate = (job) => {
+      // First check the expiresAt field (new way)
+      if (job.expiresAt) {
+        try {
+          return new Date(job.expiresAt);
+        } catch (e) {
+          // Invalid date, check requirements as fallback
+        }
+      }
+      
+      // Fallback to requirements.expiresAt (old way, for backward compatibility)
       const requirements = job.requirements || {};
       const expiresAt = requirements.expiresAt;
       
-      if (!expiresAt) return false; // No expiration set
+      if (!expiresAt) return null;
       
       try {
-        const expirationDate = new Date(expiresAt);
-        return expirationDate <= now;
+        return new Date(expiresAt);
       } catch (e) {
-        return false; // Invalid date
+        return null; // Invalid date
       }
+    };
+
+    // Find jobs expiring in 1 hour (for email warning)
+    const jobsExpiringSoon = allOpenJobs.filter(job => {
+      const expirationDate = getExpirationDate(job);
+      if (!expirationDate) return false;
+      
+      // Check if expires between now and 1 hour from now
+      const timeUntilExpiration = expirationDate - now;
+      const oneHourInMs = 60 * 60 * 1000;
+      
+      return timeUntilExpiration > 0 && timeUntilExpiration <= oneHourInMs;
+    });
+
+    // Send email warnings for jobs expiring in 1 hour
+    let warningsSent = 0;
+    for (const job of jobsExpiringSoon) {
+      try {
+        // Check if we already sent warning (to avoid spamming)
+        const requirements = job.requirements || {};
+        const warningKey = `expirationWarning1hSent_${job.id}`;
+        
+        if (!requirements[warningKey] && job.customer && job.customer.email) {
+          await sendJobExpiringEmail(
+            job.customer.email,
+            job.customer.name,
+            job.title,
+            job.id
+          );
+          // Mark warning as sent
+          await prisma.job.update({
+            where: { id: job.id },
+            data: {
+              requirements: {
+                ...requirements,
+                [warningKey]: true,
+                expirationWarning1hSentAt: new Date().toISOString(),
+              },
+            },
+          });
+          warningsSent++;
+          console.log(`[Cleanup Expired] Sent 1-hour expiration warning for job ${job.id}`);
+        }
+      } catch (emailError) {
+        console.error(`[Cleanup Expired] Error sending expiration warning for job ${job.id}:`, emailError);
+        // Continue with expiration even if email fails
+      }
+    }
+
+    // Filter jobs where expiresAt has passed
+    const expiredJobs = allOpenJobs.filter(job => {
+      const expirationDate = getExpirationDate(job);
+      if (!expirationDate) return false;
+      return expirationDate <= now;
     });
 
     if (expiredJobs.length === 0) {
       console.log('[Cleanup Expired] No expired jobs found');
-      return { expired: 0 };
+      return { expired: 0, warningsSent };
     }
 
     console.log(`[Cleanup Expired] Found ${expiredJobs.length} jobs past expiration date`);
@@ -199,7 +265,7 @@ async function cleanupExpiredJobs() {
 
     console.log(`[Cleanup Expired] Expired ${result.count} jobs past their expiration date`);
     
-    return { expired: result.count };
+    return { expired: result.count, warningsSent };
   } catch (error) {
     console.error('[Cleanup Expired] Error cleaning up expired jobs:', error);
     throw error;

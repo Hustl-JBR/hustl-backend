@@ -122,6 +122,7 @@ router.get('/my-jobs', authenticate, async (req, res) => {
 router.get('/user-posted', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
+    const now = new Date();
     
     const jobs = await prisma.job.findMany({
       where: {
@@ -130,7 +131,16 @@ router.get('/user-posted', authenticate, async (req, res) => {
           notIn: ['PAID', 'CANCELLED', 'EXPIRED', 'ASSIGNED', 'SCHEDULED']
         },
         // Exclude jobs where completion code has been verified (these are completed)
-        completionCodeVerified: false
+        completionCodeVerified: false,
+        // Also exclude jobs where expiresAt has passed (even if status is still OPEN)
+        AND: [
+          {
+            OR: [
+              { expiresAt: null }, // Jobs without expiration
+              { expiresAt: { gt: now } } // Jobs that haven't expired yet
+            ]
+          }
+        ]
       },
       include: {
         customer: {
@@ -483,12 +493,14 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
     }
 
     // Calculate expiration date based on keepActiveFor (days)
-    let expiresAt = null;
-    if (keepActiveFor) {
-      const days = parseInt(keepActiveFor) || 3; // Default to 3 days
-      expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + days);
-    }
+    // Default to 3 days if not specified
+    const days = keepActiveFor ? parseInt(keepActiveFor) : 3;
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + days);
+    expiresAt.setHours(23, 59, 59, 999); // End of day in UTC
+
+    // Get preferred time from request (morning, afternoon, evening, anytime)
+    const preferredTime = req.body.preferredTime || requirements.preferredTime || 'anytime';
 
     // Build job data object
     const jobData = {
@@ -507,11 +519,13 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
       amount: parseFloat(amount),
       hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
       estHours: estHours ? parseInt(estHours) : null,
+      expiresAt: expiresAt, // Store as DateTime field (UTC)
       requirements: {
         ...requirements,
         teamSize: parseInt(teamSize) || 1,
         keepActiveFor: keepActiveFor ? parseInt(keepActiveFor) : null,
-        expiresAt: expiresAt ? expiresAt.toISOString() : null,
+        expiresAt: expiresAt.toISOString(), // Also keep in requirements for backward compatibility
+        preferredTime: preferredTime, // morning, afternoon, evening, anytime
       },
       status: 'OPEN',
       recurrencePaused: false,
@@ -630,14 +644,25 @@ router.get('/', optionalAuth, [
     if (category) where.category = category;
     
     // Exclude expired jobs from browse (unless specifically requesting expired status)
+    // Also exclude jobs where expiresAt has passed (even if status is still OPEN)
     if (!status || status !== 'EXPIRED') {
+      const now = new Date();
+      // Exclude EXPIRED status
       where.status = {
         not: 'EXPIRED'
       };
-      // Also override if status was provided
-      if (status) {
-        where.status = status;
-      }
+      // Also check expiresAt field - exclude jobs that have expired
+      where.AND = [
+        {
+          OR: [
+            { expiresAt: null }, // Jobs without expiration
+            { expiresAt: { gt: now } } // Jobs that haven't expired yet
+          ]
+        }
+      ];
+    } else if (status === 'EXPIRED') {
+      // If explicitly requesting EXPIRED, show all expired jobs
+      where.status = 'EXPIRED';
     }
     
     // Filter by ZIP code if provided (searches in address field)
@@ -1170,13 +1195,17 @@ router.patch('/:id', authenticate, requireRole('CUSTOMER'), [
       const days = parseInt(keepActiveFor) || 3;
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + days);
+      expiresAt.setHours(23, 59, 59, 999); // End of day in UTC
+      
+      // Set expiresAt field (new way)
+      updateData.expiresAt = expiresAt;
       
       // Get existing requirements (either from updateData or job)
       const existingRequirements = updateData.requirements || job.requirements || {};
       updateData.requirements = {
         ...existingRequirements,
         keepActiveFor: days,
-        expiresAt: expiresAt.toISOString()
+        expiresAt: expiresAt.toISOString() // Also keep in requirements for backward compatibility
       };
     }
     

@@ -604,6 +604,59 @@ async function sendFeedbackEmail(feedbackName, feedbackEmail, feedbackMessage) {
   }
 }
 
+async function sendJobExpiringEmail(email, name, jobTitle, jobId) {
+  if (!isEmailConfigured()) return;
+  try {
+    const manageJobsUrl = `${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'https://hustljobs.com'}`;
+    const jobUrl = `${manageJobsUrl}/jobs/${jobId}`;
+    
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `⏰ Your job "${jobTitle}" expires in 1 hour!`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <h1 style="color: #dc2626; font-size: 1.75rem; margin-bottom: 1rem;">⏰ Job Expiring Soon!</h1>
+          <p style="font-size: 1.1rem; color: #1f2937; margin-bottom: 1.5rem;">Hi <strong>${name}</strong>,</p>
+          
+          <div style="background: #fef2f2; border: 2px solid #fca5a5; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
+            <p style="font-size: 1.05rem; color: #991b1b; margin: 0 0 0.5rem 0; font-weight: 600;">
+              Your job will expire in less than 1 hour:
+            </p>
+            <h2 style="color: #dc2626; font-size: 1.5rem; margin: 0.5rem 0;">
+              ${jobTitle}
+            </h2>
+          </div>
+          
+          <p style="color: #374151; line-height: 1.6; margin: 1.5rem 0;">
+            Don't lose your job posting! You can:
+          </p>
+          
+          <ul style="color: #374151; line-height: 1.8; margin: 1rem 0; padding-left: 1.5rem;">
+            <li>Extend the expiration date</li>
+            <li>Update the job details</li>
+            <li>Repost the job if it expires</li>
+          </ul>
+          
+          <div style="margin: 2rem 0; text-align: center;">
+            <a href="${manageJobsUrl}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+              Manage Your Jobs →
+            </a>
+          </div>
+          
+          <p style="color: #6b7280; font-size: 0.9rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+            Once a job expires, it will be removed from Browse Jobs. You can always repost it from your Manage Jobs page.
+          </p>
+        </div>
+      `,
+    });
+    console.log(`[Email] Sent job expiring email to ${email} for job ${jobId}`);
+  } catch (error) {
+    console.error('[Email] Send job expiring email error:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   sendSignupEmail,
   sendEmailVerificationEmail,
@@ -622,6 +675,7 @@ module.exports = {
   sendStripeRequiredEmail,
   sendFeedbackEmail,
   sendNewMessageEmail,
+  sendJobExpiringEmail,
 };
 
 async function sendJobPostedEmail(email, name, jobTitle, jobId, jobDate, amount, payType, hourlyRate, estHours) {

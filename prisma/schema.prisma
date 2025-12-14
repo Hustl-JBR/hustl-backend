@@ -133,6 +133,7 @@ model Job {
   recurrenceEndDate     DateTime?             @map("recurrence_end_date")
   recurrencePaused      Boolean               @default(false) @map("recurrence_paused")
   nextRecurrenceDate    DateTime?             @map("next_recurrence_date")
+  expiresAt             DateTime?             @map("expires_at") // Job expiration timestamp (UTC)
   createdAt             DateTime              @default(now()) @map("created_at")
   updatedAt             DateTime              @updatedAt @map("updated_at")
 

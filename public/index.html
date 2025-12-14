@@ -3374,13 +3374,24 @@
           <div class="section-title" style="margin-top: 1rem; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">📅 When do you need this done?</div>
           
           <div class="field">
-            <label for="jobWhen">Preferred time</label>
+            <label for="jobWhen">Deadline preference</label>
             <select id="jobWhen">
               <option value="today_asap">⚡ Today – ASAP</option>
               <option value="tomorrow">📆 Tomorrow</option>
               <option value="specific_date">📅 Specific date</option>
               <option value="flexible_week">⏰ Flexible (this week)</option>
               <option value="no_deadline">✅ No strict deadline</option>
+            </select>
+          </div>
+          
+          <!-- Preferred Time Field (Always visible, required) -->
+          <div class="field">
+            <label for="preferredTime">Preferred time <span style="color: #dc2626;">*</span></label>
+            <select id="preferredTime" required>
+              <option value="morning">🌅 Morning (8am - 12pm)</option>
+              <option value="afternoon">☀️ Afternoon (12pm - 5pm)</option>
+              <option value="evening">🌆 Evening (5pm - 9pm)</option>
+              <option value="anytime" selected>⏰ Anytime / Flexible</option>
             </select>
           </div>
           
@@ -5609,6 +5620,7 @@ function showChangePasswordModal() {
             notes: notes || null,
             pricing_option: pricingOption,
             deadline_preference: deadlinePreference || jobWhen,
+            preferredTime: document.getElementById("preferredTime")?.value || requirements.preferredTime || "anytime",
           },
         };
         
@@ -6573,6 +6585,9 @@ function showChangePasswordModal() {
               return showToast("❌ Please set a valid price amount.");
             }
             
+            // Get preferred time (morning, afternoon, evening, anytime)
+            const preferredTime = document.getElementById("preferredTime")?.value || "anytime";
+            
             // Build job data - only include hourlyRate/estHours if they have values
             const jobData = {
               title,
@@ -6586,6 +6601,7 @@ function showChangePasswordModal() {
               amount: amount, // Backend expects dollar amount (not cents)
               teamSize: workersNeeded || 1,
               keepActiveFor: keepActiveFor, // Days to keep job active
+              preferredTime: preferredTime, // morning, afternoon, evening, anytime
               requirements: {
                 pickup_area: pickupArea,
                 pickup_city: pickupCity,
@@ -6609,6 +6625,7 @@ function showChangePasswordModal() {
                 notes: notes || null,
                 pricing_option: pricingOption, // Store for future use
                 deadline_preference: deadlinePreference || jobWhen, // Store deadline preference
+                preferredTime: preferredTime, // morning, afternoon, evening, anytime
               },
             };
             
@@ -6990,10 +7007,25 @@ async function renderJobs(reset = false) {
       allLoadedJobs = [];
     }
     
-    // Browse Jobs only shows OPEN jobs that the user hasn't applied to
+    // Browse Jobs only shows OPEN jobs that the user hasn't applied to and haven't expired
     let filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => {
       // Only show OPEN jobs
       if (j.status !== "OPEN" && j.status !== "open") return false;
+      
+      // Filter out expired jobs (check both expiresAt field and requirements.expiresAt)
+      const now = new Date();
+      if (j.expiresAt) {
+        const expirationDate = new Date(j.expiresAt);
+        if (expirationDate <= now) return false; // Expired
+      } else if (j.requirements?.expiresAt) {
+        // Fallback to requirements.expiresAt for backward compatibility
+        try {
+          const expirationDate = new Date(j.requirements.expiresAt);
+          if (expirationDate <= now) return false; // Expired
+        } catch (e) {
+          // Invalid date, continue
+        }
+      }
       
       // Filter out jobs the user has already applied to
       if (userAppliedJobIds && userAppliedJobIds.has(j.id)) {
@@ -7311,6 +7343,71 @@ async function renderJobs(reset = false) {
 
       meta.textContent = `${catIcon} ${catName} • ${timeAgo(createdMs)}`;
       textContent.appendChild(meta);
+      
+      // Expiration countdown (if expiresAt exists)
+      if (job.expiresAt) {
+        const countdownMeta = document.createElement("div");
+        countdownMeta.className = "job-meta job-countdown";
+        countdownMeta.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; font-weight: 600;";
+        countdownMeta.dataset.expiresAt = job.expiresAt;
+        
+        // Function to update countdown
+        const updateCountdown = () => {
+          const expiresAt = new Date(job.expiresAt);
+          const now = new Date();
+          const diff = expiresAt - now;
+          
+          if (diff <= 0) {
+            countdownMeta.textContent = "⏰ Expired";
+            countdownMeta.style.color = "#dc2626";
+            return;
+          }
+          
+          const hours = Math.floor(diff / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          
+          // Check if expires today (local time)
+          const expiresDate = new Date(expiresAt);
+          const today = new Date();
+          const isToday = expiresDate.toDateString() === today.toDateString();
+          
+          if (isToday) {
+            countdownMeta.textContent = `⏰ Expires today (${hours}h ${minutes}m)`;
+            countdownMeta.style.color = "#dc2626";
+          } else if (hours < 24) {
+            countdownMeta.textContent = `⏰ Expires in ${hours}h ${minutes}m`;
+            countdownMeta.style.color = "#f59e0b";
+          } else {
+            const days = Math.floor(hours / 24);
+            countdownMeta.textContent = `⏰ Expires in ${days}d ${hours % 24}h`;
+            countdownMeta.style.color = "#059669";
+          }
+        };
+        
+        updateCountdown();
+        // Update every minute
+        const countdownInterval = setInterval(updateCountdown, 60000);
+        // Store interval ID on element for cleanup if needed
+        countdownMeta.dataset.intervalId = countdownInterval;
+        
+        textContent.appendChild(countdownMeta);
+      }
+      
+      // Preferred time display
+      const preferredTime = requirements.preferredTime || 'anytime';
+      const preferredTimeLabels = {
+        'morning': '🌅 Morning',
+        'afternoon': '☀️ Afternoon',
+        'evening': '🌆 Evening',
+        'anytime': '⏰ Anytime'
+      };
+      const preferredTimeLabel = preferredTimeLabels[preferredTime] || '⏰ Anytime';
+      
+      const preferredTimeMeta = document.createElement("div");
+      preferredTimeMeta.className = "job-meta";
+      preferredTimeMeta.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted);";
+      preferredTimeMeta.textContent = preferredTimeLabel;
+      textContent.appendChild(preferredTimeMeta);
       
       // Deadline/needed by line (simplified)
       try {
@@ -14546,7 +14643,26 @@ async function renderJobs(reset = false) {
             const jobs = await response.json();
             
             // Separate posted jobs (as customer) from active jobs (as hustler)
-            const postedJobs = jobs.filter(j => j.customerId === user.id);
+            // Filter out expired jobs from posted jobs
+            const now = new Date();
+            const postedJobs = jobs.filter(j => {
+              if (j.customerId !== user.id) return false;
+              // Filter out expired jobs
+              if (j.status === 'EXPIRED') return false;
+              // Also check if expiresAt has passed
+              if (j.expiresAt) {
+                const expirationDate = new Date(j.expiresAt);
+                if (expirationDate <= now) return false;
+              } else if (j.requirements?.expiresAt) {
+                try {
+                  const expirationDate = new Date(j.requirements.expiresAt);
+                  if (expirationDate <= now) return false;
+                } catch (e) {
+                  // Invalid date, continue
+                }
+              }
+              return true;
+            });
             const activeJobs = jobs.filter(j => j.hustlerId === user.id && j.status !== 'PAID' && j.status !== 'CANCELLED');
             
             // Render Posted Jobs
@@ -15760,9 +15876,27 @@ meta.textContent =
         // - ASSIGNED or SCHEDULED jobs (they should only appear in "Active Jobs")
         // - CANCELLED jobs (deleted as a whole)
         // - PAID or completed jobs (they should appear in "Completed Jobs")
+        // - EXPIRED jobs (removed from browse and posted jobs)
+        const now = new Date();
         const postedJobs = jobs.filter(job => {
           // Exclude cancelled jobs (deleted as a whole)
           if (job.status === 'CANCELLED') return false;
+          
+          // Exclude expired jobs
+          if (job.status === 'EXPIRED') return false;
+          
+          // Also check if expiresAt has passed (even if status is still OPEN)
+          if (job.expiresAt) {
+            const expirationDate = new Date(job.expiresAt);
+            if (expirationDate <= now) return false; // Expired
+          } else if (job.requirements?.expiresAt) {
+            try {
+              const expirationDate = new Date(job.requirements.expiresAt);
+              if (expirationDate <= now) return false; // Expired
+            } catch (e) {
+              // Invalid date, continue
+            }
+          }
           
           // Exclude assigned or scheduled jobs (they go to Active Jobs tab)
           if (job.status === 'ASSIGNED' || job.status === 'SCHEDULED') return false;
@@ -17940,7 +18074,9 @@ meta.textContent =
         const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
         const teamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
         const keepActiveFor = requirements.keepActiveFor;
-        const expiresAt = requirements.expiresAt ? new Date(requirements.expiresAt) : null;
+        // Check both expiresAt field and requirements.expiresAt for backward compatibility
+        const expiresAt = job.expiresAt ? new Date(job.expiresAt) : (requirements.expiresAt ? new Date(requirements.expiresAt) : null);
+        const preferredTime = requirements.preferredTime || 'anytime';
         
         // Format pay
         const payType = job.payType || 'flat';
@@ -18019,14 +18155,45 @@ meta.textContent =
         // Format expiration - check if keepOpenUntilAccepted is enabled
         const isKeepOpenEnabled = requirements.keepOpenUntilAccepted === true;
         let expirationDisplay = '';
+        let expirationColor = '#059669';
         if (isKeepOpenEnabled) {
           expirationDisplay = 'Stays open until hustler assigned';
+          expirationColor = '#1e40af';
         } else if (expiresAt && expiresAt > new Date()) {
-          const daysLeft = Math.ceil((expiresAt - new Date()) / (1000 * 60 * 60 * 24));
-          expirationDisplay = `Expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
+          const now = new Date();
+          const diff = expiresAt - now;
+          const hours = Math.floor(diff / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          
+          // Check if expires today (local time)
+          const expiresDate = new Date(expiresAt);
+          const today = new Date();
+          const isToday = expiresDate.toDateString() === today.toDateString();
+          
+          if (isToday) {
+            expirationDisplay = `Expires today (${hours}h ${minutes}m)`;
+            expirationColor = '#dc2626';
+          } else if (hours < 24) {
+            expirationDisplay = `Expires in ${hours}h ${minutes}m`;
+            expirationColor = '#f59e0b';
+          } else {
+            const days = Math.floor(hours / 24);
+            expirationDisplay = `Expires in ${days}d ${hours % 24}h`;
+            expirationColor = '#059669';
+          }
         } else if (expiresAt && expiresAt <= new Date()) {
-          expirationDisplay = 'Expired — Repost?';
+          expirationDisplay = 'Expired';
+          expirationColor = '#dc2626';
         }
+        
+        // Format preferred time
+        const preferredTimeLabels = {
+          'morning': '🌅 Morning (8am - 12pm)',
+          'afternoon': '☀️ Afternoon (12pm - 5pm)',
+          'evening': '🌆 Evening (5pm - 9pm)',
+          'anytime': '⏰ Anytime / Flexible'
+        };
+        const preferredTimeDisplay = preferredTimeLabels[preferredTime] || '⏰ Anytime / Flexible';
         
         // Category icon
         const categoryIcons = {
@@ -18107,6 +18274,10 @@ meta.textContent =
                     <div style="font-weight: 600; color: var(--text-main);">${timingDisplay}</div>
                   </div>
                   <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">🕐 Preferred Time</div>
+                    <div style="font-weight: 600; color: var(--text-main);">${preferredTimeDisplay}</div>
+                  </div>
+                  <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">👥 Workers</div>
                     <div style="font-weight: 600; color: var(--text-main);">${workersDisplay}</div>
                   </div>
@@ -18118,7 +18289,7 @@ meta.textContent =
                     const requirements = job.requirements || {};
                     const isKeepOpenEnabled = requirements.keepOpenUntilAccepted === true;
                     const displayText = isKeepOpenEnabled ? 'Stays open until hustler assigned' : (expirationDisplay || '');
-                    const displayColor = isKeepOpenEnabled ? '#1e40af' : (expiresAt && expiresAt <= new Date() ? '#dc2626' : '#d97706');
+                    const displayColor = isKeepOpenEnabled ? '#1e40af' : expirationColor || '#d97706';
                     const bgColor = isKeepOpenEnabled ? '#dbeafe' : (expiresAt && expiresAt <= new Date() ? '#fee2e2' : '#fef3c7');
                     const borderColor = isKeepOpenEnabled ? '#3b82f6' : (expiresAt && expiresAt <= new Date() ? '#fca5a5' : '#fbbf24');
                     
@@ -18690,15 +18861,73 @@ meta.textContent =
         
         document.body.appendChild(modalOverlay);
         
+        // Live countdown update for expiration display
+        let countdownInterval = null;
+        if (expiresAt && !isKeepOpenEnabled) {
+          const expirationDisplayEl = modalOverlay.querySelector(`#expirationDisplay_${job.id}`);
+          if (expirationDisplayEl) {
+            const updateExpirationCountdown = () => {
+              const now = new Date();
+              const diff = expiresAt - now;
+              
+              if (diff <= 0) {
+                expirationDisplayEl.textContent = 'Expired';
+                expirationDisplayEl.style.color = '#dc2626';
+                if (countdownInterval) {
+                  clearInterval(countdownInterval);
+                  countdownInterval = null;
+                }
+                return;
+              }
+              
+              const hours = Math.floor(diff / (1000 * 60 * 60));
+              const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+              
+              // Check if expires today (local time)
+              const expiresDate = new Date(expiresAt);
+              const today = new Date();
+              const isToday = expiresDate.toDateString() === today.toDateString();
+              
+              let displayText = '';
+              let displayColor = '#059669';
+              
+              if (isToday) {
+                displayText = `Expires today (${hours}h ${minutes}m)`;
+                displayColor = '#dc2626';
+              } else if (hours < 24) {
+                displayText = `Expires in ${hours}h ${minutes}m`;
+                displayColor = '#f59e0b';
+              } else {
+                const days = Math.floor(hours / 24);
+                displayText = `Expires in ${days}d ${hours % 24}h`;
+                displayColor = '#059669';
+              }
+              
+              expirationDisplayEl.textContent = displayText;
+              expirationDisplayEl.style.color = displayColor;
+            };
+            
+            // Update immediately and then every minute
+            updateExpirationCountdown();
+            countdownInterval = setInterval(updateExpirationCountdown, 60000);
+          }
+        }
+        
         // Close button
-        modalOverlay.querySelector('.closeViewJobModal')?.addEventListener('click', () => {
+        const closeModal = () => {
+          if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+          }
           document.body.removeChild(modalOverlay);
-        });
+        };
+        
+        modalOverlay.querySelector('.closeViewJobModal')?.addEventListener('click', closeModal);
         
         // Click outside to close
         modalOverlay.addEventListener('click', (e) => {
           if (e.target === modalOverlay) {
-            document.body.removeChild(modalOverlay);
+            closeModal();
           }
         });
         
