@@ -18907,7 +18907,40 @@ meta.textContent =
                   <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 2px solid var(--border);">
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Your offer:</div>
                     <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.75rem;">
-                      ${userOffer.proposedAmount && (!job.amount || Math.abs(parseFloat(userOffer.proposedAmount) - parseFloat(job.amount || 0)) < 0.01) ? `$${parseFloat(userOffer.proposedAmount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}` : (job.amount ? `$${parseFloat(job.amount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}` : (userOffer.proposedAmount ? `$${parseFloat(userOffer.proposedAmount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}` : 'No price specified'))}
+                      ${(() => {
+                        // Always show hustler's most recent offer
+                        // After hustler counter-offers, proposedAmount is their most recent offer
+                        // Check localStorage for customer's counter-offer to determine if hustler has counter-offered
+                        const customerCounterOfferKey = `customerCounterOffer_${userOffer.id}`;
+                        const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
+                        
+                        // If customer has counter-offered and proposedAmount differs from customer's counter-offer,
+                        // then proposedAmount is hustler's counter-offer (most recent)
+                        // Otherwise, if proposedAmount exists and differs from job.amount, it might be hustler's initial offer or customer's counter-offer
+                        // We need to check: if customer counter-offered, and proposedAmount matches it, then show job.amount or hustler's original
+                        // If proposedAmount doesn't match customer counter-offer, it's hustler's counter-offer
+                        
+                        if (customerCounterOffer) {
+                          const customerOffer = parseFloat(customerCounterOffer);
+                          const currentProposed = userOffer.proposedAmount ? parseFloat(userOffer.proposedAmount) : null;
+                          
+                          // If proposedAmount exists and differs from customer's counter-offer, it's hustler's counter-offer
+                          if (currentProposed && Math.abs(currentProposed - customerOffer) > 0.01) {
+                            return `$${currentProposed.toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
+                          }
+                          // Otherwise, customer counter-offered but hustler hasn't responded yet
+                          // Show hustler's original offer (job.amount or their initial proposedAmount before customer negotiated)
+                          // For now, show job.amount as baseline
+                          return `$${parseFloat(job.amount || 0).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
+                        } else if (userOffer.proposedAmount) {
+                          // No customer counter-offer yet, so proposedAmount is hustler's offer
+                          return `$${parseFloat(userOffer.proposedAmount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
+                        } else if (job.amount) {
+                          return `$${parseFloat(job.amount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
+                        } else {
+                          return 'No price specified';
+                        }
+                      })()}
                     </div>
                     ${userOffer.note ? `
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600; margin-top: 0.75rem;">Your message:</div>
@@ -18915,11 +18948,37 @@ meta.textContent =
                     ` : ''}
                   </div>
                   
-                  ${userOffer.proposedAmount && job.amount && Math.abs(parseFloat(userOffer.proposedAmount) - parseFloat(job.amount)) > 0.01 ? `
+                  ${(() => {
+                    // Check if customer has counter-offered (stored in localStorage)
+                    const customerCounterOfferKey = `customerCounterOffer_${userOffer.id}`;
+                    const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
+                    const currentProposed = userOffer.proposedAmount ? parseFloat(userOffer.proposedAmount) : null;
+                    
+                    // Show customer counter-offer if:
+                    // 1. Customer counter-offer exists in localStorage, AND
+                    // 2. Either hustler hasn't counter-offered yet (proposedAmount matches customer's), OR hustler has counter-offered (proposedAmount differs)
+                    if (customerCounterOffer) {
+                      const customerOffer = parseFloat(customerCounterOffer);
+                      // If proposedAmount matches customer's counter-offer, customer just negotiated and hustler hasn't responded
+                      // If proposedAmount differs, hustler has counter-offered, but we still show customer's counter-offer
+                      return true;
+                    }
+                    // Fallback: if proposedAmount differs from job.amount, might be customer's counter-offer (before localStorage tracking)
+                    return userOffer.proposedAmount && job.amount && Math.abs(parseFloat(userOffer.proposedAmount) - parseFloat(job.amount)) > 0.01;
+                  })() ? `
                   <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
                     <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Customer counter-offer:</div>
                     <div style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
-                      $${parseFloat(userOffer.proposedAmount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}
+                      ${(() => {
+                        // Show customer's counter-offer from localStorage, or proposedAmount if no localStorage
+                        const customerCounterOfferKey = `customerCounterOffer_${userOffer.id}`;
+                        const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
+                        if (customerCounterOffer) {
+                          return `$${parseFloat(customerCounterOffer).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
+                        }
+                        // Fallback to proposedAmount if no localStorage
+                        return `$${parseFloat(userOffer.proposedAmount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
+                      })()}
                     </div>
                     <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
                       <button class="btn btn-primary acceptNegotiationBtn" data-offer-id="${userOffer.id}" data-proposed-amount="${userOffer.proposedAmount}" style="flex: 1; padding: 0.75rem; font-weight: 600; background: #10b981; border-color: #10b981;">✅ Accept</button>
@@ -20433,6 +20492,10 @@ meta.textContent =
           // Mark this offer as recently negotiated in localStorage
           const negotiationKey = `negotiated_${offerId}`;
           localStorage.setItem(negotiationKey, 'true');
+          
+          // Store customer's counter-offer in localStorage so we can display it even after hustler counter-offers
+          const customerCounterOfferKey = `customerCounterOffer_${offerId}`;
+          localStorage.setItem(customerCounterOfferKey, price.toString());
           
           // Remove the flag after 1 hour (3600000 ms)
           setTimeout(() => {
