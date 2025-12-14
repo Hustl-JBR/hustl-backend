@@ -7329,13 +7329,13 @@ async function renderJobs(reset = false) {
         const total = Number(job.amount) || 0;
         pay.textContent = `💰 $${total.toFixed(0)}`;
       }
-      titleRow.appendChild(pay);
+      // Don't append pay to titleRow yet - we'll put it with location
       textContent.appendChild(titleRow);
 
-      // Category + posted time line (simplified)
+      // Compact meta section: Category • time ago
       const meta = document.createElement("div");
       meta.className = "job-meta";
-      meta.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted);";
+      meta.style.cssText = "margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
 
       const createdMs = job.createdAt
         ? new Date(job.createdAt).getTime()
@@ -7345,24 +7345,14 @@ async function renderJobs(reset = false) {
       textContent.appendChild(meta);
       
       // Expiration countdown (if expiresAt exists)
+      let countdownText = '';
+      let countdownColor = '#059669';
       if (job.expiresAt) {
-        const countdownMeta = document.createElement("div");
-        countdownMeta.className = "job-meta job-countdown";
-        countdownMeta.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; font-weight: 600;";
-        countdownMeta.dataset.expiresAt = job.expiresAt;
+        const expiresAt = new Date(job.expiresAt);
+        const now = new Date();
+        const diff = expiresAt - now;
         
-        // Function to update countdown
-        const updateCountdown = () => {
-          const expiresAt = new Date(job.expiresAt);
-          const now = new Date();
-          const diff = expiresAt - now;
-          
-          if (diff <= 0) {
-            countdownMeta.textContent = "⏰ Expired";
-            countdownMeta.style.color = "#dc2626";
-            return;
-          }
-          
+        if (diff > 0) {
           const hours = Math.floor(diff / (1000 * 60 * 60));
           const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
           
@@ -7372,23 +7362,67 @@ async function renderJobs(reset = false) {
           const isToday = expiresDate.toDateString() === today.toDateString();
           
           if (isToday) {
-            countdownMeta.textContent = `⏰ Expires today (${hours}h ${minutes}m)`;
-            countdownMeta.style.color = "#dc2626";
+            countdownText = `⏰ Expires today (${hours}h ${minutes}m)`;
+            countdownColor = "#dc2626";
           } else if (hours < 24) {
-            countdownMeta.textContent = `⏰ Expires in ${hours}h ${minutes}m`;
-            countdownMeta.style.color = "#f59e0b";
+            countdownText = `⏰ Expires in ${hours}h ${minutes}m`;
+            countdownColor = "#f59e0b";
           } else {
             const days = Math.floor(hours / 24);
-            countdownMeta.textContent = `⏰ Expires in ${days}d ${hours % 24}h`;
-            countdownMeta.style.color = "#059669";
+            countdownText = `⏰ Expires in ${days}d ${hours % 24}h`;
+            countdownColor = "#059669";
           }
-        };
+        } else {
+          countdownText = "⏰ Expired";
+          countdownColor = "#dc2626";
+        }
+      }
+      
+      if (countdownText) {
+        const countdownMeta = document.createElement("div");
+        countdownMeta.className = "job-meta job-countdown";
+        countdownMeta.style.cssText = `margin-top: 0.25rem; font-size: 0.85rem; font-weight: 600; color: ${countdownColor};`;
+        countdownMeta.textContent = countdownText;
+        countdownMeta.dataset.expiresAt = job.expiresAt;
         
-        updateCountdown();
-        // Update every minute
-        const countdownInterval = setInterval(updateCountdown, 60000);
-        // Store interval ID on element for cleanup if needed
-        countdownMeta.dataset.intervalId = countdownInterval;
+        // Function to update countdown
+        if (job.expiresAt) {
+          const updateCountdown = () => {
+            const expiresAt = new Date(job.expiresAt);
+            const now = new Date();
+            const diff = expiresAt - now;
+            
+            if (diff <= 0) {
+              countdownMeta.textContent = "⏰ Expired";
+              countdownMeta.style.color = "#dc2626";
+              return;
+            }
+            
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            
+            // Check if expires today (local time)
+            const expiresDate = new Date(expiresAt);
+            const today = new Date();
+            const isToday = expiresDate.toDateString() === today.toDateString();
+            
+            if (isToday) {
+              countdownMeta.textContent = `⏰ Expires today (${hours}h ${minutes}m)`;
+              countdownMeta.style.color = "#dc2626";
+            } else if (hours < 24) {
+              countdownMeta.textContent = `⏰ Expires in ${hours}h ${minutes}m`;
+              countdownMeta.style.color = "#f59e0b";
+            } else {
+              const days = Math.floor(hours / 24);
+              countdownMeta.textContent = `⏰ Expires in ${days}d ${hours % 24}h`;
+              countdownMeta.style.color = "#059669";
+            }
+          };
+          
+          // Update every minute
+          const countdownInterval = setInterval(updateCountdown, 60000);
+          countdownMeta.dataset.intervalId = countdownInterval;
+        }
         
         textContent.appendChild(countdownMeta);
       }
@@ -7405,9 +7439,27 @@ async function renderJobs(reset = false) {
       
       const preferredTimeMeta = document.createElement("div");
       preferredTimeMeta.className = "job-meta";
-      preferredTimeMeta.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted);";
+      preferredTimeMeta.style.cssText = "margin-top: 0.25rem; font-size: 0.85rem; color: var(--text-muted);";
       preferredTimeMeta.textContent = preferredTimeLabel;
       textContent.appendChild(preferredTimeMeta);
+      
+      // Date display (Dec 12 format)
+      if (job.date) {
+        try {
+          const jobDate = new Date(job.date);
+          if (!isNaN(jobDate.getTime())) {
+            const dateStr = jobDate.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric'
+            });
+            const dateMeta = document.createElement("div");
+            dateMeta.className = "job-meta";
+            dateMeta.style.cssText = "margin-top: 0.25rem; font-size: 0.85rem; color: var(--text-muted);";
+            dateMeta.textContent = `⏰ ${dateStr}`;
+            textContent.appendChild(dateMeta);
+          }
+        } catch (e) {}
+      }
       
       // Deadline/needed by line (simplified)
       try {
@@ -7584,12 +7636,122 @@ async function renderJobs(reset = false) {
         }
       }
       
+      // Location and price on same line
+      const locationPriceRow = document.createElement("div");
+      locationPriceRow.style.cssText = "display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border);";
+      
+      const loc = document.createElement("div");
+      loc.className = "job-meta";
+      loc.style.cssText = "font-size: 0.85rem; color: var(--text-muted); flex: 1; cursor: pointer;";
       loc.textContent = `📍 ${locationText}`;
       loc.addEventListener("click", (e) => {
         e.stopPropagation();
         openJobDetails(job.id);
       });
-      textContent.appendChild(loc);
+      locationPriceRow.appendChild(loc);
+      
+      // Add price to the right side
+      const priceDisplay = document.createElement("div");
+      priceDisplay.style.cssText = "font-weight: 700; color: var(--success); font-size: 0.9rem; white-space: nowrap; margin-left: 0.5rem;";
+      
+      // Format pricing display
+      if (pricingOption === "hustlers_quote") {
+        priceDisplay.textContent = "💰 Hustler suggests price";
+        priceDisplay.style.color = "#f59e0b";
+      } else if (job.payType === "flat") {
+        const total = Number(job.amount) || 0;
+        priceDisplay.textContent = `💰 $${total.toFixed(0)} flat`;
+      } else if (job.payType === "hourly") {
+        const hr = Number(job.hourlyRate) || 0;
+        const maxHrs = job.estHours || "";
+        priceDisplay.textContent = `💰 $${hr.toFixed(0)}/hr${maxHrs ? ` (max ${maxHrs} hrs)` : ''}`;
+      } else {
+        const total = Number(job.amount) || 0;
+        priceDisplay.textContent = `💰 $${total.toFixed(0)}`;
+      }
+      locationPriceRow.appendChild(priceDisplay);
+      textContent.appendChild(locationPriceRow);
+      
+      // Title again with category prefix
+      const titleWithCategory = document.createElement("div");
+      titleWithCategory.style.cssText = "margin-top: 0.75rem; font-size: 0.95rem; font-weight: 600; color: var(--text-main); line-height: 1.4;";
+      titleWithCategory.textContent = `${catIcon} ${catName} — ${job.title}`;
+      textContent.appendChild(titleWithCategory);
+      
+      // Preferred time · Date
+      const preferredTimeDateRow = document.createElement("div");
+      preferredTimeDateRow.style.cssText = "margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
+      let preferredTimeDateText = preferredTimeLabel;
+      if (job.date) {
+        try {
+          const jobDate = new Date(job.date);
+          if (!isNaN(jobDate.getTime())) {
+            const dateStr = jobDate.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric'
+            });
+            preferredTimeDateText += ` · ${dateStr}`;
+          }
+        } catch (e) {}
+      }
+      preferredTimeDateRow.textContent = preferredTimeDateText;
+      textContent.appendChild(preferredTimeDateRow);
+      
+      // Expiration countdown (again, if exists) - use ⏳ instead of ⏰
+      if (countdownText) {
+        const countdownMeta2 = document.createElement("div");
+        countdownMeta2.className = "job-meta job-countdown";
+        countdownMeta2.style.cssText = `margin-top: 0.25rem; font-size: 0.85rem; font-weight: 600; color: ${countdownColor};`;
+        countdownMeta2.textContent = countdownText.replace('⏰', '⏳');
+        countdownMeta2.dataset.expiresAt = job.expiresAt;
+        if (job.expiresAt) {
+          const updateCountdown2 = () => {
+            const expiresAt = new Date(job.expiresAt);
+            const now = new Date();
+            const diff = expiresAt - now;
+            
+            if (diff <= 0) {
+              countdownMeta2.textContent = "⏳ Expired";
+              countdownMeta2.style.color = "#dc2626";
+              return;
+            }
+            
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            
+            const expiresDate = new Date(expiresAt);
+            const today = new Date();
+            const isToday = expiresDate.toDateString() === today.toDateString();
+            
+            if (isToday) {
+              countdownMeta2.textContent = `⏳ Expires today (${hours}h ${minutes}m)`;
+              countdownMeta2.style.color = "#dc2626";
+            } else if (hours < 24) {
+              countdownMeta2.textContent = `⏳ Expires in ${hours}h ${minutes}m`;
+              countdownMeta2.style.color = "#f59e0b";
+            } else {
+              const days = Math.floor(hours / 24);
+              countdownMeta2.textContent = `⏳ Expires in ${days}d ${hours % 24}h`;
+              countdownMeta2.style.color = "#059669";
+            }
+          };
+          
+          const countdownInterval2 = setInterval(updateCountdown2, 60000);
+          countdownMeta2.dataset.intervalId = countdownInterval2;
+        }
+        textContent.appendChild(countdownMeta2);
+      }
+      
+      // Location again
+      const loc2 = document.createElement("div");
+      loc2.className = "job-meta";
+      loc2.style.cssText = "margin-top: 0.25rem; font-size: 0.85rem; color: var(--text-muted); cursor: pointer;";
+      loc2.textContent = `📍 ${locationText}`;
+      loc2.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openJobDetails(job.id);
+      });
+      textContent.appendChild(loc2);
       
       // Workers needed line (simplified)
       const teamSize = job.teamSize || job.requirements?.teamSize || job.requirements?.team_size || 1;
