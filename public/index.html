@@ -18636,10 +18636,55 @@ meta.textContent =
                                   </div>
                                   
                                   ${(() => {
-                                    // Show customer's counter-offer if it exists
+                                    // Show customer's counter-offer if it exists, OR hustler's counter-offer
                                     const customerCounterOfferKey = `customerCounterOffer_${offer.id}`;
+                                    const hustlerCounterOfferKey = `hustlerCounterOffer_${offer.id}`;
                                     const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
-                                    if (customerCounterOffer) {
+                                    const hustlerCounterOffer = localStorage.getItem(hustlerCounterOfferKey);
+                                    
+                                    // Check if hustler has counter-offered (proposedAmount differs from customer's counter-offer)
+                                    let showHustlerCounterOffer = false;
+                                    let hustlerCounterAmount = null;
+                                    
+                                    if (customerCounterOffer && proposedAmount) {
+                                      const customerOffer = parseFloat(customerCounterOffer);
+                                      if (Math.abs(proposedAmount - customerOffer) > 0.01) {
+                                        // Hustler has counter-offered
+                                        showHustlerCounterOffer = true;
+                                        hustlerCounterAmount = proposedAmount;
+                                      }
+                                    } else if (hustlerCounterOffer) {
+                                      showHustlerCounterOffer = true;
+                                      hustlerCounterAmount = parseFloat(hustlerCounterOffer);
+                                    }
+                                    
+                                    if (showHustlerCounterOffer && hustlerCounterAmount) {
+                                      // Show hustler's counter-offer with accept/deny buttons
+                                      return `
+                                        <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
+                                          <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Hustler's counter-offer:</div>
+                                          <div style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
+                                            $${hustlerCounterAmount.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}
+                                          </div>
+                                          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                            <button class="btn btn-primary acceptHustlerCounterOfferBtn" data-offer-id="${offer.id}" data-proposed-amount="${hustlerCounterAmount}" style="flex: 1; padding: 0.75rem; font-weight: 600; background: #10b981; border-color: #10b981;">✅ Accept</button>
+                                            <button class="btn btn-ghost denyHustlerCounterOfferBtn" data-offer-id="${offer.id}" style="flex: 1; padding: 0.75rem; font-weight: 600; color: #dc2626; border-color: #fecaca;">❌ Deny</button>
+                                          </div>
+                                          <div id="customerCounterOfferSection_${offer.id}" style="display: none; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #93c5fd;">
+                                            <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">💬 Counter with your price:</div>
+                                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                              <span style="font-size: 1.25rem; color: #0f172a;">$</span>
+                                              <input type="number" id="customerCounterOfferInput_${offer.id}" value="${hustlerCounterAmount}" 
+                                                style="flex: 1; padding: 0.75rem; font-size: 1.25rem; font-weight: 600; border: 2px solid #3b82f6; border-radius: 8px; text-align: center;"
+                                                min="0" step="0.01" />
+                                              <span style="font-size: 0.85rem; color: #64748b;">${job.payType === 'hourly' ? '/hr' : 'flat'}</span>
+                                            </div>
+                                            <button class="btn btn-primary submitCustomerCounterOfferBtn" data-offer-id="${offer.id}" style="width: 100%; padding: 0.75rem; font-weight: 600; background: #3b82f6; border-color: #3b82f6;">💬 Send Counter-Offer</button>
+                                          </div>
+                                        </div>
+                                      `;
+                                    } else if (customerCounterOffer) {
+                                      // Customer has counter-offered, waiting for hustler
                                       return `
                                         <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
                                           <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Your counter-offer:</div>
@@ -19422,14 +19467,42 @@ meta.textContent =
               
               try {
                 const token = localStorage.getItem('hustl_token');
-                // Update the offer to reflect that hustler accepted the counter-offer
+                if (!token) {
+                  showToast('Please log in');
+                  return;
+                }
+                
+                // Get customer's counter-offer from localStorage
+                const customerCounterOfferKey = `customerCounterOffer_${offerId}`;
+                const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
+                const acceptedAmount = customerCounterOffer ? parseFloat(customerCounterOffer) : (proposedAmount ? parseFloat(proposedAmount) : null);
+                
+                if (!acceptedAmount) {
+                  showToast('Error: Could not find counter-offer amount');
+                  return;
+                }
+                
+                btn.disabled = true;
+                btn.textContent = 'Accepting...';
+                
                 // The offer.proposedAmount already contains the customer's counter-offer
                 // We just need to confirm acceptance - the customer can then officially accept
+                // For now, we'll just show a success message and refresh
+                // In the future, we could add a backend endpoint to track negotiation acceptance
+                
                 showToast('✅ You accepted the customer\'s counter-offer. The customer can now officially accept the job.');
                 document.body.removeChild(modalOverlay);
-                if (typeof loadActiveJobs === 'function') loadActiveJobs();
+                
+                // Refresh the view
+                if (typeof loadActiveJobs === 'function') {
+                  loadActiveJobs();
+                } else if (typeof renderJobs === 'function') {
+                  await renderJobs(true);
+                }
               } catch (error) {
                 showToast('Error: ' + (error.message || 'Failed to accept'));
+                btn.disabled = false;
+                btn.textContent = '✅ Accept';
               }
             });
           });
@@ -19495,12 +19568,24 @@ meta.textContent =
                   throw new Error(error.error || 'Failed to send counter-offer');
                 }
                 
+                // Update localStorage to track hustler's counter-offer
+                const hustlerCounterOfferKey = `hustlerCounterOffer_${offerId}`;
+                localStorage.setItem(hustlerCounterOfferKey, proposedAmount.toString());
+                
                 showToast('✅ Counter-offer sent to customer!');
                 document.body.removeChild(modalOverlay);
-                // Refresh the modal to show updated state
-                setTimeout(() => {
-                  showViewJobModal(job.id, 'hustler');
-                }, 500);
+                
+                // Refresh the view to show updated state
+                if (typeof loadActiveJobs === 'function') {
+                  loadActiveJobs();
+                } else if (typeof renderJobs === 'function') {
+                  await renderJobs(true);
+                } else {
+                  // Refresh the modal to show updated state
+                  setTimeout(() => {
+                    showViewJobModal(job.id, 'hustler');
+                  }, 500);
+                }
               } catch (error) {
                 showToast('Error: ' + (error.message || 'Failed to send counter-offer'));
                 btn.disabled = false;
