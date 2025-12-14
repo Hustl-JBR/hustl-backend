@@ -7300,37 +7300,12 @@ async function renderJobs(reset = false) {
         card.style.background = "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)";
       }
 
-      const pay = document.createElement("div");
-      pay.style.cssText = "font-weight: 700; color: var(--success); font-size: 1rem; white-space: nowrap;";
-
-      // Format pricing display
+      // Don't add pay to titleRow - we'll add it with location later
+      textContent.appendChild(titleRow);
+      
+      // Get requirements for later use
       const requirements = job.requirements || {};
       const pricingOption = requirements.pricing_option;
-      
-      if (pricingOption === "hustlers_quote") {
-        pay.textContent = "💰 Hustler suggests price";
-        pay.style.color = "#f59e0b";
-      } else if (job.payType === "flat") {
-        const total = Number(job.amount) || 0;
-        pay.textContent = `💰 $${total.toFixed(0)} flat`;
-      } else if (job.payType === "hourly") {
-        const hr = Number(job.hourlyRate) || 0;
-        const maxHrs = job.estHours || "";
-        const rawTeamSize = job.teamSize || 1;
-        const teamSize = typeof rawTeamSize === 'string' ? parseInt(rawTeamSize, 10) : Number(rawTeamSize) || 1;
-        if (teamSize > 1) {
-          const perPerson = hr / teamSize;
-          pay.textContent = `💰 $${hr.toFixed(0)}/hr (max ${maxHrs || '?'} hrs)\n👥 ${teamSize} → $${perPerson.toFixed(0)}/hr each`;
-          pay.style.whiteSpace = "pre-line";
-        } else {
-          pay.textContent = `💰 $${hr.toFixed(0)}/hr (max ${maxHrs || '?'} hrs)`;
-        }
-      } else {
-        const total = Number(job.amount) || 0;
-        pay.textContent = `💰 $${total.toFixed(0)}`;
-      }
-      // Don't append pay to titleRow yet - we'll put it with location
-      textContent.appendChild(titleRow);
 
       // Compact meta section: Category • time ago
       const meta = document.createElement("div");
