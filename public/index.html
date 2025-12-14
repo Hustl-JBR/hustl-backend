@@ -7149,12 +7149,14 @@ async function renderJobs(reset = false) {
       filteredJobs = [];
     }
 
-    // Get user role for card title
+    // Get user role and ID for card title and "Your job" badge
     let role = null;
+    let currentUserId = null;
     try {
       if (window.hustlAPI && window.hustlAPI.auth) {
         const user = await window.hustlAPI.auth.getCurrentUser();
         role = user?.roles?.[0] || null;
+        currentUserId = user?.id || null;
       }
     } catch (e) {
       console.error("Error getting user role:", e);
@@ -7242,9 +7244,29 @@ async function renderJobs(reset = false) {
       
       const titleEl = document.createElement("div");
       titleEl.className = "job-title";
-      titleEl.style.cssText = "font-size: 0.95rem; line-height: 1.3;";
-      titleEl.textContent = job.title;
+      titleEl.style.cssText = "font-size: 0.95rem; line-height: 1.3; flex: 1;";
+      
+      // Check if this is the user's posted job
+      const isUserJob = currentUserId && job.customerId === currentUserId;
+      
+      if (isUserJob) {
+        // Add "Your job" badge
+        const yourJobBadge = document.createElement("span");
+        yourJobBadge.style.cssText = "display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; margin-right: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;";
+        yourJobBadge.textContent = "Your Job";
+        titleEl.appendChild(yourJobBadge);
+      }
+      
+      const titleText = document.createElement("span");
+      titleText.textContent = job.title;
+      titleEl.appendChild(titleText);
       titleRow.appendChild(titleEl);
+      
+      // Add different border color for user's jobs
+      if (isUserJob) {
+        card.style.border = "2px solid #3b82f6";
+        card.style.background = "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)";
+      }
 
       const pay = document.createElement("div");
       pay.style.cssText = "font-weight: 700; color: var(--success); font-size: 1rem; white-space: nowrap;";
@@ -18586,7 +18608,7 @@ meta.textContent =
                   <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 2px solid var(--border);">
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Your offer:</div>
                     <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.75rem;">
-                      ${userOffer.proposedAmount ? `$${parseFloat(userOffer.proposedAmount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}` : 'No price specified'}
+                      ${userOffer.proposedAmount && (!job.amount || Math.abs(parseFloat(userOffer.proposedAmount) - parseFloat(job.amount || 0)) < 0.01) ? `$${parseFloat(userOffer.proposedAmount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}` : (job.amount ? `$${parseFloat(job.amount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}` : (userOffer.proposedAmount ? `$${parseFloat(userOffer.proposedAmount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}` : 'No price specified'))}
                     </div>
                     ${userOffer.note ? `
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600; margin-top: 0.75rem;">Your message:</div>
