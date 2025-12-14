@@ -18600,37 +18600,59 @@ meta.textContent =
                                   <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">💬 Negotiation</h3>
                                   
                                   <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 2px solid var(--border);">
-                                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Hustler's offer:</div>
-                                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.75rem;">
+                                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Most recent offer:</div>
+                                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.25rem;">
                                       ${(() => {
-                                        // Show hustler's original offer (not customer's counter-offer)
+                                        // Show most recent offer - could be hustler's or customer's
                                         const hustlerOriginalOfferKey = `hustlerOriginalOffer_${offer.id}`;
                                         const customerCounterOfferKey = `customerCounterOffer_${offer.id}`;
+                                        const hustlerCounterOfferKey = `hustlerCounterOffer_${offer.id}`;
                                         const hustlerOriginalOffer = localStorage.getItem(hustlerOriginalOfferKey);
                                         const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
+                                        const hustlerCounterOffer = localStorage.getItem(hustlerCounterOfferKey);
                                         
-                                        // If customer counter-offered, proposedAmount is customer's offer
-                                        // So we need to show hustler's original offer
-                                        if (customerCounterOffer) {
-                                          const customerOffer = parseFloat(customerCounterOffer);
-                                          // If proposedAmount matches customer's counter-offer, show hustler's original
-                                          if (proposedAmount && Math.abs(proposedAmount - customerOffer) < 0.01) {
-                                            if (hustlerOriginalOffer && hustlerOriginalOffer !== '') {
-                                              return `$${parseFloat(hustlerOriginalOffer).toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}`;
-                                            }
-                                            return `$${jobAmount.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}`;
-                                          }
-                                          // If proposedAmount differs, hustler counter-offered
-                                          if (proposedAmount && Math.abs(proposedAmount - customerOffer) > 0.01) {
-                                            return `$${proposedAmount.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}`;
-                                          }
+                                        // Determine most recent offer and who sent it
+                                        let mostRecentAmount = null;
+                                        let sentBy = 'hustler';
+                                        
+                                        // Check if hustler counter-offered (most recent)
+                                        if (hustlerCounterOffer) {
+                                          mostRecentAmount = parseFloat(hustlerCounterOffer);
+                                          sentBy = 'hustler';
+                                        } else if (customerCounterOffer) {
+                                          // Customer counter-offered
+                                          mostRecentAmount = parseFloat(customerCounterOffer);
+                                          sentBy = 'customer';
+                                        } else if (proposedAmount) {
+                                          // Initial hustler offer
+                                          mostRecentAmount = proposedAmount;
+                                          sentBy = 'hustler';
+                                        } else if (hustlerOriginalOffer && hustlerOriginalOffer !== '') {
+                                          mostRecentAmount = parseFloat(hustlerOriginalOffer);
+                                          sentBy = 'hustler';
+                                        } else {
+                                          mostRecentAmount = jobAmount;
+                                          sentBy = 'hustler';
                                         }
                                         
-                                        // No customer counter-offer or hustler's original offer
-                                        if (hustlerOriginalOffer && hustlerOriginalOffer !== '') {
-                                          return `$${parseFloat(hustlerOriginalOffer).toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}`;
+                                        return mostRecentAmount ? `$${mostRecentAmount.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}` : 'No price specified';
+                                      })()}
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">
+                                      ${(() => {
+                                        // Determine who sent the most recent offer
+                                        const customerCounterOfferKey = `customerCounterOffer_${offer.id}`;
+                                        const hustlerCounterOfferKey = `hustlerCounterOffer_${offer.id}`;
+                                        const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
+                                        const hustlerCounterOffer = localStorage.getItem(hustlerCounterOfferKey);
+                                        
+                                        if (hustlerCounterOffer) {
+                                          return 'Sent by hustler';
+                                        } else if (customerCounterOffer) {
+                                          return 'Sent by you';
+                                        } else {
+                                          return 'Sent by hustler';
                                         }
-                                        return proposedPrice || `$${jobAmount.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}`;
                                       })()}
                                     </div>
                                   </div>
@@ -18995,8 +19017,8 @@ meta.textContent =
                   <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">💬 Negotiation</h3>
                   
                   <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 2px solid var(--border);">
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Your offer:</div>
-                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.75rem;">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Most recent offer:</div>
+                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.25rem;">
                       ${(() => {
                         // Always show hustler's most recent offer
                         // Logic:
@@ -19054,6 +19076,7 @@ meta.textContent =
                         }
                       })()}
                     </div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">Sent by you</div>
                     ${userOffer.note ? `
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600; margin-top: 0.75rem;">Your message:</div>
                     <div style="color: var(--text-main); font-size: 0.9rem; padding: 0.75rem; background: white; border-radius: 6px; border: 1px solid var(--border);">"${userOffer.note}"</div>
