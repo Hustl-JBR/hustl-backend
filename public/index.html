@@ -18171,14 +18171,34 @@ meta.textContent =
         }
         
         // Format "Needed By" using endTime (the actual deadline)
-        if (job.endTime || (deadlinePreference === 'today_asap' && job.date)) {
+        // Show Needed By for jobs with specific deadlines (not flexible/no deadline)
+        if (deadlinePreference && 
+            deadlinePreference !== 'until_completed' && 
+            deadlinePreference !== 'whenever' && 
+            deadlinePreference !== 'flexible' &&
+            deadlinePreference !== 'flexible_week' &&
+            deadlinePreference !== 'no_deadline') {
           let neededByDate;
+          
           if (job.endTime) {
             neededByDate = new Date(job.endTime);
           } else if (deadlinePreference === 'today_asap' && job.date) {
-            // For today_asap, use today at 11:59 PM
+            // For today_asap, use today at 11:59 PM local time
             neededByDate = new Date(job.date);
             neededByDate.setHours(23, 59, 59, 999);
+          } else if (deadlinePreference === 'tomorrow' && job.date) {
+            // For tomorrow, use tomorrow at end of day
+            neededByDate = new Date(job.date);
+            neededByDate.setHours(23, 59, 59, 999);
+          } else if (deadlinePreference === 'specific_date' && job.date) {
+            // For specific date, use the job date + end time if available
+            neededByDate = new Date(job.date);
+            if (job.endTime) {
+              neededByDate = new Date(job.endTime);
+            } else {
+              // Default to end of selected day
+              neededByDate.setHours(23, 59, 59, 999);
+            }
           }
           
           if (neededByDate && !isNaN(neededByDate.getTime())) {
