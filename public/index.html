@@ -18909,33 +18909,42 @@ meta.textContent =
                     <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.75rem;">
                       ${(() => {
                         // Always show hustler's most recent offer
-                        // After hustler counter-offers, proposedAmount is their most recent offer
-                        // Check localStorage for customer's counter-offer to determine if hustler has counter-offered
-                        const customerCounterOfferKey = `customerCounterOffer_${userOffer.id}`;
-                        const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
+                        // Logic:
+                        // 1. If hustler counter-offered, proposedAmount is their most recent offer
+                        // 2. If customer counter-offered but hustler hasn't responded, show hustler's original offer
+                        // 3. If no negotiations, show hustler's initial offer or job.amount
                         
-                        // If customer has counter-offered and proposedAmount differs from customer's counter-offer,
-                        // then proposedAmount is hustler's counter-offer (most recent)
-                        // Otherwise, if proposedAmount exists and differs from job.amount, it might be hustler's initial offer or customer's counter-offer
-                        // We need to check: if customer counter-offered, and proposedAmount matches it, then show job.amount or hustler's original
-                        // If proposedAmount doesn't match customer counter-offer, it's hustler's counter-offer
+                        const customerCounterOfferKey = `customerCounterOffer_${userOffer.id}`;
+                        const hustlerOriginalOfferKey = `hustlerOriginalOffer_${userOffer.id}`;
+                        const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
+                        const hustlerOriginalOffer = localStorage.getItem(hustlerOriginalOfferKey);
+                        const currentProposed = userOffer.proposedAmount ? parseFloat(userOffer.proposedAmount) : null;
                         
                         if (customerCounterOffer) {
+                          // Customer has counter-offered
                           const customerOffer = parseFloat(customerCounterOffer);
-                          const currentProposed = userOffer.proposedAmount ? parseFloat(userOffer.proposedAmount) : null;
                           
-                          // If proposedAmount exists and differs from customer's counter-offer, it's hustler's counter-offer
+                          // If proposedAmount exists and differs from customer's counter-offer, hustler has counter-offered
                           if (currentProposed && Math.abs(currentProposed - customerOffer) > 0.01) {
+                            // This is hustler's counter-offer (most recent)
                             return `$${currentProposed.toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
                           }
-                          // Otherwise, customer counter-offered but hustler hasn't responded yet
-                          // Show hustler's original offer (job.amount or their initial proposedAmount before customer negotiated)
-                          // For now, show job.amount as baseline
+                          
+                          // Customer counter-offered but hustler hasn't responded yet
+                          // Show hustler's original offer
+                          if (hustlerOriginalOffer && hustlerOriginalOffer !== '') {
+                            return `$${parseFloat(hustlerOriginalOffer).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
+                          }
+                          // Fallback to job.amount if no original offer stored
                           return `$${parseFloat(job.amount || 0).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
-                        } else if (userOffer.proposedAmount) {
-                          // No customer counter-offer yet, so proposedAmount is hustler's offer
-                          return `$${parseFloat(userOffer.proposedAmount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
+                        } else if (currentProposed) {
+                          // No customer counter-offer yet, so proposedAmount is hustler's initial offer
+                          return `$${currentProposed.toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
+                        } else if (hustlerOriginalOffer && hustlerOriginalOffer !== '') {
+                          // No proposedAmount but we have original offer stored
+                          return `$${parseFloat(hustlerOriginalOffer).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
                         } else if (job.amount) {
+                          // Fallback to job.amount
                           return `$${parseFloat(job.amount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
                         } else {
                           return 'No price specified';
@@ -20830,6 +20839,8 @@ meta.textContent =
     
     // Apply to Job (Hustler)
     async function applyToJob(jobId, note, proposedPrice) {
+      // Store hustler's original offer in localStorage for tracking
+      // This will be used to show "Your offer" even after negotiations
       try {
         const token = localStorage.getItem('hustl_token');
         const response = await fetch(`${API_BASE}/offers`, {
@@ -20848,6 +20859,16 @@ meta.textContent =
         if (!response.ok) {
           const error = await response.json();
           throw new Error(error.error || 'Failed to apply to job');
+        }
+        
+        const offer = await response.json();
+        
+        // Store hustler's original offer in localStorage for tracking
+        // This will be used to show "Your offer" even after negotiations
+        if (offer.id) {
+          const hustlerOriginalOfferKey = `hustlerOriginalOffer_${offer.id}`;
+          // Store the proposedAmount if hustler proposed a price, otherwise store null (will use job.amount as baseline)
+          localStorage.setItem(hustlerOriginalOfferKey, (proposedPrice || '').toString());
         }
         
         // Show success confirmation modal
