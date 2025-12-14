@@ -18920,22 +18920,35 @@ meta.textContent =
                         const hustlerOriginalOffer = localStorage.getItem(hustlerOriginalOfferKey);
                         const currentProposed = userOffer.proposedAmount ? parseFloat(userOffer.proposedAmount) : null;
                         
+                        // CRITICAL: Always show hustler's offer, NEVER customer's counter-offer
+                        // When customer counter-offers, proposedAmount becomes customer's offer
+                        // So we need to check if proposedAmount matches customer's counter-offer
+                        
                         if (customerCounterOffer) {
                           // Customer has counter-offered
                           const customerOffer = parseFloat(customerCounterOffer);
                           
-                          // If proposedAmount exists and differs from customer's counter-offer, hustler has counter-offered
+                          // If proposedAmount matches customer's counter-offer, that means customer just negotiated
+                          // and hustler hasn't counter-offered yet - show hustler's original offer
+                          if (currentProposed && Math.abs(currentProposed - customerOffer) < 0.01) {
+                            // proposedAmount is customer's counter-offer, so show hustler's original
+                            if (hustlerOriginalOffer && hustlerOriginalOffer !== '') {
+                              return `$${parseFloat(hustlerOriginalOffer).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
+                            }
+                            // Fallback to job.amount if no original offer stored
+                            return `$${parseFloat(job.amount || 0).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
+                          }
+                          
+                          // If proposedAmount differs from customer's counter-offer, hustler has counter-offered
+                          // This is hustler's most recent offer
                           if (currentProposed && Math.abs(currentProposed - customerOffer) > 0.01) {
-                            // This is hustler's counter-offer (most recent)
                             return `$${currentProposed.toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
                           }
                           
-                          // Customer counter-offered but hustler hasn't responded yet
-                          // Show hustler's original offer
+                          // Edge case: show hustler's original offer
                           if (hustlerOriginalOffer && hustlerOriginalOffer !== '') {
                             return `$${parseFloat(hustlerOriginalOffer).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
                           }
-                          // Fallback to job.amount if no original offer stored
                           return `$${parseFloat(job.amount || 0).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
                         } else if (currentProposed) {
                           // No customer counter-offer yet, so proposedAmount is hustler's initial offer
