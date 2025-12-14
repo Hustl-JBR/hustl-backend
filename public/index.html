@@ -19306,6 +19306,135 @@ meta.textContent =
             });
           });
           
+          // Accept hustler's counter-offer (customer side)
+          modalOverlay.querySelectorAll('.acceptHustlerCounterOfferBtn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const offerId = btn.dataset.offerId;
+              const proposedAmount = btn.dataset.proposedAmount;
+              if (!offerId) return;
+              
+              try {
+                const token = localStorage.getItem('hustl_token');
+                if (!token) {
+                  showToast('Please log in');
+                  return;
+                }
+                
+                btn.disabled = true;
+                btn.textContent = 'Accepting...';
+                
+                // Customer accepts hustler's counter-offer
+                showToast('✅ You accepted the hustler\'s counter-offer. You can now officially accept this applicant.');
+                document.body.removeChild(modalOverlay);
+                
+                // Refresh the view
+                if (typeof loadPostedJobs === 'function') {
+                  loadPostedJobs();
+                } else if (typeof showViewJobModal === 'function') {
+                  setTimeout(() => {
+                    showViewJobModal(job.id, 'customer');
+                  }, 500);
+                }
+              } catch (error) {
+                showToast('Error: ' + (error.message || 'Failed to accept'));
+                btn.disabled = false;
+                btn.textContent = '✅ Accept';
+              }
+            });
+          });
+          
+          // Deny hustler's counter-offer (customer side - show counter-offer option)
+          modalOverlay.querySelectorAll('.denyHustlerCounterOfferBtn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const offerId = btn.dataset.offerId;
+              if (!offerId) return;
+              
+              // Show the counter-offer section
+              const counterSection = document.getElementById(`customerCounterOfferSection_${offerId}`);
+              if (counterSection) {
+                counterSection.style.display = counterSection.style.display === 'none' ? 'block' : 'none';
+                if (counterSection.style.display === 'block') {
+                  // Focus the input
+                  const input = document.getElementById(`customerCounterOfferInput_${offerId}`);
+                  if (input) {
+                    setTimeout(() => input.focus(), 100);
+                  }
+                }
+              }
+            });
+          });
+          
+          // Submit customer counter-offer (customer sends counter-offer to hustler)
+          modalOverlay.querySelectorAll('.submitCustomerCounterOfferBtn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const offerId = btn.dataset.offerId;
+              if (!offerId) return;
+              
+              const input = document.getElementById(`customerCounterOfferInput_${offerId}`);
+              const proposedAmount = parseFloat(input?.value || 0);
+              
+              if (!proposedAmount || proposedAmount <= 0) {
+                showToast('Please enter a valid price');
+                return;
+              }
+              
+              try {
+                const token = localStorage.getItem('hustl_token');
+                if (!token) {
+                  showToast('Please log in to send counter-offer');
+                  return;
+                }
+                
+                btn.disabled = true;
+                btn.textContent = 'Sending...';
+                
+                const response = await fetch(`${API_BASE}/offers/${offerId}/negotiate`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ proposedAmount })
+                });
+                
+                if (!response.ok) {
+                  const error = await response.json();
+                  throw new Error(error.error || 'Failed to send counter-offer');
+                }
+                
+                // Store customer's counter-offer in localStorage
+                const customerCounterOfferKey = `customerCounterOffer_${offerId}`;
+                localStorage.setItem(customerCounterOfferKey, proposedAmount.toString());
+                
+                // Mark as recently negotiated
+                const negotiationKey = `negotiated_${offerId}`;
+                localStorage.setItem(negotiationKey, 'true');
+                setTimeout(() => {
+                  localStorage.removeItem(negotiationKey);
+                }, 3600000);
+                
+                showToast('✅ Counter-offer sent to hustler!');
+                document.body.removeChild(modalOverlay);
+                
+                // Refresh the view
+                if (typeof loadPostedJobs === 'function') {
+                  loadPostedJobs();
+                } else if (typeof showViewJobModal === 'function') {
+                  setTimeout(() => {
+                    showViewJobModal(job.id, 'customer');
+                  }, 500);
+                }
+              } catch (error) {
+                showToast('Error: ' + (error.message || 'Failed to send counter-offer'));
+                btn.disabled = false;
+                btn.textContent = '💬 Send Counter-Offer';
+              }
+            });
+          });
+          
           // Edit/Close/Repost job
           modalOverlay.querySelector('.editJobBtn')?.addEventListener('click', async (e) => {
             e.stopPropagation();
