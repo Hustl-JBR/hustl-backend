@@ -16941,13 +16941,25 @@ meta.textContent =
             originalPriceDisplay = `$${Number(job.amount || 0).toFixed(0)} flat`;
           }
           
-          // Format proposed price
+          // Format proposed price - only show if hustler actually proposed a different amount
           let proposedPriceDisplay = '';
+          let hasHustlerProposedPrice = false;
+          
+          // Check if hustler proposed a price (only for hustlers_quote jobs, or if proposedAmount differs from job amount)
           if (offer.proposedAmount) {
-            if (job.payType === 'hourly') {
-              proposedPriceDisplay = `$${Number(offer.proposedAmount).toFixed(0)}/hr`;
-            } else {
-              proposedPriceDisplay = `$${Number(offer.proposedAmount).toFixed(0)} flat`;
+            const proposedAmount = Number(offer.proposedAmount);
+            const jobAmount = Number(job.amount || 0);
+            
+            // Only show "Your offer" if:
+            // 1. It's a hustlers_quote job (hustler must propose), OR
+            // 2. The proposed amount is different from the job amount (negotiation happened)
+            if (pricingOption === 'hustlers_quote' || Math.abs(proposedAmount - jobAmount) > 0.01) {
+              hasHustlerProposedPrice = true;
+              if (job.payType === 'hourly') {
+                proposedPriceDisplay = `$${proposedAmount.toFixed(0)}/hr`;
+              } else {
+                proposedPriceDisplay = `$${proposedAmount.toFixed(0)} flat`;
+              }
             }
           }
           
@@ -16992,13 +17004,13 @@ meta.textContent =
               <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Status:</div>
               <div style="color: var(--text-main); font-weight: 600; margin-bottom: 0.75rem;">${offer.status === 'PENDING' ? 'Waiting for customer review' : offer.status === 'ACCEPTED' ? 'Customer accepted your offer' : offer.status}</div>
               
-              ${proposedPriceDisplay ? `
+              ${hasHustlerProposedPrice ? `
               <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Your offer:</div>
               <div style="color: var(--primary); font-weight: 600; margin-bottom: 0.75rem;">${proposedPriceDisplay}</div>
               ` : ''}
               
-              ${pricingOption !== 'hustlers_quote' ? `
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Their original price:</div>
+              ${pricingOption !== 'hustlers_quote' && !hasHustlerProposedPrice ? `
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Job price:</div>
               <div style="color: var(--text-main); margin-bottom: ${offer.note ? '0.75rem' : '0'};">${originalPriceDisplay}</div>
               ` : ''}
             </div>
