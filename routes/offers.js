@@ -816,6 +816,107 @@ router.post('/:id/negotiate', authenticate, requireRole('CUSTOMER'), [
   }
 });
 
+// POST /offers/:id/hustler-counter - Hustler counter-offers customer's negotiation (HUSTLER only)
+router.post('/:id/hustler-counter', authenticate, requireRole('HUSTLER'), [
+  body('proposedAmount').isFloat({ min: 0.01 }).withMessage('Proposed amount must be greater than 0'),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        error: 'Validation failed',
+        details: errors.array() 
+      });
+    }
+
+    const { proposedAmount } = req.body;
+    const offer = await prisma.offer.findUnique({
+      where: { id: req.params.id },
+      include: {
+        job: {
+          include: {
+            customer: { select: { id: true, email: true, name: true } },
+          },
+        },
+        hustler: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!offer) {
+      return res.status(404).json({ error: 'Offer not found' });
+    }
+
+    // Verify hustler owns this offer
+    if (offer.hustlerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden - You can only counter-offer on your own offers' });
+    }
+
+    // Only allow counter-offer on pending offers
+    if (offer.status !== 'PENDING') {
+      return res.status(400).json({ 
+        error: 'Can only counter-offer on pending offers',
+        currentStatus: offer.status 
+      });
+    }
+
+    // Update the offer with the new proposed amount (hustler's counter-offer)
+    const updatedOffer = await prisma.offer.update({
+      where: { id: req.params.id },
+      data: {
+        proposedAmount: parseFloat(proposedAmount),
+      },
+      include: {
+        hustler: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            photoUrl: true,
+          },
+        },
+        job: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    // Send notification email to customer about counter-offer (non-blocking)
+    try {
+      const emailService = require('../services/email');
+      if (emailService.sendPriceNegotiationEmail) {
+        await emailService.sendPriceNegotiationEmail(
+          offer.job.customer.email,
+          offer.job.customer.name,
+          offer.job.title,
+          parseFloat(proposedAmount),
+          offer.job.id
+        );
+      }
+    } catch (emailError) {
+      console.error('Error sending counter-offer email (non-fatal):', emailError);
+      // Continue - the counter-offer is still successful
+    }
+
+    res.json({
+      success: true,
+      message: 'Counter-offer sent to customer',
+      offer: updatedOffer,
+    });
+  } catch (error) {
+    console.error('Hustler counter-offer error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /offers/:id/hustler-cancel - Hustler cancels after being accepted (HUSTLER only)
 router.post('/:id/hustler-cancel', authenticate, requireRole('HUSTLER'), async (req, res) => {
   try {

@@ -18289,7 +18289,7 @@ meta.textContent =
                                   <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">
                                     Your offer: <span style="color: var(--primary);">${proposedPrice}</span>
                                   </div>
-                                  ${jobAmount > 0 ? `<div style="font-size: 0.85rem; color: var(--text-muted);">
+                                  ${jobAmount > 0 && pricingOption !== 'hustlers_quote' ? `<div style="font-size: 0.85rem; color: var(--text-muted);">
                                     Original job price: $${jobAmount.toFixed(2)}
                                   </div>` : ''}
                                 </div>
@@ -18600,9 +18600,20 @@ meta.textContent =
                     <div style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
                       $${parseFloat(userOffer.proposedAmount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}
                     </div>
-                    <div style="display: flex; gap: 0.5rem;">
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
                       <button class="btn btn-primary acceptNegotiationBtn" data-offer-id="${userOffer.id}" data-proposed-amount="${userOffer.proposedAmount}" style="flex: 1; padding: 0.75rem; font-weight: 600; background: #10b981; border-color: #10b981;">✅ Accept</button>
-                      <button class="btn btn-ghost denyNegotiationBtn" data-offer-id="${userOffer.id}" style="flex: 1; padding: 0.75rem; font-weight: 600; color: #dc2626; border-color: #fecaca;">❌ Deny</button>
+                      <button class="btn btn-ghost denyNegotiationBtn" data-offer-id="${userOffer.id}" data-customer-offer="${userOffer.proposedAmount}" style="flex: 1; padding: 0.75rem; font-weight: 600; color: #dc2626; border-color: #fecaca;">❌ Deny</button>
+                    </div>
+                    <div id="counterOfferSection_${userOffer.id}" style="display: none; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #93c5fd;">
+                      <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">💬 Counter with your price:</div>
+                      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <span style="font-size: 1.25rem; color: #0f172a;">$</span>
+                        <input type="number" id="hustlerCounterOffer_${userOffer.id}" value="${userOffer.proposedAmount || job.amount}" 
+                          style="flex: 1; padding: 0.75rem; font-size: 1.25rem; font-weight: 600; border: 2px solid #3b82f6; border-radius: 8px; text-align: center;"
+                          min="0" step="0.01" />
+                        <span style="font-size: 0.85rem; color: #64748b;">${payType === 'hourly' ? '/hr' : 'flat'}</span>
+                      </div>
+                      <button class="btn btn-primary submitCounterOfferBtn" data-offer-id="${userOffer.id}" style="width: 100%; padding: 0.75rem; font-weight: 600; background: #3b82f6; border-color: #3b82f6;">💬 Send Counter-Offer</button>
                     </div>
                   </div>
                   ` : `
@@ -18918,23 +18929,77 @@ meta.textContent =
             });
           });
           
-          // Deny negotiation (hustler rejects customer's counter-offer)
+          // Deny negotiation (hustler rejects customer's counter-offer - show counter-offer option)
           modalOverlay.querySelectorAll('.denyNegotiationBtn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
               e.stopPropagation();
               const offerId = btn.dataset.offerId;
               if (!offerId) return;
               
-              if (confirm('Are you sure you want to reject the customer\'s counter-offer? Your original offer will remain.')) {
-                try {
-                  const token = localStorage.getItem('hustl_token');
-                  // For now, just show a message - the offer stays as is
-                  showToast('Counter-offer rejected. Your original offer remains.');
-                  document.body.removeChild(modalOverlay);
-                  if (typeof loadActiveJobs === 'function') loadActiveJobs();
-                } catch (error) {
-                  showToast('Error: ' + (error.message || 'Failed to reject'));
+              // Show the counter-offer section
+              const counterSection = document.getElementById(`counterOfferSection_${offerId}`);
+              if (counterSection) {
+                counterSection.style.display = counterSection.style.display === 'none' ? 'block' : 'none';
+                if (counterSection.style.display === 'block') {
+                  // Focus the input
+                  const input = document.getElementById(`hustlerCounterOffer_${offerId}`);
+                  if (input) {
+                    setTimeout(() => input.focus(), 100);
+                  }
                 }
+              }
+            });
+          });
+          
+          // Submit counter-offer (hustler sends counter-offer to customer)
+          modalOverlay.querySelectorAll('.submitCounterOfferBtn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const offerId = btn.dataset.offerId;
+              if (!offerId) return;
+              
+              const input = document.getElementById(`hustlerCounterOffer_${offerId}`);
+              const proposedAmount = parseFloat(input?.value || 0);
+              
+              if (!proposedAmount || proposedAmount <= 0) {
+                showToast('Please enter a valid price');
+                return;
+              }
+              
+              try {
+                const token = localStorage.getItem('hustl_token');
+                if (!token) {
+                  showToast('Please log in to send counter-offer');
+                  return;
+                }
+                
+                btn.disabled = true;
+                btn.textContent = 'Sending...';
+                
+                const response = await fetch(`${API_BASE}/offers/${offerId}/hustler-counter`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ proposedAmount })
+                });
+                
+                if (!response.ok) {
+                  const error = await response.json();
+                  throw new Error(error.error || 'Failed to send counter-offer');
+                }
+                
+                showToast('✅ Counter-offer sent to customer!');
+                document.body.removeChild(modalOverlay);
+                // Refresh the modal to show updated state
+                setTimeout(() => {
+                  showViewJobModal(job.id, 'hustler');
+                }, 500);
+              } catch (error) {
+                showToast('Error: ' + (error.message || 'Failed to send counter-offer'));
+                btn.disabled = false;
+                btn.textContent = '💬 Send Counter-Offer';
               }
             });
           });
