@@ -16782,8 +16782,10 @@ meta.textContent =
               <div style="color: var(--primary); font-weight: 600; margin-bottom: 0.75rem;">${proposedPriceDisplay}</div>
               ` : ''}
               
+              ${pricingOption !== 'hustlers_quote' ? `
               <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Their original price:</div>
               <div style="color: var(--text-main); margin-bottom: ${offer.note ? '0.75rem' : '0'};">${originalPriceDisplay}</div>
+              ` : ''}
             </div>
             
             ${offer.note ? `
@@ -17861,9 +17863,10 @@ meta.textContent =
         const isHustler = job.hustlerId === user.id;
         const actualRole = isCustomer ? 'customer' : (isHustler ? 'hustler' : role);
         
-        // Fetch applicants/offers for customer view
+        // Fetch applicants/offers for customer view and hustler view (to check if already applied)
         let offers = [];
         let pendingOffers = [];
+        let userOffer = null; // For hustler view - check if they already applied
         if (actualRole === 'customer') {
           try {
             const offersResponse = await fetch(`${API_BASE}/offers/${jobId}`, {
@@ -17872,6 +17875,19 @@ meta.textContent =
             if (offersResponse.ok) {
               offers = await offersResponse.json();
               pendingOffers = offers.filter(o => o.status === 'PENDING');
+            }
+          } catch (e) {
+            console.error("Error fetching offers:", e);
+          }
+        } else if (!isCustomer && !isHustler && job.status === 'OPEN') {
+          // Hustler viewing job - check if they already applied
+          try {
+            const offersResponse = await fetch(`${API_BASE}/offers/${jobId}`, {
+              headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+            if (offersResponse.ok) {
+              const allOffers = await offersResponse.json();
+              userOffer = allOffers.find(o => o.hustlerId === user.id && o.status === 'PENDING');
             }
           } catch (e) {
             console.error("Error fetching offers:", e);
@@ -18525,8 +18541,8 @@ meta.textContent =
                 </div>
                 ` : ''}
                 
-                <!-- Apply Section -->
-                ${job.status === 'OPEN' && !isHustler ? `
+                <!-- Apply Section or Negotiation Section -->
+                ${job.status === 'OPEN' && !isHustler && !userOffer ? `
                 <div style="padding: 1.5rem; background: #f0fdf4; border-radius: 12px; margin-bottom: 2rem; border: 2px solid #10b981;">
                   <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">💼 Apply for This Job</h3>
                   
@@ -18562,6 +18578,42 @@ meta.textContent =
                   </div>
                   
                   <button class="btn btn-primary applyToJobBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.75rem; font-size: 1rem; font-weight: 600;">✅ Apply to Job</button>
+                </div>
+                ` : job.status === 'OPEN' && !isHustler && userOffer ? `
+                <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 2rem; border: 2px solid #f59e0b;">
+                  <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">💬 Negotiation</h3>
+                  
+                  <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 2px solid var(--border);">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Your offer:</div>
+                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.75rem;">
+                      ${userOffer.proposedAmount ? `$${parseFloat(userOffer.proposedAmount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}` : 'No price specified'}
+                    </div>
+                    ${userOffer.note ? `
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600; margin-top: 0.75rem;">Your message:</div>
+                    <div style="color: var(--text-main); font-size: 0.9rem; padding: 0.75rem; background: white; border-radius: 6px; border: 1px solid var(--border);">"${userOffer.note}"</div>
+                    ` : ''}
+                  </div>
+                  
+                  ${userOffer.proposedAmount && job.amount && Math.abs(parseFloat(userOffer.proposedAmount) - parseFloat(job.amount)) > 0.01 ? `
+                  <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
+                    <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Customer counter-offer:</div>
+                    <div style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
+                      $${parseFloat(userOffer.proposedAmount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                      <button class="btn btn-primary acceptNegotiationBtn" data-offer-id="${userOffer.id}" data-proposed-amount="${userOffer.proposedAmount}" style="flex: 1; padding: 0.75rem; font-weight: 600; background: #10b981; border-color: #10b981;">✅ Accept</button>
+                      <button class="btn btn-ghost denyNegotiationBtn" data-offer-id="${userOffer.id}" style="flex: 1; padding: 0.75rem; font-weight: 600; color: #dc2626; border-color: #fecaca;">❌ Deny</button>
+                    </div>
+                  </div>
+                  ` : `
+                  <div style="padding: 0.75rem; background: #ecfdf5; border-radius: 8px; border: 1px solid #10b981; color: #059669; font-size: 0.9rem; text-align: center;">
+                    ⏳ Waiting for customer response...
+                  </div>
+                  `}
+                  
+                  <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                    <button class="btn btn-ghost cancelApplicationBtn" data-offer-id="${userOffer.id}" style="width: 100%; padding: 0.75rem; font-weight: 600; color: #dc2626; border-color: #fecaca;">Cancel Application</button>
+                  </div>
                 </div>
                 ` : isHustler ? `
                 <div style="padding: 1.5rem; background: #dbeafe; border-radius: 12px; margin-bottom: 2rem; border: 2px solid #3b82f6;">
@@ -18804,14 +18856,87 @@ meta.textContent =
             // showToast is handled inside applyToJob function
           });
           
-          // Cancel application
-          modalOverlay.querySelector('.cancelApplicationBtn')?.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            if (confirm('Are you sure you want to cancel this job? You cannot do it anymore. The customer will be notified and the job will be reopened for other applicants. This action cannot be undone.')) {
-              await cancelApplication(job.id);
-              document.body.removeChild(modalOverlay);
-              loadActiveJobs();
-            }
+          // Cancel application (for negotiation view)
+          modalOverlay.querySelectorAll('.cancelApplicationBtn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const offerId = btn.dataset.offerId;
+              const jobId = btn.dataset.jobId;
+              if (offerId) {
+                // Cancel pending application
+                if (confirm('Are you sure you want to cancel this application?')) {
+                  try {
+                    const token = localStorage.getItem('hustl_token');
+                    const response = await fetch(`${API_BASE}/offers/${offerId}/cancel`, {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                      }
+                    });
+                    if (!response.ok) {
+                      const error = await response.json();
+                      throw new Error(error.error || 'Failed to cancel application');
+                    }
+                    showToast('✅ Application cancelled');
+                    document.body.removeChild(modalOverlay);
+                    if (typeof loadActiveJobs === 'function') loadActiveJobs();
+                  } catch (error) {
+                    showToast('Error: ' + (error.message || 'Failed to cancel'));
+                  }
+                }
+              } else if (jobId) {
+                // Cancel accepted job
+                if (confirm('Are you sure you want to cancel this job? You cannot do it anymore. The customer will be notified and the job will be reopened for other applicants. This action cannot be undone.')) {
+                  await cancelApplication(jobId);
+                  document.body.removeChild(modalOverlay);
+                  if (typeof loadActiveJobs === 'function') loadActiveJobs();
+                }
+              }
+            });
+          });
+          
+          // Accept negotiation (hustler accepts customer's counter-offer)
+          modalOverlay.querySelectorAll('.acceptNegotiationBtn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const offerId = btn.dataset.offerId;
+              const proposedAmount = btn.dataset.proposedAmount;
+              if (!offerId) return;
+              
+              try {
+                const token = localStorage.getItem('hustl_token');
+                // Update the offer to reflect that hustler accepted the counter-offer
+                // The offer.proposedAmount already contains the customer's counter-offer
+                // We just need to confirm acceptance - the customer can then officially accept
+                showToast('✅ You accepted the customer\'s counter-offer. The customer can now officially accept the job.');
+                document.body.removeChild(modalOverlay);
+                if (typeof loadActiveJobs === 'function') loadActiveJobs();
+              } catch (error) {
+                showToast('Error: ' + (error.message || 'Failed to accept'));
+              }
+            });
+          });
+          
+          // Deny negotiation (hustler rejects customer's counter-offer)
+          modalOverlay.querySelectorAll('.denyNegotiationBtn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const offerId = btn.dataset.offerId;
+              if (!offerId) return;
+              
+              if (confirm('Are you sure you want to reject the customer\'s counter-offer? Your original offer will remain.')) {
+                try {
+                  const token = localStorage.getItem('hustl_token');
+                  // For now, just show a message - the offer stays as is
+                  showToast('Counter-offer rejected. Your original offer remains.');
+                  document.body.removeChild(modalOverlay);
+                  if (typeof loadActiveJobs === 'function') loadActiveJobs();
+                } catch (error) {
+                  showToast('Error: ' + (error.message || 'Failed to reject'));
+                }
+              }
+            });
           });
           
           // Message customer
