@@ -9094,7 +9094,7 @@ async function renderJobs(reset = false) {
         const jobStatusUpper = (job.status || "OPEN").toUpperCase();
         
         if (hasApplied) {
-          let statusText = "✓ Applied — Pending Customer Response";
+          let statusText = "✓ Applied — Waiting for customer to accept offer";
           let statusBg = "#dcfce7";
           let statusColor = "#059669";
           
@@ -10075,7 +10075,7 @@ async function renderJobs(reset = false) {
             appliedStatus.textContent = "Your application was declined.";
             appliedStatus.style.color = "#dc2626";
           } else {
-            appliedStatus.textContent = "Your application is pending customer review.";
+            appliedStatus.textContent = "Waiting for customer to accept offer";
           }
           applySection.appendChild(appliedStatus);
 
@@ -18647,11 +18647,11 @@ meta.textContent =
                                         const hustlerCounterOffer = localStorage.getItem(hustlerCounterOfferKey);
                                         
                                         if (hustlerCounterOffer) {
-                                          return 'Sent by hustler';
+                                          return `Sent by ${hustler.name || 'hustler'}`;
                                         } else if (customerCounterOffer) {
                                           return 'Sent by you';
                                         } else {
-                                          return 'Sent by hustler';
+                                          return `Sent by ${hustler.name || 'hustler'}`;
                                         }
                                       })()}
                                     </div>
@@ -19076,7 +19076,32 @@ meta.textContent =
                         }
                       })()}
                     </div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">Sent by you</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">
+                      ${(() => {
+                        // Determine who sent the most recent offer
+                        const customerCounterOfferKey = `customerCounterOffer_${userOffer.id}`;
+                        const hustlerCounterOfferKey = `hustlerCounterOffer_${userOffer.id}`;
+                        const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
+                        const hustlerCounterOffer = localStorage.getItem(hustlerCounterOfferKey);
+                        const currentProposed = userOffer.proposedAmount ? parseFloat(userOffer.proposedAmount) : null;
+                        
+                        // If hustler counter-offered, it was sent by hustler (current user)
+                        if (hustlerCounterOffer || (customerCounterOffer && currentProposed && Math.abs(currentProposed - parseFloat(customerCounterOffer)) > 0.01)) {
+                          return 'Sent by you';
+                        } else if (customerCounterOffer) {
+                          // Customer counter-offered
+                          return `Sent by ${job.customer?.name || 'customer'}`;
+                        } else {
+                          // Initial offer was sent by hustler (current user)
+                          return 'Sent by you';
+                        }
+                      })()}
+                    </div>
+                    ${userOffer.status === 'PENDING' ? `
+                    <div style="font-size: 0.85rem; color: #d97706; margin-top: 0.75rem; padding: 0.5rem; background: #fef3c7; border-radius: 6px; border: 1px solid #fbbf24;">
+                      ⏳ Waiting for customer to accept offer
+                    </div>
+                    ` : ''}
                     ${userOffer.note ? `
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600; margin-top: 0.75rem;">Your message:</div>
                     <div style="color: var(--text-main); font-size: 0.9rem; padding: 0.75rem; background: white; border-radius: 6px; border: 1px solid var(--border);">"${userOffer.note}"</div>
@@ -19182,6 +19207,109 @@ meta.textContent =
         }
         
         document.body.appendChild(modalOverlay);
+        
+        // Background refresh for offers (silent, no UI indicators)
+        let offerRefreshInterval = null;
+        const refreshOffersSilently = async () => {
+          try {
+            const token = localStorage.getItem('hustl_token');
+            if (!token) return;
+            
+            // Only refresh if modal is still open
+            if (!document.body.contains(modalOverlay)) {
+              if (offerRefreshInterval) {
+                clearInterval(offerRefreshInterval);
+                offerRefreshInterval = null;
+              }
+              return;
+            }
+            
+            // Silently fetch updated offers
+            if (actualRole === 'customer') {
+              const offersResponse = await fetch(`${API_BASE}/offers/${jobId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              if (offersResponse.ok) {
+                const updatedOffers = await offersResponse.json();
+                const updatedPendingOffers = updatedOffers.filter(o => o.status === 'PENDING');
+                
+                // Only update if offers changed (to avoid unnecessary re-renders)
+                if (updatedPendingOffers.length !== pendingOffers.length || 
+                    JSON.stringify(updatedOffers.map(o => ({ id: o.id, status: o.status }))) !== 
+                    JSON.stringify(offers.map(o => ({ id: o.id, status: o.status })))) {
+                  offers = updatedOffers;
+                  pendingOffers = updatedPendingOffers;
+                  
+                  // Update the modal content silently
+                  const applicantsSection = modalOverlay.querySelector('.applicants-section');
+                  if (applicantsSection) {
+                    // Re-render applicants section with updated offers
+                    // This will be handled by re-calling showViewJobModal, but we'll do it silently
+                    // For now, just update the status indicators
+                    modalOverlay.querySelectorAll('[data-offer-id]').forEach(el => {
+                      const offerId = el.dataset.offerId;
+                      const updatedOffer = updatedOffers.find(o => o.id === offerId);
+                      if (updatedOffer) {
+                        // Update status text if offer was accepted
+                        const statusEl = el.querySelector('.offer-status-text');
+                        if (statusEl && updatedOffer.status === 'ACCEPTED') {
+                          statusEl.textContent = '✓ Accepted';
+                          statusEl.style.color = '#059669';
+                        } else if (statusEl && updatedOffer.status === 'PENDING') {
+                          statusEl.textContent = '⏳ Waiting for customer to accept offer';
+                          statusEl.style.color = '#d97706';
+                        }
+                      }
+                    });
+                  }
+                }
+              }
+            } else if (!isCustomer && !isHustler && job.status === 'OPEN') {
+              // Hustler view - check if their offer status changed
+              const offersResponse = await fetch(`${API_BASE}/offers/${jobId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              if (offersResponse.ok) {
+                const allOffers = await offersResponse.json();
+                const updatedUserOffer = allOffers.find(o => o.hustlerId === user.id && o.status === 'PENDING');
+                
+                if (updatedUserOffer && (!userOffer || updatedUserOffer.status !== userOffer.status)) {
+                  userOffer = updatedUserOffer;
+                  // Silently update the negotiation section if status changed
+                  const negotiationSection = modalOverlay.querySelector('.negotiation-section');
+                  if (negotiationSection && userOffer.status === 'PENDING') {
+                    const statusEl = negotiationSection.querySelector('.offer-status-text');
+                    if (statusEl) {
+                      statusEl.textContent = '⏳ Waiting for customer to accept offer';
+                      statusEl.style.color = '#d97706';
+                    }
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            // Silently fail - don't log or show errors during background refresh
+            console.debug('[OFFERS] Background refresh error (silent):', error);
+          }
+        };
+        
+        // Start background refresh every 5 seconds (silent, no UI indicators)
+        offerRefreshInterval = setInterval(refreshOffersSilently, 5000);
+        
+        // Clean up on modal close
+        const originalCloseModal = () => {
+          if (offerRefreshInterval) {
+            clearInterval(offerRefreshInterval);
+            offerRefreshInterval = null;
+          }
+          if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+          }
+          if (document.body.contains(modalOverlay)) {
+            document.body.removeChild(modalOverlay);
+          }
+        };
         
         // Live countdown update for expiration display
         let countdownInterval = null;
