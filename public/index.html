@@ -19912,8 +19912,11 @@ meta.textContent =
                 }
                 
                 // Store customer's counter-offer in localStorage
+                // Clear hustler counter-offer since customer just responded
                 const customerCounterOfferKey = `customerCounterOffer_${offerId}`;
+                const hustlerCounterOfferKey = `hustlerCounterOffer_${offerId}`;
                 localStorage.setItem(customerCounterOfferKey, proposedAmount.toString());
+                localStorage.removeItem(hustlerCounterOfferKey); // Clear hustler's counter-offer since customer responded
                 
                 // Mark as recently negotiated
                 const negotiationKey = `negotiated_${offerId}`;
