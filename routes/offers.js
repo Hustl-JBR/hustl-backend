@@ -917,6 +917,88 @@ router.post('/:id/hustler-counter', authenticate, requireRole('HUSTLER'), [
   }
 });
 
+// POST /offers/:id/accept-negotiation - Hustler accepts customer's counter-offer (HUSTLER only)
+router.post('/:id/accept-negotiation', authenticate, requireRole('HUSTLER'), async (req, res) => {
+  try {
+    const offer = await prisma.offer.findUnique({
+      where: { id: req.params.id },
+      include: {
+        hustler: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        job: {
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!offer) {
+      return res.status(404).json({ error: 'Offer not found' });
+    }
+
+    // Verify hustler owns this offer
+    if (offer.hustlerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden - You can only accept on your own offers' });
+    }
+
+    // Only allow accept on pending offers
+    if (offer.status !== 'PENDING') {
+      return res.status(400).json({ 
+        error: 'Can only accept negotiation on pending offers',
+        currentStatus: offer.status 
+      });
+    }
+
+    // Hustler accepted customer's counter-offer
+    // The proposedAmount already contains the customer's counter-offer
+    // We just need to mark that hustler accepted it
+    // The customer can now officially accept the offer (which will move job to SCHEDULED)
+    
+    // For now, we'll just return success - the customer will see the offer is ready to accept
+    // In the future, we could add a field to track negotiation acceptance
+    
+    // Send notification email to customer (non-blocking)
+    try {
+      const emailService = require('../services/email');
+      if (emailService.sendPriceNegotiationEmail) {
+        await emailService.sendPriceNegotiationEmail(
+          offer.job.customer.email,
+          offer.job.customer.name,
+          offer.job.title,
+          offer.job.id,
+          offer.hustler.name,
+          offer.proposedAmount,
+          true // isAccepted = true
+        );
+      }
+    } catch (emailError) {
+      console.error('Error sending negotiation acceptance email:', emailError);
+      // Don't fail the request if email fails
+    }
+
+    res.json({
+      success: true,
+      message: 'You accepted the customer\'s counter-offer. The customer can now officially accept the job.',
+      offer: offer,
+    });
+  } catch (error) {
+    console.error('Hustler accept negotiation error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /offers/:id/hustler-cancel - Hustler cancels after being accepted (HUSTLER only)
 router.post('/:id/hustler-cancel', authenticate, requireRole('HUSTLER'), async (req, res) => {
   try {

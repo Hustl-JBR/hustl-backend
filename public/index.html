@@ -19400,7 +19400,7 @@ meta.textContent =
               return;
             }
             
-            // Silently fetch updated offers
+            // Silently fetch updated offers and sync negotiation state
             if (actualRole === 'customer') {
               const offersResponse = await fetch(`${API_BASE}/offers/${jobId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -19409,34 +19409,73 @@ meta.textContent =
                 const updatedOffers = await offersResponse.json();
                 const updatedPendingOffers = updatedOffers.filter(o => o.status === 'PENDING');
                 
-                // Only update if offers changed (to avoid unnecessary re-renders)
-                if (updatedPendingOffers.length !== pendingOffers.length || 
-                    JSON.stringify(updatedOffers.map(o => ({ id: o.id, status: o.status }))) !== 
-                    JSON.stringify(offers.map(o => ({ id: o.id, status: o.status })))) {
+                // Sync localStorage from backend for each offer
+                updatedOffers.forEach(offer => {
+                  if (offer.proposedAmount) {
+                    const originalKey = `hustlerOriginalOffer_${offer.id}`;
+                    const customerCounterKey = `customerCounterOffer_${offer.id}`;
+                    const hustlerCounterKey = `hustlerCounterOffer_${offer.id}`;
+                    
+                    // Store original if not stored
+                    if (!localStorage.getItem(originalKey)) {
+                      localStorage.setItem(originalKey, offer.proposedAmount.toString());
+                    }
+                    
+                    // Sync counter-offers based on proposedAmount changes
+                    const currentAmount = parseFloat(offer.proposedAmount);
+                    const originalAmount = parseFloat(localStorage.getItem(originalKey) || offer.proposedAmount);
+                    
+                    if (Math.abs(currentAmount - originalAmount) > 0.01) {
+                      // Someone negotiated
+                      const storedCustomerCounter = localStorage.getItem(customerCounterKey);
+                      if (storedCustomerCounter) {
+                        const customerAmount = parseFloat(storedCustomerCounter);
+                        if (Math.abs(currentAmount - customerAmount) > 0.01) {
+                          // Different from customer's - hustler counter-offered
+                          localStorage.setItem(hustlerCounterKey, currentAmount.toString());
+                        }
+                      }
+                    }
+                  }
+                });
+                
+                // Check if offers changed (status or proposedAmount)
+                const offersChanged = updatedPendingOffers.length !== pendingOffers.length || 
+                    offers.some((oldOffer, idx) => {
+                      const newOffer = updatedOffers.find(o => o.id === oldOffer.id);
+                      if (!newOffer) return true;
+                      if (oldOffer.status !== newOffer.status) return true;
+                      const oldAmount = oldOffer.proposedAmount ? parseFloat(oldOffer.proposedAmount) : null;
+                      const newAmount = newOffer.proposedAmount ? parseFloat(newOffer.proposedAmount) : null;
+                      if (oldAmount !== newAmount && (oldAmount === null || newAmount === null || Math.abs(oldAmount - newAmount) > 0.01)) {
+                        return true;
+                      }
+                      return false;
+                    });
+                
+                if (offersChanged) {
                   offers = updatedOffers;
                   pendingOffers = updatedPendingOffers;
                   
-                  // Update the modal content silently
-                  const applicantsSection = modalOverlay.querySelector('.applicants-section');
-                  if (applicantsSection) {
-                    // Re-render applicants section with updated offers
-                    // This will be handled by re-calling showViewJobModal, but we'll do it silently
-                    // For now, just update the status indicators
-                    modalOverlay.querySelectorAll('[data-offer-id]').forEach(el => {
-                      const offerId = el.dataset.offerId;
-                      const updatedOffer = updatedOffers.find(o => o.id === offerId);
-                      if (updatedOffer) {
-                        // Update status text if offer was accepted
-                        const statusEl = el.querySelector('.offer-status-text');
-                        if (statusEl && updatedOffer.status === 'ACCEPTED') {
-                          statusEl.textContent = '✓ Accepted';
-                          statusEl.style.color = '#059669';
-                        } else if (statusEl && updatedOffer.status === 'PENDING') {
-                          statusEl.textContent = '⏳ Waiting for customer to accept offer';
-                          statusEl.style.color = '#d97706';
-                        }
+                  // Re-render modal to show updated negotiation state
+                  if (document.body.contains(modalOverlay)) {
+                    const lastRenderKey = `lastModalRender_${jobId}`;
+                    const lastRender = parseInt(localStorage.getItem(lastRenderKey) || '0');
+                    const now = Date.now();
+                    
+                    // Only re-render if it's been at least 2 seconds since last render
+                    if (now - lastRender > 2000) {
+                      localStorage.setItem(lastRenderKey, now.toString());
+                      document.body.removeChild(modalOverlay);
+                      if (offerRefreshInterval) {
+                        clearInterval(offerRefreshInterval);
+                        offerRefreshInterval = null;
                       }
-                    });
+                      setTimeout(() => {
+                        showViewJobModal(jobId, actualRole);
+                      }, 100);
+                      return;
+                    }
                   }
                 }
               }
@@ -19449,15 +19488,73 @@ meta.textContent =
                 const allOffers = await offersResponse.json();
                 const updatedUserOffer = allOffers.find(o => o.hustlerId === user.id && o.status === 'PENDING');
                 
-                if (updatedUserOffer && (!userOffer || updatedUserOffer.status !== userOffer.status)) {
-                  userOffer = updatedUserOffer;
-                  // Silently update the negotiation section if status changed
-                  const negotiationSection = modalOverlay.querySelector('.negotiation-section');
-                  if (negotiationSection && userOffer.status === 'PENDING') {
-                    const statusEl = negotiationSection.querySelector('.offer-status-text');
-                    if (statusEl) {
-                      statusEl.textContent = '⏳ Waiting for customer to accept offer';
-                      statusEl.style.color = '#d97706';
+                if (updatedUserOffer) {
+                  // Sync localStorage from backend
+                  const originalKey = `hustlerOriginalOffer_${updatedUserOffer.id}`;
+                  const customerCounterKey = `customerCounterOffer_${updatedUserOffer.id}`;
+                  const hustlerCounterKey = `hustlerCounterOffer_${updatedUserOffer.id}`;
+                  
+                  // Store original if not stored
+                  if (!localStorage.getItem(originalKey)) {
+                    const originalAmount = updatedUserOffer.proposedAmount || job.amount || 0;
+                    localStorage.setItem(originalKey, originalAmount.toString());
+                  }
+                  
+                  // Sync counter-offers
+                  const currentAmount = updatedUserOffer.proposedAmount ? parseFloat(updatedUserOffer.proposedAmount) : null;
+                  const originalAmount = parseFloat(localStorage.getItem(originalKey) || updatedUserOffer.proposedAmount || job.amount || 0);
+                  
+                  if (currentAmount && Math.abs(currentAmount - originalAmount) > 0.01) {
+                    // Someone negotiated
+                    const storedCustomerCounter = localStorage.getItem(customerCounterKey);
+                    if (storedCustomerCounter) {
+                      const customerAmount = parseFloat(storedCustomerCounter);
+                      if (Math.abs(currentAmount - customerAmount) < 0.01) {
+                        // Matches customer's counter-offer
+                        localStorage.removeItem(hustlerCounterKey);
+                      } else {
+                        // Different - hustler counter-offered
+                        localStorage.setItem(hustlerCounterKey, currentAmount.toString());
+                      }
+                    } else {
+                      // No stored customer counter-offer, but amount differs
+                      // Customer must have negotiated
+                      localStorage.setItem(customerCounterKey, currentAmount.toString());
+                      localStorage.removeItem(hustlerCounterKey);
+                    }
+                  }
+                  
+                  // Check if offer changed
+                  const oldAmount = userOffer?.proposedAmount ? parseFloat(userOffer.proposedAmount) : null;
+                  const newAmount = updatedUserOffer.proposedAmount ? parseFloat(updatedUserOffer.proposedAmount) : null;
+                  const amountChanged = oldAmount !== newAmount && (oldAmount === null || newAmount === null || Math.abs(oldAmount - newAmount) > 0.01);
+                  
+                  const offerChanged = !userOffer || 
+                    updatedUserOffer.status !== userOffer.status ||
+                    amountChanged;
+                  
+                  if (offerChanged) {
+                    userOffer = updatedUserOffer;
+                    
+                    // Re-render modal to show updated negotiation state
+                    if (document.body.contains(modalOverlay)) {
+                      const lastRenderKey = `lastModalRender_${jobId}`;
+                      const lastRender = parseInt(localStorage.getItem(lastRenderKey) || '0');
+                      const now = Date.now();
+                      
+                      // Only re-render if it's been at least 2 seconds since last render
+                      if (now - lastRender > 2000) {
+                        localStorage.setItem(lastRenderKey, now.toString());
+                        document.body.removeChild(modalOverlay);
+                        if (offerRefreshInterval) {
+                          clearInterval(offerRefreshInterval);
+                          offerRefreshInterval = null;
+                        }
+                        setTimeout(() => {
+                          showViewJobModal(jobId, actualRole);
+                        }, 100);
+                        return;
+                      }
                     }
                   }
                 }
@@ -19910,7 +20007,6 @@ meta.textContent =
             btn.addEventListener('click', async (e) => {
               e.stopPropagation();
               const offerId = btn.dataset.offerId;
-              const proposedAmount = btn.dataset.proposedAmount;
               if (!offerId) return;
               
               try {
@@ -19920,25 +20016,27 @@ meta.textContent =
                   return;
                 }
                 
-                // Get customer's counter-offer from localStorage
-                const customerCounterOfferKey = `customerCounterOffer_${offerId}`;
-                const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
-                const acceptedAmount = customerCounterOffer ? parseFloat(customerCounterOffer) : (proposedAmount ? parseFloat(proposedAmount) : null);
-                
-                if (!acceptedAmount) {
-                  showToast('Error: Could not find counter-offer amount');
-                  return;
-                }
-                
                 btn.disabled = true;
                 btn.textContent = 'Accepting...';
                 
-                // The offer.proposedAmount already contains the customer's counter-offer
-                // We just need to confirm acceptance - the customer can then officially accept
-                // For now, we'll just show a success message and refresh
-                // In the future, we could add a backend endpoint to track negotiation acceptance
+                // Call backend endpoint to accept negotiation
+                const response = await fetch(`${API_BASE}/offers/${offerId}/accept-negotiation`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  }
+                });
                 
-                showToast('✅ You accepted the customer\'s counter-offer. The customer can now officially accept the job.');
+                if (!response.ok) {
+                  const error = await response.json();
+                  throw new Error(error.error || 'Failed to accept negotiation');
+                }
+                
+                const result = await response.json();
+                showToast('✅ ' + result.message);
+                
+                // Close modal and refresh
                 document.body.removeChild(modalOverlay);
                 
                 // Refresh the view
@@ -19946,6 +20044,8 @@ meta.textContent =
                   loadActiveJobs();
                 } else if (typeof renderJobs === 'function') {
                   await renderJobs(true);
+                } else if (typeof loadAppliedJobs === 'function') {
+                  await loadAppliedJobs();
                 }
               } catch (error) {
                 showToast('Error: ' + (error.message || 'Failed to accept'));
