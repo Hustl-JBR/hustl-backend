@@ -5528,6 +5528,9 @@ function showChangePasswordModal() {
           }
           date = customDate;
           const selectedDate = new Date(customDate);
+          const today = new Date();
+          const isToday = selectedDate.toDateString() === today.toDateString();
+          
           if (customTime === "morning") {
             startTime = new Date(selectedDate);
             startTime.setHours(8, 0, 0, 0);
@@ -5549,6 +5552,9 @@ function showChangePasswordModal() {
             endTime = new Date(selectedDate);
             endTime.setHours(23, 0, 0, 0);
           }
+          
+          // If job is posted TODAY and user selects a specific time today, use that time
+          // If it's a future date, use the selected date + time (already set above)
           deadlinePreference = "specific_date";
         } else if (jobWhen === "tomorrow") {
           const targetDate = new Date(now);
@@ -5560,11 +5566,12 @@ function showChangePasswordModal() {
           endTime.setHours(21, 0, 0, 0);
           deadlinePreference = "tomorrow";
         } else {
+          // today_asap - set to today at 11:59 PM local time
           date = now.toISOString().split('T')[0];
           startTime = new Date(now);
           startTime.setHours(now.getHours(), 0, 0, 0);
           endTime = new Date(now);
-          endTime.setHours(23, 59, 59, 0);
+          endTime.setHours(23, 59, 59, 999); // 11:59 PM local time
           deadlinePreference = "today_asap";
         }
         
@@ -6530,12 +6537,12 @@ function showChangePasswordModal() {
               endTime.setHours(21, 0, 0, 0);
               deadlinePreference = "tomorrow";
             } else {
-              // today_asap - set to today with ASAP timing
+              // today_asap - set to today at 11:59 PM local time
               date = now.toISOString().split('T')[0];
               startTime = new Date(now);
               startTime.setHours(now.getHours(), 0, 0, 0);
               endTime = new Date(now);
-              endTime.setHours(23, 59, 59, 0);
+              endTime.setHours(23, 59, 59, 999); // 11:59 PM local time
               deadlinePreference = "today_asap";
             }
             
@@ -7341,7 +7348,7 @@ async function renderJobs(reset = false) {
         ? new Date(job.createdAt).getTime()
         : Date.now();
 
-      meta.textContent = `${catIcon} ${catName} • ${timeAgo(createdMs)}`;
+      meta.textContent = `${catIcon} ${catName} • 🕒 Posted ${timeAgo(createdMs)}`;
       textContent.appendChild(meta);
       
       // Expiration countdown (if expiresAt exists)
@@ -18141,8 +18148,10 @@ meta.textContent =
           payDisplay = `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
         }
         
-        // Format timing display
+        // Format timing display / Needed By
         let timingDisplay = '';
+        let neededByDisplay = '';
+        
         if (deadlinePreference === 'until_completed') {
           timingDisplay = 'Until completed (no strict deadline)';
         } else if (deadlinePreference === 'whenever' || deadlinePreference === 'flexible') {
@@ -18159,6 +18168,29 @@ meta.textContent =
           timingDisplay = deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         } else {
           timingDisplay = 'Not specified';
+        }
+        
+        // Format "Needed By" using endTime (the actual deadline)
+        if (job.endTime || (deadlinePreference === 'today_asap' && job.date)) {
+          let neededByDate;
+          if (job.endTime) {
+            neededByDate = new Date(job.endTime);
+          } else if (deadlinePreference === 'today_asap' && job.date) {
+            // For today_asap, use today at 11:59 PM
+            neededByDate = new Date(job.date);
+            neededByDate.setHours(23, 59, 59, 999);
+          }
+          
+          if (neededByDate && !isNaN(neededByDate.getTime())) {
+            neededByDisplay = neededByDate.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric', 
+              year: 'numeric'
+            }) + ', ' + neededByDate.toLocaleTimeString('en-US', { 
+              hour: 'numeric', 
+              minute: '2-digit'
+            });
+          }
         }
         
         // Format date/time
@@ -18324,6 +18356,10 @@ meta.textContent =
                   <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">⏰ Timing</div>
                     <div style="font-weight: 600; color: var(--text-main);">${timingDisplay}</div>
+                    ${neededByDisplay ? `<div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border);">
+                      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">📅 Needed By</div>
+                      <div style="font-weight: 600; color: var(--text-main);">${neededByDisplay}</div>
+                    </div>` : ''}
                   </div>
                   <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">🕐 Preferred Time</div>
@@ -18700,6 +18736,10 @@ meta.textContent =
                   <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">⏰ Timing</div>
                     <div style="font-weight: 600; color: var(--text-main);">${timingDisplay}</div>
+                    ${neededByDisplay ? `<div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border);">
+                      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">📅 Needed By</div>
+                      <div style="font-weight: 600; color: var(--text-main);">${neededByDisplay}</div>
+                    </div>` : ''}
                   </div>
                   <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">👥 Workers</div>
