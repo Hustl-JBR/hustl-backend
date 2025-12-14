@@ -18772,7 +18772,8 @@ meta.textContent =
                                     const hustlerCounterOffer = localStorage.getItem(hustlerCounterOfferKey);
                                     
                                     // CUSTOMER SIDE: Determine if hustler has counter-offered and if it's customer's turn
-                                    // Use backend proposedAmount as single source of truth
+                                    // Logic: If proposedAmount matches a stored hustler counter-offer, hustler sent it last (customer's turn)
+                                    // If proposedAmount matches stored customer counter-offer, customer sent it last (not customer's turn)
                                     const originalKey = `hustlerOriginalOffer_${offer.id}`;
                                     const customerCounterKey = `customerCounterOffer_${offer.id}`;
                                     const hustlerCounterKey = `hustlerCounterOffer_${offer.id}`;
@@ -18781,23 +18782,91 @@ meta.textContent =
                                     const originalAmount = parseFloat(localStorage.getItem(originalKey) || proposedAmount || jobAmount || 0);
                                     const currentAmount = proposedAmount || originalAmount;
                                     const storedCustomerCounter = localStorage.getItem(customerCounterKey);
+                                    const storedHustlerCounter = localStorage.getItem(hustlerCounterKey);
                                     
-                                    // If proposedAmount differs from original, someone negotiated
-                                    const hasNegotiation = Math.abs(currentAmount - originalAmount) > 0.01;
-                                    
-                                    if (!hasNegotiation) {
+                                    // If proposedAmount equals original, no negotiation yet
+                                    if (Math.abs(currentAmount - originalAmount) < 0.01) {
                                       return ''; // No negotiation yet
                                     }
                                     
-                                    // Determine who sent the current offer and if it's customer's turn
+                                    // Determine who sent the LAST offer (the one currently in proposedAmount)
                                     let isHustlerOffer = false;
                                     let isCustomerTurn = false;
                                     let hustlerCounterAmount = null;
                                     
-                                    if (storedCustomerCounter) {
+                                    if (storedHustlerCounter) {
+                                      const hustlerAmount = parseFloat(storedHustlerCounter);
+                                      if (Math.abs(currentAmount - hustlerAmount) < 0.01) {
+                                        // Current amount matches hustler's counter-offer → hustler sent it last → customer's turn
+                                        isHustlerOffer = true;
+                                        isCustomerTurn = true;
+                                        hustlerCounterAmount = currentAmount;
+                                      } else if (storedCustomerCounter) {
+                                        const customerAmount = parseFloat(storedCustomerCounter);
+                                        if (Math.abs(currentAmount - customerAmount) < 0.01) {
+                                          // Current amount matches customer's counter-offer → customer sent it last → not customer's turn
+                                          return `
+                                            <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
+                                              <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Your counter-offer:</div>
+                                              <div style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
+                                                $${customerAmount.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}
+                                              </div>
+                                              <div style="padding: 0.75rem; background: #ecfdf5; border-radius: 8px; border: 1px solid #10b981; color: #059669; font-size: 0.9rem; text-align: center;">
+                                                ⏳ Waiting for hustler response...
+                                              </div>
+                                            </div>
+                                          `;
+                                        } else {
+                                          // Current amount doesn't match either stored value
+                                          // This means a new counter-offer was sent - check which direction
+                                          const diffFromHustler = Math.abs(currentAmount - hustlerAmount);
+                                          const diffFromCustomer = Math.abs(currentAmount - customerAmount);
+                                          
+                                          if (diffFromHustler < diffFromCustomer) {
+                                            // Closer to hustler's → hustler sent new counter-offer → customer's turn
+                                            localStorage.setItem(hustlerCounterKey, currentAmount.toString());
+                                            localStorage.removeItem(customerCounterKey);
+                                            isHustlerOffer = true;
+                                            isCustomerTurn = true;
+                                            hustlerCounterAmount = currentAmount;
+                                          } else {
+                                            // Closer to customer's → customer sent new counter-offer → not customer's turn
+                                            localStorage.setItem(customerCounterKey, currentAmount.toString());
+                                            localStorage.removeItem(hustlerCounterKey);
+                                            return `
+                                              <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
+                                                <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Your counter-offer:</div>
+                                                <div style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
+                                                  $${currentAmount.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}
+                                                </div>
+                                                <div style="padding: 0.75rem; background: #ecfdf5; border-radius: 8px; border: 1px solid #10b981; color: #059669; font-size: 0.9rem; text-align: center;">
+                                                  ⏳ Waiting for hustler response...
+                                                </div>
+                                              </div>
+                                            `;
+                                          }
+                                        }
+                                      } else {
+                                        // No stored customer counter, but current doesn't match hustler's
+                                        // This means customer just counter-offered → not customer's turn
+                                        localStorage.setItem(customerCounterKey, currentAmount.toString());
+                                        localStorage.removeItem(hustlerCounterKey);
+                                        return `
+                                          <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
+                                            <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Your counter-offer:</div>
+                                            <div style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
+                                              $${currentAmount.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}
+                                            </div>
+                                            <div style="padding: 0.75rem; background: #ecfdf5; border-radius: 8px; border: 1px solid #10b981; color: #059669; font-size: 0.9rem; text-align: center;">
+                                              ⏳ Waiting for hustler response...
+                                            </div>
+                                          </div>
+                                        `;
+                                      }
+                                    } else if (storedCustomerCounter) {
                                       const customerAmount = parseFloat(storedCustomerCounter);
                                       if (Math.abs(currentAmount - customerAmount) < 0.01) {
-                                        // Matches customer's counter-offer - customer sent it, waiting for hustler
+                                        // Matches customer's counter-offer → customer sent it last → not customer's turn
                                         return `
                                           <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
                                             <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Your counter-offer:</div>
@@ -18810,31 +18879,19 @@ meta.textContent =
                                           </div>
                                         `;
                                       } else {
-                                        // Different from customer's - hustler counter-offered, customer's turn
+                                        // Different from customer's → hustler counter-offered → customer's turn
+                                        localStorage.setItem(hustlerCounterKey, currentAmount.toString());
                                         isHustlerOffer = true;
                                         isCustomerTurn = true;
                                         hustlerCounterAmount = currentAmount;
-                                        // Store hustler's counter-offer
-                                        localStorage.setItem(hustlerCounterKey, currentAmount.toString());
                                       }
                                     } else {
-                                      // No stored customer counter-offer, but amount differs from original
-                                      // This means hustler counter-offered (or initial negotiation)
-                                      // Check if hustlerCounterOffer exists
-                                      const storedHustlerCounter = localStorage.getItem(hustlerCounterKey);
-                                      if (storedHustlerCounter && Math.abs(currentAmount - parseFloat(storedHustlerCounter)) < 0.01) {
-                                        // Matches stored hustler counter-offer
-                                        isHustlerOffer = true;
-                                        isCustomerTurn = true;
-                                        hustlerCounterAmount = currentAmount;
-                                      } else {
-                                        // Amount differs but no stored values - might be first negotiation
-                                        // Assume hustler sent it (they counter-offered)
-                                        isHustlerOffer = true;
-                                        isCustomerTurn = true;
-                                        hustlerCounterAmount = currentAmount;
-                                        localStorage.setItem(hustlerCounterKey, currentAmount.toString());
-                                      }
+                                      // No stored values, but amount differs from original
+                                      // This means hustler counter-offered (first negotiation) → customer's turn
+                                      localStorage.setItem(hustlerCounterKey, currentAmount.toString());
+                                      isHustlerOffer = true;
+                                      isCustomerTurn = true;
+                                      hustlerCounterAmount = currentAmount;
                                     }
                                     
                                     // Only show accept/deny if it's customer's turn (hustler sent the last offer)
@@ -19255,7 +19312,8 @@ meta.textContent =
                   
                   ${(() => {
                     // HUSTLER SIDE: Determine if customer has counter-offered and if it's hustler's turn
-                    // Use backend proposedAmount as single source of truth
+                    // Logic: If proposedAmount matches a stored customer counter-offer, customer sent it last (hustler's turn)
+                    // If proposedAmount differs from stored customer counter-offer, hustler sent it last (not hustler's turn)
                     const originalKey = `hustlerOriginalOffer_${userOffer.id}`;
                     const customerCounterKey = `customerCounterOffer_${userOffer.id}`;
                     const hustlerCounterKey = `hustlerCounterOffer_${userOffer.id}`;
@@ -19263,34 +19321,66 @@ meta.textContent =
                     const originalAmount = parseFloat(localStorage.getItem(originalKey) || userOffer.proposedAmount || job.amount || 0);
                     const currentAmount = userOffer.proposedAmount ? parseFloat(userOffer.proposedAmount) : originalAmount;
                     const storedCustomerCounter = localStorage.getItem(customerCounterKey);
+                    const storedHustlerCounter = localStorage.getItem(hustlerCounterKey);
                     
-                    // If proposedAmount differs from original, someone negotiated
-                    const hasNegotiation = Math.abs(currentAmount - originalAmount) > 0.01;
-                    
-                    if (!hasNegotiation) {
+                    // If proposedAmount equals original, no negotiation yet
+                    if (Math.abs(currentAmount - originalAmount) < 0.01) {
                       return false; // No negotiation yet
                     }
                     
-                    // Determine who sent the current offer
+                    // Determine who sent the LAST offer (the one currently in proposedAmount)
+                    // If currentAmount matches stored customer counter-offer, customer sent it last → hustler's turn
+                    // If currentAmount matches stored hustler counter-offer, hustler sent it last → not hustler's turn
+                    // If currentAmount doesn't match either, infer from comparison
+                    
                     let isCustomerOffer = false;
                     let isHustlerTurn = false;
                     
                     if (storedCustomerCounter) {
                       const customerAmount = parseFloat(storedCustomerCounter);
                       if (Math.abs(currentAmount - customerAmount) < 0.01) {
-                        // Matches customer's counter-offer - customer sent it, hustler's turn
+                        // Current amount matches customer's counter-offer → customer sent it last → hustler's turn
                         isCustomerOffer = true;
                         isHustlerTurn = true;
+                      } else if (storedHustlerCounter) {
+                        const hustlerAmount = parseFloat(storedHustlerCounter);
+                        if (Math.abs(currentAmount - hustlerAmount) < 0.01) {
+                          // Current amount matches hustler's counter-offer → hustler sent it last → not hustler's turn
+                          isCustomerOffer = false;
+                          isHustlerTurn = false;
+                        } else {
+                          // Current amount doesn't match either stored value
+                          // This means a new counter-offer was sent - check which direction
+                          // If it's closer to customer's, customer sent new counter-offer
+                          // If it's closer to hustler's, hustler sent new counter-offer
+                          const diffFromCustomer = Math.abs(currentAmount - customerAmount);
+                          const diffFromHustler = storedHustlerCounter ? Math.abs(currentAmount - parseFloat(storedHustlerCounter)) : Infinity;
+                          
+                          if (diffFromCustomer < diffFromHustler) {
+                            // Closer to customer's → customer sent new counter-offer → hustler's turn
+                            localStorage.setItem(customerCounterKey, currentAmount.toString());
+                            localStorage.removeItem(hustlerCounterKey);
+                            isCustomerOffer = true;
+                            isHustlerTurn = true;
+                          } else {
+                            // Closer to hustler's → hustler sent new counter-offer → not hustler's turn
+                            localStorage.setItem(hustlerCounterKey, currentAmount.toString());
+                            isCustomerOffer = false;
+                            isHustlerTurn = false;
+                          }
+                        }
                       } else {
-                        // Different from customer's - hustler counter-offered, not hustler's turn
+                        // No stored hustler counter, but current doesn't match customer's
+                        // This means hustler just counter-offered → not hustler's turn
+                        localStorage.setItem(hustlerCounterKey, currentAmount.toString());
                         isCustomerOffer = false;
                         isHustlerTurn = false;
                       }
                     } else {
                       // No stored customer counter-offer, but amount differs from original
-                      // This means customer just negotiated (first negotiation)
-                      // Store it and show it to hustler
+                      // This means customer just negotiated (first negotiation) → hustler's turn
                       localStorage.setItem(customerCounterKey, currentAmount.toString());
+                      localStorage.removeItem(hustlerCounterKey);
                       isCustomerOffer = true;
                       isHustlerTurn = true;
                     }
@@ -20117,8 +20207,11 @@ meta.textContent =
                 }
                 
                 // Update localStorage to track hustler's counter-offer
+                // Clear customer counter-offer since hustler just responded
                 const hustlerCounterOfferKey = `hustlerCounterOffer_${offerId}`;
+                const customerCounterOfferKey = `customerCounterOffer_${offerId}`;
                 localStorage.setItem(hustlerCounterOfferKey, proposedAmount.toString());
+                localStorage.removeItem(customerCounterOfferKey); // Clear customer's counter-offer since hustler responded
                 
                 showToast('✅ Counter-offer sent to customer!');
                 document.body.removeChild(modalOverlay);
