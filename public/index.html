@@ -19296,20 +19296,6 @@ meta.textContent =
         // Start background refresh every 5 seconds (silent, no UI indicators)
         offerRefreshInterval = setInterval(refreshOffersSilently, 5000);
         
-        // Clean up on modal close
-        const originalCloseModal = () => {
-          if (offerRefreshInterval) {
-            clearInterval(offerRefreshInterval);
-            offerRefreshInterval = null;
-          }
-          if (countdownInterval) {
-            clearInterval(countdownInterval);
-            countdownInterval = null;
-          }
-          if (document.body.contains(modalOverlay)) {
-            document.body.removeChild(modalOverlay);
-          }
-        };
         
         // Live countdown update for expiration display
         let countdownInterval = null;
@@ -19365,11 +19351,17 @@ meta.textContent =
         
         // Close button
         const closeModal = () => {
+          if (offerRefreshInterval) {
+            clearInterval(offerRefreshInterval);
+            offerRefreshInterval = null;
+          }
           if (countdownInterval) {
             clearInterval(countdownInterval);
             countdownInterval = null;
           }
-          document.body.removeChild(modalOverlay);
+          if (document.body.contains(modalOverlay)) {
+            document.body.removeChild(modalOverlay);
+          }
         };
         
         modalOverlay.querySelector('.closeViewJobModal')?.addEventListener('click', closeModal);
