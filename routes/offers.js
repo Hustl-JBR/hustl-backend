@@ -962,12 +962,21 @@ router.post('/:id/accept-negotiation', authenticate, requireRole('HUSTLER'), asy
     }
 
     // Hustler accepted customer's counter-offer
-    // The proposedAmount already contains the customer's counter-offer
-    // We just need to mark that hustler accepted it
-    // The customer can now officially accept the offer (which will move job to SCHEDULED)
-    
-    // For now, we'll just return success - the customer will see the offer is ready to accept
-    // In the future, we could add a field to track negotiation acceptance
+    // Mark this in job requirements so customer can see it and confirm
+    const jobRequirements = offer.job.requirements || {};
+    const updatedJob = await prisma.job.update({
+      where: { id: offer.job.id },
+      data: {
+        requirements: {
+          ...jobRequirements,
+          negotiationAccepted: {
+            offerId: offer.id,
+            acceptedAt: new Date().toISOString(),
+            acceptedAmount: offer.proposedAmount?.toString(),
+          }
+        }
+      }
+    });
     
     // Send notification email to customer (non-blocking)
     try {
@@ -992,6 +1001,7 @@ router.post('/:id/accept-negotiation', authenticate, requireRole('HUSTLER'), asy
       success: true,
       message: 'You accepted the customer\'s counter-offer. The customer can now officially accept the job.',
       offer: offer,
+      job: updatedJob,
     });
   } catch (error) {
     console.error('Hustler accept negotiation error:', error);

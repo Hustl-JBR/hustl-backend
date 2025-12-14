@@ -18706,227 +18706,64 @@ meta.textContent =
                                 <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1rem; border: 2px solid #f59e0b;">
                                   <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">💬 Negotiation</h3>
                                   
-                                  <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 2px solid var(--border);">
-                                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Most recent offer:</div>
-                                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.25rem;">
-                                      ${(() => {
-                                        // Show most recent offer - could be hustler's or customer's
-                                        const hustlerOriginalOfferKey = `hustlerOriginalOffer_${offer.id}`;
-                                        const customerCounterOfferKey = `customerCounterOffer_${offer.id}`;
-                                        const hustlerCounterOfferKey = `hustlerCounterOffer_${offer.id}`;
-                                        const hustlerOriginalOffer = localStorage.getItem(hustlerOriginalOfferKey);
-                                        const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
-                                        const hustlerCounterOffer = localStorage.getItem(hustlerCounterOfferKey);
-                                        
-                                        // Determine most recent offer and who sent it
-                                        let mostRecentAmount = null;
-                                        let sentBy = 'hustler';
-                                        
-                                        // Check if hustler counter-offered (most recent)
-                                        if (hustlerCounterOffer) {
-                                          mostRecentAmount = parseFloat(hustlerCounterOffer);
-                                          sentBy = 'hustler';
-                                        } else if (customerCounterOffer) {
-                                          // Customer counter-offered
-                                          mostRecentAmount = parseFloat(customerCounterOffer);
-                                          sentBy = 'customer';
-                                        } else if (proposedAmount) {
-                                          // Initial hustler offer
-                                          mostRecentAmount = proposedAmount;
-                                          sentBy = 'hustler';
-                                        } else if (hustlerOriginalOffer && hustlerOriginalOffer !== '') {
-                                          mostRecentAmount = parseFloat(hustlerOriginalOffer);
-                                          sentBy = 'hustler';
-                                        } else {
-                                          mostRecentAmount = jobAmount;
-                                          sentBy = 'hustler';
-                                        }
-                                        
-                                        return mostRecentAmount ? `$${mostRecentAmount.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}` : 'No price specified';
-                                      })()}
-                                    </div>
-                                    <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">
-                                      ${(() => {
-                                        // Determine who sent the most recent offer
-                                        const customerCounterOfferKey = `customerCounterOffer_${offer.id}`;
-                                        const hustlerCounterOfferKey = `hustlerCounterOffer_${offer.id}`;
-                                        const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
-                                        const hustlerCounterOffer = localStorage.getItem(hustlerCounterOfferKey);
-                                        
-                                        if (hustlerCounterOffer) {
-                                          return `Sent by ${hustler.name || 'hustler'}`;
-                                        } else if (customerCounterOffer) {
-                                          return 'Sent by you';
-                                        } else {
-                                          return `Sent by ${hustler.name || 'hustler'}`;
-                                        }
-                                      })()}
-                                    </div>
-                                  </div>
-                                  
                                   ${(() => {
-                                    // Show customer's counter-offer if it exists, OR hustler's counter-offer
-                                    const customerCounterOfferKey = `customerCounterOffer_${offer.id}`;
-                                    const hustlerCounterOfferKey = `hustlerCounterOffer_${offer.id}`;
-                                    const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
-                                    const hustlerCounterOffer = localStorage.getItem(hustlerCounterOfferKey);
+                                    // SIMPLE CUSTOMER VIEW:
+                                    // 1. Store original offer (hustler's initial)
+                                    // 2. If proposedAmount != original, someone negotiated
+                                    // 3. Check if hustler accepted customer's counter (job.requirements.negotiationAccepted)
+                                    // 4. Show appropriate UI based on state
                                     
-                                    // CUSTOMER SIDE: Determine if hustler has counter-offered and if it's customer's turn
-                                    // Logic: If proposedAmount matches a stored hustler counter-offer, hustler sent it last (customer's turn)
-                                    // If proposedAmount matches stored customer counter-offer, customer sent it last (not customer's turn)
                                     const originalKey = `hustlerOriginalOffer_${offer.id}`;
-                                    const customerCounterKey = `customerCounterOffer_${offer.id}`;
-                                    const hustlerCounterKey = `hustlerCounterOffer_${offer.id}`;
-                                    
-                                    // Get original offer (hustler's initial)
-                                    const originalAmount = parseFloat(localStorage.getItem(originalKey) || proposedAmount || jobAmount || 0);
-                                    const currentAmount = proposedAmount || originalAmount;
-                                    const storedCustomerCounter = localStorage.getItem(customerCounterKey);
-                                    const storedHustlerCounter = localStorage.getItem(hustlerCounterKey);
-                                    
-                                    // If proposedAmount equals original, no negotiation yet
-                                    if (Math.abs(currentAmount - originalAmount) < 0.01) {
-                                      return ''; // No negotiation yet
+                                    let originalAmount = localStorage.getItem(originalKey);
+                                    if (!originalAmount) {
+                                      originalAmount = (proposedAmount || jobAmount || 0).toString();
+                                      localStorage.setItem(originalKey, originalAmount);
                                     }
                                     
-                                    // Determine who sent the LAST offer (the one currently in proposedAmount)
-                                    let isHustlerOffer = false;
-                                    let isCustomerTurn = false;
-                                    let hustlerCounterAmount = null;
+                                    const original = parseFloat(originalAmount);
+                                    const current = proposedAmount || original;
+                                    const hasNegotiated = Math.abs(current - original) > 0.01;
                                     
-                                    if (storedHustlerCounter) {
-                                      const hustlerAmount = parseFloat(storedHustlerCounter);
-                                      if (Math.abs(currentAmount - hustlerAmount) < 0.01) {
-                                        // Current amount matches hustler's counter-offer → hustler sent it last → customer's turn
-                                        isHustlerOffer = true;
-                                        isCustomerTurn = true;
-                                        hustlerCounterAmount = currentAmount;
-                                      } else if (storedCustomerCounter) {
-                                        const customerAmount = parseFloat(storedCustomerCounter);
-                                        if (Math.abs(currentAmount - customerAmount) < 0.01) {
-                                          // Current amount matches customer's counter-offer → customer sent it last → not customer's turn
-                                          return `
-                                            <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
-                                              <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Your counter-offer:</div>
-                                              <div style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
-                                                $${customerAmount.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}
-                                              </div>
-                                              <div style="padding: 0.75rem; background: #ecfdf5; border-radius: 8px; border: 1px solid #10b981; color: #059669; font-size: 0.9rem; text-align: center;">
-                                                ⏳ Waiting for hustler response...
-                                              </div>
-                                            </div>
-                                          `;
-                                        } else {
-                                          // Current amount doesn't match either stored value
-                                          // This means a new counter-offer was sent - check which direction
-                                          const diffFromHustler = Math.abs(currentAmount - hustlerAmount);
-                                          const diffFromCustomer = Math.abs(currentAmount - customerAmount);
-                                          
-                                          if (diffFromHustler < diffFromCustomer) {
-                                            // Closer to hustler's → hustler sent new counter-offer → customer's turn
-                                            localStorage.setItem(hustlerCounterKey, currentAmount.toString());
-                                            localStorage.removeItem(customerCounterKey);
-                                            isHustlerOffer = true;
-                                            isCustomerTurn = true;
-                                            hustlerCounterAmount = currentAmount;
-                                          } else {
-                                            // Closer to customer's → customer sent new counter-offer → not customer's turn
-                                            localStorage.setItem(customerCounterKey, currentAmount.toString());
-                                            localStorage.removeItem(hustlerCounterKey);
-                                            return `
-                                              <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
-                                                <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Your counter-offer:</div>
-                                                <div style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
-                                                  $${currentAmount.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}
-                                                </div>
-                                                <div style="padding: 0.75rem; background: #ecfdf5; border-radius: 8px; border: 1px solid #10b981; color: #059669; font-size: 0.9rem; text-align: center;">
-                                                  ⏳ Waiting for hustler response...
-                                                </div>
-                                              </div>
-                                            `;
-                                          }
-                                        }
-                                      } else {
-                                        // No stored customer counter, but current doesn't match hustler's
-                                        // This means customer just counter-offered → not customer's turn
-                                        localStorage.setItem(customerCounterKey, currentAmount.toString());
-                                        localStorage.removeItem(hustlerCounterKey);
-                                        return `
-                                          <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
-                                            <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Your counter-offer:</div>
-                                            <div style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
-                                              $${currentAmount.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}
-                                            </div>
-                                            <div style="padding: 0.75rem; background: #ecfdf5; border-radius: 8px; border: 1px solid #10b981; color: #059669; font-size: 0.9rem; text-align: center;">
-                                              ⏳ Waiting for hustler response...
-                                            </div>
-                                          </div>
-                                        `;
-                                      }
-                                    } else if (storedCustomerCounter) {
-                                      const customerAmount = parseFloat(storedCustomerCounter);
-                                      if (Math.abs(currentAmount - customerAmount) < 0.01) {
-                                        // Matches customer's counter-offer → customer sent it last → not customer's turn
-                                        return `
-                                          <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
-                                            <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Your counter-offer:</div>
-                                            <div style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
-                                              $${customerAmount.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}
-                                            </div>
-                                            <div style="padding: 0.75rem; background: #ecfdf5; border-radius: 8px; border: 1px solid #10b981; color: #059669; font-size: 0.9rem; text-align: center;">
-                                              ⏳ Waiting for hustler response...
-                                            </div>
-                                          </div>
-                                        `;
-                                      } else {
-                                        // Different from customer's → hustler counter-offered → customer's turn
-                                        localStorage.setItem(hustlerCounterKey, currentAmount.toString());
-                                        isHustlerOffer = true;
-                                        isCustomerTurn = true;
-                                        hustlerCounterAmount = currentAmount;
-                                      }
-                                    } else {
-                                      // No stored values, but amount differs from original
-                                      // This means hustler counter-offered (first negotiation) → customer's turn
-                                      localStorage.setItem(hustlerCounterKey, currentAmount.toString());
-                                      isHustlerOffer = true;
-                                      isCustomerTurn = true;
-                                      hustlerCounterAmount = currentAmount;
-                                    }
+                                    // Check if hustler accepted customer's counter
+                                    const negotiationAccepted = job.requirements?.negotiationAccepted;
+                                    const hustlerAcceptedCounter = negotiationAccepted && negotiationAccepted.offerId === offer.id;
                                     
-                                    // Only show accept/deny if it's customer's turn (hustler sent the last offer)
-                                    if (isCustomerTurn && isHustlerOffer && hustlerCounterAmount) {
-                                      return `
-                                        <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
-                                          <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Hustler's counter-offer:</div>
-                                          <div style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
-                                            $${hustlerCounterAmount.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}
-                                          </div>
-                                          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
-                                            <button class="btn btn-primary acceptHustlerCounterOfferBtn" data-offer-id="${offer.id}" data-proposed-amount="${hustlerCounterAmount}" style="flex: 1; padding: 0.75rem; font-weight: 600; background: #10b981; border-color: #10b981;">✅ Accept</button>
-                                            <button class="btn btn-ghost denyHustlerCounterOfferBtn" data-offer-id="${offer.id}" style="flex: 1; padding: 0.75rem; font-weight: 600; color: #dc2626; border-color: #fecaca;">❌ Deny</button>
-                                          </div>
-                                          <div id="customerCounterOfferSection_${offer.id}" style="display: none; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #93c5fd;">
-                                            <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">💬 Counter with your price:</div>
-                                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                              <span style="font-size: 1.25rem; color: #0f172a;">$</span>
-                                              <input type="number" id="customerCounterOfferInput_${offer.id}" value="${hustlerCounterAmount}" 
-                                                style="flex: 1; padding: 0.75rem; font-size: 1.25rem; font-weight: 600; border: 2px solid #3b82f6; border-radius: 8px; text-align: center;"
-                                                min="0" step="0.01" />
-                                              <span style="font-size: 0.85rem; color: #64748b;">${job.payType === 'hourly' ? '/hr' : 'flat'}</span>
-                                            </div>
-                                            <button class="btn btn-primary submitCustomerCounterOfferBtn" data-offer-id="${offer.id}" style="width: 100%; padding: 0.75rem; font-weight: 600; background: #3b82f6; border-color: #3b82f6;">💬 Send Counter-Offer</button>
-                                          </div>
+                                    return `
+                                      <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 2px solid var(--border);">
+                                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Most recent offer:</div>
+                                        <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.25rem;">
+                                          $${hasNegotiated ? current.toFixed(2) : original.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}
                                         </div>
-                                      `;
-                                    }
-                                    
-                                    return '';
+                                        <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">
+                                          ${hasNegotiated && current !== original ? 'Sent by you' : `Sent by ${hustler.name || 'hustler'}`}
+                                        </div>
+                                      </div>
+                                      
+                                      ${hustlerAcceptedCounter ? `
+                                      <div style="padding: 1rem; background: #d1fae5; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #10b981;">
+                                        <div style="font-size: 0.9rem; color: #059669; margin-bottom: 0.75rem; font-weight: 600;">
+                                          ✅ Hustler accepted your counter-offer of $${current.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}!
+                                        </div>
+                                        <div style="font-size: 0.85rem; color: #047857; margin-bottom: 1rem;">
+                                          Accept this hustler to move the job to scheduled.
+                                        </div>
+                                        <button class="btn btn-primary acceptApplicantBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="width: 100%; padding: 0.75rem; font-weight: 600; background: #10b981; border-color: #10b981;">
+                                          ✅ Accept This Hustler
+                                        </button>
+                                      </div>
+                                      ` : hasNegotiated && current !== original ? `
+                                      <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
+                                        <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Your counter-offer:</div>
+                                        <div style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
+                                          $${current.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}
+                                        </div>
+                                        <div style="padding: 0.75rem; background: #ecfdf5; border-radius: 8px; border: 1px solid #10b981; color: #059669; font-size: 0.9rem; text-align: center;">
+                                          ⏳ Waiting for hustler response...
+                                        </div>
+                                      </div>
+                                      ` : ''}
+                                    `;
                                   })()}
-                                  
-                                  ${jobAmount > 0 && pricingOption !== 'hustlers_quote' ? `<div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">
-                                    Original job price: $${jobAmount.toFixed(2)}
-                                  </div>` : ''}
                                 </div>
                               ` : ''}
                               <div style="font-size: 0.85rem; color: var(--text-muted);">${appliedText}</div>
@@ -19218,219 +19055,70 @@ meta.textContent =
                 <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 2rem; border: 2px solid #f59e0b;">
                   <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">💬 Negotiation</h3>
                   
-                  <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 2px solid var(--border);">
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Most recent offer:</div>
-                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.25rem;">
-                      ${(() => {
-                        // Always show hustler's most recent offer
-                        // Logic:
-                        // 1. If hustler counter-offered, proposedAmount is their most recent offer
-                        // 2. If customer counter-offered but hustler hasn't responded, show hustler's original offer
-                        // 3. If no negotiations, show hustler's initial offer or job.amount
-                        
-                        const customerCounterOfferKey = `customerCounterOffer_${userOffer.id}`;
-                        const hustlerOriginalOfferKey = `hustlerOriginalOffer_${userOffer.id}`;
-                        const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
-                        const hustlerOriginalOffer = localStorage.getItem(hustlerOriginalOfferKey);
-                        const currentProposed = userOffer.proposedAmount ? parseFloat(userOffer.proposedAmount) : null;
-                        
-                        // CRITICAL: Always show hustler's offer, NEVER customer's counter-offer
-                        // When customer counter-offers, proposedAmount becomes customer's offer
-                        // So we need to check if proposedAmount matches customer's counter-offer
-                        
-                        if (customerCounterOffer) {
-                          // Customer has counter-offered
-                          const customerOffer = parseFloat(customerCounterOffer);
-                          
-                          // If proposedAmount matches customer's counter-offer, that means customer just negotiated
-                          // and hustler hasn't counter-offered yet - show hustler's original offer
-                          if (currentProposed && Math.abs(currentProposed - customerOffer) < 0.01) {
-                            // proposedAmount is customer's counter-offer, so show hustler's original
-                            if (hustlerOriginalOffer && hustlerOriginalOffer !== '') {
-                              return `$${parseFloat(hustlerOriginalOffer).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
-                            }
-                            // Fallback to job.amount if no original offer stored
-                            return `$${parseFloat(job.amount || 0).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
-                          }
-                          
-                          // If proposedAmount differs from customer's counter-offer, hustler has counter-offered
-                          // This is hustler's most recent offer
-                          if (currentProposed && Math.abs(currentProposed - customerOffer) > 0.01) {
-                            return `$${currentProposed.toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
-                          }
-                          
-                          // Edge case: show hustler's original offer
-                          if (hustlerOriginalOffer && hustlerOriginalOffer !== '') {
-                            return `$${parseFloat(hustlerOriginalOffer).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
-                          }
-                          return `$${parseFloat(job.amount || 0).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
-                        } else if (currentProposed) {
-                          // No customer counter-offer yet, so proposedAmount is hustler's initial offer
-                          return `$${currentProposed.toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
-                        } else if (hustlerOriginalOffer && hustlerOriginalOffer !== '') {
-                          // No proposedAmount but we have original offer stored
-                          return `$${parseFloat(hustlerOriginalOffer).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
-                        } else if (job.amount) {
-                          // Fallback to job.amount
-                          return `$${parseFloat(job.amount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
-                        } else {
-                          return 'No price specified';
-                        }
-                      })()}
-                    </div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">
-                      ${(() => {
-                        // Determine who sent the most recent offer
-                        const customerCounterOfferKey = `customerCounterOffer_${userOffer.id}`;
-                        const hustlerCounterOfferKey = `hustlerCounterOffer_${userOffer.id}`;
-                        const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
-                        const hustlerCounterOffer = localStorage.getItem(hustlerCounterOfferKey);
-                        const currentProposed = userOffer.proposedAmount ? parseFloat(userOffer.proposedAmount) : null;
-                        
-                        // If hustler counter-offered, it was sent by hustler (current user)
-                        if (hustlerCounterOffer || (customerCounterOffer && currentProposed && Math.abs(currentProposed - parseFloat(customerCounterOffer)) > 0.01)) {
-                          return 'Sent by you';
-                        } else if (customerCounterOffer) {
-                          // Customer counter-offered
-                          return `Sent by ${job.customer?.name || 'customer'}`;
-                        } else {
-                          // Initial offer was sent by hustler (current user)
-                          return 'Sent by you';
-                        }
-                      })()}
-                    </div>
-                    ${userOffer.status === 'PENDING' ? `
-                    <div style="font-size: 0.85rem; color: #d97706; margin-top: 0.75rem; padding: 0.5rem; background: #fef3c7; border-radius: 6px; border: 1px solid #fbbf24;">
-                      ⏳ Waiting for customer to accept offer
-                    </div>
-                    ` : ''}
-                    ${userOffer.note ? `
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600; margin-top: 0.75rem;">Your message:</div>
-                    <div style="color: var(--text-main); font-size: 0.9rem; padding: 0.75rem; background: white; border-radius: 6px; border: 1px solid var(--border);">"${userOffer.note}"</div>
-                    ` : ''}
-                  </div>
-                  
                   ${(() => {
-                    // HUSTLER SIDE: Determine if customer has counter-offered and if it's hustler's turn
-                    // Logic: If proposedAmount matches a stored customer counter-offer, customer sent it last (hustler's turn)
-                    // If proposedAmount differs from stored customer counter-offer, hustler sent it last (not hustler's turn)
+                    // SIMPLE HUSTLER VIEW:
+                    // 1. Store original offer (hustler's initial)
+                    // 2. If proposedAmount != original, customer countered
+                    // 3. Show customer's counter with accept/deny
+                    
                     const originalKey = `hustlerOriginalOffer_${userOffer.id}`;
-                    const customerCounterKey = `customerCounterOffer_${userOffer.id}`;
-                    const hustlerCounterKey = `hustlerCounterOffer_${userOffer.id}`;
-                    
-                    const originalAmount = parseFloat(localStorage.getItem(originalKey) || userOffer.proposedAmount || job.amount || 0);
-                    const currentAmount = userOffer.proposedAmount ? parseFloat(userOffer.proposedAmount) : originalAmount;
-                    const storedCustomerCounter = localStorage.getItem(customerCounterKey);
-                    const storedHustlerCounter = localStorage.getItem(hustlerCounterKey);
-                    
-                    // If proposedAmount equals original, no negotiation yet
-                    if (Math.abs(currentAmount - originalAmount) < 0.01) {
-                      return false; // No negotiation yet
+                    let originalAmount = localStorage.getItem(originalKey);
+                    if (!originalAmount) {
+                      originalAmount = (userOffer.proposedAmount || job.amount || 0).toString();
+                      localStorage.setItem(originalKey, originalAmount);
                     }
                     
-                    // Determine who sent the LAST offer (the one currently in proposedAmount)
-                    // If currentAmount matches stored customer counter-offer, customer sent it last → hustler's turn
-                    // If currentAmount matches stored hustler counter-offer, hustler sent it last → not hustler's turn
-                    // If currentAmount doesn't match either, infer from comparison
+                    const original = parseFloat(originalAmount);
+                    const current = userOffer.proposedAmount ? parseFloat(userOffer.proposedAmount) : original;
+                    const customerCountered = Math.abs(current - original) > 0.01;
                     
-                    let isCustomerOffer = false;
-                    let isHustlerTurn = false;
-                    
-                    if (storedCustomerCounter) {
-                      const customerAmount = parseFloat(storedCustomerCounter);
-                      if (Math.abs(currentAmount - customerAmount) < 0.01) {
-                        // Current amount matches customer's counter-offer → customer sent it last → hustler's turn
-                        isCustomerOffer = true;
-                        isHustlerTurn = true;
-                      } else if (storedHustlerCounter) {
-                        const hustlerAmount = parseFloat(storedHustlerCounter);
-                        if (Math.abs(currentAmount - hustlerAmount) < 0.01) {
-                          // Current amount matches hustler's counter-offer → hustler sent it last → not hustler's turn
-                          isCustomerOffer = false;
-                          isHustlerTurn = false;
-                        } else {
-                          // Current amount doesn't match either stored value
-                          // This means a new counter-offer was sent - check which direction
-                          // If it's closer to customer's, customer sent new counter-offer
-                          // If it's closer to hustler's, hustler sent new counter-offer
-                          const diffFromCustomer = Math.abs(currentAmount - customerAmount);
-                          const diffFromHustler = storedHustlerCounter ? Math.abs(currentAmount - parseFloat(storedHustlerCounter)) : Infinity;
-                          
-                          if (diffFromCustomer < diffFromHustler) {
-                            // Closer to customer's → customer sent new counter-offer → hustler's turn
-                            localStorage.setItem(customerCounterKey, currentAmount.toString());
-                            localStorage.removeItem(hustlerCounterKey);
-                            isCustomerOffer = true;
-                            isHustlerTurn = true;
-                          } else {
-                            // Closer to hustler's → hustler sent new counter-offer → not hustler's turn
-                            localStorage.setItem(hustlerCounterKey, currentAmount.toString());
-                            isCustomerOffer = false;
-                            isHustlerTurn = false;
-                          }
-                        }
-                      } else {
-                        // No stored hustler counter, but current doesn't match customer's
-                        // This means hustler just counter-offered → not hustler's turn
-                        localStorage.setItem(hustlerCounterKey, currentAmount.toString());
-                        isCustomerOffer = false;
-                        isHustlerTurn = false;
-                      }
-                    } else {
-                      // No stored customer counter-offer, but amount differs from original
-                      // This means customer just negotiated (first negotiation) → hustler's turn
-                      localStorage.setItem(customerCounterKey, currentAmount.toString());
-                      localStorage.removeItem(hustlerCounterKey);
-                      isCustomerOffer = true;
-                      isHustlerTurn = true;
-                    }
-                    
-                    // Only show accept/deny if it's hustler's turn (customer sent the last offer)
-                    return isHustlerTurn && isCustomerOffer;
-                  })() ? `
-                  <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
-                    <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Customer counter-offer:</div>
-                    <div style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
-                      ${(() => {
-                        // Show customer's counter-offer from backend proposedAmount
-                        const customerCounterKey = `customerCounterOffer_${userOffer.id}`;
-                        const customerCounter = localStorage.getItem(customerCounterKey);
-                        const currentAmount = userOffer.proposedAmount ? parseFloat(userOffer.proposedAmount) : null;
-                        
-                        // Use stored customer counter-offer or current proposedAmount if it matches
-                        if (customerCounter) {
-                          return `$${parseFloat(customerCounter).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
-                        } else if (currentAmount) {
-                          return `$${currentAmount.toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}`;
-                        }
-                        return 'No amount specified';
-                      })()}
-                    </div>
-                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
-                      <button class="btn btn-primary acceptNegotiationBtn" data-offer-id="${userOffer.id}" data-proposed-amount="${userOffer.proposedAmount}" style="flex: 1; padding: 0.75rem; font-weight: 600; background: #10b981; border-color: #10b981;">✅ Accept</button>
-                      <button class="btn btn-ghost denyNegotiationBtn" data-offer-id="${userOffer.id}" data-customer-offer="${userOffer.proposedAmount}" style="flex: 1; padding: 0.75rem; font-weight: 600; color: #dc2626; border-color: #fecaca;">❌ Deny</button>
-                    </div>
-                    <div id="counterOfferSection_${userOffer.id}" style="display: none; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #93c5fd;">
-                      <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">💬 Counter with your price:</div>
-                      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                        <span style="font-size: 1.25rem; color: #0f172a;">$</span>
-                        <input type="number" id="hustlerCounterOffer_${userOffer.id}" value="${userOffer.proposedAmount || job.amount}" 
-                          style="flex: 1; padding: 0.75rem; font-size: 1.25rem; font-weight: 600; border: 2px solid #3b82f6; border-radius: 8px; text-align: center;"
-                          min="0" step="0.01" />
-                        <span style="font-size: 0.85rem; color: #64748b;">${payType === 'hourly' ? '/hr' : 'flat'}</span>
+                    return `
+                      <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 2px solid var(--border);">
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Most recent offer:</div>
+                        <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.25rem;">
+                          $${original.toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">Sent by you</div>
+                        ${userOffer.status === 'PENDING' && !customerCountered ? `
+                        <div style="font-size: 0.85rem; color: #d97706; margin-top: 0.75rem; padding: 0.5rem; background: #fef3c7; border-radius: 6px; border: 1px solid #fbbf24;">
+                          ⏳ Waiting for customer to accept offer
+                        </div>
+                        ` : ''}
+                        ${userOffer.note ? `
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600; margin-top: 0.75rem;">Your message:</div>
+                        <div style="color: var(--text-main); font-size: 0.9rem; padding: 0.75rem; background: white; border-radius: 6px; border: 1px solid var(--border);">"${userOffer.note}"</div>
+                        ` : ''}
                       </div>
-                      <button class="btn btn-primary submitCounterOfferBtn" data-offer-id="${userOffer.id}" style="width: 100%; padding: 0.75rem; font-weight: 600; background: #3b82f6; border-color: #3b82f6;">💬 Send Counter-Offer</button>
-                    </div>
-                  </div>
-                  ` : `
-                  <div style="padding: 0.75rem; background: #ecfdf5; border-radius: 8px; border: 1px solid #10b981; color: #059669; font-size: 0.9rem; text-align: center;">
-                    ⏳ Waiting for customer response...
-                  </div>
-                  `}
-                  
-                  <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-                    <button class="btn btn-ghost cancelApplicationBtn" data-offer-id="${userOffer.id}" style="width: 100%; padding: 0.75rem; font-weight: 600; color: #dc2626; border-color: #fecaca;">Cancel Application</button>
-                  </div>
+                      
+                      ${customerCountered ? `
+                      <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
+                        <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Customer counter-offer:</div>
+                        <div style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
+                          $${current.toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+                          <button class="btn btn-primary acceptNegotiationBtn" data-offer-id="${userOffer.id}" data-proposed-amount="${current}" style="flex: 1; padding: 0.75rem; font-weight: 600; background: #10b981; border-color: #10b981;">✅ Accept</button>
+                          <button class="btn btn-ghost denyNegotiationBtn" data-offer-id="${userOffer.id}" style="flex: 1; padding: 0.75rem; font-weight: 600; color: #dc2626; border-color: #fecaca;">❌ Deny</button>
+                        </div>
+                        <div id="counterOfferSection_${userOffer.id}" style="display: none; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #93c5fd;">
+                          <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">💬 Counter with your price:</div>
+                          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <span style="font-size: 1.25rem; color: #0f172a;">$</span>
+                            <input type="number" id="hustlerCounterOffer_${userOffer.id}" value="${current}" 
+                              style="flex: 1; padding: 0.75rem; font-size: 1.25rem; font-weight: 600; border: 2px solid #3b82f6; border-radius: 8px; text-align: center;"
+                              min="0" step="0.01" />
+                            <span style="font-size: 0.85rem; color: #64748b;">${payType === 'hourly' ? '/hr' : 'flat'}</span>
+                          </div>
+                          <button class="btn btn-primary submitCounterOfferBtn" data-offer-id="${userOffer.id}" style="width: 100%; padding: 0.75rem; font-weight: 600; background: #3b82f6; border-color: #3b82f6;">💬 Send Counter-Offer</button>
+                        </div>
+                      </div>
+                      ` : ''}
+                      
+                      <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                        <button class="btn btn-ghost cancelApplicationBtn" data-offer-id="${userOffer.id}" style="width: 100%; padding: 0.75rem; font-weight: 600; color: #dc2626; border-color: #fecaca;">Cancel Application</button>
+                      </div>
+                    `;
+                  })()}
                 </div>
                 ` : isHustler ? `
                 <div style="padding: 1.5rem; background: #dbeafe; border-radius: 12px; margin-bottom: 2rem; border: 2px solid #3b82f6;">
