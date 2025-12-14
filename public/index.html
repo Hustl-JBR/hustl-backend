@@ -18595,24 +18595,69 @@ meta.textContent =
                                 <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem; font-weight: 600;">Why I'm a good fit:</div>
                                 <div style="color: var(--text-main); line-height: 1.5;">${offer.note}</div>
                               </div>` : ''}
-                              ${hasNegotiation ? `
-                                <div style="padding: 1rem; background: ${wasRecentlyNegotiated ? '#dbeafe' : '#f0fdf4'}; border: 2px solid ${wasRecentlyNegotiated ? '#3b82f6' : '#86efac'}; border-radius: 8px; margin-bottom: 0.75rem;">
-                                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                    <span style="font-size: 1.2rem;">${wasRecentlyNegotiated ? '💬' : '💰'}</span>
-                                    <div style="font-size: 0.9rem; font-weight: 700; color: ${wasRecentlyNegotiated ? '#1e40af' : '#166534'};">
-                                      ${wasRecentlyNegotiated ? 'You sent a price negotiation!' : 'Negotiated Price'}
+                              ${hasNegotiation || proposedPrice ? `
+                                <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1rem; border: 2px solid #f59e0b;">
+                                  <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">💬 Negotiation</h3>
+                                  
+                                  <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 2px solid var(--border);">
+                                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Hustler's offer:</div>
+                                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.75rem;">
+                                      ${(() => {
+                                        // Show hustler's original offer (not customer's counter-offer)
+                                        const hustlerOriginalOfferKey = `hustlerOriginalOffer_${offer.id}`;
+                                        const customerCounterOfferKey = `customerCounterOffer_${offer.id}`;
+                                        const hustlerOriginalOffer = localStorage.getItem(hustlerOriginalOfferKey);
+                                        const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
+                                        
+                                        // If customer counter-offered, proposedAmount is customer's offer
+                                        // So we need to show hustler's original offer
+                                        if (customerCounterOffer) {
+                                          const customerOffer = parseFloat(customerCounterOffer);
+                                          // If proposedAmount matches customer's counter-offer, show hustler's original
+                                          if (proposedAmount && Math.abs(proposedAmount - customerOffer) < 0.01) {
+                                            if (hustlerOriginalOffer && hustlerOriginalOffer !== '') {
+                                              return `$${parseFloat(hustlerOriginalOffer).toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}`;
+                                            }
+                                            return `$${jobAmount.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}`;
+                                          }
+                                          // If proposedAmount differs, hustler counter-offered
+                                          if (proposedAmount && Math.abs(proposedAmount - customerOffer) > 0.01) {
+                                            return `$${proposedAmount.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}`;
+                                          }
+                                        }
+                                        
+                                        // No customer counter-offer or hustler's original offer
+                                        if (hustlerOriginalOffer && hustlerOriginalOffer !== '') {
+                                          return `$${parseFloat(hustlerOriginalOffer).toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}`;
+                                        }
+                                        return proposedPrice || `$${jobAmount.toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}`;
+                                      })()}
                                     </div>
                                   </div>
-                                  <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">
-                                    Your offer: <span style="color: var(--primary);">${proposedPrice}</span>
-                                  </div>
-                                  ${jobAmount > 0 && pricingOption !== 'hustlers_quote' ? `<div style="font-size: 0.85rem; color: var(--text-muted);">
+                                  
+                                  ${(() => {
+                                    // Show customer's counter-offer if it exists
+                                    const customerCounterOfferKey = `customerCounterOffer_${offer.id}`;
+                                    const customerCounterOffer = localStorage.getItem(customerCounterOfferKey);
+                                    if (customerCounterOffer) {
+                                      return `
+                                        <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
+                                          <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Your counter-offer:</div>
+                                          <div style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
+                                            $${parseFloat(customerCounterOffer).toFixed(2)} ${job.payType === 'hourly' ? '/hr' : 'flat'}
+                                          </div>
+                                          <div style="padding: 0.75rem; background: #ecfdf5; border-radius: 8px; border: 1px solid #10b981; color: #059669; font-size: 0.9rem; text-align: center;">
+                                            ⏳ Waiting for hustler response...
+                                          </div>
+                                        </div>
+                                      `;
+                                    }
+                                    return '';
+                                  })()}
+                                  
+                                  ${jobAmount > 0 && pricingOption !== 'hustlers_quote' ? `<div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">
                                     Original job price: $${jobAmount.toFixed(2)}
                                   </div>` : ''}
-                                </div>
-                              ` : proposedPrice ? `
-                                <div style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 0.5rem;">
-                                  💵 Hustler's suggested price: <span style="font-weight: 700; color: var(--primary); font-size: 1.1rem;">${proposedPrice}</span>
                                 </div>
                               ` : ''}
                               <div style="font-size: 0.85rem; color: var(--text-muted);">${appliedText}</div>
