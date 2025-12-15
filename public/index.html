@@ -4557,6 +4557,76 @@ heart of Hustl.
     }
 
     let toastTimeout = null;
+    // Show popup modal for price suggestion
+    function showPriceSuggestionPopup(jobId, payType, priceInput, priceNegotiationSection, priceCheckbox) {
+      // Create modal overlay
+      const popupOverlay = document.createElement("div");
+      popupOverlay.style.cssText = "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem;";
+      
+      const popupModal = document.createElement("div");
+      popupModal.style.cssText = "background: white; border-radius: 16px; padding: 2rem; max-width: 500px; width: 100%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
+      
+      popupModal.innerHTML = `
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.5rem 0;">💵 Suggest a Different Price</h3>
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0;">Enter the price you'd like to propose for this job.</p>
+        </div>
+        
+        <div style="margin-bottom: 1.5rem;">
+          <label style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">Your Proposed ${payType === 'hourly' ? 'Hourly' : 'Flat'} Rate</label>
+          <div style="position: relative;">
+            <span style="position: absolute; left: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 2rem; font-weight: 700; color: var(--primary); z-index: 1;">$</span>
+            <input type="number" id="popupPriceInput_${jobId}" placeholder="${payType === 'hourly' ? 'e.g., 25.00' : 'e.g., 150.00'}" step="0.01" min="0" style="width: 100%; padding: 2rem 1.5rem 2rem 3.5rem; border: 4px solid var(--primary); border-radius: 16px; font-size: 2.5rem; font-weight: 700; text-align: left; background: #f0fdf4; color: var(--text-main); min-height: 80px; box-sizing: border-box; font-family: inherit;">
+            ${payType === 'hourly' ? '<span style="position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 1.5rem; font-weight: 600; color: var(--text-muted); z-index: 1;">/hr</span>' : ''}
+          </div>
+        </div>
+        
+        <div style="display: flex; gap: 0.75rem;">
+          <button id="cancelPricePopup_${jobId}" class="btn btn-ghost" style="flex: 1; padding: 0.75rem; font-weight: 600;">Cancel</button>
+          <button id="confirmPricePopup_${jobId}" class="btn btn-primary" style="flex: 1; padding: 0.75rem; font-weight: 600;">Confirm</button>
+        </div>
+      `;
+      
+      popupOverlay.appendChild(popupModal);
+      document.body.appendChild(popupOverlay);
+      
+      const popupPriceInput = document.getElementById(`popupPriceInput_${jobId}`);
+      if (popupPriceInput) {
+        popupPriceInput.focus();
+      }
+      
+      // Cancel button
+      document.getElementById(`cancelPricePopup_${jobId}`).addEventListener("click", () => {
+        document.body.removeChild(popupOverlay);
+        if (priceCheckbox) priceCheckbox.checked = false;
+      });
+      
+      // Confirm button
+      document.getElementById(`confirmPricePopup_${jobId}`).addEventListener("click", () => {
+        const proposedPrice = popupPriceInput ? parseFloat(popupPriceInput.value) : null;
+        if (!proposedPrice || proposedPrice <= 0) {
+          showToast("Please enter a valid price.");
+          return;
+        }
+        
+        // Set the price in the hidden input and show the section
+        if (priceInput) {
+          priceInput.value = proposedPrice;
+        }
+        priceNegotiationSection.style.display = "block";
+        
+        document.body.removeChild(popupOverlay);
+      });
+      
+      // Close on overlay click
+      popupOverlay.addEventListener("click", (e) => {
+        if (e.target === popupOverlay) {
+          document.body.removeChild(popupOverlay);
+          if (priceCheckbox) priceCheckbox.checked = false;
+        }
+      });
+    }
+
     function showToast(msg) {
       const el = document.getElementById("toast");
       el.textContent = msg;
@@ -9313,8 +9383,8 @@ async function renderJobs(reset = false) {
             if (priceCheckbox) {
               priceCheckbox.addEventListener("change", () => {
                 if (priceCheckbox.checked) {
-                  priceNegotiationSection.style.display = "block";
-                  priceInput.focus();
+                  // Show popup modal instead of inline input
+                  showPriceSuggestionPopup(job.id, job.payType, priceInput, priceNegotiationSection, priceCheckbox);
                 } else {
                   priceNegotiationSection.style.display = "none";
                   priceInput.value = "";
@@ -9942,11 +10012,22 @@ async function renderJobs(reset = false) {
             actionsRow.appendChild(viewProfileBtn);
 
             if (!job.hustlerId && !job.acceptedHustlerId) {
-              const acceptBtn = document.createElement("button");
-              acceptBtn.className = "btn btn-primary";
-              acceptBtn.textContent = "Accept Hustler";
-              acceptBtn.style.cssText = "flex: 1; padding: 0.6rem; font-size: 0.9rem;";
-              acceptBtn.addEventListener("click", async () => {
+              // Check if job was posted as "hustlers decide their price"
+              const pricingOption = job.requirements?.pricing_option;
+              const isHustlersQuoteJob = pricingOption === "hustlers_quote";
+              
+              // Check if hustler suggested a price (proposedAmount exists and differs from job amount)
+              const hustlerSuggestedPrice = offer.proposedAmount && 
+                Math.abs(parseFloat(offer.proposedAmount) - parseFloat(job.amount || 0)) > 0.01;
+              
+              // If job is NOT hustlers_quote OR hustler suggested price, only show Accept/Deny (no counter-offer)
+              // Only hustlers_quote jobs allow customer to negotiate
+              if (!isHustlersQuoteJob || hustlerSuggestedPrice) {
+                const acceptBtn = document.createElement("button");
+                acceptBtn.className = "btn btn-primary";
+                acceptBtn.textContent = "Accept Hustler";
+                acceptBtn.style.cssText = "flex: 1; padding: 0.6rem; font-size: 0.9rem;";
+                acceptBtn.addEventListener("click", async () => {
                 acceptBtn.disabled = true;
                 acceptBtn.textContent = "Accepting...";
                 
@@ -10037,6 +10118,146 @@ async function renderJobs(reset = false) {
                 }
               });
               actionsRow.appendChild(acceptBtn);
+              
+              // Add Deny button when hustler suggested price
+              const denyBtn = document.createElement("button");
+              denyBtn.className = "btn btn-ghost";
+              denyBtn.textContent = "Deny";
+              denyBtn.style.cssText = "flex: 1; padding: 0.6rem; font-size: 0.9rem; color: #dc2626; border-color: #fecaca;";
+              denyBtn.addEventListener("click", async () => {
+                if (!confirm("Are you sure you want to deny this hustler's application?")) {
+                  return;
+                }
+                
+                denyBtn.disabled = true;
+                denyBtn.textContent = "Denying...";
+                
+                try {
+                  const token = localStorage.getItem("hustl_token");
+                  const response = await fetch(`${API_BASE}/offers/${offer.id}/decline`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    }
+                  });
+                  
+                  if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to deny hustler');
+                  }
+                  
+                  showToast("Hustler application denied.");
+                  document.body.removeChild(modalOverlay);
+                  document.body.style.overflow = "";
+                  openJobDetails(job.id);
+                  renderJobs();
+                } catch (error) {
+                  console.error("Error denying hustler:", error);
+                  showToast("Failed to deny hustler: " + (error.message || "Unknown error"));
+                  denyBtn.disabled = false;
+                  denyBtn.textContent = "Deny";
+                }
+              });
+              actionsRow.appendChild(denyBtn);
+              } else {
+                // Job IS hustlers_quote AND hustler didn't suggest price - show Accept button (customer can negotiate if needed)
+                const acceptBtnNoPrice = document.createElement("button");
+                acceptBtnNoPrice.className = "btn btn-primary";
+                acceptBtnNoPrice.textContent = "Accept Hustler";
+                acceptBtnNoPrice.style.cssText = "flex: 1; padding: 0.6rem; font-size: 0.9rem;";
+                acceptBtnNoPrice.addEventListener("click", async () => {
+                  acceptBtnNoPrice.disabled = true;
+                  acceptBtnNoPrice.textContent = "Accepting...";
+                  
+                  try {
+                    const token = localStorage.getItem("hustl_token");
+                    
+                    // First, try to accept the offer
+                    let response = await fetch(`${API_BASE}/offers/${offer.id}/accept`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                      }
+                    });
+
+                    if (!response.ok) {
+                      const errorData = await response.json();
+                      
+                      // If payment is required, create payment intent and show payment modal
+                      if (errorData.requiresPayment) {
+                        acceptBtnNoPrice.disabled = false;
+                        acceptBtnNoPrice.textContent = "Accept Hustler";
+                        
+                        // Create payment intent
+                        const paymentResponse = await fetch(`${API_BASE}/payments/create-intent/offer/${offer.id}`, {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${token}`
+                          }
+                        });
+                        
+                        if (!paymentResponse.ok) {
+                          const paymentError = await paymentResponse.json();
+                          throw new Error(paymentError.error || "Failed to create payment");
+                        }
+                        
+                        const paymentData = await paymentResponse.json();
+                        
+                        // Close job modal first
+                        document.body.removeChild(modalOverlay);
+                        document.body.style.overflow = "";
+                        
+                        // Show Stripe payment modal
+                        await showStripePaymentModal(paymentData.clientSecret, job.id, async (paymentIntentId) => {
+                          // After payment succeeds, accept the offer with paymentIntentId
+                          try {
+                            const acceptResponse = await fetch(`${API_BASE}/offers/${offer.id}/accept`, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                              },
+                              body: JSON.stringify({ paymentIntentId })
+                            });
+                            
+                            if (!acceptResponse.ok) {
+                              const acceptError = await acceptResponse.json();
+                              throw new Error(acceptError.error || "Failed to accept offer");
+                            }
+                            
+                            showToast("✅ Hustler accepted! You can now message them.");
+                            openJobDetails(job.id);
+                            renderJobs();
+                          } catch (acceptError) {
+                            showToast("Error accepting offer: " + (acceptError.message || "Unknown error"));
+                          }
+                        });
+                        
+                        return;
+                      }
+                      
+                      throw new Error(errorData.error || 'Failed to accept hustler');
+                    }
+
+                    const data = await response.json();
+                    
+                    showToast("✅ Hustler accepted! You can now message them.");
+                    document.body.removeChild(modalOverlay);
+                    document.body.style.overflow = "";
+                    openJobDetails(job.id);
+                    renderJobs();
+                  } catch (error) {
+                    console.error("Error accepting hustler:", error);
+                    showToast("Failed to accept hustler: " + (error.message || "Unknown error"));
+                    acceptBtnNoPrice.disabled = false;
+                    acceptBtnNoPrice.textContent = "Accept Hustler";
+                  }
+                });
+                actionsRow.appendChild(acceptBtnNoPrice);
+              }
             }
 
             applicantCard.appendChild(actionsRow);
