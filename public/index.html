@@ -7612,49 +7612,56 @@ async function renderJobs(reset = false) {
         try {
           const deadlineDate = new Date(job.startTime);
           if (!isNaN(deadlineDate.getTime())) {
-            // Use toLocaleString to properly format date and time in user's local timezone
-            const deadlineStr = deadlineDate.toLocaleString('en-US', { 
+            // Format date and time in user's local timezone (browser default)
+            const dateStr = deadlineDate.toLocaleDateString('en-US', { 
               month: 'short', 
-              day: 'numeric',
+              day: 'numeric'
+            });
+            const timeStr = deadlineDate.toLocaleTimeString('en-US', {
               hour: 'numeric',
               minute: '2-digit',
-              hour12: true,
-              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+              hour12: true
             });
-            neededByText = `📅 Needed by ${deadlineStr}`;
+            neededByText = `📅 Needed by ${dateStr}, ${timeStr}`;
           }
         } catch (e) {}
       } else if (job.expiresAt) {
-        // Use expiresAt if available
+        // Use expiresAt if available - this is the primary source for expiration
         try {
           const expiresDate = new Date(job.expiresAt);
           if (!isNaN(expiresDate.getTime())) {
-            // Use toLocaleString to properly format date and time in user's local timezone
-            const deadlineStr = expiresDate.toLocaleString('en-US', { 
+            // Format date and time in user's local timezone (browser default)
+            const dateStr = expiresDate.toLocaleDateString('en-US', { 
               month: 'short', 
-              day: 'numeric',
+              day: 'numeric'
+            });
+            const timeStr = expiresDate.toLocaleTimeString('en-US', {
               hour: 'numeric',
               minute: '2-digit',
-              hour12: true,
-              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+              hour12: true
             });
-            neededByText = `📅 Needed by ${deadlineStr}`;
+            neededByText = `📅 Needed by ${dateStr}, ${timeStr}`;
           }
         } catch (e) {}
       } else if (job.date) {
+        // Fallback to job.date if expiresAt is not set
         try {
           const deadlineDate = new Date(job.date);
           if (!isNaN(deadlineDate.getTime())) {
-            // Use toLocaleString to properly format date and time in user's local timezone
-            const deadlineStr = deadlineDate.toLocaleString('en-US', { 
+            // If date doesn't have time, assume end of day
+            if (deadlineDate.getHours() === 0 && deadlineDate.getMinutes() === 0) {
+              deadlineDate.setHours(23, 59, 0, 0);
+            }
+            const dateStr = deadlineDate.toLocaleDateString('en-US', { 
               month: 'short', 
-              day: 'numeric',
+              day: 'numeric'
+            });
+            const timeStr = deadlineDate.toLocaleTimeString('en-US', {
               hour: 'numeric',
               minute: '2-digit',
-              hour12: true,
-              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+              hour12: true
             });
-            neededByText = `📅 Needed by ${deadlineStr}`;
+            neededByText = `📅 Needed by ${dateStr}, ${timeStr}`;
           }
         } catch (e) {}
       }
