@@ -15464,12 +15464,7 @@ async function openUserProfile(userId) {
     e.stopPropagation();
   });
 
-  // Header
-  const header = document.createElement("div");
-  header.className = "card-header";
-  const title = document.createElement("div");
-  title.className = "card-title";
-  title.textContent = user.name || "Profile";
+  // Close button
   const closeBtn = document.createElement("button");
   closeBtn.innerHTML = "×";
   closeBtn.style.cssText = "position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px; border-radius: 50%; background: #f3f4f6; border: none; font-size: 1.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6b7280; z-index: 10;";
@@ -15477,100 +15472,52 @@ async function openUserProfile(userId) {
     overlay.remove();
     document.body.style.overflow = "";
   });
-  header.appendChild(title);
-  header.appendChild(closeBtn);
-  card.appendChild(header);
+  card.appendChild(closeBtn);
 
-  // Photo + Name + Role
-  const row = document.createElement("div");
-  row.className = "profile-row";
-  row.style.cssText = "display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;";
+  // 1. Name
+  const nameSection = document.createElement("div");
+  nameSection.style.cssText = "padding: 1.5rem 1.5rem 1rem; border-bottom: 1px solid var(--border);";
+  const name = document.createElement("div");
+  name.style.cssText = "font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;";
+  name.textContent = user.name || "User";
+  nameSection.appendChild(name);
+  
+  // Rating display (if available)
+  const ratingDisplay = window.getUserRatingDisplay ? window.getUserRatingDisplay(user) : '';
+  if (ratingDisplay) {
+    const ratingDiv = document.createElement("div");
+    ratingDiv.style.cssText = "font-size: 0.9rem; color: var(--text-muted);";
+    ratingDiv.innerHTML = ratingDisplay;
+    nameSection.appendChild(ratingDiv);
+  } else {
+    const noReviews = document.createElement("div");
+    noReviews.style.cssText = "font-size: 0.9rem; color: var(--text-muted);";
+    noReviews.textContent = "No reviews yet";
+    nameSection.appendChild(noReviews);
+  }
+  
+  card.appendChild(nameSection);
 
-  // Use renderUserAvatar for consistent photo display
-  const avatarHtml = renderUserAvatar(user, 64, {
+  // 2. Profile Photo
+  const photoSection = document.createElement("div");
+  photoSection.style.cssText = "padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: center;";
+  
+  const avatarHtml = renderUserAvatar(user, 120, {
     showBorder: true,
-    borderWidth: '2px',
-    style: 'box-shadow: 0 2px 8px rgba(0,0,0,0.1);'
+    borderWidth: '3px',
+    style: 'box-shadow: 0 4px 12px rgba(0,0,0,0.15);'
   });
   
   const avatar = document.createElement("div");
-  avatar.className = "profile-avatar";
   avatar.innerHTML = avatarHtml;
-  row.appendChild(avatar);
-
-  const info = document.createElement("div");
-  info.style.cssText = "flex: 1;";
-  info.innerHTML = `
-    <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">${user.name || "User"}</div>
-    <div class="muted" style="font-size: 0.9rem;">${user.role === "hustler" ? "Hustler" : "Customer"}</div>
-  `;
-  row.appendChild(info);
-
-  card.appendChild(row);
-
-  // Gender (if available)
-  if (user.gender) {
-    const genderLabel = 
-      user.gender === 'male' ? 'Male' : 
-      user.gender === 'female' ? 'Female' : 
-      user.gender === 'other' ? 'Non-binary' : 
-      user.gender === 'prefer_not_to_say' ? 'Prefer not to say' : user.gender;
-    
-    const genderWrap = document.createElement("div");
-    genderWrap.className = "field";
-    genderWrap.style.cssText = "margin-top: 0.6rem; margin-bottom: 0.6rem;";
-    
-    const genderText = document.createElement("div");
-    genderText.className = "about-text";
-    genderText.style.cssText = "color: var(--text-muted); font-size: 0.9rem;";
-    genderText.textContent = genderLabel;
-    genderWrap.appendChild(genderText);
-    
-    card.appendChild(genderWrap);
-  }
-
-  // Bio / description
-  const bioWrap = document.createElement("div");
-  bioWrap.className = "field";
-  bioWrap.style.marginTop = "0.6rem";
-
-  const bioLabel = document.createElement("div");
-  bioLabel.className = "stat-label";
-  bioLabel.textContent = "About this person";
-  bioWrap.appendChild(bioLabel);
-
-  const bioText = document.createElement("div");
-  bioText.className = "about-text";
-  bioText.style.cssText = "color: var(--text-main); line-height: 1.6; white-space: pre-wrap;";
-  bioText.textContent = user.bio || "This person hasn't added anything about themselves yet.";
-  bioWrap.appendChild(bioText);
+  photoSection.appendChild(avatar);
   
-  card.appendChild(bioWrap);
-  
-  // Tools/Equipment (if available)
-  if (user.tools && user.tools.trim()) {
-    const toolsWrap = document.createElement("div");
-    toolsWrap.className = "field";
-    toolsWrap.style.marginTop = "0.6rem";
-    
-    const toolsLabel = document.createElement("div");
-    toolsLabel.className = "stat-label";
-    toolsLabel.textContent = "🔧 Tools & Equipment";
-    toolsWrap.appendChild(toolsLabel);
-    
-    const toolsText = document.createElement("div");
-    toolsText.className = "about-text";
-    toolsText.style.cssText = "color: var(--text-main); line-height: 1.6; white-space: pre-wrap;";
-    toolsText.textContent = user.tools;
-    toolsWrap.appendChild(toolsText);
-    
-    card.appendChild(toolsWrap);
-  }
-  
-  // Completed jobs count
+  card.appendChild(photoSection);
+
+  // 3. Completed Jobs
   const jobsCount = document.createElement("div");
   jobsCount.className = "field";
-  jobsCount.style.marginTop = "0.6rem";
+  jobsCount.style.cssText = "padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);";
   
   const jobsLabel = document.createElement("div");
   jobsLabel.className = "stat-label";
@@ -15578,16 +15525,16 @@ async function openUserProfile(userId) {
   jobsCount.appendChild(jobsLabel);
   
   const jobsText = document.createElement("div");
-  jobsText.className = "about-text";
+  jobsText.style.cssText = "font-size: 2rem; font-weight: 700; color: var(--text-main); margin-top: 0.5rem;";
   jobsText.textContent = user.completedJobsCount || "0";
   jobsCount.appendChild(jobsText);
   
   card.appendChild(jobsCount);
 
-  // Reviews (demo only – will show once we start filling user.reviews)
+  // 4. Last 5 Reviews (with ratings)
   const reviewsWrap = document.createElement("div");
   reviewsWrap.className = "field";
-  reviewsWrap.style.marginTop = "0.6rem";
+  reviewsWrap.style.cssText = "padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);";
 
   const reviewLabel = document.createElement("div");
   reviewLabel.className = "stat-label";
@@ -15598,31 +15545,84 @@ async function openUserProfile(userId) {
   if (reviews.length === 0) {
     const empty = document.createElement("div");
     empty.className = "muted";
+    empty.style.cssText = "margin-top: 0.5rem;";
     empty.textContent = "No reviews yet.";
     reviewsWrap.appendChild(empty);
   } else {
-    reviews.forEach((r) => {
+    // Show last 5 reviews
+    const last5Reviews = reviews.slice(-5).reverse(); // Most recent first
+    last5Reviews.forEach((r) => {
       const rCard = document.createElement("div");
-      rCard.className = "stat-card";
-      rCard.style.marginTop = "0.35rem";
+      rCard.style.cssText = "margin-top: 0.75rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px;";
 
       const top = document.createElement("div");
-      top.className = "stat-value";
-      top.style.fontSize = "0.8rem";
-      top.textContent = (r.rating ? "★".repeat(r.rating) + " · " : "") + (r.fromName || "Someone on Hustl");
+      top.style.cssText = "display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;";
+      
+      // Rating stars
+      if (r.rating) {
+        const stars = document.createElement("div");
+        stars.style.cssText = "color: #fbbf24; font-size: 1rem;";
+        stars.textContent = "★".repeat(r.rating) + "☆".repeat(5 - r.rating);
+        top.appendChild(stars);
+      }
+      
+      // Reviewer name
+      const reviewerName = document.createElement("div");
+      reviewerName.style.cssText = "font-weight: 600; color: var(--text-main); font-size: 0.9rem;";
+      reviewerName.textContent = r.fromName || "Someone on Hustl";
+      top.appendChild(reviewerName);
+      
       rCard.appendChild(top);
 
-      const body = document.createElement("div");
-      body.className = "muted";
-      body.style.marginTop = "0.2rem";
-      body.textContent = r.text || "";
-      rCard.appendChild(body);
+      // Review text
+      if (r.text) {
+        const body = document.createElement("div");
+        body.style.cssText = "color: var(--text-main); line-height: 1.5; font-size: 0.9rem;";
+        body.textContent = r.text;
+        rCard.appendChild(body);
+      }
 
       reviewsWrap.appendChild(rCard);
     });
   }
 
   card.appendChild(reviewsWrap);
+
+  // 5. Bio / About this person
+  const bioWrap = document.createElement("div");
+  bioWrap.className = "field";
+  bioWrap.style.cssText = "padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);";
+
+  const bioLabel = document.createElement("div");
+  bioLabel.className = "stat-label";
+  bioLabel.textContent = "About this person";
+  bioWrap.appendChild(bioLabel);
+
+  const bioText = document.createElement("div");
+  bioText.style.cssText = "color: var(--text-main); line-height: 1.6; white-space: pre-wrap; margin-top: 0.5rem; font-size: 0.95rem;";
+  bioText.textContent = user.bio || "This person hasn't added anything about themselves yet.";
+  bioWrap.appendChild(bioText);
+  
+  card.appendChild(bioWrap);
+  
+  // 6. Tools/Equipment (if available)
+  if (user.tools && user.tools.trim()) {
+    const toolsWrap = document.createElement("div");
+    toolsWrap.className = "field";
+    toolsWrap.style.cssText = "padding: 1rem 1.5rem;";
+    
+    const toolsLabel = document.createElement("div");
+    toolsLabel.className = "stat-label";
+    toolsLabel.textContent = "🔧 Tools & Equipment";
+    toolsWrap.appendChild(toolsLabel);
+    
+    const toolsText = document.createElement("div");
+    toolsText.style.cssText = "color: var(--text-main); line-height: 1.6; white-space: pre-wrap; margin-top: 0.5rem; font-size: 0.95rem;";
+    toolsText.textContent = user.tools;
+    toolsWrap.appendChild(toolsText);
+    
+    card.appendChild(toolsWrap);
+  }
 
   overlay.appendChild(card);
   overlay.addEventListener("click", (e) => {
