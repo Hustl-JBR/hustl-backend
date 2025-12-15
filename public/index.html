@@ -16577,11 +16577,8 @@ meta.textContent =
                   <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 200px; padding: 1rem; font-size: 1rem; font-weight: 700; border-radius: 10px;">
                     ${offerCount > 0 ? '👥 View Applicants & Manage' : '🔍 View Job Details'}
                   </button>
-                  ${job.status === 'OPEN' ? `
-                  <button class="btn btn-ghost editJobBtn" data-job-id="${job.id}" style="padding: 1rem 1.5rem; font-weight: 600; border-radius: 10px;">✏️ Edit</button>
-                  ` : ''}
                   ${(job.status === 'OPEN' || ((job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified)) ? `
-                  <button class="btn btn-ghost cancelJobBtn" data-job-id="${job.id}" style="padding: 1rem 1.5rem; font-weight: 600; border-radius: 10px; color: #dc2626; border-color: #fecaca;">🚫 Cancel</button>
+                  <button class="btn btn-ghost cancelJobBtn" data-job-id="${job.id}" style="padding: 1rem 1.5rem; font-weight: 600; border-radius: 10px; color: #dc2626; border-color: #fecaca;">🚫 Delete</button>
                   ` : ''}
                 </div>
               </div>
@@ -16591,11 +16588,6 @@ meta.textContent =
             jobCard.querySelector('.viewJobBtn')?.addEventListener('click', (e) => {
               e.stopPropagation();
               showViewJobModal(job.id, 'customer');
-            });
-            
-            jobCard.querySelector('.editJobBtn')?.addEventListener('click', async (e) => {
-              e.stopPropagation();
-              await loadJobForEdit(job.id);
             });
             
             jobCard.querySelector('.cancelJobBtn')?.addEventListener('click', async (e) => {
@@ -16842,6 +16834,10 @@ meta.textContent =
                   <button class="btn btn-primary messageBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">💬 Message</button>
                   <button class="btn btn-ghost viewJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem;">🔍 View Job</button>
                   <button class="btn btn-ghost mapBtn" data-address="${job.address || ''}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">🗺️ Map</button>
+                  ${(job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified ? `
+                    <button class="btn btn-ghost unassignHustlerBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; color: #f59e0b; border-color: #fde68a; font-size: 0.9rem;">🔓 Unassign</button>
+                    <button class="btn btn-ghost deleteJobBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">🗑️ Delete</button>
+                  ` : ''}
                   ${job.status === 'ASSIGNED' && !job.startCodeVerified ? `<button class="btn btn-ghost unacceptBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">Unaccept</button>` : ''}
                 </div>
               `;
@@ -16930,6 +16926,45 @@ meta.textContent =
                 await unacceptHustler(job.id);
                 loadActiveJobs();
                 loadPostedJobs();
+              }
+            });
+            
+            // Unassign hustler button (customer view for scheduled jobs)
+            card.querySelector('.unassignHustlerBtn')?.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              if (confirm('Are you sure you want to unassign this hustler? The job will be open for applicants again.')) {
+                await unacceptHustler(job.id);
+                loadActiveJobs();
+                loadPostedJobs();
+              }
+            });
+            
+            // Delete job button (customer view for scheduled jobs)
+            card.querySelector('.deleteJobBtn')?.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              if (confirm('Are you sure you want to delete this job? This action cannot be undone.')) {
+                try {
+                  const token = localStorage.getItem('hustl_token');
+                  const response = await fetch(`${API_BASE}/jobs/${job.id}`, {
+                    method: 'DELETE',
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json'
+                    }
+                  });
+                  
+                  if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || errorData.message || 'Failed to delete job');
+                  }
+                  
+                  showToast("✅ Job deleted successfully.");
+                  loadActiveJobs();
+                  loadPostedJobs();
+                } catch (error) {
+                  console.error("Error deleting job:", error);
+                  showToast(error.message || "Error deleting job. Please try again.");
+                }
               }
             });
             
@@ -19077,8 +19112,7 @@ meta.textContent =
                 <!-- Action Buttons -->
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 2rem; padding-top: 2rem; border-top: 2px solid var(--border);">
                   ${job.status === 'OPEN' ? `
-                  <button class="btn btn-ghost editJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">✏️ Edit Job</button>
-                  <button class="btn btn-ghost cancelJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; color: #dc2626; border-color: #fecaca; font-weight: 600;">🚫 Cancel Job</button>
+                  <button class="btn btn-ghost cancelJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; color: #dc2626; border-color: #fecaca; font-weight: 600;">🚫 Delete Job</button>
                   ${(() => {
                     const requirements = job.requirements || {};
                     const isKeepOpenEnabled = requirements.keepOpenUntilAccepted === true;
