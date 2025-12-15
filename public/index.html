@@ -9744,14 +9744,48 @@ async function renderJobs(reset = false) {
             
             // Click to open full map view
             mapContainer.addEventListener('click', () => {
+              // Close the popup first - find the modal by ID
+              const jobDetailModal = document.getElementById('jobDetailModal');
+              if (jobDetailModal && jobDetailModal.parentNode) {
+                document.body.removeChild(jobDetailModal);
+                document.body.style.overflow = "";
+              }
+              
               // Switch to map view in browse jobs
               if (typeof toggleJobsView === 'function') {
                 toggleJobsView('map');
-                // Scroll to map
+                
+                // Wait for map to be ready, then navigate to job location
                 setTimeout(() => {
-                  const mapContainer = document.getElementById('jobsMapContainer');
-                  if (mapContainer) {
-                    mapContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  if (jobsMap && jobsMap.loaded()) {
+                    // Fly to the job location
+                    jobsMap.flyTo({
+                      center: [parseFloat(lng), parseFloat(lat)],
+                      zoom: 15,
+                      duration: 1000
+                    });
+                    
+                    // Scroll to map
+                    const mapContainerEl = document.getElementById('jobsMapContainer');
+                    if (mapContainerEl) {
+                      mapContainerEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                  } else {
+                    // If map not ready, wait a bit more
+                    if (jobsMap) {
+                      jobsMap.once('load', () => {
+                        jobsMap.flyTo({
+                          center: [parseFloat(lng), parseFloat(lat)],
+                          zoom: 15,
+                          duration: 1000
+                        });
+                        
+                        const mapContainerEl = document.getElementById('jobsMapContainer');
+                        if (mapContainerEl) {
+                          mapContainerEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                      });
+                    }
                   }
                 }, 300);
               }
@@ -20635,16 +20669,44 @@ meta.textContent =
               
               // Click to open full map view
               preview.addEventListener('click', () => {
+                // Close modal first
+                closeModal();
+                
                 // Switch to map view in browse jobs
                 if (typeof toggleJobsView === 'function') {
                   toggleJobsView('map');
-                  // Close modal
-                  closeModal();
-                  // Scroll to map
+                  
+                  // Wait for map to be ready, then navigate to job location
                   setTimeout(() => {
-                    const mapContainer = document.getElementById('jobsMapContainer');
-                    if (mapContainer) {
-                      mapContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    if (jobsMap && jobsMap.loaded()) {
+                      // Fly to the job location
+                      jobsMap.flyTo({
+                        center: [lng, lat],
+                        zoom: 15,
+                        duration: 1000
+                      });
+                      
+                      // Scroll to map
+                      const mapContainer = document.getElementById('jobsMapContainer');
+                      if (mapContainer) {
+                        mapContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    } else {
+                      // If map not ready, wait a bit more
+                      if (jobsMap) {
+                        jobsMap.once('load', () => {
+                          jobsMap.flyTo({
+                            center: [lng, lat],
+                            zoom: 15,
+                            duration: 1000
+                          });
+                          
+                          const mapContainer = document.getElementById('jobsMapContainer');
+                          if (mapContainer) {
+                            mapContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }
+                        });
+                      }
                     }
                   }, 300);
                 }
