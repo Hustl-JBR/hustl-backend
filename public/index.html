@@ -19329,7 +19329,7 @@ meta.textContent =
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 8px; border: 2px solid #10b981;">
                       <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; flex: 1;">
-                        <input type="checkbox" id="negotiatePriceCheck" class="negotiate-price-checkbox" data-job-id="${job.id}" data-default-price="${job.payType === 'hourly' ? (job.hourlyRate || job.amount || '0') : (job.amount || '0')}" data-default-pay-type="${job.payType || 'flat'}" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+                        <input type="checkbox" id="negotiatePriceCheck" class="negotiate-price-checkbox" data-job-id="${job.id}" data-default-price="${job.payType === 'hourly' ? (job.hourlyRate || job.amount || '0') : (job.amount || '0')}" data-default-pay-type="${job.payType || 'flat'}" onclick="var container = document.getElementById('proposedPriceContainer'); var input = document.getElementById('proposedPriceInput'); var check = this; if(container) { if(check.checked) { container.style.display = 'block'; container.style.setProperty('display', 'block', 'important'); if(input && !input.value) { var defaultPrice = check.getAttribute('data-default-price') || '0'; if(defaultPrice && defaultPrice !== '0') input.value = defaultPrice; setTimeout(function(){ if(input) input.focus(); }, 100); } } else { container.style.display = 'none'; container.style.setProperty('display', 'none', 'important'); if(input) input.value = ''; } }" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
                         <span style="font-size: 0.95rem; font-weight: 600; color: var(--text-main);">💵 Suggest a different price</span>
                       </label>
                     </div>
@@ -19348,7 +19348,7 @@ meta.textContent =
                       <label style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">💰 Your Proposed Price</label>
                       <div style="position: relative;">
                         <span style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); font-size: 1.5rem; font-weight: 700; color: var(--primary); z-index: 1;">$</span>
-                        <input type="number" id="proposedPriceInput" placeholder="0.00" step="0.01" min="0.01" style="width: 100%; padding: 1rem 1rem 1rem 2.5rem; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.25rem; font-weight: 600; text-align: left; background: white; color: var(--text-main); box-sizing: border-box; transition: all 0.2s;" oninput="if(this.value < 0.01 && this.value !== '') this.value = 0.01;">
+                        <input type="number" id="proposedPriceInput" placeholder="0.00" step="0.01" min="0.01" style="width: 100%; padding: 1rem 1rem 1rem 2.5rem; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.25rem; font-weight: 600; text-align: left; background: white; color: var(--text-main); box-sizing: border-box; transition: all 0.2s;" oninput="var val = parseFloat(this.value); if(val < 0.01 && this.value !== '') this.value = 0.01;">
                         <span id="proposedPriceTypeLabel" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); font-size: 1rem; font-weight: 600; color: var(--text-muted); z-index: 1;">${job.payType === 'hourly' ? '/hr' : ''}</span>
                       </div>
                       <div style="margin-top: 0.75rem; padding: 0.75rem; background: #dbeafe; border-radius: 8px; font-size: 0.85rem; color: #1e40af;">
@@ -20023,10 +20023,11 @@ meta.textContent =
               // Set initial state
               priceContainer.style.display = negotiateCheck.checked ? 'block' : 'none';
               
-              // Handle checkbox change
+              // Handle checkbox change (backup handler, inline onclick handles it immediately)
               negotiateCheck.addEventListener('change', function(e) {
                 const isChecked = this.checked;
                 priceContainer.style.display = isChecked ? 'block' : 'none';
+                priceContainer.style.setProperty('display', isChecked ? 'block' : 'none', 'important');
                 
                 if (isChecked) {
                   // Set default price if empty
@@ -20040,11 +20041,8 @@ meta.textContent =
                   const defaultRadio = modalOverlay.querySelector('input[name="proposedPriceType"][value="' + defaultPayType + '"]');
                   if (defaultRadio) {
                     defaultRadio.checked = true;
-                    // Update /hr label
-                    const typeLabel = modalOverlay.querySelector('#proposedPriceTypeLabel');
-                    if (typeLabel) {
-                      typeLabel.textContent = defaultPayType === 'hourly' ? '/hr' : '';
-                    }
+                    // Trigger change to update styling
+                    defaultRadio.dispatchEvent(new Event('change'));
                   }
                   // Focus the input
                   setTimeout(() => {
@@ -20058,10 +20056,7 @@ meta.textContent =
                   const defaultRadio = modalOverlay.querySelector('input[name="proposedPriceType"][value="' + defaultPayType + '"]');
                   if (defaultRadio) {
                     defaultRadio.checked = true;
-                    const typeLabel = modalOverlay.querySelector('#proposedPriceTypeLabel');
-                    if (typeLabel) {
-                      typeLabel.textContent = defaultPayType === 'hourly' ? '/hr' : '';
-                    }
+                    defaultRadio.dispatchEvent(new Event('change'));
                   }
                 }
               });
