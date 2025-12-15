@@ -14539,10 +14539,14 @@ async function renderJobs(reset = false) {
           reviews = Array.isArray(reviewsData) ? reviewsData : [];
         }
         
-        // Get last 5 reviews
-        const last5Reviews = reviews
-          .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-          .slice(0, 5);
+        // Sort reviews by date (newest first)
+        const sortedReviews = reviews
+          .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        
+        // Show only 3 reviews initially
+        const initialReviews = sortedReviews.slice(0, 3);
+        const remainingReviews = sortedReviews.slice(3);
+        const hasMoreReviews = remainingReviews.length > 0;
         
         // Create modal overlay
         const overlay = document.createElement('div');
@@ -14574,12 +14578,12 @@ async function renderJobs(reset = false) {
           box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         `;
         
-        // Build reviews HTML
+        // Build reviews HTML - only show first 3
         let reviewsHTML = '';
-        if (last5Reviews.length === 0) {
+        if (initialReviews.length === 0) {
           reviewsHTML = '<div style="padding: 1rem; text-align: center; color: var(--text-muted);">No reviews yet.</div>';
         } else {
-          reviewsHTML = last5Reviews.map(review => `
+          reviewsHTML = initialReviews.map(review => `
             <div style="padding: 1rem; border-bottom: 1px solid var(--border);">
               <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
                 <span style="font-size: 1.1rem;">${'⭐'.repeat(review.stars || 5)}</span>
@@ -14590,6 +14594,21 @@ async function renderJobs(reset = false) {
               ${review.job ? `<div style="font-size: 0.8rem; color: var(--text-muted);">${review.job.title || 'Untitled Job'}</div>` : ''}
             </div>
           `).join('');
+          
+          // Add hidden section for remaining reviews
+          if (hasMoreReviews) {
+            reviewsHTML += `<div id="remainingReviews_${userId}" style="display: none;">${remainingReviews.map(review => `
+              <div style="padding: 1rem; border-bottom: 1px solid var(--border);">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                  <span style="font-size: 1.1rem;">${'⭐'.repeat(review.stars || 5)}</span>
+                  <span style="font-weight: 600; color: var(--text-main);">${review.stars || 5}/5</span>
+                  ${review.reviewer ? `<span style="font-size: 0.85rem; color: var(--text-muted);">by ${review.reviewer.name || 'Anonymous'}</span>` : ''}
+                </div>
+                ${review.text ? `<div style="color: var(--text-main); margin-bottom: 0.5rem; line-height: 1.5;">${review.text}</div>` : ''}
+                ${review.job ? `<div style="font-size: 0.8rem; color: var(--text-muted);">${review.job.title || 'Untitled Job'}</div>` : ''}
+              </div>
+            `).join('')}</div>`;
+          }
         }
         
         modal.innerHTML = `
@@ -14641,31 +14660,32 @@ async function renderJobs(reset = false) {
             <!-- Reviews Section -->
             <div style="margin-bottom: 1rem;">
               <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; font-weight: 600;">Reviews</div>
-              <button id="viewLast5ReviewsBtn_${userId}" style="
-                width: 100%;
-                padding: 0.75rem 1rem;
-                background: var(--primary);
-                color: white;
-                border: none;
-                border-radius: 8px;
-                font-weight: 600;
-                cursor: pointer;
-                font-size: 0.9rem;
-                transition: all 0.2s;
-              " onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                View last 5 reviews
-              </button>
-              <div id="reviewsDropdown_${userId}" style="
-                display: none;
-                margin-top: 1rem;
+              <div style="
                 border: 1px solid var(--border);
                 border-radius: 8px;
                 overflow: hidden;
-                max-height: 400px;
+                max-height: 500px;
                 overflow-y: auto;
               ">
                 ${reviewsHTML}
               </div>
+              ${hasMoreReviews ? `
+                <button id="loadMoreReviewsBtn_${userId}" style="
+                  width: 100%;
+                  margin-top: 0.75rem;
+                  padding: 0.75rem 1rem;
+                  background: var(--primary);
+                  color: white;
+                  border: none;
+                  border-radius: 8px;
+                  font-weight: 600;
+                  cursor: pointer;
+                  font-size: 0.9rem;
+                  transition: all 0.2s;
+                " onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                  Load More (${remainingReviews.length} more)
+                </button>
+              ` : ''}
             </div>
           </div>
         `;
@@ -14688,15 +14708,16 @@ async function renderJobs(reset = false) {
           }
         });
         
-        // View reviews button handler
-        const viewReviewsBtn = document.getElementById(`viewLast5ReviewsBtn_${userId}`);
-        const reviewsDropdown = document.getElementById(`reviewsDropdown_${userId}`);
+        // Load more reviews button handler
+        const loadMoreBtn = document.getElementById(`loadMoreReviewsBtn_${userId}`);
+        const remainingReviewsDiv = document.getElementById(`remainingReviews_${userId}`);
         
-        if (viewReviewsBtn && reviewsDropdown) {
-          viewReviewsBtn.addEventListener('click', () => {
-            const isVisible = reviewsDropdown.style.display !== 'none';
-            reviewsDropdown.style.display = isVisible ? 'none' : 'block';
-            viewReviewsBtn.textContent = isVisible ? 'View last 5 reviews' : 'Hide reviews';
+        if (loadMoreBtn && remainingReviewsDiv) {
+          loadMoreBtn.addEventListener('click', () => {
+            // Show remaining reviews
+            remainingReviewsDiv.style.display = 'block';
+            // Hide the load more button
+            loadMoreBtn.style.display = 'none';
           });
         }
         
