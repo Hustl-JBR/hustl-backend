@@ -19789,6 +19789,20 @@ meta.textContent =
                             const offerIsAccepted = offer.status === 'ACCEPTED';
                             const hustlerAcceptedCounter = hasNegotiated && jobIsScheduled && offerIsAccepted && job.hustlerId === offer.hustlerId;
                             
+                            // Determine if "Suggest New Price" should be shown
+                            const requirements = job.requirements || {};
+                            const pricingOption = requirements.pricing_option;
+                            const hustlerSuggestedPrice = offer.proposedAmount !== null && offer.proposedAmount !== undefined;
+                            const showSuggestPrice = (pricingOption === 'hustlers_quote' || hustlerSuggestedPrice) && offer.status === 'PENDING';
+                            
+                            // Check if customer has already countered
+                            const customerCounteredKey = `customerCountered_${offer.id}`;
+                            const customerCountered = localStorage.getItem(customerCounteredKey) === 'true';
+                            const canSuggestPrice = showSuggestPrice && !customerCountered;
+                            
+                            // Check if waiting for hustler response
+                            const waitingForHustler = customerCountered && offer.proposedAmount;
+                            
                             if (hustlerAcceptedCounter) {
                               return `
                                 <div style="padding: 0.75rem; background: #d1fae5; border-radius: 8px; border: 2px solid #10b981;">
@@ -19799,11 +19813,33 @@ meta.textContent =
                               `;
                             }
                             
+                            if (waitingForHustler) {
+                              return `
+                                <div style="padding: 0.75rem; background: #fef3c7; border-radius: 8px; border: 2px solid #fbbf24; margin-bottom: 0.75rem;">
+                                  <div style="font-size: 0.9rem; color: #92400e; font-weight: 600; text-align: center;">
+                                    ⏳ Waiting for hustler response
+                                  </div>
+                                  <div style="font-size: 0.85rem; color: #78350f; text-align: center; margin-top: 0.25rem;">
+                                    They can accept or decline your price
+                                  </div>
+                                </div>
+                                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                                  <button class="btn btn-primary acceptApplicantBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">✅ Accept</button>
+                                  <button class="btn btn-ghost declineApplicantBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; color: #dc2626; border-color: #fecaca;">❌ Decline</button>
+                                  <button class="btn btn-ghost viewApplicantProfileBtn" data-user-id="${hustler.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">👤 View Profile</button>
+                                </div>
+                              `;
+                            }
+                            
                             return `
                               <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
                                 <button class="btn btn-primary acceptApplicantBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">✅ Accept</button>
                                 <button class="btn btn-ghost declineApplicantBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; color: #dc2626; border-color: #fecaca;">❌ Decline</button>
-                                <button class="btn btn-ghost negotiatePriceBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem; ${hasNegotiation ? 'border: 2px solid var(--primary); background: var(--primary-soft);' : ''}">💰 Counter Offer</button>
+                                ${canSuggestPrice ? `
+                                  <button class="btn btn-ghost suggestPriceBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem; border-color: #3b82f6; color: #3b82f6;">
+                                    💰 Suggest New Price
+                                  </button>
+                                ` : ''}
                                 <button class="btn btn-ghost viewApplicantProfileBtn" data-user-id="${hustler.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">👤 View Profile</button>
                               </div>
                             `;
@@ -20501,7 +20537,8 @@ meta.textContent =
           });
           
           // Negotiate price
-          modalOverlay.querySelectorAll('.negotiatePriceBtn').forEach(btn => {
+          // Handle both negotiatePriceBtn (old) and suggestPriceBtn (new)
+          modalOverlay.querySelectorAll('.negotiatePriceBtn, .suggestPriceBtn').forEach(btn => {
             btn.addEventListener('click', (e) => {
               e.stopPropagation();
               const offerId = btn.dataset.offerId;
@@ -21624,6 +21661,20 @@ meta.textContent =
             const proposedPrice = offer.proposedAmount ? `$${parseFloat(offer.proposedAmount).toFixed(2)}` : null;
             const jobPrice = `$${parseFloat(job.amount || 0).toFixed(2)}`;
             
+            // Determine if "Suggest New Price" should be shown
+            const requirements = job.requirements || {};
+            const pricingOption = requirements.pricing_option;
+            const hustlerSuggestedPrice = offer.proposedAmount !== null && offer.proposedAmount !== undefined;
+            const showSuggestPrice = (pricingOption === 'hustlers_quote' || hustlerSuggestedPrice) && offer.status === 'PENDING';
+            
+            // Check if customer has already countered (stored in localStorage)
+            const customerCounteredKey = `customerCountered_${offer.id}`;
+            const customerCountered = localStorage.getItem(customerCounteredKey) === 'true';
+            const canSuggestPrice = showSuggestPrice && !customerCountered;
+            
+            // Check if waiting for hustler response (customer countered, waiting for hustler)
+            const waitingForHustler = customerCountered && offer.proposedAmount;
+            
             return `
               <div style="padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 1rem; background: white;">
                 <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
@@ -21647,25 +21698,40 @@ meta.textContent =
                   </div>
                 ` : ''}
                 
-                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid var(--border);">
-                  <div>
-                    ${proposedPrice ? `
-                      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Proposed Price</div>
-                      <div style="font-weight: 700; font-size: 1.1rem; color: var(--primary);">${proposedPrice}</div>
-                      <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Your price: ${jobPrice}</div>
-                    ` : `
-                      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Price</div>
-                      <div style="font-weight: 700; font-size: 1.1rem; color: var(--primary);">${jobPrice}</div>
-                    `}
+                <div style="padding-top: 1rem; border-top: 1px solid var(--border);">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                    <div>
+                      ${proposedPrice ? `
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">${waitingForHustler ? 'Your Proposed Price' : 'Hustler Proposed Price'}</div>
+                        <div style="font-weight: 700; font-size: 1.1rem; color: var(--primary);">${proposedPrice}</div>
+                        ${!waitingForHustler ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Your price: ${jobPrice}</div>` : ''}
+                      ` : `
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Price</div>
+                        <div style="font-weight: 700; font-size: 1.1rem; color: var(--primary);">${jobPrice}</div>
+                      `}
+                    </div>
                   </div>
-                  <div style="display: flex; gap: 0.75rem;">
+                  
+                  ${waitingForHustler ? `
+                    <div style="padding: 0.75rem; background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
+                      <div style="font-weight: 600; color: #92400e; font-size: 0.9rem;">⏳ Waiting for hustler response</div>
+                      <div style="font-size: 0.85rem; color: #78350f; margin-top: 0.25rem;">They can accept or decline your price</div>
+                    </div>
+                  ` : ''}
+                  
+                  <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
                     <button class="btn btn-ghost declineOfferBtn" data-offer-id="${offer.id}" style="padding: 0.75rem 1.5rem; color: #6b7280;">Decline</button>
+                    ${canSuggestPrice ? `
+                      <button class="btn btn-ghost suggestPriceBtn" data-offer-id="${offer.id}" data-job-id="${jobId}" style="padding: 0.75rem 1.5rem; border-color: #3b82f6; color: #3b82f6;">
+                        💰 Suggest New Price
+                      </button>
+                    ` : ''}
                     <button class="btn btn-primary acceptOfferBtn" data-offer-id="${offer.id}" data-job-id="${jobId}" style="padding: 0.75rem 1.5rem;">
                       💳 Accept & Pay
                     </button>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; padding: 0.5rem; background: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">
-                      💰 Payment will be held in escrow until job completion
-                    </div>
+                  </div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.75rem; padding: 0.5rem; background: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd; text-align: center;">
+                    💰 Payment will be held in escrow until job completion
                   </div>
                 </div>
               </div>
@@ -21703,6 +21769,16 @@ meta.textContent =
           e.stopPropagation();
           const offerId = btn.dataset.offerId;
           await declineOffer(offerId, jobId, overlay);
+        });
+      });
+      
+      // Suggest New Price button handlers
+      modal.querySelectorAll('.suggestPriceBtn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const offerId = btn.dataset.offerId;
+          const jobId = btn.dataset.jobId;
+          await showNegotiatePriceModal(offerId, jobId, overlay);
         });
       });
     };
@@ -21917,12 +21993,12 @@ meta.textContent =
             font-size: 1.25rem;
           ">×</button>
           
-          <h3 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">💰 Negotiate Price</h3>
+          <h3 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">💰 Suggest New Price</h3>
           
           <div style="margin-bottom: 1.5rem;">
-            <label for="negotiatePriceInput" style="display: block; font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.75rem;">💰 Proposed Price ($)</label>
-            <input type="number" id="negotiatePriceInput" placeholder="Enter your proposed price" step="0.01" min="0" value="${offer?.proposedAmount || ''}" style="width: 100%; padding: 1.75rem; border: 3px solid var(--primary); border-radius: 12px; font-size: 2rem; font-weight: 700; text-align: center; background: #f0fdf4; color: var(--text-main); min-height: 70px; box-sizing: border-box;">
-            <div style="margin-top: 0.75rem; font-size: 0.9rem; color: var(--text-muted); text-align: center;">Enter the amount you'd like to propose</div>
+            <label for="negotiatePriceInput" style="display: block; font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.75rem;">💰 Your Proposed Price ($)</label>
+            <input type="number" id="negotiatePriceInput" placeholder="Enter your price" step="0.01" min="0" value="${offer?.proposedAmount || ''}" style="width: 100%; padding: 1.75rem; border: 3px solid var(--primary); border-radius: 12px; font-size: 2rem; font-weight: 700; text-align: center; background: #f0fdf4; color: var(--text-main); min-height: 70px; box-sizing: border-box;">
+            <div style="margin-top: 0.75rem; font-size: 0.9rem; color: var(--text-muted); text-align: center;">The hustler can accept or decline your price</div>
           </div>
           
           <div style="display: flex; gap: 0.75rem;">
@@ -21961,27 +22037,23 @@ meta.textContent =
           
           if (!response.ok) throw new Error('Failed to negotiate price');
           
-          // Mark this offer as recently negotiated in localStorage
-          const negotiationKey = `negotiated_${offerId}`;
-          localStorage.setItem(negotiationKey, 'true');
+          // Mark that customer has countered (prevent multiple counters)
+          const customerCounteredKey = `customerCountered_${offerId}`;
+          localStorage.setItem(customerCounteredKey, 'true');
           
-          // Store customer's counter-offer in localStorage so we can display it even after hustler counter-offers
+          // Store customer's counter-offer amount
           const customerCounterOfferKey = `customerCounterOffer_${offerId}`;
           localStorage.setItem(customerCounterOfferKey, price.toString());
           
-          // Remove the flag after 1 hour (3600000 ms)
-          setTimeout(() => {
-            localStorage.removeItem(negotiationKey);
-          }, 3600000);
-          
-          showToast("✅ Price negotiation sent to applicant!");
+          showToast("✅ Price negotiation sent! Waiting for hustler response.");
           document.body.removeChild(modalOverlay);
-          // Refresh the parent modal
-          if (parentModal) {
-            const viewJobModal = document.getElementById('viewJobModal');
-            if (viewJobModal) {
-              showViewJobModal(jobId, 'customer');
-            }
+          
+          // Refresh the applicants modal to show "Waiting for hustler response"
+          if (parentModal && jobId) {
+            document.body.removeChild(parentModal);
+            setTimeout(() => {
+              showApplicantsModal(jobId);
+            }, 100);
           }
         } catch (error) {
           console.error("Error negotiating price:", error);
