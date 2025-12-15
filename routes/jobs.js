@@ -1602,8 +1602,8 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
     const jobTitle = job.title;
     const hustlerEmail = job.hustler?.email;
     const hustlerName = job.hustler?.name;
-    const customerEmail = job.customer?.email;
-    const customerName = job.customer?.name;
+    const customerEmail = job.customer?.email || req.user.email;
+    const customerName = job.customer?.name || req.user.name;
 
     // Delete the job (cascade will handle offers, threads, etc.)
     await prisma.job.delete({
