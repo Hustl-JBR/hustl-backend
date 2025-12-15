@@ -5810,6 +5810,31 @@ function showChangePasswordModal() {
           deadlinePreference = "today_asap";
         }
         
+        // Calculate expiresAt based on deadline preference
+        let expiresAt = null;
+        if (deadlinePreference === "today_asap") {
+          // Today/ASAP → expires today at 11:59 PM local time
+          expiresAt = new Date(now);
+          expiresAt.setHours(23, 59, 59, 999);
+        } else if (deadlinePreference === "tomorrow") {
+          // Tomorrow → expires tomorrow at 11:59 PM local time
+          expiresAt = new Date(now);
+          expiresAt.setDate(expiresAt.getDate() + 1);
+          expiresAt.setHours(23, 59, 59, 999);
+        } else if (deadlinePreference === "flexible_week") {
+          // This week → expires 7 days from post date at 11:59 PM
+          expiresAt = new Date(now);
+          expiresAt.setDate(expiresAt.getDate() + 7);
+          expiresAt.setHours(23, 59, 59, 999);
+        } else if (deadlinePreference === "specific_date" && startTime) {
+          // Custom date/time → expires exactly at the selected date & time
+          expiresAt = new Date(startTime);
+        } else if (deadlinePreference === "no_deadline") {
+          // No deadline → set far future expiration (1 year)
+          expiresAt = new Date(now);
+          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        }
+        
         // Build payment data
         const payType = paymentType || 'flat';
         let amount = 0;
@@ -5837,6 +5862,7 @@ function showChangePasswordModal() {
           date,
           startTime: startTime.toISOString(),
           endTime: endTime.toISOString(),
+          expiresAt: expiresAt ? expiresAt.toISOString() : null, // Expiration date/time
           payType,
           amount,
           teamSize: workersNeeded || 1, // Backend will move this to requirements
@@ -6786,6 +6812,31 @@ function showChangePasswordModal() {
               deadlinePreference = jobWhen || "today_asap";
             }
             
+            // Calculate expiresAt based on deadline preference
+            let expiresAt = null;
+            if (deadlinePreference === "today_asap") {
+              // Today/ASAP → expires today at 11:59 PM local time
+              expiresAt = new Date(now);
+              expiresAt.setHours(23, 59, 59, 999);
+            } else if (deadlinePreference === "tomorrow") {
+              // Tomorrow → expires tomorrow at 11:59 PM local time
+              expiresAt = new Date(now);
+              expiresAt.setDate(expiresAt.getDate() + 1);
+              expiresAt.setHours(23, 59, 59, 999);
+            } else if (deadlinePreference === "flexible_week") {
+              // This week → expires 7 days from post date at 11:59 PM
+              expiresAt = new Date(now);
+              expiresAt.setDate(expiresAt.getDate() + 7);
+              expiresAt.setHours(23, 59, 59, 999);
+            } else if (deadlinePreference === "specific_date" && startTime) {
+              // Custom date/time → expires exactly at the selected date & time
+              expiresAt = new Date(startTime);
+            } else if (deadlinePreference === "no_deadline") {
+              // No deadline → set far future expiration (1 year)
+              expiresAt = new Date(now);
+              expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+            }
+            
             // Transform payment data to backend format
             const payType = paymentType || 'flat';
             let amount = 0;
@@ -6839,6 +6890,7 @@ function showChangePasswordModal() {
               date, // Backend expects ISO date string
               startTime: startTime.toISOString(), // Backend expects ISO datetime
               endTime: endTime.toISOString(), // Backend expects ISO datetime
+              expiresAt: expiresAt ? expiresAt.toISOString() : null, // Expiration date/time
               payType: payType, // Backend expects 'flat' or 'hourly'
               amount: amount, // Backend expects dollar amount (not cents)
               teamSize: workersNeeded || 1,
@@ -7530,81 +7582,97 @@ async function renderJobs(reset = false) {
       titleEl.appendChild(titleText);
       textContent.appendChild(titleEl);
 
-      // 2. Category + time posted
+      // 2. Category + time posted (with both relative and absolute date)
       const meta = document.createElement("div");
       meta.className = "job-meta";
       meta.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
 
-      const createdMs = job.createdAt
-        ? new Date(job.createdAt).getTime()
-        : Date.now();
+      const createdDate = job.createdAt ? new Date(job.createdAt) : new Date();
+      const createdMs = createdDate.getTime();
+      const relativeTime = timeAgo(createdMs);
+      const absoluteDate = createdDate.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+      });
 
-      meta.textContent = `${catIcon} ${catName} • 🕒 Posted ${timeAgo(createdMs)}`;
+      meta.textContent = `${catIcon} ${catName} • 🕒 Posted ${relativeTime} (${absoluteDate})`;
       textContent.appendChild(meta);
       
-      // 3. Deadline info (if set)
+      // 3. Needed By / Deadline info
       const requirements = job.requirements || {};
-      let deadlineText = '';
+      let neededByText = '';
       
-      // Check expiration first
-      if (job.expiresAt) {
-        const expiresAt = new Date(job.expiresAt);
-        const now = new Date();
-        const diff = expiresAt - now;
-        
-        if (diff > 0) {
-          const hours = Math.floor(diff / (1000 * 60 * 60));
-          const days = Math.floor(hours / 24);
-          if (days > 0) {
-            deadlineText = `⏳ Expires in ${days}d ${hours % 24}h`;
-          } else {
-            deadlineText = `⏳ Expires in ${hours}h`;
+      const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
+      
+      if (deadlinePreference === "specific_date" && job.startTime) {
+        try {
+          const deadlineDate = new Date(job.startTime);
+          if (!isNaN(deadlineDate.getTime())) {
+            const deadlineStr = deadlineDate.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
+            neededByText = `📅 Needed by ${deadlineStr}`;
           }
-        }
+        } catch (e) {}
+      } else if (job.expiresAt) {
+        // Use expiresAt if available
+        try {
+          const expiresDate = new Date(job.expiresAt);
+          if (!isNaN(expiresDate.getTime())) {
+            const deadlineStr = expiresDate.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
+            neededByText = `📅 Needed by ${deadlineStr}`;
+          }
+        } catch (e) {}
+      } else if (job.date) {
+        try {
+          const deadlineDate = new Date(job.date);
+          if (!isNaN(deadlineDate.getTime())) {
+            const deadlineStr = deadlineDate.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
+            neededByText = `📅 Needed by ${deadlineStr}`;
+          }
+        } catch (e) {}
       }
       
-      // If no expiration, check deadline preference
-      if (!deadlineText) {
-        const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
-        
-        if (deadlinePreference === "custom" && job.startTime) {
-          try {
-            const deadlineDate = new Date(job.startTime);
-            if (!isNaN(deadlineDate.getTime())) {
-              const deadlineStr = deadlineDate.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-              });
-              deadlineText = `⏳ Needed by ${deadlineStr}`;
-            }
-          } catch (e) {}
-        } else if (job.date) {
-          try {
-            const deadlineDate = new Date(job.date);
-            if (!isNaN(deadlineDate.getTime())) {
-              const deadlineStr = deadlineDate.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-              });
-              deadlineText = `⏳ Needed by ${deadlineStr}`;
-            }
-          } catch (e) {}
-        }
+      if (neededByText) {
+        const neededByMeta = document.createElement("div");
+        neededByMeta.className = "job-meta";
+        neededByMeta.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
+        neededByMeta.textContent = neededByText;
+        textContent.appendChild(neededByMeta);
       }
       
-      if (deadlineText) {
-        const deadlineMeta = document.createElement("div");
-        deadlineMeta.className = "job-meta";
-        deadlineMeta.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
-        deadlineMeta.textContent = deadlineText;
-        textContent.appendChild(deadlineMeta);
-      }
+      // 4. Preferred Time (informational only)
+      const preferredTime = requirements.preferredTime || job.preferredTime || 'anytime';
+      const preferredTimeLabels = {
+        'morning': 'Morning',
+        'afternoon': 'Afternoon',
+        'evening': 'Evening',
+        'anytime': 'Anytime'
+      };
+      const preferredTimeLabel = preferredTimeLabels[preferredTime] || 'Anytime';
+      
+      const preferredTimeMeta = document.createElement("div");
+      preferredTimeMeta.className = "job-meta";
+      preferredTimeMeta.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
+      preferredTimeMeta.textContent = `⏰ Preferred: ${preferredTimeLabel}`;
+      textContent.appendChild(preferredTimeMeta);
 
       // 4. Workers needed
       const teamSize = job.teamSize || job.requirements?.teamSize || job.requirements?.team_size || 1;
