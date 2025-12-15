@@ -670,6 +670,43 @@
       border-color: rgba(37, 99, 235, 0.25);
     }
 
+    /* Jobs view toggle buttons */
+    .jobs-view-toggle.active {
+      background: white !important;
+      color: #111827 !important;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+    }
+    
+    .jobs-view-toggle:not(.active) {
+      background: transparent !important;
+      color: #6b7280 !important;
+    }
+    
+    .jobs-view-toggle:hover {
+      opacity: 0.8;
+    }
+    
+    /* Map container */
+    #jobsMapContainer {
+      position: relative;
+    }
+    
+    /* Job markers on map */
+    .job-marker {
+      width: 32px;
+      height: 32px;
+      background: #3b82f6;
+      border: 3px solid white;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      transition: transform 0.2s;
+    }
+    
+    .job-marker:hover {
+      transform: scale(1.1);
+    }
+
     /* Mobile responsive for hamburger */
     @media (max-width: 768px) {
       .nav-tabs {
@@ -682,6 +719,12 @@
 
       .hamburger-btn {
         display: flex !important;
+      }
+      
+      /* Map container on mobile */
+      #jobsMapContainer {
+        height: calc(100vh - 250px) !important;
+        min-height: 400px !important;
       }
       
       /* Mobile layout fixes: Account for fixed header and bottom nav */
@@ -3971,13 +4014,32 @@
             <h2 style="margin: 0; font-size: 1.1rem; color: var(--text-main); font-weight: 600;" id="jobsCardTitle">Jobs near you</h2>
             <span class="muted" id="jobsFilterSummary" style="font-size: 0.8rem;"></span>
           </div>
-          <button id="refreshJobsBtn" style="padding: 0.4rem 0.65rem; background: transparent; border: 1px solid var(--border); border-radius: 8px; font-size: 0.8rem; color: var(--text-muted); cursor: pointer;">
-            🔄 Refresh
-          </button>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <!-- List/Map Toggle -->
+            <div style="display: flex; background: #f3f4f6; border-radius: 8px; padding: 0.25rem; border: 1px solid #e5e7eb;">
+              <button id="jobsViewListBtn" class="jobs-view-toggle active" style="padding: 0.5rem 1rem; background: white; border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: #111827; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1); transition: all 0.2s;">
+                📋 List
+              </button>
+              <button id="jobsViewMapBtn" class="jobs-view-toggle" style="padding: 0.5rem 1rem; background: transparent; border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: #6b7280; cursor: pointer; transition: all 0.2s;">
+                🗺️ Map
+              </button>
+            </div>
+            <button id="refreshJobsBtn" style="padding: 0.4rem 0.65rem; background: transparent; border: 1px solid var(--border); border-radius: 8px; font-size: 0.8rem; color: var(--text-muted); cursor: pointer;">
+              🔄 Refresh
+            </button>
+          </div>
         </div>
         
-        <!-- Jobs List -->
+        <!-- Jobs List View -->
         <div class="jobs-list" id="jobsList" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+        
+        <!-- Jobs Map View -->
+        <div id="jobsMapContainer" style="display: none; width: 100%; height: calc(100vh - 300px); min-height: 500px; max-height: 800px; border-radius: 12px; overflow: hidden; border: 2px solid #e5e7eb; background: #f3f4f6; position: relative; margin-bottom: 1rem;">
+          <div id="jobsMap" style="width: 100%; height: 100%;"></div>
+          <div id="jobsMapLoading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 1rem 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-weight: 600; color: #111827; z-index: 10;">
+            Loading map...
+          </div>
+        </div>
         
         <!-- Load More Button -->
         <div id="loadMoreSection" style="text-align: center; padding: 1rem; display: none;">
@@ -4919,6 +4981,15 @@ heart of Hustl.
           }
         } else {
           document.body.classList.remove('viewing-post');
+        }
+        
+        // Initialize jobs view toggle when jobs view is shown
+        if (view === 'jobs') {
+          setTimeout(() => {
+            initJobsViewToggle();
+            // Ensure correct view is shown
+            toggleJobsView(currentJobsView);
+          }, 100);
         }
       }
       
@@ -7143,6 +7214,329 @@ let lastPollTime = 0;
 const POLL_INTERVAL = 4500; // 4.5 seconds (between 3-6 seconds)
 const POLLABLE_VIEWS = ['jobs', 'manage-jobs', 'messages'];
 
+// Map view state
+let currentJobsView = 'list'; // 'list' or 'map'
+let jobsMap = null; // Mapbox map instance
+let mapMarkers = []; // Array of map markers
+let mapboxToken = null; // Mapbox access token
+
+// Calculate distance between two coordinates (Haversine formula)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 3959; // Earth's radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// Format distance for display
+function formatDistance(miles) {
+  if (miles < 0.1) return '< 0.1 mi away';
+  if (miles < 1) return `${miles.toFixed(1)} mi away`;
+  return `${miles.toFixed(1)} mi away`;
+}
+
+// Get Mapbox token
+async function getMapboxToken() {
+  if (mapboxToken) return mapboxToken;
+  try {
+    const response = await fetch(`${API_BASE}/jobs/mapbox-token`);
+    if (response.ok) {
+      const data = await response.json();
+      mapboxToken = data.token;
+      return mapboxToken;
+    }
+  } catch (e) {
+    console.error('Failed to get Mapbox token:', e);
+  }
+  return null;
+}
+
+// Initialize Mapbox map
+async function initJobsMap() {
+  const mapContainer = document.getElementById('jobsMap');
+  const mapLoading = document.getElementById('jobsMapLoading');
+  if (!mapContainer) return;
+  
+  // Check if map already initialized
+  if (jobsMap) {
+    return jobsMap;
+  }
+  
+  try {
+    const token = await getMapboxToken();
+    if (!token) {
+      if (mapLoading) mapLoading.textContent = 'Map unavailable - token not configured';
+      return null;
+    }
+    
+    // Load Mapbox GL JS if not already loaded
+    if (typeof mapboxgl === 'undefined') {
+      // Add Mapbox GL JS CSS
+      if (!document.querySelector('link[href*="mapbox-gl.css"]')) {
+        const link = document.createElement('link');
+        link.href = 'https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css';
+        link.rel = 'stylesheet';
+        document.head.appendChild(link);
+      }
+      
+      // Add Mapbox GL JS script
+      if (!document.querySelector('script[src*="mapbox-gl.js"]')) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+    }
+    
+    mapboxgl.accessToken = token;
+    
+    // Initialize map centered on Tennessee (default)
+    jobsMap = new mapboxgl.Map({
+      container: 'jobsMap',
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [-86.7816, 35.7471], // Tennessee center
+      zoom: 7
+    });
+    
+    jobsMap.on('load', () => {
+      if (mapLoading) mapLoading.style.display = 'none';
+      // Map is ready, but we'll render when renderJobs is called
+    });
+    
+    jobsMap.on('error', (e) => {
+      console.error('Map error:', e);
+      if (mapLoading) mapLoading.textContent = 'Error loading map';
+    });
+    
+    return jobsMap;
+  } catch (error) {
+    console.error('Failed to initialize map:', error);
+    if (mapLoading) mapLoading.textContent = 'Failed to load map';
+    return null;
+  }
+}
+
+// Render jobs on map
+function renderJobsOnMap(jobs) {
+  if (!jobsMap || !jobs || jobs.length === 0) return;
+  
+  // Clear existing markers
+  mapMarkers.forEach(marker => marker.remove());
+  mapMarkers = [];
+  
+  // Get user location for distance calculation
+  const userLoc = userLocation || null;
+  
+  // Filter jobs that have valid coordinates
+  const jobsWithCoords = jobs.filter(job => {
+    const requirements = job.requirements || {};
+    const hidePickupAddress = requirements.hide_pickup_address_until_assigned || requirements.hidePickupAddressUntilAssigned;
+    
+    // Check if user is accepted (for hidden addresses)
+    let showExactLocation = true;
+    if (hidePickupAddress) {
+      try {
+        const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
+        if (user) {
+          const isHustler = user && !user.roles?.includes('CUSTOMER');
+          const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
+          showExactLocation = !isHustler || jobAccepted;
+        }
+      } catch (e) {
+        showExactLocation = true;
+      }
+    }
+    
+    // If address is hidden and user not accepted, use general area (ZIP/neighborhood)
+    if (hidePickupAddress && !showExactLocation) {
+      // Use ZIP code center or neighborhood center if available
+      const zip = requirements.pickup_zip;
+      const city = requirements.pickup_city || requirements.pickupCity;
+      if (zip || city) {
+        // We'll use approximate location based on ZIP/city
+        // For now, skip these jobs or use approximate coordinates
+        return false; // Skip jobs with hidden addresses for now
+      }
+      return false;
+    }
+    
+    // Use exact coordinates if available
+    if (job.lat && job.lng) {
+      return true;
+    }
+    
+    // Fallback to requirements coordinates
+    const reqLat = requirements.pickup_lat || requirements.pickupLat;
+    const reqLng = requirements.pickup_lng || requirements.pickupLng;
+    if (reqLat && reqLng) {
+      job.lat = parseFloat(reqLat);
+      job.lng = parseFloat(reqLng);
+      return true;
+    }
+    
+    return false;
+  });
+  
+  if (jobsWithCoords.length === 0) {
+    // Center on Tennessee if no jobs
+    if (jobsMap) {
+      jobsMap.flyTo({
+        center: [-86.7816, 35.7471],
+        zoom: 7
+      });
+    }
+    // Show message if we have jobs but no coordinates
+    const mapLoading = document.getElementById('jobsMapLoading');
+    if (mapLoading && jobs.length > 0) {
+      mapLoading.style.display = 'block';
+      mapLoading.textContent = 'No jobs with location data to display';
+    }
+    return;
+  }
+  
+  // Hide loading message
+  const mapLoading = document.getElementById('jobsMapLoading');
+  if (mapLoading) mapLoading.style.display = 'none';
+  
+  // Calculate bounds
+  const lats = jobsWithCoords.map(j => j.lat);
+  const lngs = jobsWithCoords.map(j => j.lng);
+  const bounds = [
+    [Math.min(...lngs), Math.min(...lats)],
+    [Math.max(...lngs), Math.max(...lats)]
+  ];
+  
+  // Fit map to bounds
+  jobsMap.fitBounds(bounds, {
+    padding: { top: 50, bottom: 50, left: 50, right: 50 },
+    maxZoom: 14
+  });
+  
+  // Add markers for each job
+  jobsWithCoords.forEach(job => {
+    const requirements = job.requirements || {};
+    const pickupArea = requirements.pickup_area || requirements.pickupArea;
+    const pickupCity = requirements.pickup_city || requirements.pickupCity;
+    const pickupZip = requirements.pickup_zip;
+    
+    // Calculate distance if user location available
+    let distanceText = '';
+    if (userLoc && userLoc.lat && userLoc.lng) {
+      const distance = calculateDistance(userLoc.lat, userLoc.lng, job.lat, job.lng);
+      distanceText = formatDistance(distance);
+    }
+    
+    // Build location text (neighborhood + ZIP, no apartment)
+    let locationText = '';
+    if (pickupArea) locationText = pickupArea;
+    if (pickupCity) locationText += (locationText ? ', ' : '') + pickupCity;
+    if (pickupZip) locationText += (locationText ? ' ' : '') + pickupZip;
+    if (!locationText) locationText = 'Location';
+    
+    // Create popup content
+    const popupContent = document.createElement('div');
+    popupContent.style.cssText = 'padding: 0.75rem; min-width: 200px;';
+    popupContent.innerHTML = `
+      <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.5rem; color: #111827;">${job.title || 'Untitled Job'}</div>
+      ${distanceText ? `<div style="font-size: 0.85rem; color: #3b82f6; margin-bottom: 0.25rem;">📍 ${distanceText}</div>` : ''}
+      <div style="font-size: 0.85rem; color: #6b7280; margin-bottom: 0.5rem;">${locationText}</div>
+      <div style="font-weight: 700; font-size: 0.9rem; color: #059669;">
+        ${job.payType === 'hourly' ? `$${parseFloat(job.hourlyRate || 0).toFixed(0)}/hr` : `$${parseFloat(job.amount || 0).toFixed(0)} flat`}
+      </div>
+      <button class="view-job-map-btn" data-job-id="${job.id}" style="margin-top: 0.5rem; padding: 0.5rem 1rem; width: 100%; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+        View Details
+      </button>
+    `;
+    
+    // Create marker
+    const el = document.createElement('div');
+    el.className = 'job-marker';
+    el.style.cssText = 'width: 32px; height: 32px; background: #3b82f6; border: 3px solid white; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3);';
+    
+    const marker = new mapboxgl.Marker(el)
+      .setLngLat([job.lng, job.lat])
+      .setPopup(new mapboxgl.Popup({ offset: 25 }).setDOMContent(popupContent))
+      .addTo(jobsMap);
+    
+    mapMarkers.push(marker);
+    
+    // Add click handler to popup button
+    popupContent.querySelector('.view-job-map-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const jobId = e.target.getAttribute('data-job-id');
+      if (jobId && typeof openJobDetails === 'function') {
+        openJobDetails(jobId);
+      }
+    });
+  });
+}
+
+// Toggle between List and Map view
+function toggleJobsView(view) {
+  currentJobsView = view;
+  const listBtn = document.getElementById('jobsViewListBtn');
+  const mapBtn = document.getElementById('jobsViewMapBtn');
+  const listContainer = document.getElementById('jobsList');
+  const mapContainer = document.getElementById('jobsMapContainer');
+  
+  if (view === 'list') {
+    if (listBtn) {
+      listBtn.classList.add('active');
+      listBtn.style.background = 'white';
+      listBtn.style.color = '#111827';
+    }
+    if (mapBtn) {
+      mapBtn.classList.remove('active');
+      mapBtn.style.background = 'transparent';
+      mapBtn.style.color = '#6b7280';
+    }
+    if (listContainer) listContainer.style.display = 'flex';
+    if (mapContainer) mapContainer.style.display = 'none';
+  } else {
+    if (listBtn) {
+      listBtn.classList.remove('active');
+      listBtn.style.background = 'transparent';
+      listBtn.style.color = '#6b7280';
+    }
+    if (mapBtn) {
+      mapBtn.classList.add('active');
+      mapBtn.style.background = 'white';
+      mapBtn.style.color = '#111827';
+    }
+    if (listContainer) listContainer.style.display = 'none';
+    if (mapContainer) mapContainer.style.display = 'block';
+    
+    // Initialize map if not already done
+    if (!jobsMap) {
+      initJobsMap().then(() => {
+        // Re-render will happen when renderJobs is called
+      });
+    }
+  }
+}
+
+// Initialize view toggle buttons
+function initJobsViewToggle() {
+  const listBtn = document.getElementById('jobsViewListBtn');
+  const mapBtn = document.getElementById('jobsViewMapBtn');
+  
+  if (listBtn) {
+    listBtn.addEventListener('click', () => toggleJobsView('list'));
+  }
+  
+  if (mapBtn) {
+    mapBtn.addEventListener('click', () => toggleJobsView('map'));
+  }
+}
+
 async function renderJobs(reset = false) {
   console.log('🔵 NEW RENDERJOBS VERSION LOADED - v3.0');
   const jobsList = document.getElementById("jobsList");
@@ -7798,6 +8192,20 @@ async function renderJobs(reset = false) {
         jobsList.classList.add('has-content'); // Add scrollbar when there's content
       }
     });
+
+    // Render on map if in map view
+    if (currentJobsView === 'map') {
+      if (jobsMap) {
+        renderJobsOnMap(filteredJobs);
+      } else {
+        // Initialize map if not already done
+        initJobsMap().then(() => {
+          if (jobsMap && filteredJobs.length > 0) {
+            renderJobsOnMap(filteredJobs);
+          }
+        });
+      }
+    }
 
     // Add "Load More" button if there are more pages
     const existingLoadMore = jobsList?.querySelector("#loadMoreJobsBtn");
