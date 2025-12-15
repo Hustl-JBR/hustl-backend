@@ -18793,7 +18793,7 @@ meta.textContent =
                               <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
                                 <button class="btn btn-primary acceptApplicantBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">✅ Accept</button>
                                 <button class="btn btn-ghost declineApplicantBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; color: #dc2626; border-color: #fecaca;">❌ Decline</button>
-                                <button class="btn btn-ghost negotiatePriceBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem; ${hasNegotiation ? 'border: 2px solid var(--primary); background: var(--primary-soft);' : ''}">${hasNegotiation ? '💰 Edit Negotiation' : '💰 Negotiate Price'}</button>
+                                <button class="btn btn-ghost negotiatePriceBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem; ${hasNegotiation ? 'border: 2px solid var(--primary); background: var(--primary-soft);' : ''}">💰 Counter Offer</button>
                                 <button class="btn btn-ghost viewApplicantProfileBtn" data-user-id="${hustler.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">👤 View Profile</button>
                               </div>
                             `;
@@ -19123,11 +19123,11 @@ meta.textContent =
                       
                       ${customerCountered && !hustlerAcceptedCounter ? `
                       <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
-                        <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.5rem; font-weight: 600;">Customer counter-offer:</div>
-                        <div style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
+                        <div style="font-size: 0.9rem; color: #1e40af; margin-bottom: 0.75rem; font-weight: 600;">Customer counter-offer:</div>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem; text-align: center;">
                           $${current.toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}
                         </div>
-                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+                        <div style="display: flex; gap: 0.5rem;">
                           <button class="btn btn-primary acceptNegotiationBtn" data-offer-id="${userOffer.id}" data-proposed-amount="${current}" style="flex: 1; padding: 0.75rem; font-weight: 600; background: #10b981; border-color: #10b981;">✅ Accept</button>
                           <button class="btn btn-ghost denyNegotiationBtn" data-offer-id="${userOffer.id}" style="flex: 1; padding: 0.75rem; font-weight: 600; color: #dc2626; border-color: #fecaca;">❌ Deny</button>
                         </div>
