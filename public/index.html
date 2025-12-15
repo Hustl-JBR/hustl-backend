@@ -7499,29 +7499,23 @@ async function renderJobs(reset = false) {
       const catIcon = categoryIcons[jobCategory] || '⭐';
       const catName = categoryNames[jobCategory] || job.category || 'Job';
       
-      // Top row with category icon, title, and price
-      const headerRow = document.createElement("div");
-      headerRow.style.cssText = "display: flex; align-items: flex-start; gap: 0.75rem;";
-      
-      // Category icon badge
-      const iconBadge = document.createElement("div");
-      iconBadge.style.cssText = "width: 40px; height: 40px; border-radius: 10px; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0;";
-      iconBadge.textContent = catIcon;
-      headerRow.appendChild(iconBadge);
-      
-      // Title and meta container
+      // Simplified job card structure
       const textContent = document.createElement("div");
       textContent.style.cssText = "flex: 1; min-width: 0;";
       
-      const titleRow = document.createElement("div");
-      titleRow.style.cssText = "display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;";
-      
-      const titleEl = document.createElement("div");
-      titleEl.className = "job-title";
-      titleEl.style.cssText = "font-size: 0.95rem; line-height: 1.3; flex: 1;";
-      
       // Check if this is the user's posted job
       const isUserJob = currentUserId && job.customerId === currentUserId;
+      
+      // Add different border color for user's jobs
+      if (isUserJob) {
+        card.style.border = "2px solid #3b82f6";
+        card.style.background = "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)";
+      }
+
+      // 1. Job title (large + bold)
+      const titleEl = document.createElement("div");
+      titleEl.className = "job-title";
+      titleEl.style.cssText = "font-size: 1.1rem; font-weight: 700; line-height: 1.4; margin-bottom: 0.5rem; color: var(--text-main);";
       
       if (isUserJob) {
         // Add "Your job" badge
@@ -7534,50 +7528,12 @@ async function renderJobs(reset = false) {
       const titleText = document.createElement("span");
       titleText.textContent = job.title;
       titleEl.appendChild(titleText);
-      titleRow.appendChild(titleEl);
-      
-      // Add different border color for user's jobs
-      if (isUserJob) {
-        card.style.border = "2px solid #3b82f6";
-        card.style.background = "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)";
-      }
+      textContent.appendChild(titleEl);
 
-      const pay = document.createElement("div");
-      pay.style.cssText = "font-weight: 700; color: var(--success); font-size: 1rem; white-space: nowrap;";
-
-      // Format pricing display
-      const requirements = job.requirements || {};
-      const pricingOption = requirements.pricing_option;
-      
-      if (pricingOption === "hustlers_quote") {
-        pay.textContent = "💰 Hustler suggests price";
-        pay.style.color = "#f59e0b";
-      } else if (job.payType === "flat") {
-        const total = Number(job.amount) || 0;
-        pay.textContent = `💰 $${total.toFixed(0)} flat`;
-      } else if (job.payType === "hourly") {
-        const hr = Number(job.hourlyRate) || 0;
-        const maxHrs = job.estHours || "";
-        const rawTeamSize = job.teamSize || 1;
-        const teamSize = typeof rawTeamSize === 'string' ? parseInt(rawTeamSize, 10) : Number(rawTeamSize) || 1;
-        if (teamSize > 1) {
-          const perPerson = hr / teamSize;
-          pay.textContent = `💰 $${hr.toFixed(0)}/hr (max ${maxHrs || '?'} hrs)\n👥 ${teamSize} → $${perPerson.toFixed(0)}/hr each`;
-          pay.style.whiteSpace = "pre-line";
-        } else {
-          pay.textContent = `💰 $${hr.toFixed(0)}/hr (max ${maxHrs || '?'} hrs)`;
-        }
-      } else {
-        const total = Number(job.amount) || 0;
-        pay.textContent = `💰 $${total.toFixed(0)}`;
-      }
-      titleRow.appendChild(pay);
-      textContent.appendChild(titleRow);
-
-      // Compact meta section: Category • time ago
+      // 2. Category + time posted
       const meta = document.createElement("div");
       meta.className = "job-meta";
-      meta.style.cssText = "margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
+      meta.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
 
       const createdMs = job.createdAt
         ? new Date(job.createdAt).getTime()
@@ -7586,9 +7542,11 @@ async function renderJobs(reset = false) {
       meta.textContent = `${catIcon} ${catName} • 🕒 Posted ${timeAgo(createdMs)}`;
       textContent.appendChild(meta);
       
-      // Expiration countdown (if expiresAt exists)
-      let countdownText = '';
-      let countdownColor = '#059669';
+      // 3. Deadline info (if set)
+      const requirements = job.requirements || {};
+      let deadlineText = '';
+      
+      // Check expiration first
       if (job.expiresAt) {
         const expiresAt = new Date(job.expiresAt);
         const now = new Date();
@@ -7596,132 +7554,20 @@ async function renderJobs(reset = false) {
         
         if (diff > 0) {
           const hours = Math.floor(diff / (1000 * 60 * 60));
-          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-          
-          // Check if expires today (local time)
-          const expiresDate = new Date(expiresAt);
-          const today = new Date();
-          const isToday = expiresDate.toDateString() === today.toDateString();
-          
-          if (isToday) {
-            countdownText = `⏳ Expires today (${hours}h ${minutes}m)`;
-            countdownColor = "#dc2626";
-          } else if (hours < 24) {
-            countdownText = `⏳ Expires in ${hours}h ${minutes}m`;
-            countdownColor = "#f59e0b";
+          const days = Math.floor(hours / 24);
+          if (days > 0) {
+            deadlineText = `⏳ Expires in ${days}d ${hours % 24}h`;
           } else {
-            const days = Math.floor(hours / 24);
-            countdownText = `⏳ Expires in ${days}d ${hours % 24}h`;
-            countdownColor = "#059669";
+            deadlineText = `⏳ Expires in ${hours}h`;
           }
-        } else {
-          countdownText = "⏳ Expired";
-          countdownColor = "#dc2626";
         }
       }
       
-      if (countdownText) {
-        const countdownMeta = document.createElement("div");
-        countdownMeta.className = "job-meta job-countdown";
-        countdownMeta.style.cssText = `margin-top: 0.25rem; font-size: 0.85rem; font-weight: 600; color: ${countdownColor};`;
-        countdownMeta.textContent = countdownText;
-        countdownMeta.dataset.expiresAt = job.expiresAt;
-        
-        // Function to update countdown
-        if (job.expiresAt) {
-          const updateCountdown = () => {
-            const expiresAt = new Date(job.expiresAt);
-            const now = new Date();
-            const diff = expiresAt - now;
-            
-            if (diff <= 0) {
-              countdownMeta.textContent = "⏳ Expired";
-              countdownMeta.style.color = "#dc2626";
-              return;
-            }
-            
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            
-            // Check if expires today (local time)
-            const expiresDate = new Date(expiresAt);
-            const today = new Date();
-            const isToday = expiresDate.toDateString() === today.toDateString();
-            
-            if (isToday) {
-              countdownMeta.textContent = `⏳ Expires today (${hours}h ${minutes}m)`;
-              countdownMeta.style.color = "#dc2626";
-            } else if (hours < 24) {
-              countdownMeta.textContent = `⏳ Expires in ${hours}h ${minutes}m`;
-              countdownMeta.style.color = "#f59e0b";
-            } else {
-              const days = Math.floor(hours / 24);
-              countdownMeta.textContent = `⏳ Expires in ${days}d ${hours % 24}h`;
-              countdownMeta.style.color = "#059669";
-            }
-          };
-          
-          // Update every minute
-          const countdownInterval = setInterval(updateCountdown, 60000);
-          countdownMeta.dataset.intervalId = countdownInterval;
-        }
-        
-        textContent.appendChild(countdownMeta);
-      }
-      
-      // Preferred time display
-      const preferredTime = requirements.preferredTime || 'anytime';
-      const preferredTimeLabels = {
-        'morning': '🌅 Morning',
-        'afternoon': '☀️ Afternoon',
-        'evening': '🌆 Evening',
-        'anytime': '⏰ Anytime'
-      };
-      const preferredTimeLabel = preferredTimeLabels[preferredTime] || '⏰ Anytime';
-      
-      const preferredTimeMeta = document.createElement("div");
-      preferredTimeMeta.className = "job-meta";
-      preferredTimeMeta.style.cssText = "margin-top: 0.25rem; font-size: 0.85rem; color: var(--text-muted);";
-      preferredTimeMeta.textContent = preferredTimeLabel;
-      textContent.appendChild(preferredTimeMeta);
-      
-      // Date display (Dec 12 format)
-      if (job.date) {
-        try {
-          const jobDate = new Date(job.date);
-          if (!isNaN(jobDate.getTime())) {
-            const dateStr = jobDate.toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric'
-            });
-            const dateMeta = document.createElement("div");
-            dateMeta.className = "job-meta";
-            dateMeta.style.cssText = "margin-top: 0.25rem; font-size: 0.85rem; color: var(--text-muted);";
-            dateMeta.textContent = dateStr;
-            textContent.appendChild(dateMeta);
-          }
-        } catch (e) {}
-      }
-      
-      // Deadline/needed by line (simplified)
-      try {
-        const deadlineMeta = document.createElement("div");
-        deadlineMeta.className = "job-meta";
-        deadlineMeta.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted);";
-        
+      // If no expiration, check deadline preference
+      if (!deadlineText) {
         const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
         
-        if (deadlinePreference === "until_completed") {
-          deadlineMeta.textContent = "⏰ No deadline";
-        } else if (deadlinePreference === "whenever" || deadlinePreference === "flexible") {
-          deadlineMeta.textContent = "⏰ Flexible this week";
-        } else if (deadlinePreference === "this_morning" || deadlinePreference === "this_afternoon" || deadlinePreference === "this_evening") {
-          deadlineMeta.textContent = "⏰ Today – ASAP";
-          deadlineMeta.style.color = "#dc2626";
-          deadlineMeta.style.fontWeight = "600";
-        } else if (deadlinePreference === "tomorrow") {
-          deadlineMeta.textContent = "⏰ Tomorrow";
-        } else if (deadlinePreference === "custom" && job.startTime) {
+        if (deadlinePreference === "custom" && job.startTime) {
           try {
             const deadlineDate = new Date(job.startTime);
             if (!isNaN(deadlineDate.getTime())) {
@@ -7732,7 +7578,7 @@ async function renderJobs(reset = false) {
                 minute: '2-digit',
                 hour12: true
               });
-              deadlineMeta.textContent = `⏰ ${deadlineStr}`;
+              deadlineText = `⏳ Needed by ${deadlineStr}`;
             }
           } catch (e) {}
         } else if (job.date) {
@@ -7741,31 +7587,45 @@ async function renderJobs(reset = false) {
             if (!isNaN(deadlineDate.getTime())) {
               const deadlineStr = deadlineDate.toLocaleDateString('en-US', { 
                 month: 'short', 
-                day: 'numeric'
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
               });
-              deadlineMeta.textContent = `⏰ ${deadlineStr}`;
+              deadlineText = `⏳ Needed by ${deadlineStr}`;
             }
           } catch (e) {}
         }
-        if (deadlineMeta.textContent) {
-          textContent.appendChild(deadlineMeta);
-        }
-      } catch (e) {
-        console.warn("Error rendering deadline:", e);
+      }
+      
+      if (deadlineText) {
+        const deadlineMeta = document.createElement("div");
+        deadlineMeta.className = "job-meta";
+        deadlineMeta.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
+        deadlineMeta.textContent = deadlineText;
+        textContent.appendChild(deadlineMeta);
       }
 
-      // Description line (short preview)
-      if (job.description) {
-        const desc = document.createElement("div");
-        desc.className = "job-meta";
-        desc.style.cssText = "margin-top: 0.25rem; color: var(--text-muted); font-size: 0.8rem; line-height: 1.4;";
-        const shortDesc = job.description.length > 70 ? job.description.substring(0, 70) + "..." : job.description;
-        desc.textContent = shortDesc;
-        textContent.appendChild(desc);
+      // 4. Workers needed
+      const teamSize = job.teamSize || job.requirements?.teamSize || job.requirements?.team_size || 1;
+      if (teamSize === 0 || teamSize === 'company') {
+        const workersBadge = document.createElement("div");
+        workersBadge.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
+        workersBadge.textContent = "👥 Company/crew";
+        textContent.appendChild(workersBadge);
+      } else if (teamSize > 1) {
+        const workersBadge = document.createElement("div");
+        workersBadge.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
+        workersBadge.textContent = `👥 ${teamSize} workers`;
+        textContent.appendChild(workersBadge);
+      } else {
+        const workersBadge = document.createElement("div");
+        workersBadge.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
+        workersBadge.textContent = "👥 1 worker";
+        textContent.appendChild(workersBadge);
       }
-
-      // Calculate locationText first
-      let locationText = "";
+      
+      // 5. Location logic
       const pickupArea = requirements.pickup_area || requirements.pickupArea;
       const pickupCity = requirements.pickup_city || requirements.pickupCity;
       const pickupZip = requirements.pickup_zip;
@@ -7774,29 +7634,8 @@ async function renderJobs(reset = false) {
       const dropoffZip = requirements.dropoff_zip;
       const onSiteOnly = requirements.on_site_only || requirements.onSiteOnly || job.onSiteOnly;
       
-      // Helper function to calculate distance using Haversine formula (accurate)
-      function calculateDistance(lat1, lng1, lat2, lng2) {
-        if (!lat1 || !lng1 || !lat2 || !lng2) return null;
-        
-        const R = 3959; // Earth's radius in miles
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLng = (lng2 - lng1) * Math.PI / 180;
-        const a = 
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-          Math.sin(dLng / 2) * Math.sin(dLng / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const miles = R * c;
-        
-        return Math.round(miles * 10) / 10; // Round to 1 decimal place
-      }
-      
       const pickupAddress = requirements.pickup_address || requirements.pickupAddress;
       const dropoffAddress = requirements.dropoff_address || requirements.dropoffAddress;
-      const pickupLat = requirements.pickup_lat || requirements.pickupLat;
-      const pickupLng = requirements.pickup_lng || requirements.pickupLng;
-      const dropoffLat = requirements.dropoff_lat || requirements.dropoffLat;
-      const dropoffLng = requirements.dropoff_lng || requirements.dropoffLng;
       
       // Check if address should be hidden based on customer preference
       const hidePickupAddressUntilAssigned = requirements.hide_pickup_address_until_assigned || requirements.hidePickupAddressUntilAssigned;
@@ -7831,76 +7670,82 @@ async function renderJobs(reset = false) {
         }
       }
       
+      let locationText = "";
+      
       if (onSiteOnly) {
+        // On-site only job
         if (showFullPickupAddress && pickupAddress) {
           locationText = pickupAddress;
-        } else if (pickupCity) {
-          locationText = `${pickupCity}${pickupZip ? ` ${pickupZip}` : ''}`;
-          if (!showFullPickupAddress) {
-            locationText += ' (Address after assignment)';
-          }
         } else {
-          locationText = job.address?.split(',')[0] || "Location TBD";
+          // Show Neighborhood/Area + ZIP if hide address is ON, otherwise show full address
+          locationText = pickupArea || pickupCity || "Location TBD";
+          if (pickupZip) {
+            locationText += ` ${pickupZip}`;
+          }
         }
       } else if (dropoffArea || dropoffCity || dropoffZip || dropoffAddress) {
-        let pickupStr = showFullPickupAddress && pickupAddress ? pickupAddress : (pickupCity || "Pickup");
-        if (!showFullPickupAddress && !pickupAddress) {
-          pickupStr = `${pickupCity || 'Pickup'}${pickupZip ? ` ${pickupZip}` : ''}`;
-        }
-        let dropoffStr = showFullDropoffAddress && dropoffAddress ? dropoffAddress : (dropoffCity || "Dropoff");
-        if (!showFullDropoffAddress && !dropoffAddress) {
-          dropoffStr = `${dropoffCity || 'Dropoff'}${dropoffZip ? ` ${dropoffZip}` : ''}`;
-        }
-        // Use coordinates for accurate distance calculation
-        if (pickupLat && pickupLng && dropoffLat && dropoffLng) {
-          const miles = calculateDistance(parseFloat(pickupLat), parseFloat(pickupLng), parseFloat(dropoffLat), parseFloat(dropoffLng));
-          locationText = `${pickupStr} → ${dropoffStr}${miles ? ` (${miles} mi)` : ''}`;
+        // Has dropoff location
+        let pickupStr = "";
+        if (showFullPickupAddress && pickupAddress) {
+          pickupStr = pickupAddress;
         } else {
-          locationText = `${pickupStr} → ${dropoffStr}`;
+          pickupStr = pickupArea || pickupCity || "Pickup";
+          if (pickupZip) {
+            pickupStr += ` ${pickupZip}`;
+          }
         }
-        if (!showFullPickupAddress || !showFullDropoffAddress) {
-          locationText += ' (Addresses after assignment)';
+        
+        let dropoffStr = "";
+        if (showFullDropoffAddress && dropoffAddress) {
+          dropoffStr = dropoffAddress;
+        } else {
+          dropoffStr = dropoffArea || dropoffCity || "Dropoff";
+          if (dropoffZip) {
+            dropoffStr += ` ${dropoffZip}`;
+          }
         }
+        
+        locationText = `${pickupStr} → ${dropoffStr}`;
       } else {
+        // No dropoff, just pickup
         if (showFullPickupAddress && pickupAddress) {
           locationText = pickupAddress;
-        } else if (pickupCity) {
-          locationText = `${pickupCity}${pickupZip ? ` ${pickupZip}` : ''}`;
-          if (!showFullPickupAddress) {
-            locationText += ' (Address after assignment)';
-          }
         } else {
-          locationText = job.address?.split(',')[0] || "Location TBD";
+          locationText = pickupArea || pickupCity || "Location TBD";
+          if (pickupZip) {
+            locationText += ` ${pickupZip}`;
+          }
         }
       }
       
-      // Location line (simplified)
       const loc = document.createElement("div");
       loc.className = "job-meta";
-      loc.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted); cursor: pointer;";
+      loc.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
       loc.textContent = `📍 ${locationText}`;
-      loc.addEventListener("click", (e) => {
-        e.stopPropagation();
-        openJobDetails(job.id);
-      });
       textContent.appendChild(loc);
       
-      // Workers needed line (simplified)
-      const teamSize = job.teamSize || job.requirements?.teamSize || job.requirements?.team_size || 1;
-      if (teamSize === 0) {
-        const workersBadge = document.createElement("div");
-        workersBadge.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted);";
-        workersBadge.textContent = "👥 Company/crew";
-        textContent.appendChild(workersBadge);
-      } else if (teamSize > 1) {
-        const workersBadge = document.createElement("div");
-        workersBadge.style.cssText = "margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted);";
-        workersBadge.textContent = `👥 ${teamSize} workers`;
-        textContent.appendChild(workersBadge);
-      }
+      // 6. Price (flat/hourly)
+      const pricingOption = requirements.pricing_option;
+      const pay = document.createElement("div");
+      pay.style.cssText = "font-weight: 700; color: var(--success); font-size: 1rem; margin-top: 0.25rem;";
       
-      headerRow.appendChild(textContent);
-      card.appendChild(headerRow);
+      if (pricingOption === "hustlers_quote") {
+        pay.textContent = "💰 Hustler suggests price";
+        pay.style.color = "#f59e0b";
+      } else if (job.payType === "flat") {
+        const total = Number(job.amount) || 0;
+        pay.textContent = `💰 $${total.toFixed(0)} flat`;
+      } else if (job.payType === "hourly") {
+        const hr = Number(job.hourlyRate) || 0;
+        pay.textContent = `💰 $${hr.toFixed(0)}/hr`;
+      } else {
+        const total = Number(job.amount) || 0;
+        pay.textContent = `💰 $${total.toFixed(0)}`;
+      }
+      textContent.appendChild(pay);
+      
+      // Add textContent to card
+      card.appendChild(textContent);
 
       // Actions row
       const actions = document.createElement("div");
