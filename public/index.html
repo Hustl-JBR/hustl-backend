@@ -16890,7 +16890,7 @@ meta.textContent =
                     <button class="btn btn-primary verifyCompletionCodeBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.75rem; font-weight: 600; background: #10b981;">✅ Verify & Complete Job</button>
                   </div>
                   ` : ''}
-                  ${(job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && !job.startCodeVerified ? `<button class="btn btn-ghost cancelApplicationBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">Cancel</button>` : ''}
+                  ${(job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && !job.startCodeVerified ? `<button class="btn btn-ghost leaveJobBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">🚪 Leave Job</button>` : ''}
                 </div>
               `;
             }
@@ -17045,6 +17045,15 @@ meta.textContent =
               if (success) {
                 loadActiveJobs();
                 loadCompletedJobs();
+              }
+            });
+            
+            // Leave job button (hustler view for scheduled/assigned jobs)
+            card.querySelector('.leaveJobBtn')?.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              if (confirm('Are you sure you want to leave this job? The job will be open for other applicants.')) {
+                await leaveJob(job.id);
+                loadActiveJobs();
               }
             });
             
@@ -22467,32 +22476,7 @@ meta.textContent =
       try {
         const token = localStorage.getItem('hustl_token');
         
-        // Fetch job to check if start code has been exchanged
-        const jobResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!jobResponse.ok) throw new Error('Failed to fetch job');
-        const job = await jobResponse.json();
-        
-        if (job.startCodeVerified) {
-          showToast("Cannot unaccept: Start code has already been exchanged.");
-          return;
-        }
-        
-        // Find the accepted offer
-        const offersResponse = await fetch(`${API_BASE}/offers/${jobId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!offersResponse.ok) throw new Error('Failed to fetch offers');
-        const offers = await offersResponse.json();
-        const acceptedOffer = offers.find(o => o.status === 'ACCEPTED');
-        
-        if (!acceptedOffer) {
-          showToast("No accepted offer found for this job.");
-          return;
-        }
-        
-        const response = await fetch(`${API_BASE}/offers/${acceptedOffer.id}/unaccept`, {
+        const response = await fetch(`${API_BASE}/jobs/${jobId}/unassign`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -22500,14 +22484,44 @@ meta.textContent =
           }
         });
         
-        if (!response.ok) throw new Error('Failed to unaccept hustler');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || errorData.message || 'Failed to unassign hustler');
+        }
         
-        showToast("Hustler unaccepted. Job is now open for applicants again.");
+        const result = await response.json();
+        showToast(result.message || "Hustler unassigned. Job is now open for applicants again.");
         loadPostedJobs();
         loadActiveJobs();
       } catch (error) {
-        console.error("Error unaccepting hustler:", error);
-        showToast(error.message || "Error unaccepting hustler. Please try again.");
+        console.error("Error unassigning hustler:", error);
+        showToast(error.message || "Error unassigning hustler. Please try again.");
+      }
+    }
+
+    async function leaveJob(jobId) {
+      try {
+        const token = localStorage.getItem('hustl_token');
+        
+        const response = await fetch(`${API_BASE}/jobs/${jobId}/leave`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || errorData.message || 'Failed to leave job');
+        }
+        
+        const result = await response.json();
+        showToast(result.message || "You have left the job.");
+        loadActiveJobs();
+      } catch (error) {
+        console.error("Error leaving job:", error);
+        showToast(error.message || "Error leaving job. Please try again.");
       }
     }
 

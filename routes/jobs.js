@@ -1565,7 +1565,7 @@ router.post('/:id/confirm-complete', authenticate, requireRole('CUSTOMER'), asyn
   }
 });
 
-// DELETE /jobs/:id - Delete a job (Customer only, only if OPEN)
+// DELETE /jobs/:id - Delete a job (Customer only, only if not in progress)
 router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) => {
   try {
     const job = await prisma.job.findUnique({
@@ -1584,17 +1584,11 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
       return res.status(403).json({ error: 'You can only delete your own jobs' });
     }
 
-    if (job.status !== 'OPEN') {
+    // BUSINESS RULE: Cannot delete if job is in progress (start code verified)
+    if (job.startCodeVerified || job.status === 'IN_PROGRESS') {
       return res.status(400).json({ 
-        error: 'Can only delete open jobs that have not been assigned',
-        message: `Job status is ${job.status}. Only OPEN jobs can be deleted.`
-      });
-    }
-
-    if (job.offers && job.offers.some(o => o.status === 'ACCEPTED')) {
-      return res.status(400).json({ 
-        error: 'Cannot delete job with accepted offer',
-        message: 'This job has an accepted offer and cannot be deleted.'
+        error: 'Cannot delete job that is in progress. Once the start code is entered, the job must be completed.',
+        message: 'Job is currently in progress and cannot be deleted.'
       });
     }
 
@@ -1606,6 +1600,170 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
     res.json({ message: 'Job deleted successfully' });
   } catch (error) {
     console.error('Delete job error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /jobs/:id/unassign - Unassign hustler (Customer only, before start code)
+router.post('/:id/unassign', authenticate, requireRole('CUSTOMER'), async (req, res) => {
+  try {
+    const job = await prisma.job.findUnique({
+      where: { id: req.params.id },
+      include: {
+        offers: {
+          where: { status: 'ACCEPTED' },
+        },
+        payment: true,
+        customer: { select: { id: true, email: true, name: true } },
+        hustler: { select: { id: true, email: true, name: true } }
+      },
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // BUSINESS RULE: Cannot unassign if job is in progress
+    if (job.startCodeVerified || job.status === 'IN_PROGRESS') {
+      return res.status(400).json({ 
+        error: 'Cannot unassign: Job is in progress. Once the start code is entered, the job must be completed.',
+        startCodeUsed: true
+      });
+    }
+
+    // Find accepted offer
+    const acceptedOffer = job.offers && job.offers.length > 0 ? job.offers[0] : null;
+    
+    if (acceptedOffer) {
+      // Update offer status back to PENDING
+      await prisma.offer.update({
+        where: { id: acceptedOffer.id },
+        data: { status: 'PENDING' }
+      });
+    }
+
+    // Update job - remove hustler, set back to OPEN
+    const updatedJob = await prisma.job.update({
+      where: { id: req.params.id },
+      data: {
+        status: 'OPEN',
+        hustlerId: null,
+        acceptedHustlerId: null,
+        startCode: null,
+        startCodeExpiresAt: null
+      }
+    });
+
+    // Send notification email to hustler (non-blocking)
+    if (job.hustler) {
+      try {
+        const { sendJobUnacceptedEmail } = require('../services/email');
+        await sendJobUnacceptedEmail(
+          job.hustler.email,
+          job.hustler.name,
+          job.title,
+          job.id
+        );
+      } catch (emailError) {
+        console.error('Error sending unaccept email:', emailError);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Hustler unassigned. Job is now open for other applicants.',
+      job: updatedJob
+    });
+  } catch (error) {
+    console.error('Unassign job error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /jobs/:id/leave - Leave job (Hustler only, before start code)
+router.post('/:id/leave', authenticate, requireRole('HUSTLER'), async (req, res) => {
+  try {
+    const job = await prisma.job.findUnique({
+      where: { id: req.params.id },
+      include: {
+        offers: {
+          where: {
+            hustlerId: req.user.id,
+            status: 'ACCEPTED'
+          },
+        },
+        customer: { select: { id: true, email: true, name: true } },
+      },
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (job.hustlerId !== req.user.id) {
+      return res.status(403).json({ error: 'You are not assigned to this job' });
+    }
+
+    // BUSINESS RULE: Cannot leave if job is in progress
+    if (job.startCodeVerified || job.status === 'IN_PROGRESS') {
+      return res.status(400).json({ 
+        error: 'Cannot leave: Job is in progress. Once the start code is entered, the job must be completed.',
+        jobStarted: true
+      });
+    }
+
+    // Find accepted offer
+    const acceptedOffer = job.offers && job.offers.length > 0 ? job.offers[0] : null;
+    
+    if (acceptedOffer) {
+      // Update offer status to DECLINED
+      await prisma.offer.update({
+        where: { id: acceptedOffer.id },
+        data: { status: 'DECLINED' }
+      });
+    }
+
+    // Update job - remove hustler, set back to OPEN
+    const updatedJob = await prisma.job.update({
+      where: { id: req.params.id },
+      data: {
+        status: 'OPEN',
+        hustlerId: null,
+        acceptedHustlerId: null,
+        startCode: null,
+        startCodeExpiresAt: null
+      }
+    });
+
+    // Send notification email to customer (non-blocking)
+    if (job.customer) {
+      try {
+        const emailService = require('../services/email');
+        if (emailService.sendHustlerCancelledEmail) {
+          await emailService.sendHustlerCancelledEmail(
+            job.customer.email,
+            job.customer.name,
+            job.title,
+            req.user.name || 'Hustler',
+            job.id
+          );
+        }
+      } catch (emailError) {
+        console.error('Error sending cancellation email (non-fatal):', emailError);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'You have left the job. The job is now open for other applicants.',
+      job: updatedJob
+    });
+  } catch (error) {
+    console.error('Leave job error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
