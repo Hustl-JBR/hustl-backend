@@ -23887,11 +23887,17 @@ try {
       // Show Manage Jobs tab when logged in
       const manageJobsTab = document.getElementById('manageJobsTab');
       if (manageJobsTab) manageJobsTab.style.display = 'block';
+      // Hide bottom sign up CTA when logged in
+      const homeBottomSignUpCTA = document.getElementById('homeBottomSignUpCTA');
+      if (homeBottomSignUpCTA) homeBottomSignUpCTA.style.display = 'none';
     } else {
       document.body.classList.remove('logged-in');
       // Hide Manage Jobs tab when logged out
       const manageJobsTab = document.getElementById('manageJobsTab');
       if (manageJobsTab) manageJobsTab.style.display = 'none';
+      // Show bottom sign up CTA when logged out
+      const homeBottomSignUpCTA = document.getElementById('homeBottomSignUpCTA');
+      if (homeBottomSignUpCTA) homeBottomSignUpCTA.style.display = '';
     }
     
     const mobileMenu = document.getElementById('mobileMenu');
