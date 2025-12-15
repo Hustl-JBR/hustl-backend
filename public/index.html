@@ -7612,12 +7612,14 @@ async function renderJobs(reset = false) {
         try {
           const deadlineDate = new Date(job.startTime);
           if (!isNaN(deadlineDate.getTime())) {
-            const deadlineStr = deadlineDate.toLocaleDateString('en-US', { 
+            // Use toLocaleString to properly format date and time in user's local timezone
+            const deadlineStr = deadlineDate.toLocaleString('en-US', { 
               month: 'short', 
               day: 'numeric',
               hour: 'numeric',
               minute: '2-digit',
-              hour12: true
+              hour12: true,
+              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
             });
             neededByText = `📅 Needed by ${deadlineStr}`;
           }
@@ -7627,12 +7629,14 @@ async function renderJobs(reset = false) {
         try {
           const expiresDate = new Date(job.expiresAt);
           if (!isNaN(expiresDate.getTime())) {
-            const deadlineStr = expiresDate.toLocaleDateString('en-US', { 
+            // Use toLocaleString to properly format date and time in user's local timezone
+            const deadlineStr = expiresDate.toLocaleString('en-US', { 
               month: 'short', 
               day: 'numeric',
               hour: 'numeric',
               minute: '2-digit',
-              hour12: true
+              hour12: true,
+              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
             });
             neededByText = `📅 Needed by ${deadlineStr}`;
           }
@@ -7641,12 +7645,14 @@ async function renderJobs(reset = false) {
         try {
           const deadlineDate = new Date(job.date);
           if (!isNaN(deadlineDate.getTime())) {
-            const deadlineStr = deadlineDate.toLocaleDateString('en-US', { 
+            // Use toLocaleString to properly format date and time in user's local timezone
+            const deadlineStr = deadlineDate.toLocaleString('en-US', { 
               month: 'short', 
               day: 'numeric',
               hour: 'numeric',
               minute: '2-digit',
-              hour12: true
+              hour12: true,
+              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
             });
             neededByText = `📅 Needed by ${deadlineStr}`;
           }
