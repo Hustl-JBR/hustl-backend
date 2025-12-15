@@ -7625,16 +7625,42 @@ async function renderJobs(reset = false) {
         textContent.appendChild(workersBadge);
       }
       
-      // 5. Location logic - Only show neighborhood/area if location is hidden
-      const hidePickupAddressUntilAssigned = requirements.hide_pickup_address_until_assigned || requirements.hidePickupAddressUntilAssigned;
+      // 5. Location logic
       const pickupArea = requirements.pickup_area || requirements.pickupArea;
+      const pickupAddress = requirements.pickup_address || requirements.pickupAddress;
       
-      // Only show location if they are hiding location AND we have a neighborhood/area
-      if (hidePickupAddressUntilAssigned && pickupArea) {
+      // Check if address should be hidden based on customer preference
+      const hidePickupAddressUntilAssigned = requirements.hide_pickup_address_until_assigned || requirements.hidePickupAddressUntilAssigned;
+      let showFullPickupAddress = true;
+      
+      if (hidePickupAddressUntilAssigned) {
+        try {
+          const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
+          if (user) {
+            const isHustler = user && !user.roles?.includes('CUSTOMER');
+            const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS' || job.status === 'COMPLETED_BY_HUSTLER');
+            showFullPickupAddress = !isHustler || jobAccepted;
+          }
+        } catch (e) {
+          showFullPickupAddress = true;
+        }
+      }
+      
+      // Show location: full address if not hidden, neighborhood/area if hidden
+      let locationText = "";
+      if (showFullPickupAddress && pickupAddress) {
+        // Show full address when not hiding
+        locationText = pickupAddress;
+      } else if (hidePickupAddressUntilAssigned && pickupArea) {
+        // Show only neighborhood/area when hiding location
+        locationText = pickupArea;
+      }
+      
+      if (locationText) {
         const loc = document.createElement("div");
         loc.className = "job-meta";
         loc.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
-        loc.textContent = `📍 ${pickupArea}`;
+        loc.textContent = `📍 ${locationText}`;
         textContent.appendChild(loc);
       }
       
