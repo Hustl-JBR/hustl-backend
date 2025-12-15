@@ -1901,6 +1901,7 @@ router.post('/:id/leave', authenticate, requireRole('HUSTLER'), async (req, res)
             status: 'ACCEPTED'
           },
         },
+        payment: true,
         customer: { select: { id: true, email: true, name: true } },
       },
     });
