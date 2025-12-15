@@ -14941,37 +14941,179 @@ async function renderJobs(reset = false) {
                 const statusColor = statusColors[jobStatus] || '#6b7280';
                 const statusLabel = statusLabels[jobStatus] || jobStatus;
                 
+                // Get requirements for formatting
+                const requirements = job.requirements || {};
+                const teamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
+                const payType = job.payType || 'flat';
+                
+                // Format pay display
+                let payDisplay = '';
+                if (payType === 'hourly') {
+                  const hourlyRate = parseFloat(job.hourlyRate || 0);
+                  const estHours = job.estHours || '?';
+                  if (teamSize > 1) {
+                    const perPersonRate = hourlyRate / teamSize;
+                    payDisplay = `$${hourlyRate.toFixed(0)}/hr total (Max ${estHours} hrs) · ${teamSize} workers → $${perPersonRate.toFixed(0)}/hr each`;
+                  } else {
+                    payDisplay = `$${hourlyRate.toFixed(0)}/hr total (Max ${estHours} hrs)`;
+                  }
+                } else {
+                  payDisplay = `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
+                }
+                
+                // Format workers
+                let workersDisplay = '';
+                if (teamSize === 0) {
+                  workersDisplay = 'Company/crew';
+                } else if (teamSize === 1) {
+                  workersDisplay = '1 worker';
+                } else {
+                  workersDisplay = `${teamSize} workers`;
+                }
+                
+                // Format date
+                const jobDate = new Date(job.date || job.startTime || job.createdAt);
+                const dateStr = jobDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                
+                // Format location
+                let locationDisplay = job.address || 'Location not specified';
+                const pickupArea = requirements.pickup_area || requirements.pickupArea;
+                const pickupCity = requirements.pickup_city || requirements.pickupCity;
+                const pickupZip = requirements.pickup_zip;
+                const dropoffArea = requirements.dropoff_area || requirements.dropoffArea;
+                const dropoffCity = requirements.dropoff_city || requirements.dropoffCity;
+                const dropoffZip = requirements.dropoff_zip;
+                const onSiteOnly = requirements.on_site_only || requirements.onSiteOnly;
+                
+                if (pickupArea || pickupCity) {
+                  const pickupParts = [];
+                  if (pickupArea) pickupParts.push(pickupArea);
+                  if (pickupCity) pickupParts.push(pickupCity);
+                  if (pickupZip) pickupParts.push(pickupZip);
+                  locationDisplay = pickupParts.join(', ');
+                  
+                  if (!onSiteOnly && (dropoffArea || dropoffCity)) {
+                    const dropoffParts = [];
+                    if (dropoffArea) dropoffParts.push(dropoffArea);
+                    if (dropoffCity) dropoffParts.push(dropoffCity);
+                    if (dropoffZip) dropoffParts.push(dropoffZip);
+                    locationDisplay += ` → ${dropoffParts.join(', ')}`;
+                  } else if (onSiteOnly) {
+                    locationDisplay += ' (Single location)';
+                  }
+                }
+                
+                // Format expiration
+                const expiresAt = requirements.expiresAt ? new Date(requirements.expiresAt) : null;
+                let expirationDisplay = '';
+                if (expiresAt && expiresAt > new Date()) {
+                  const daysLeft = Math.ceil((expiresAt - new Date()) / (1000 * 60 * 60 * 24));
+                  expirationDisplay = `Expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
+                }
+                
+                // Format time ago
+                const postedDate = new Date(job.createdAt);
+                const hoursAgo = Math.floor((Date.now() - postedDate.getTime()) / (1000 * 60 * 60));
+                const minutesAgo = Math.floor((Date.now() - postedDate.getTime()) / (1000 * 60));
+                let timeAgo = '';
+                if (minutesAgo < 60) {
+                  timeAgo = minutesAgo < 1 ? 'Just now' : `${minutesAgo} ${minutesAgo === 1 ? 'minute' : 'minutes'} ago`;
+                } else if (hoursAgo < 24) {
+                  timeAgo = `${hoursAgo} ${hoursAgo === 1 ? 'hour' : 'hours'} ago`;
+                } else {
+                  const daysAgo = Math.floor((Date.now() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
+                  timeAgo = daysAgo === 1 ? '1 day ago' : `${daysAgo} days ago`;
+                }
+                
+                // Get category icon
+                const categoryMap = {
+                  'Moving / Hauling': '🚚',
+                  'moving': '🚚',
+                  'Yard work / Outdoor': '🌿',
+                  'yard-work': '🌿',
+                  'yard': '🌿',
+                  'Cleaning / Organizing': '🧹',
+                  'cleaning': '🧹',
+                  'Furniture / Assembly': '🛠',
+                  'furniture-assembly': '🛠',
+                  'furniture': '🛠',
+                  'Other': '⭐',
+                  'other': '⭐'
+                };
+                const categoryIcon = categoryMap[job.category] || '📋';
+                
+                // Normalize category name
+                const categoryDisplayNames = {
+                  'moving': 'Moving / Hauling',
+                  'yard-work': 'Yard work / Outdoor',
+                  'yard': 'Yard work / Outdoor',
+                  'cleaning': 'Cleaning / Organizing',
+                  'furniture-assembly': 'Furniture / Assembly',
+                  'furniture': 'Furniture / Assembly',
+                  'other': 'Other'
+                };
+                const categoryDisplay = categoryDisplayNames[job.category] || job.category || 'General';
+                
                 const jobCard = document.createElement("div");
-                jobCard.style.cssText = "padding: 1.25rem; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 1rem; background: white; transition: all 0.2s;";
-                jobCard.style.cursor = "default";
+                jobCard.style.cssText = "padding: 0; border: 2px solid var(--border); border-radius: 16px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.08); transition: all 0.3s; overflow: hidden; margin-bottom: 1.5rem;";
+                jobCard.onmouseenter = () => { 
+                  jobCard.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+                  jobCard.style.transform = 'translateY(-2px)';
+                  jobCard.style.borderColor = 'var(--primary)';
+                };
+                jobCard.onmouseleave = () => { 
+                  jobCard.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+                  jobCard.style.transform = 'translateY(0)';
+                  jobCard.style.borderColor = 'var(--border)';
+                };
                 jobCard.innerHTML = `
-                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-                    <div style="flex: 1;">
-                      <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
-                      <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted);">
-                        <span>📅 ${new Date(job.createdAt).toLocaleDateString()}</span>
-                        <span>💰 $${parseFloat(job.amount || 0).toFixed(2)}</span>
-                        <span style="padding: 0.25rem 0.75rem; background: ${statusColor}20; color: ${statusColor}; border-radius: 6px; font-weight: 600;">${statusLabel}</span>
+                  <div style="padding: 1.5rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border-bottom: 2px solid var(--border);">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                      <span style="font-size: 2rem;">${categoryIcon}</span>
+                      <div style="flex: 1;">
+                        <h3 style="margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main); line-height: 1.2;">${job.title || 'Untitled Job'}</h3>
+                        <div style="margin-top: 0.25rem; font-size: 0.9rem; color: var(--text-muted);">${categoryDisplay}</div>
+                      </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.9rem;">
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-weight: 700; color: var(--text-main);">💰</span>
+                        <span style="font-weight: 700; color: var(--text-main); font-size: 1.1rem;">${payDisplay}</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span>⏰</span>
+                        <span style="color: var(--text-muted);">${dateStr}</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span>👥</span>
+                        <span style="color: var(--text-muted);">${workersDisplay}</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📍</span>
+                        <span style="color: var(--text-muted);">${locationDisplay}</span>
+                      </div>
+                      ${expirationDisplay ? `
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span>⏳</span>
+                        <span style="color: #d97706; font-weight: 600;">${expirationDisplay}</span>
+                      </div>
+                      ` : ''}
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📅</span>
+                        <span style="color: var(--text-muted);">${timeAgo}</span>
                       </div>
                     </div>
                   </div>
                   
-                  ${jobStatus === 'OPEN' ? `
-                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 8px;">
-                      <span style="font-weight: 600; color: #059669;">👥 ${offerCount} ${offerCount === 1 ? 'applicant' : 'applicants'}</span>
+                  <div style="padding: 1.5rem;">
+                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                      <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 200px; padding: 1rem; font-size: 1rem; font-weight: 700; border-radius: 10px;">
+                        ${offerCount > 0 ? '👥 View Applicants & Manage' : '🔍 View Job Details'}
+                      </button>
+                      ${jobStatus === 'OPEN' ? `
+                        <button class="btn btn-ghost deleteJobBtn" data-job-id="${job.id}" style="padding: 1rem 1.5rem; font-weight: 600; border-radius: 10px; color: #dc2626; border-color: #fecaca;">🗑️ Delete</button>
+                      ` : ''}
                     </div>
-                  ` : job.hustlerId ? `
-                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; padding: 0.75rem; background: #dbeafe; border-radius: 8px;">
-                      <span style="font-weight: 600; color: #1e40af;">✅ Hustler assigned</span>
-                    </div>
-                  ` : ''}
-                  
-                  <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                    <button class="btn btn-ghost viewJobBtn" data-job-id="${job.id}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">View Details</button>
-                    ${jobStatus === 'OPEN' ? `
-                      <button class="btn btn-primary manageApplicantsBtn" data-job-id="${job.id}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Manage Applicants (${offerCount})</button>
-                      <button class="btn btn-ghost deleteJobBtn" data-job-id="${job.id}" style="padding: 0.5rem 1rem; font-size: 0.9rem; color: #dc2626; border-color: #fecaca;">Delete Job</button>
-                    ` : ''}
                   </div>
                 `;
                 
@@ -24283,5 +24425,6 @@ try {
   <script src="/mobile-core.js" defer></script>
 </body>
 </html>
+
 
 
