@@ -1593,7 +1593,7 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
     // BUSINESS RULE: Cannot delete if job is in progress (start code verified)
     if (job.startCodeVerified || job.status === 'IN_PROGRESS') {
       return res.status(400).json({ 
-        error: 'Cannot delete job that is in progress. Once the start code is entered, the job must be completed.',
+        error: 'Cannot delete job that is in progress. Once the start code is entered, the job must be completed. Please contact support.',
         message: 'Job is currently in progress and cannot be deleted.'
       });
     }
@@ -1605,7 +1605,11 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
     const customerEmail = job.customer?.email || req.user.email;
     const customerName = job.customer?.name || req.user.name;
 
+    // Process refund (automatic if before start code)
+    await processRefundIfNeeded(job, 'Job deleted by customer', req.user.id, req.user.name, req.ip);
+
     // Delete payment first (if exists) - Payment has ON DELETE RESTRICT constraint
+    // Note: Refund should have already been processed above, but we still need to delete the payment record
     if (job.payment) {
       try {
         await prisma.payment.delete({
@@ -1658,6 +1662,131 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
   }
 });
 
+// Helper function to process refunds (only if start code not verified)
+async function processRefundIfNeeded(job, reason, actorId, actorName, ipAddress = 'system') {
+  // Only refund if job hasn't started (start code not verified)
+  if (job.startCodeVerified || job.status === 'IN_PROGRESS') {
+    return; // No refund if job has started
+  }
+
+  if (!job.payment) {
+    return; // No payment to refund
+  }
+
+  const { voidPaymentIntent, createRefund } = require('../services/stripe');
+  const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+
+  try {
+    if (job.payment.status === 'PREAUTHORIZED') {
+      // Payment is on hold - void it
+      if (!skipStripeCheck && job.payment.providerId) {
+        try {
+          await voidPaymentIntent(job.payment.providerId);
+        } catch (voidError) {
+          console.error('Error voiding payment intent:', voidError);
+          // Continue even if void fails
+        }
+      }
+
+      await prisma.payment.update({
+        where: { id: job.payment.id },
+        data: { 
+          status: 'VOIDED',
+        },
+      });
+
+      // Log audit
+      await prisma.auditLog.create({
+        data: {
+          actorId: actorId,
+          actionType: 'VOID',
+          resourceType: 'PAYMENT',
+          resourceId: job.payment.id,
+          details: {
+            reason: reason,
+            jobId: job.id,
+          },
+          ipAddress: ipAddress,
+        },
+      }).catch(err => console.error('Error creating audit log:', err));
+    } else if (job.payment.status === 'CAPTURED') {
+      // Payment was captured - issue full refund
+      if (!skipStripeCheck && job.payment.providerId) {
+        const refundAmountCents = Math.round(Number(job.payment.total) * 100);
+        await createRefund(job.payment.providerId, refundAmountCents);
+      }
+
+      await prisma.payment.update({
+        where: { id: job.payment.id },
+        data: { 
+          status: 'REFUNDED',
+          refundAmount: Number(job.payment.total),
+          refundReason: reason,
+        },
+      });
+
+      // Log audit
+      await prisma.auditLog.create({
+        data: {
+          actorId: actorId,
+          actionType: 'REFUND',
+          resourceType: 'PAYMENT',
+          resourceId: job.payment.id,
+          details: {
+            amount: Number(job.payment.total),
+            reason: reason,
+            jobId: job.id,
+          },
+          ipAddress: ipAddress,
+        },
+      }).catch(err => console.error('Error creating audit log:', err));
+
+      // Send email to customer about refund
+      const { sendRefundEmail, sendAdminRefundNotification } = require('../services/email');
+      try {
+        const customer = await prisma.user.findUnique({
+          where: { id: job.customerId },
+          select: { email: true, name: true }
+        });
+        
+        if (customer) {
+          await sendRefundEmail(
+            customer.email,
+            customer.name,
+            job.title,
+            Number(job.payment.total)
+          );
+        }
+      } catch (emailError) {
+        console.error('Error sending refund email:', emailError);
+      }
+
+      // Send admin notification
+      try {
+        const payment = await prisma.payment.findUnique({
+          where: { id: job.payment.id },
+          include: { 
+            customer: { select: { id: true, email: true, name: true } }, 
+            hustler: { select: { id: true, email: true, name: true } }, 
+            job: true 
+          },
+        });
+        await sendAdminRefundNotification(
+          payment,
+          Number(job.payment.total),
+          reason,
+          actorName || 'System'
+        );
+      } catch (adminError) {
+        console.error('Error sending admin refund notification:', adminError);
+      }
+    }
+  } catch (error) {
+    console.error('Error processing refund:', error);
+    // Continue even if refund fails - don't block the operation
+  }
+}
+
 // POST /jobs/:id/unassign - Unassign hustler (Customer only, before start code)
 router.post('/:id/unassign', authenticate, requireRole('CUSTOMER'), async (req, res) => {
   try {
@@ -1684,10 +1813,13 @@ router.post('/:id/unassign', authenticate, requireRole('CUSTOMER'), async (req, 
     // BUSINESS RULE: Cannot unassign if job is in progress
     if (job.startCodeVerified || job.status === 'IN_PROGRESS') {
       return res.status(400).json({ 
-        error: 'Cannot unassign: Job is in progress. Once the start code is entered, the job must be completed.',
+        error: 'Cannot unassign: Job is in progress. Once the start code is entered, the job must be completed. Please contact support.',
         startCodeUsed: true
       });
     }
+
+    // Process refund (automatic if before start code)
+    await processRefundIfNeeded(job, 'Job unassigned by customer', req.user.id, req.user.name, req.ip);
 
     // Find accepted offer
     const acceptedOffer = job.offers && job.offers.length > 0 ? job.offers[0] : null;
@@ -1784,10 +1916,13 @@ router.post('/:id/leave', authenticate, requireRole('HUSTLER'), async (req, res)
     // BUSINESS RULE: Cannot leave if job is in progress
     if (job.startCodeVerified || job.status === 'IN_PROGRESS') {
       return res.status(400).json({ 
-        error: 'Cannot leave: Job is in progress. Once the start code is entered, the job must be completed.',
+        error: 'Cannot leave: Job is in progress. Once the start code is entered, the job must be completed. Please contact support.',
         jobStarted: true
       });
     }
+
+    // Process refund (automatic if before start code)
+    await processRefundIfNeeded(job, 'Hustler left job', req.user.id, req.user.name, req.ip);
 
     // Find accepted offer
     const acceptedOffer = job.offers && job.offers.length > 0 ? job.offers[0] : null;
