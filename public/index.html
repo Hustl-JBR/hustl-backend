@@ -19385,34 +19385,6 @@ meta.textContent =
                       <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary);">${payDisplay}</div>
                       <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">${payType === 'hourly' ? 'Hourly Rate' : 'Flat Rate'}</div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 8px; border: 2px solid #10b981;">
-                      <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; flex: 1;">
-                        <input type="checkbox" id="negotiatePriceCheck" class="negotiate-price-checkbox" data-job-id="${job.id}" data-default-price="${job.payType === 'hourly' ? (job.hourlyRate || job.amount || '0') : (job.amount || '0')}" data-default-pay-type="${job.payType || 'flat'}" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
-                        <span style="font-size: 0.95rem; font-weight: 600; color: var(--text-main);">💵 Suggest a different price</span>
-                      </label>
-                    </div>
-                    <div id="proposedPriceContainer" style="display: none; margin-top: 1rem; padding: 1rem; background: #f9fafb; border-radius: 8px; border: 2px solid var(--border);">
-                      <label style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">Price Type</label>
-                      <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem;">
-                        <label class="price-type-label-hourly" style="flex: 1; display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${job.payType === 'hourly' ? '#dbeafe' : '#f3f4f6'}; border: 2px solid ${job.payType === 'hourly' ? '#3b82f6' : '#e5e7eb'}; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                          <input type="radio" name="proposedPriceType" value="hourly" ${job.payType === 'hourly' ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
-                          <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">Hourly</span>
-                        </label>
-                        <label class="price-type-label-flat" style="flex: 1; display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${job.payType === 'flat' ? '#dbeafe' : '#f3f4f6'}; border: 2px solid ${job.payType === 'flat' ? '#3b82f6' : '#e5e7eb'}; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                          <input type="radio" name="proposedPriceType" value="flat" ${job.payType === 'flat' ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
-                          <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">Flat Rate</span>
-                        </label>
-                      </div>
-                      <label style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">💰 Your Proposed Price</label>
-                      <div style="position: relative;">
-                        <span style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); font-size: 1.5rem; font-weight: 700; color: var(--primary); z-index: 1;">$</span>
-                        <input type="number" id="proposedPriceInput" placeholder="0.00" step="0.01" min="0.01" style="width: 100%; padding: 1rem 1rem 1rem 2.5rem; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.25rem; font-weight: 600; text-align: left; background: white; color: var(--text-main); box-sizing: border-box; transition: all 0.2s;" oninput="var val = parseFloat(this.value); if(val < 0.01 && this.value !== '') this.value = 0.01;">
-                        <span id="proposedPriceTypeLabel" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); font-size: 1rem; font-weight: 600; color: var(--text-muted); z-index: 1;">${job.payType === 'hourly' ? '/hr' : ''}</span>
-                      </div>
-                      <div style="margin-top: 0.75rem; padding: 0.75rem; background: #dbeafe; border-radius: 8px; font-size: 0.85rem; color: #1e40af;">
-                        💡 Customer will see your proposed price when reviewing your application
-                      </div>
-                    </div>
                   </div>
                   
                   <div style="margin-bottom: 1rem;">
@@ -20072,97 +20044,12 @@ meta.textContent =
         } else {
           // Event listeners for hustler view
           // Negotiate price checkbox - Use both inline onclick (for immediate response) and event listener (as backup)
-          // Handle negotiate price checkbox - attach immediately when modal is created
-          const negotiateCheck = modalOverlay.querySelector('#negotiatePriceCheck');
-          const priceContainer = modalOverlay.querySelector('#proposedPriceContainer');
-          const priceInput = modalOverlay.querySelector('#proposedPriceInput');
-          
-          if (negotiateCheck && priceContainer && priceInput) {
-            // Set initial state
-            priceContainer.style.display = negotiateCheck.checked ? 'block' : 'none';
-            
-            // Handle checkbox change
-            negotiateCheck.addEventListener('change', function(e) {
-              const isChecked = this.checked;
-              if (isChecked) {
-                priceContainer.style.display = 'block';
-                // Set default price if empty
-                if (!priceInput.value) {
-                  const defaultPrice = this.dataset.defaultPrice || 
-                                    (job.payType === 'hourly' ? (job.hourlyRate || job.amount || '').toString() : (job.amount || '').toString());
-                  if (defaultPrice && defaultPrice !== '0') {
-                    priceInput.value = defaultPrice;
-                  }
-                }
-                // Ensure default price type is selected
-                const defaultPayType = this.dataset.defaultPayType || job.payType || 'flat';
-                const defaultRadio = modalOverlay.querySelector('input[name="proposedPriceType"][value="' + defaultPayType + '"]');
-                if (defaultRadio) {
-                  defaultRadio.checked = true;
-                  // Trigger change to update styling
-                  const changeEvent = new Event('change', { bubbles: true });
-                  defaultRadio.dispatchEvent(changeEvent);
-                }
-                // Focus the input
-                setTimeout(() => {
-                  if (priceInput) priceInput.focus();
-                }, 100);
-              } else {
-                priceContainer.style.display = 'none';
-                priceInput.value = '';
-                // Reset price type to default
-                const defaultPayType = this.dataset.defaultPayType || job.payType || 'flat';
-                const defaultRadio = modalOverlay.querySelector('input[name="proposedPriceType"][value="' + defaultPayType + '"]');
-                if (defaultRadio) {
-                  defaultRadio.checked = true;
-                  const changeEvent = new Event('change', { bubbles: true });
-                  defaultRadio.dispatchEvent(changeEvent);
-                }
-              }
-            });
-            
-            // Also handle click on label to trigger checkbox
-            const checkboxLabel = negotiateCheck.closest('label');
-            if (checkboxLabel) {
-              checkboxLabel.addEventListener('click', function(e) {
-                // If clicking on the label (not the checkbox itself), let the default behavior happen
-                // then trigger change event
-                setTimeout(() => {
-                  negotiateCheck.dispatchEvent(new Event('change', { bubbles: true }));
-                }, 0);
-              });
-            }
-          }
-          
           // Apply to job
           modalOverlay.querySelector('.applyToJobBtn')?.addEventListener('click', async (e) => {
             e.stopPropagation();
             const note = document.getElementById('applicationNoteInput')?.value.trim() || '';
-            const negotiatePrice = document.getElementById('negotiatePriceCheck')?.checked || false;
             
-            let proposedPrice = null;
-            let priceType = null;
-            
-            if (negotiatePrice) {
-              const priceInput = document.getElementById('proposedPriceInput');
-              const priceValue = parseFloat(priceInput?.value || 0);
-              
-              if (!priceValue || priceValue < 0.01) {
-                showToast("Please enter a valid price (minimum $0.01) or uncheck the suggestion box.");
-                return;
-              }
-              
-              const priceTypeRadio = modalOverlay.querySelector('input[name="proposedPriceType"]:checked');
-              if (!priceTypeRadio) {
-                showToast("Please select a price type (Hourly or Flat Rate).");
-                return;
-              }
-              
-              proposedPrice = priceValue;
-              priceType = priceTypeRadio.value;
-            }
-            
-            const result = await applyToJob(job.id, note, proposedPrice, priceType);
+            const result = await applyToJob(job.id, note, null, null);
             document.body.removeChild(modalOverlay);
             // Refresh jobs list to remove the applied job from Browse Jobs
             if (typeof renderJobs === 'function') {
@@ -20172,45 +20059,6 @@ meta.textContent =
             }
             // showToast is handled inside applyToJob function
           });
-          
-          // Update "/hr" label and radio button styling when price type changes
-          setTimeout(() => {
-            const hourlyRadio = modalOverlay.querySelector('input[name="proposedPriceType"][value="hourly"]');
-            const flatRadio = modalOverlay.querySelector('input[name="proposedPriceType"][value="flat"]');
-            const hourlyLabel = hourlyRadio?.parentElement;
-            const flatLabel = flatRadio?.parentElement;
-            const typeLabel = modalOverlay.querySelector('#proposedPriceTypeLabel');
-            
-            if (hourlyRadio && flatRadio) {
-              const updateRadioStyling = (selectedValue) => {
-                if (typeLabel) {
-                  typeLabel.textContent = selectedValue === 'hourly' ? '/hr' : '';
-                }
-                if (hourlyLabel && flatLabel) {
-                  if (selectedValue === 'hourly') {
-                    hourlyLabel.style.background = '#dbeafe';
-                    hourlyLabel.style.borderColor = '#3b82f6';
-                    flatLabel.style.background = '#f3f4f6';
-                    flatLabel.style.borderColor = '#e5e7eb';
-                  } else {
-                    flatLabel.style.background = '#dbeafe';
-                    flatLabel.style.borderColor = '#3b82f6';
-                    hourlyLabel.style.background = '#f3f4f6';
-                    hourlyLabel.style.borderColor = '#e5e7eb';
-                  }
-                }
-              };
-              
-              hourlyRadio.addEventListener('change', () => updateRadioStyling('hourly'));
-              flatRadio.addEventListener('change', () => updateRadioStyling('flat'));
-              
-              // Set initial styling
-              const checkedRadio = modalOverlay.querySelector('input[name="proposedPriceType"]:checked');
-              if (checkedRadio) {
-                updateRadioStyling(checkedRadio.value);
-              }
-            }
-          }, 100);
           
           // Cancel application (for negotiation view)
           modalOverlay.querySelectorAll('.cancelApplicationBtn').forEach(btn => {
