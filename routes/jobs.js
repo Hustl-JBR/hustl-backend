@@ -1652,7 +1652,6 @@ router.post('/:id/unassign', authenticate, requireRole('CUSTOMER'), async (req, 
       data: {
         status: 'OPEN',
         hustlerId: null,
-        acceptedHustlerId: null,
         startCode: null,
         startCodeExpiresAt: null
       }
@@ -1733,7 +1732,6 @@ router.post('/:id/leave', authenticate, requireRole('HUSTLER'), async (req, res)
       data: {
         status: 'OPEN',
         hustlerId: null,
-        acceptedHustlerId: null,
         startCode: null,
         startCodeExpiresAt: null
       }
