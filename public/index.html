@@ -19329,19 +19329,30 @@ meta.textContent =
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 8px; border: 2px solid #10b981;">
                       <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; flex: 1;" onclick="var cb = document.getElementById('negotiatePriceCheck'); if(cb) cb.click();">
-                        <input type="checkbox" id="negotiatePriceCheck" class="negotiate-price-checkbox" data-job-id="${job.id}" data-default-price="${job.payType === 'hourly' ? (job.hourlyRate || job.amount || '0') : (job.amount || '0')}" onchange="var c = document.getElementById('proposedPriceContainer'); var i = document.getElementById('proposedPriceInput'); if(c) c.style.display = this.checked ? 'block' : 'none'; if(this.checked && i) { var d = this.getAttribute('data-default-price'); if(d && !i.value) i.value = d; setTimeout(function(){ i.focus(); }, 100); } else if(!this.checked && i) i.value = '';" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
-                        <span style="font-size: 0.95rem; font-weight: 600; color: var(--text-main);">💵 Suggest a different ${payType === 'hourly' ? 'hourly' : 'flat'} rate</span>
+                        <input type="checkbox" id="negotiatePriceCheck" class="negotiate-price-checkbox" data-job-id="${job.id}" data-default-price="${job.payType === 'hourly' ? (job.hourlyRate || job.amount || '0') : (job.amount || '0')}" data-default-pay-type="${job.payType || 'flat'}" onchange="var c = document.getElementById('proposedPriceContainer'); if(c) { c.style.display = this.checked ? 'block' : 'none'; if(!this.checked) { var i = document.getElementById('proposedPriceInput'); var pt = document.querySelector('input[name=\"proposedPriceType\"]:checked'); if(i) i.value = ''; if(pt) pt.checked = false; var defaultType = this.getAttribute('data-default-pay-type') || 'flat'; var defaultRadio = document.querySelector('input[name=\"proposedPriceType\"][value=\"' + defaultType + '\"]'); if(defaultRadio) defaultRadio.checked = true; } else { setTimeout(function(){ var i = document.getElementById('proposedPriceInput'); if(i && !i.value) { var d = document.getElementById('negotiatePriceCheck').getAttribute('data-default-price'); if(d) i.value = d; i.focus(); } }, 100); } }" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+                        <span style="font-size: 0.95rem; font-weight: 600; color: var(--text-main);">💵 Suggest a different price</span>
                       </label>
                     </div>
-                    <div id="proposedPriceContainer" style="display: none !important; margin-top: 1rem;">
-                      <label style="display: block; font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.75rem;">💰 Your Proposed ${payType === 'hourly' ? 'Hourly' : 'Flat'} Rate</label>
+                    <div id="proposedPriceContainer" style="display: none; margin-top: 1rem; padding: 1rem; background: #f9fafb; border-radius: 8px; border: 2px solid var(--border);">
+                      <label style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">Price Type</label>
+                      <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem;">
+                        <label style="flex: 1; display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${job.payType === 'hourly' ? '#dbeafe' : '#f3f4f6'}; border: 2px solid ${job.payType === 'hourly' ? '#3b82f6' : '#e5e7eb'}; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="if(this.querySelector('input').checked === false) { this.style.background='#f3f4f6'; this.style.borderColor='#d1d5db'; }" onmouseout="if(this.querySelector('input').checked === false) { this.style.background='${job.payType === 'hourly' ? '#dbeafe' : '#f3f4f6'}'; this.style.borderColor='${job.payType === 'hourly' ? '#3b82f6' : '#e5e7eb'}'; }">
+                          <input type="radio" name="proposedPriceType" value="hourly" ${job.payType === 'hourly' ? 'checked' : ''} onchange="this.parentElement.style.background='#dbeafe'; this.parentElement.style.borderColor='#3b82f6'; var flatLabel = this.parentElement.nextElementSibling; if(flatLabel) { flatLabel.style.background='#f3f4f6'; flatLabel.style.borderColor='#e5e7eb'; } var label = document.getElementById('proposedPriceTypeLabel'); if(label) label.textContent = '/hr';" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                          <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">Hourly</span>
+                        </label>
+                        <label style="flex: 1; display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${job.payType === 'flat' ? '#dbeafe' : '#f3f4f6'}; border: 2px solid ${job.payType === 'flat' ? '#3b82f6' : '#e5e7eb'}; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="if(this.querySelector('input').checked === false) { this.style.background='#f3f4f6'; this.style.borderColor='#d1d5db'; }" onmouseout="if(this.querySelector('input').checked === false) { this.style.background='${job.payType === 'flat' ? '#dbeafe' : '#f3f4f6'}'; this.style.borderColor='${job.payType === 'flat' ? '#3b82f6' : '#e5e7eb'}'; }">
+                          <input type="radio" name="proposedPriceType" value="flat" ${job.payType === 'flat' ? 'checked' : ''} onchange="this.parentElement.style.background='#dbeafe'; this.parentElement.style.borderColor='#3b82f6'; var hourlyLabel = this.parentElement.previousElementSibling; if(hourlyLabel) { hourlyLabel.style.background='#f3f4f6'; hourlyLabel.style.borderColor='#e5e7eb'; } var label = document.getElementById('proposedPriceTypeLabel'); if(label) label.textContent = '';" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                          <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">Flat Rate</span>
+                        </label>
+                      </div>
+                      <label style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">💰 Your Proposed Price</label>
                       <div style="position: relative;">
-                        <span style="position: absolute; left: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 2rem; font-weight: 700; color: var(--primary); z-index: 1;">$</span>
-                        <input type="number" id="proposedPriceInput" placeholder="${payType === 'hourly' ? 'e.g., 25.00' : 'e.g., 150.00'}" step="0.01" min="0" style="width: 100%; padding: 2rem 1.5rem 2rem 3.5rem; border: 4px solid var(--primary); border-radius: 16px; font-size: 2.5rem; font-weight: 700; text-align: left; background: #f0fdf4; color: var(--text-main); min-height: 80px; box-sizing: border-box; transition: all 0.2s;">
-                        ${payType === 'hourly' ? '<span style="position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 1.5rem; font-weight: 600; color: var(--text-muted); z-index: 1;">/hr</span>' : ''}
+                        <span style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); font-size: 1.5rem; font-weight: 700; color: var(--primary); z-index: 1;">$</span>
+                        <input type="number" id="proposedPriceInput" placeholder="0.00" step="0.01" min="0.01" style="width: 100%; padding: 1rem 1rem 1rem 2.5rem; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.25rem; font-weight: 600; text-align: left; background: white; color: var(--text-main); box-sizing: border-box; transition: all 0.2s;" oninput="if(this.value < 0.01 && this.value !== '') this.value = 0.01;">
+                        <span id="proposedPriceTypeLabel" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); font-size: 1rem; font-weight: 600; color: var(--text-muted); z-index: 1;">${job.payType === 'hourly' ? '/hr' : ''}</span>
                       </div>
                       <div style="margin-top: 0.75rem; padding: 0.75rem; background: #dbeafe; border-radius: 8px; font-size: 0.85rem; color: #1e40af;">
-                        💡 Customer will see your proposed ${payType === 'hourly' ? 'hourly' : 'flat'} rate when reviewing your application
+                        💡 Customer will see your proposed price when reviewing your application
                       </div>
                     </div>
                   </div>
@@ -20059,14 +20070,30 @@ meta.textContent =
             e.stopPropagation();
             const note = document.getElementById('applicationNoteInput')?.value.trim() || '';
             const negotiatePrice = document.getElementById('negotiatePriceCheck')?.checked || false;
-            const proposedPrice = negotiatePrice ? parseFloat(document.getElementById('proposedPriceInput')?.value || 0) : null;
             
-            if (negotiatePrice && !proposedPrice) {
-              showToast("Please enter a proposed price or uncheck negotiable.");
-              return;
+            let proposedPrice = null;
+            let priceType = null;
+            
+            if (negotiatePrice) {
+              const priceInput = document.getElementById('proposedPriceInput');
+              const priceValue = parseFloat(priceInput?.value || 0);
+              
+              if (!priceValue || priceValue < 0.01) {
+                showToast("Please enter a valid price (minimum $0.01) or uncheck the suggestion box.");
+                return;
+              }
+              
+              const priceTypeRadio = modalOverlay.querySelector('input[name="proposedPriceType"]:checked');
+              if (!priceTypeRadio) {
+                showToast("Please select a price type (Hourly or Flat Rate).");
+                return;
+              }
+              
+              proposedPrice = priceValue;
+              priceType = priceTypeRadio.value;
             }
             
-            const result = await applyToJob(job.id, note, proposedPrice);
+            const result = await applyToJob(job.id, note, proposedPrice, priceType);
             document.body.removeChild(modalOverlay);
             // Refresh jobs list to remove the applied job from Browse Jobs
             if (typeof renderJobs === 'function') {
@@ -20075,6 +20102,16 @@ meta.textContent =
               await renderJobs(true);
             }
             // showToast is handled inside applyToJob function
+          });
+          
+          // Update "/hr" label when price type changes
+          modalOverlay.querySelectorAll('input[name="proposedPriceType"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+              const label = document.getElementById('proposedPriceTypeLabel');
+              if (label) {
+                label.textContent = e.target.value === 'hourly' ? '/hr' : '';
+              }
+            });
           });
           
           // Cancel application (for negotiation view)
@@ -21647,22 +21684,29 @@ meta.textContent =
     }
     
     // Apply to Job (Hustler)
-    async function applyToJob(jobId, note, proposedPrice) {
+    async function applyToJob(jobId, note, proposedPrice, priceType) {
       // Store hustler's original offer in localStorage for tracking
       // This will be used to show "Your offer" even after negotiations
       try {
         const token = localStorage.getItem('hustl_token');
+        const requestBody = {
+          jobId: jobId,
+          note: note || null,
+        };
+        
+        // If proposing a price, include both proposedAmount and priceType
+        if (proposedPrice !== null && proposedPrice > 0) {
+          requestBody.proposedAmount = proposedPrice;
+          requestBody.priceType = priceType || null; // Send price type for display/processing
+        }
+        
         const response = await fetch(`${API_BASE}/offers`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            jobId: jobId,
-            note: note || null,
-            proposedAmount: proposedPrice || null
-          })
+          body: JSON.stringify(requestBody)
         });
         
         if (!response.ok) {
