@@ -889,21 +889,21 @@
       appearance: checkbox;
     }
     
-    /* Mobile: Touch-friendly checkboxes with optimized sizing */
+    /* Mobile: Touch-friendly checkboxes with minimal spacing */
     @media (max-width: 768px) {
       .checkbox-field {
-        gap: 0.5rem;
-        padding: 0.5rem;
-        margin-bottom: 0.5rem;
+        gap: 0.4rem;
+        padding: 0.25rem 0;
+        margin-bottom: 0.4rem;
         align-items: center;
-        min-height: 44px; /* iOS touch target minimum */
+        min-height: 36px; /* Smaller but still touchable */
       }
       
       .checkbox-field input[type="checkbox"] {
-        width: 22px;
-        height: 22px;
-        min-width: 22px;
-        min-height: 22px;
+        width: 20px;
+        height: 20px;
+        min-width: 20px;
+        min-height: 20px;
         margin: 0;
         padding: 0;
         cursor: pointer;
@@ -912,32 +912,40 @@
         flex-shrink: 0;
       }
       
-      .checkbox-field label {
-        font-size: 0.85rem;
-        line-height: 1.4;
+      .checkbox-field label,
+      .checkbox-field div,
+      .checkbox-field span {
+        font-size: 0.8rem;
+        line-height: 1.3;
         padding: 0;
         margin: 0;
         flex: 1;
       }
       
-      /* All checkboxes in forms - ensure they're touch-friendly */
+      /* All checkboxes in forms - compact on mobile */
       input[type="checkbox"] {
-        width: 22px !important;
-        height: 22px !important;
-        min-width: 22px !important;
-        min-height: 22px !important;
+        width: 20px !important;
+        height: 20px !important;
+        min-width: 20px !important;
+        min-height: 20px !important;
         touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
       }
       
-      /* Labels with checkboxes - better spacing */
-      label:has(input[type="checkbox"]) {
+      /* Labels with checkboxes - minimal padding */
+      label:has(input[type="checkbox"]),
+      label.checkbox-field {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem;
-        min-height: 44px;
+        gap: 0.4rem;
+        padding: 0.25rem 0 !important;
+        min-height: 36px;
         cursor: pointer;
+      }
+      
+      /* Remove extra padding from checkbox containers */
+      .field:has(input[type="checkbox"]) {
+        margin-bottom: 0.5rem !important;
       }
     }
 
@@ -17360,8 +17368,57 @@ meta.textContent =
               timeAgo = postedText;
             }
             
-            jobCard.innerHTML = `
-              <!-- Header Section with Status -->
+            // Detect mobile for simpler card layout
+            const isMobile = window.innerWidth <= 768;
+            
+            jobCard.innerHTML = isMobile ? `
+              <!-- Mobile: Compact Card -->
+              <div style="padding: 1rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border-bottom: 2px solid var(--border);">
+                <div style="display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.75rem;">
+                  <span style="font-size: 1.5rem; flex-shrink: 0;">${categoryIcon}</span>
+                  <div style="flex: 1; min-width: 0;">
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main); line-height: 1.2; margin-bottom: 0.25rem;">${job.title || 'Untitled Job'}</h3>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">${categoryDisplay}</div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
+                      <span style="font-weight: 700; color: var(--text-main); font-size: 0.95rem;">💰 ${payDisplay.length > 30 ? payDisplay.substring(0, 30) + '...' : payDisplay}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--text-muted);">
+                      <span>⏰ ${timingDisplay}</span>
+                      <span>👥 ${workersDisplay}</span>
+                      ${expirationDisplay ? `<span style="color: ${isKeepOpenEnabled ? '#1e40af' : (expiresAt && expiresAt <= new Date() ? '#dc2626' : '#d97706')}; font-weight: 600;">⏳ ${expirationDisplay}</span>` : ''}
+                    </div>
+                  </div>
+                  <div style="flex-shrink: 0; text-align: right;">
+                    <div style="padding: 0.4rem 0.75rem; background: ${statusColor}20; color: ${statusColor}; border-radius: 6px; font-weight: 600; font-size: 0.75rem; border: 1px solid ${statusColor}40;">
+                      ${statusBadge}
+                    </div>
+                  </div>
+                </div>
+                ${offerCount > 0 ? `
+                <div style="padding: 0.75rem; background: #f0fdf4; border-radius: 8px; border: 1px solid #10b98140; margin-top: 0.75rem;">
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                      <div style="font-size: 1.5rem; font-weight: 700; color: #059669; line-height: 1;">${offerCount}</div>
+                      <div style="font-size: 0.75rem; color: #047857; font-weight: 600;">${offerCount === 1 ? 'Applicant' : 'Applicants'}</div>
+                    </div>
+                    <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 600; border-radius: 8px;">
+                      View
+                    </button>
+                  </div>
+                </div>
+                ` : `
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                  <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.6rem; font-size: 0.85rem; font-weight: 600; border-radius: 8px;">
+                    View Details
+                  </button>
+                  ${(job.status === 'OPEN' || ((job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified)) ? `
+                  <button class="btn btn-ghost cancelJobBtn" data-job-id="${job.id}" style="padding: 0.6rem 1rem; font-weight: 600; border-radius: 8px; color: #dc2626; border-color: #fecaca; font-size: 0.85rem;">Delete</button>
+                  ` : ''}
+                </div>
+                `}
+              </div>
+            ` : `
+              <!-- Desktop: Full Card -->
               <div style="padding: 1.5rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border-bottom: 2px solid var(--border);">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
                   <div style="flex: 1;">
@@ -17420,7 +17477,8 @@ meta.textContent =
                 </div>
               </div>
               
-              <!-- Assigned Hustler (if job is in progress or assigned) -->
+              ${!isMobile ? `
+              <!-- Desktop: Assigned Hustler (if job is in progress or assigned) -->
               ${(job.status === 'IN_PROGRESS' || job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && job.hustler ? `
               <div style="padding: 1.5rem; background: #dbeafe; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #3b82f640;">
                 <div style="font-size: 0.9rem; color: #1e40af; font-weight: 600; margin-bottom: 0.75rem;">✅ Assigned Hustler</div>
@@ -17437,7 +17495,7 @@ meta.textContent =
               </div>
               ` : ''}
               
-              <!-- Start Code Section (Customer) - CRUCIAL: Display prominently in job card -->
+              <!-- Desktop: Start Code Section (Customer) -->
               ${job.hustlerId && job.startCode && !job.startCodeVerified && (job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && job.status !== 'PAID' ? `
               <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 3px solid #fbbf24;">
                 <div style="font-weight: 700; font-size: 1rem; color: #92400e; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -17457,7 +17515,7 @@ meta.textContent =
               </div>
               ` : ''}
               
-              <!-- Metrics Section - Prominent Applicant Count -->
+              <!-- Desktop: Metrics Section - Prominent Applicant Count -->
               <div style="padding: 1.5rem; background: white;">
                 ${offerCount > 0 ? `
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; padding: 1.5rem; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 12px; border: 2px solid #10b98140;">
@@ -17482,7 +17540,7 @@ meta.textContent =
                 </div>
                 `}
                 
-                <!-- Action Buttons -->
+                <!-- Desktop: Action Buttons -->
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
                   <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 200px; padding: 1rem; font-size: 1rem; font-weight: 700; border-radius: 10px;">
                     ${offerCount > 0 ? '👥 View Applicants & Manage' : '🔍 View Job Details'}
@@ -17492,6 +17550,7 @@ meta.textContent =
                   ` : ''}
                 </div>
               </div>
+              ` : ''}
             `;
             
             // Add click handlers
