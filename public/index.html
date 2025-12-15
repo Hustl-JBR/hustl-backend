@@ -7625,104 +7625,18 @@ async function renderJobs(reset = false) {
         textContent.appendChild(workersBadge);
       }
       
-      // 5. Location logic
-      const pickupArea = requirements.pickup_area || requirements.pickupArea;
-      const pickupCity = requirements.pickup_city || requirements.pickupCity;
-      const pickupZip = requirements.pickup_zip;
-      const dropoffArea = requirements.dropoff_area || requirements.dropoffArea;
-      const dropoffCity = requirements.dropoff_city || requirements.dropoffCity;
-      const dropoffZip = requirements.dropoff_zip;
-      const onSiteOnly = requirements.on_site_only || requirements.onSiteOnly || job.onSiteOnly;
-      
-      const pickupAddress = requirements.pickup_address || requirements.pickupAddress;
-      const dropoffAddress = requirements.dropoff_address || requirements.dropoffAddress;
-      
-      // Check if address should be hidden based on customer preference
+      // 5. Location logic - Only show neighborhood/area if location is hidden
       const hidePickupAddressUntilAssigned = requirements.hide_pickup_address_until_assigned || requirements.hidePickupAddressUntilAssigned;
-      let showFullPickupAddress = true;
+      const pickupArea = requirements.pickup_area || requirements.pickupArea;
       
-      if (hidePickupAddressUntilAssigned) {
-        try {
-          const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
-          if (user) {
-            const isHustler = user && !user.roles?.includes('CUSTOMER');
-            const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS' || job.status === 'COMPLETED_BY_HUSTLER');
-            showFullPickupAddress = !isHustler || jobAccepted;
-          }
-        } catch (e) {
-          showFullPickupAddress = true;
-        }
+      // Only show location if they are hiding location AND we have a neighborhood/area
+      if (hidePickupAddressUntilAssigned && pickupArea) {
+        const loc = document.createElement("div");
+        loc.className = "job-meta";
+        loc.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
+        loc.textContent = `📍 ${pickupArea}`;
+        textContent.appendChild(loc);
       }
-      
-      const hideDropoffAddressUntilAssigned = requirements.hide_dropoff_address_until_assigned || requirements.hideDropoffAddressUntilAssigned;
-      let showFullDropoffAddress = true;
-      
-      if (hideDropoffAddressUntilAssigned) {
-        try {
-          const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
-          if (user) {
-            const isHustler = user && !user.roles?.includes('CUSTOMER');
-            const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS' || job.status === 'COMPLETED_BY_HUSTLER');
-            showFullDropoffAddress = !isHustler || jobAccepted;
-          }
-        } catch (e) {
-          showFullDropoffAddress = true;
-        }
-      }
-      
-      let locationText = "";
-      
-      if (onSiteOnly) {
-        // On-site only job
-        if (showFullPickupAddress && pickupAddress) {
-          locationText = pickupAddress;
-        } else {
-          // Show Neighborhood/Area + ZIP if hide address is ON, otherwise show full address
-          locationText = pickupArea || pickupCity || "Location TBD";
-          if (pickupZip) {
-            locationText += ` ${pickupZip}`;
-          }
-        }
-      } else if (dropoffArea || dropoffCity || dropoffZip || dropoffAddress) {
-        // Has dropoff location
-        let pickupStr = "";
-        if (showFullPickupAddress && pickupAddress) {
-          pickupStr = pickupAddress;
-        } else {
-          pickupStr = pickupArea || pickupCity || "Pickup";
-          if (pickupZip) {
-            pickupStr += ` ${pickupZip}`;
-          }
-        }
-        
-        let dropoffStr = "";
-        if (showFullDropoffAddress && dropoffAddress) {
-          dropoffStr = dropoffAddress;
-        } else {
-          dropoffStr = dropoffArea || dropoffCity || "Dropoff";
-          if (dropoffZip) {
-            dropoffStr += ` ${dropoffZip}`;
-          }
-        }
-        
-        locationText = `${pickupStr} → ${dropoffStr}`;
-      } else {
-        // No dropoff, just pickup
-        if (showFullPickupAddress && pickupAddress) {
-          locationText = pickupAddress;
-        } else {
-          locationText = pickupArea || pickupCity || "Location TBD";
-          if (pickupZip) {
-            locationText += ` ${pickupZip}`;
-          }
-        }
-      }
-      
-      const loc = document.createElement("div");
-      loc.className = "job-meta";
-      loc.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
-      loc.textContent = `📍 ${locationText}`;
-      textContent.appendChild(loc);
       
       // 6. Price (flat/hourly)
       const pricingOption = requirements.pricing_option;
