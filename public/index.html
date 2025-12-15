@@ -19123,10 +19123,10 @@ meta.textContent =
                       <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
                         <div style="font-size: 0.9rem; color: #1e40af; margin-bottom: 0.75rem; font-weight: 600;">Customer counter-offer:</div>
                         <div style="font-size: 1.5rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem; text-align: center;">
-                          $${current.toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}
+                          $${currentProposed.toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}
                         </div>
                         <div style="display: flex; gap: 0.5rem;">
-                          <button class="btn btn-primary acceptNegotiationBtn" data-offer-id="${userOffer.id}" data-proposed-amount="${current}" style="flex: 1; padding: 0.75rem; font-weight: 600; background: #10b981; border-color: #10b981;">✅ Accept</button>
+                          <button class="btn btn-primary acceptNegotiationBtn" data-offer-id="${userOffer.id}" data-proposed-amount="${currentProposed}" style="flex: 1; padding: 0.75rem; font-weight: 600; background: #10b981; border-color: #10b981;">✅ Accept</button>
                           <button class="btn btn-ghost denyNegotiationBtn" data-offer-id="${userOffer.id}" style="flex: 1; padding: 0.75rem; font-weight: 600; color: #dc2626; border-color: #fecaca;">❌ Deny</button>
                         </div>
                       </div>
