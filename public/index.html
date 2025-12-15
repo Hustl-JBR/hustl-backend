@@ -605,6 +605,7 @@
     #view-profile,
     #view-messages,
     #view-post,
+    #view-manage-jobs,
     #view-owner {
       padding: 1rem;
       padding-top: 0 !important;
@@ -677,6 +678,51 @@
       .hamburger-btn {
         display: flex !important;
       }
+      
+      /* Mobile layout fixes: Account for fixed header and bottom nav */
+      /* Header is sticky, add padding to main to prevent content from being hidden */
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      
+      /* Ensure header stays fixed/sticky and doesn't overlap content */
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
+      
+      /* Add padding-bottom to all view sections to account for bottom nav */
+      /* Bottom nav is typically 60-70px tall, using 80px for safe spacing */
+      #view-home,
+      #view-jobs,
+      #view-profile,
+      #view-messages,
+      #view-post,
+      #view-manage-jobs,
+      #view-owner {
+        padding-bottom: 80px !important;
+      }
+      
+      /* Ensure main content can scroll properly and isn't cut off */
+      main {
+        position: relative;
+        overflow-x: hidden;
+      }
+      
+      /* Ensure content can scroll properly */
+      body {
+        overflow-x: hidden;
+        position: relative;
+      }
+      
+      /* If there's a fixed bottom nav, ensure it doesn't overlap content */
+      /* This assumes bottom nav exists - if it's injected by JS, the padding above will handle it */
     }
 
     /* Floating animation */
