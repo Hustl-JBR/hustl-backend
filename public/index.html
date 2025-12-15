@@ -7228,6 +7228,61 @@ let jobsMap = null; // Mapbox map instance
 let mapMarkers = []; // Array of map markers
 let mapboxToken = null; // Mapbox access token
 
+// Format location for public display: Street name + City + ZIP (NO house number, NO apartment)
+function formatPublicLocation(job, requirements, showExactAddress = false) {
+  const req = requirements || job.requirements || {};
+  const hidePickupAddress = req.hide_pickup_address_until_assigned || req.hidePickupAddressUntilAssigned;
+  
+  // If exact address should be shown (accepted hustler), use full address but still remove apartment
+  if (showExactAddress && req.pickup_address) {
+    const address = req.pickup_address;
+    // Remove apartment/unit numbers (common patterns: Apt, Unit, #, etc.)
+    const cleanedAddress = address.replace(/\s*(?:Apt|Unit|#|Suite|Ste|Apt\.|Unit\.)\s*[A-Z0-9-]+/i, '').trim();
+    // Extract street name (remove house number)
+    const streetMatch = cleanedAddress.match(/^\d+\s+(.+)$/);
+    const streetName = streetMatch ? streetMatch[1] : cleanedAddress;
+    const city = req.pickup_city || req.pickupCity || '';
+    const zip = req.pickup_zip || '';
+    if (streetName && city) {
+      return zip ? `${streetName}, ${city} ${zip}` : `${streetName}, ${city}`;
+    }
+  }
+  
+  // Public view: Use street name only (from pickup_area or extract from address)
+  const pickupArea = req.pickup_area || req.pickupArea || '';
+  const pickupCity = req.pickup_city || req.pickupCity || '';
+  const pickupZip = req.pickup_zip || '';
+  
+  // If we have pickup_area, use it (it's typically the street name)
+  if (pickupArea) {
+    const parts = [];
+    parts.push(pickupArea);
+    if (pickupCity) parts.push(pickupCity);
+    if (pickupZip) parts.push(pickupZip);
+    return parts.join(', ');
+  }
+  
+  // Fallback: Try to extract street name from address
+  if (req.pickup_address) {
+    const address = req.pickup_address;
+    // Remove apartment/unit numbers
+    const cleanedAddress = address.replace(/\s*(?:Apt|Unit|#|Suite|Ste|Apt\.|Unit\.)\s*[A-Z0-9-]+/i, '').trim();
+    // Extract street name (remove house number)
+    const streetMatch = cleanedAddress.match(/^\d+\s+(.+)$/);
+    const streetName = streetMatch ? streetMatch[1] : cleanedAddress;
+    if (streetName && pickupCity) {
+      return pickupZip ? `${streetName}, ${pickupCity} ${pickupZip}` : `${streetName}, ${pickupCity}`;
+    }
+  }
+  
+  // Last resort: City + ZIP
+  if (pickupCity) {
+    return pickupZip ? `${pickupCity} ${pickupZip}` : pickupCity;
+  }
+  
+  return 'Location TBD';
+}
+
 // Calculate distance between two coordinates (Haversine formula)
 function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 3959; // Earth's radius in miles
@@ -7466,12 +7521,8 @@ function renderJobsOnMap(jobs) {
       distanceText = formatDistance(distance);
     }
     
-    // Location text
-    let locationText = '';
-    if (pickupArea) locationText = pickupArea;
-    if (pickupCity) locationText += (locationText ? ', ' : '') + pickupCity;
-    if (pickupZip) locationText += (locationText ? ' ' : '') + pickupZip;
-    if (!locationText) locationText = 'Location';
+    // Location text - use formatPublicLocation for consistency
+    const locationText = formatPublicLocation(job, requirements, false);
     
     // Popup content
     const popupContent = document.createElement('div');
@@ -8249,42 +8300,31 @@ async function renderJobs(reset = false) {
         textContent.appendChild(workersBadge);
       }
       
-      // 5. Location logic
-      const pickupArea = requirements.pickup_area || requirements.pickupArea;
-      const pickupAddress = requirements.pickup_address || requirements.pickupAddress;
-      
-      // Check if address should be hidden based on customer preference
+      // 5. Location logic - public view: street name + city + ZIP only
       const hidePickupAddressUntilAssigned = requirements.hide_pickup_address_until_assigned || requirements.hidePickupAddressUntilAssigned;
-      let showFullPickupAddress = true;
+      let showExactAddress = false;
       
+      // Check if user is accepted hustler (can see exact address)
       if (hidePickupAddressUntilAssigned) {
         try {
           const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
           if (user) {
             const isHustler = user && !user.roles?.includes('CUSTOMER');
-            const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS' || job.status === 'COMPLETED_BY_HUSTLER');
-            showFullPickupAddress = !isHustler || jobAccepted;
+            const jobAccepted = job.hustlerId && job.hustlerId === user.id && 
+                               (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
+            showExactAddress = isHustler && jobAccepted;
           }
         } catch (e) {
-          showFullPickupAddress = true;
+          showExactAddress = false;
         }
       }
       
-      // Show location label: "Street Address *" when not hidden, "Neighborhood / Area" when hidden
-      let locationText = "";
-      if (showFullPickupAddress && pickupAddress) {
-        // Show "Street Address *" when not hiding
-        locationText = "Street Address *";
-      } else if (hidePickupAddressUntilAssigned && pickupArea) {
-        // Show "Neighborhood / Area" when hiding location
-        locationText = "Neighborhood / Area";
-      }
-      
-      if (locationText) {
+      const locationDisplay = formatPublicLocation(job, requirements, showExactAddress);
+      if (locationDisplay && locationDisplay !== 'Location TBD') {
         const loc = document.createElement("div");
         loc.className = "job-meta";
         loc.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
-        loc.textContent = `📍 ${locationText}`;
+        loc.textContent = `📍 ${locationDisplay}`;
         textContent.appendChild(loc);
       }
       
@@ -8494,23 +8534,38 @@ async function renderJobs(reset = false) {
       const dropoffZip = requirements.dropoff_zip;
       const onSiteOnly = requirements.on_site_only || requirements.onSiteOnly;
       
-      let locationDisplay = job.address || 'Location TBD';
-      if (pickupArea || pickupCity) {
-        const pickupParts = [];
-        if (pickupArea) pickupParts.push(pickupArea);
-        if (pickupCity) pickupParts.push(pickupCity);
-        if (pickupZip) pickupParts.push(pickupZip);
-        locationDisplay = pickupParts.join(', ');
-        
-        if (!onSiteOnly && (dropoffArea || dropoffCity)) {
-          const dropoffParts = [];
-          if (dropoffArea) dropoffParts.push(dropoffArea);
-          if (dropoffCity) dropoffParts.push(dropoffCity);
-          if (dropoffZip) dropoffParts.push(dropoffZip);
-          locationDisplay += ` → ${dropoffParts.join(', ')}`;
-        } else if (onSiteOnly) {
-          locationDisplay += ' (Single location)';
+      // Format location - public view: street name + city + ZIP only
+      const hidePickupAddress = requirements.hide_pickup_address_until_assigned || requirements.hidePickupAddressUntilAssigned;
+      let showExactAddress = false;
+      
+      // Check if user is accepted hustler (can see exact address)
+      if (hidePickupAddress) {
+        try {
+          const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
+          if (user) {
+            const isHustler = user && !user.roles?.includes('CUSTOMER');
+            const jobAccepted = job.hustlerId && job.hustlerId === user.id && 
+                               (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
+            showExactAddress = isHustler && jobAccepted;
+          }
+        } catch (e) {
+          showExactAddress = false;
         }
+      }
+      
+      let locationDisplay = formatPublicLocation(job, requirements, showExactAddress);
+      
+      // Handle dropoff for multi-location jobs
+      if (!onSiteOnly && (dropoffArea || dropoffCity)) {
+        const dropoffParts = [];
+        if (dropoffArea) dropoffParts.push(dropoffArea);
+        if (dropoffCity) dropoffParts.push(dropoffCity);
+        if (dropoffZip) dropoffParts.push(dropoffZip);
+        if (dropoffParts.length > 0) {
+          locationDisplay += ` → ${dropoffParts.join(', ')}`;
+        }
+      } else if (onSiteOnly) {
+        locationDisplay += ' (Single location)';
       }
       
       // Format timing
@@ -19525,6 +19580,27 @@ meta.textContent =
                   <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">📍 Location</div>
                     <div style="font-weight: 600; color: var(--text-main); font-size: 0.9rem;">${locationDisplay}</div>
+                    ${(() => {
+                      // Add map preview if coordinates are available
+                      const reqLat = requirements.pickup_lat || requirements.pickupLat;
+                      const reqLng = requirements.pickup_lng || requirements.pickupLng;
+                      const jobLat = job.lat;
+                      const jobLng = job.lng;
+                      const lat = reqLat || jobLat;
+                      const lng = reqLng || jobLng;
+                      
+                      if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
+                        return `
+                          <div id="jobMapPreview_${job.id}" style="margin-top: 0.75rem; width: 100%; height: 200px; border-radius: 8px; overflow: hidden; border: 2px solid var(--border); cursor: pointer; position: relative;" data-job-id="${job.id}" data-lat="${lat}" data-lng="${lng}">
+                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #f3f4f6; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.85rem;">
+                              Loading map...
+                            </div>
+                          </div>
+                          <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-muted); text-align: center;">Click to view full map</div>
+                        `;
+                      }
+                      return '';
+                    })()}
                   </div>
                   ${(() => {
                     const requirements = job.requirements || {};
@@ -20469,6 +20545,66 @@ meta.textContent =
             closeModal();
           }
         });
+        
+        // Initialize map previews
+        setTimeout(async () => {
+          const mapPreviews = modalOverlay.querySelectorAll('[id^="jobMapPreview_"]');
+          for (const preview of mapPreviews) {
+            const lat = parseFloat(preview.dataset.lat);
+            const lng = parseFloat(preview.dataset.lng);
+            const jobId = preview.dataset.jobId;
+            
+            if (isNaN(lat) || isNaN(lng)) continue;
+            
+            try {
+              const token = await getMapboxToken();
+              if (!token) {
+                preview.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);">Map unavailable</div>';
+                continue;
+              }
+              
+              // Initialize small map preview
+              const previewMap = new mapboxgl.Map({
+                container: preview,
+                style: 'mapbox://styles/mapbox/streets-v12',
+                center: [lng, lat],
+                zoom: 14,
+                interactive: false,
+                attributionControl: false
+              });
+              
+              previewMap.on('load', () => {
+                // Add marker
+                new mapboxgl.Marker({
+                  color: '#3b82f6',
+                  anchor: 'center'
+                })
+                  .setLngLat([lng, lat])
+                  .addTo(previewMap);
+              });
+              
+              // Click to open full map view
+              preview.addEventListener('click', () => {
+                // Switch to map view in browse jobs
+                if (typeof toggleJobsView === 'function') {
+                  toggleJobsView('map');
+                  // Close modal
+                  closeModal();
+                  // Scroll to map
+                  setTimeout(() => {
+                    const mapContainer = document.getElementById('jobsMapContainer');
+                    if (mapContainer) {
+                      mapContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                  }, 300);
+                }
+              });
+            } catch (error) {
+              console.error('Error initializing map preview:', error);
+              preview.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);">Map unavailable</div>';
+            }
+          }
+        }, 200);
         
         // Profile button event listeners - work for both customer and hustler views
         // Use setTimeout to ensure modal is fully rendered
@@ -25052,6 +25188,7 @@ try {
   <script src="/mobile-core.js" defer></script>
 </body>
 </html>
+
 
 
 
