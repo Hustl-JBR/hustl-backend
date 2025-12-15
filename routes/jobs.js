@@ -1605,6 +1605,19 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
     const customerEmail = job.customer?.email || req.user.email;
     const customerName = job.customer?.name || req.user.name;
 
+    // Delete payment first (if exists) - Payment has ON DELETE RESTRICT constraint
+    if (job.payment) {
+      try {
+        await prisma.payment.delete({
+          where: { id: job.payment.id },
+        });
+      } catch (paymentError) {
+        console.error('Error deleting payment:', paymentError);
+        // If payment deletion fails, try to continue with job deletion
+        // The error might be that payment doesn't exist or is already deleted
+      }
+    }
+
     // Delete the job (cascade will handle offers, threads, etc.)
     await prisma.job.delete({
       where: { id: req.params.id },
