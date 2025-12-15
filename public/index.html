@@ -9425,10 +9425,10 @@ async function renderJobs(reset = false) {
                 if (priceCheckbox.checked) {
                   // Show popup modal instead of inline input
                   try {
-                    if (typeof showPriceSuggestionPopup === 'function') {
-                      showPriceSuggestionPopup(job.id, job.payType || 'flat', priceInput, priceNegotiationSection, priceCheckbox);
+                    if (typeof window.showPriceSuggestionPopup === 'function') {
+                      window.showPriceSuggestionPopup(job.id, job.payType || 'flat', priceInput, priceNegotiationSection, priceCheckbox);
                     } else {
-                      console.error('showPriceSuggestionPopup function not found');
+                      console.error('showPriceSuggestionPopup function not found on window');
                       // Fallback: show inline input
                       priceNegotiationSection.style.display = "block";
                       priceInput.focus();
