@@ -19329,7 +19329,7 @@ meta.textContent =
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 8px; border: 2px solid #10b981;">
                       <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; flex: 1;">
-                        <input type="checkbox" id="negotiatePriceCheck" class="negotiate-price-checkbox" data-job-id="${job.id}" data-default-price="${job.payType === 'hourly' ? (job.hourlyRate || job.amount || '0') : (job.amount || '0')}" data-default-pay-type="${job.payType || 'flat'}" onclick="var container = document.getElementById('proposedPriceContainer'); var input = document.getElementById('proposedPriceInput'); var check = this; if(container) { if(check.checked) { container.style.display = 'block'; container.style.setProperty('display', 'block', 'important'); if(input && !input.value) { var defaultPrice = check.getAttribute('data-default-price') || '0'; if(defaultPrice && defaultPrice !== '0') input.value = defaultPrice; setTimeout(function(){ if(input) input.focus(); }, 100); } } else { container.style.display = 'none'; container.style.setProperty('display', 'none', 'important'); if(input) input.value = ''; } }" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+                        <input type="checkbox" id="negotiatePriceCheck" class="negotiate-price-checkbox" data-job-id="${job.id}" data-default-price="${job.payType === 'hourly' ? (job.hourlyRate || job.amount || '0') : (job.amount || '0')}" data-default-pay-type="${job.payType || 'flat'}" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
                         <span style="font-size: 0.95rem; font-weight: 600; color: var(--text-main);">💵 Suggest a different price</span>
                       </label>
                     </div>
@@ -20014,54 +20014,67 @@ meta.textContent =
         } else {
           // Event listeners for hustler view
           // Negotiate price checkbox - Use both inline onclick (for immediate response) and event listener (as backup)
-          setTimeout(() => {
-            const negotiateCheck = modalOverlay.querySelector('#negotiatePriceCheck');
-            const priceContainer = modalOverlay.querySelector('#proposedPriceContainer');
-            const priceInput = modalOverlay.querySelector('#proposedPriceInput');
+          // Handle negotiate price checkbox - attach immediately when modal is created
+          const negotiateCheck = modalOverlay.querySelector('#negotiatePriceCheck');
+          const priceContainer = modalOverlay.querySelector('#proposedPriceContainer');
+          const priceInput = modalOverlay.querySelector('#proposedPriceInput');
+          
+          if (negotiateCheck && priceContainer && priceInput) {
+            // Set initial state
+            priceContainer.style.display = negotiateCheck.checked ? 'block' : 'none';
             
-            if (negotiateCheck && priceContainer && priceInput) {
-              // Set initial state
-              priceContainer.style.display = negotiateCheck.checked ? 'block' : 'none';
-              
-              // Handle checkbox change (backup handler, inline onclick handles it immediately)
-              negotiateCheck.addEventListener('change', function(e) {
-                const isChecked = this.checked;
-                priceContainer.style.display = isChecked ? 'block' : 'none';
-                priceContainer.style.setProperty('display', isChecked ? 'block' : 'none', 'important');
-                
-                if (isChecked) {
-                  // Set default price if empty
-                  if (!priceInput.value) {
-                    const defaultPrice = this.dataset.defaultPrice || 
-                                      (job.payType === 'hourly' ? (job.hourlyRate || job.amount || '').toString() : (job.amount || '').toString());
+            // Handle checkbox change
+            negotiateCheck.addEventListener('change', function(e) {
+              const isChecked = this.checked;
+              if (isChecked) {
+                priceContainer.style.display = 'block';
+                // Set default price if empty
+                if (!priceInput.value) {
+                  const defaultPrice = this.dataset.defaultPrice || 
+                                    (job.payType === 'hourly' ? (job.hourlyRate || job.amount || '').toString() : (job.amount || '').toString());
+                  if (defaultPrice && defaultPrice !== '0') {
                     priceInput.value = defaultPrice;
                   }
-                  // Ensure default price type is selected
-                  const defaultPayType = this.dataset.defaultPayType || job.payType || 'flat';
-                  const defaultRadio = modalOverlay.querySelector('input[name="proposedPriceType"][value="' + defaultPayType + '"]');
-                  if (defaultRadio) {
-                    defaultRadio.checked = true;
-                    // Trigger change to update styling
-                    defaultRadio.dispatchEvent(new Event('change'));
-                  }
-                  // Focus the input
-                  setTimeout(() => {
-                    priceInput.focus();
-                  }, 100);
-                } else {
-                  // Clear input when unchecked
-                  priceInput.value = '';
-                  // Reset price type to default
-                  const defaultPayType = this.dataset.defaultPayType || job.payType || 'flat';
-                  const defaultRadio = modalOverlay.querySelector('input[name="proposedPriceType"][value="' + defaultPayType + '"]');
-                  if (defaultRadio) {
-                    defaultRadio.checked = true;
-                    defaultRadio.dispatchEvent(new Event('change'));
-                  }
                 }
+                // Ensure default price type is selected
+                const defaultPayType = this.dataset.defaultPayType || job.payType || 'flat';
+                const defaultRadio = modalOverlay.querySelector('input[name="proposedPriceType"][value="' + defaultPayType + '"]');
+                if (defaultRadio) {
+                  defaultRadio.checked = true;
+                  // Trigger change to update styling
+                  const changeEvent = new Event('change', { bubbles: true });
+                  defaultRadio.dispatchEvent(changeEvent);
+                }
+                // Focus the input
+                setTimeout(() => {
+                  if (priceInput) priceInput.focus();
+                }, 100);
+              } else {
+                priceContainer.style.display = 'none';
+                priceInput.value = '';
+                // Reset price type to default
+                const defaultPayType = this.dataset.defaultPayType || job.payType || 'flat';
+                const defaultRadio = modalOverlay.querySelector('input[name="proposedPriceType"][value="' + defaultPayType + '"]');
+                if (defaultRadio) {
+                  defaultRadio.checked = true;
+                  const changeEvent = new Event('change', { bubbles: true });
+                  defaultRadio.dispatchEvent(changeEvent);
+                }
+              }
+            });
+            
+            // Also handle click on label to trigger checkbox
+            const checkboxLabel = negotiateCheck.closest('label');
+            if (checkboxLabel) {
+              checkboxLabel.addEventListener('click', function(e) {
+                // If clicking on the label (not the checkbox itself), let the default behavior happen
+                // then trigger change event
+                setTimeout(() => {
+                  negotiateCheck.dispatchEvent(new Event('change', { bubbles: true }));
+                }, 0);
               });
             }
-          }, 100);
+          }
           
           // Apply to job
           modalOverlay.querySelector('.applyToJobBtn')?.addEventListener('click', async (e) => {
