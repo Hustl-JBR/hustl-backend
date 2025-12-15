@@ -7303,6 +7303,9 @@ async function renderJobs(reset = false) {
     
     // Browse Jobs only shows OPEN jobs that the user hasn't applied to and haven't expired
     let filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => {
+      // Filter out EXPIRED status jobs
+      if (j.status === "EXPIRED" || j.status === "expired") return false;
+      
       // Only show OPEN jobs
       if (j.status !== "OPEN" && j.status !== "open") return false;
       
