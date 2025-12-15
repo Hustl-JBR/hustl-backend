@@ -14056,6 +14056,10 @@ async function renderJobs(reset = false) {
               ${genderLabel ? `<div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;">${genderLabel}</div>` : ''}
               
               ${user.bio ? `<div style="color: var(--text-main); line-height: 1.6; margin-top: 0.75rem; font-size: 0.95rem;">${user.bio}</div>` : '<div style="color: var(--text-muted); font-style: italic; margin-top: 0.75rem; font-size: 0.9rem;">No description yet.</div>'}
+              
+              ${user.tools && user.tools.trim() ? `<div style="color: var(--text-main); line-height: 1.6; margin-top: 0.75rem; font-size: 0.95rem;"><strong>🔧 Tools / Equipment:</strong> ${user.tools.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+              
+              ${user.hometown ? `<div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.75rem;">${user.hometown.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
             </div>
           </div>
         </div>
