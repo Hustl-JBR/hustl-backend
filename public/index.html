@@ -9672,63 +9672,110 @@ async function renderJobs(reset = false) {
       locationTitle.textContent = "📍 Location";
       locationSection.appendChild(locationTitle);
       
+      // Use formatPublicLocation for consistent display
+      const locationDisplay = formatPublicLocation(job, requirements, false);
       const locationText = document.createElement("div");
       locationText.style.cssText = "color: var(--text-main); font-size: 0.95rem; margin-bottom: 1rem; line-height: 1.5;";
-      locationText.textContent = fullAddress;
+      locationText.textContent = locationDisplay;
       locationSection.appendChild(locationText);
       
-      // Map preview (Mapbox)
-      if (fullAddress && fullAddress !== "Location TBD" && job.lat && job.lng) {
+      // Map preview (Mapbox) - use pickup coordinates or job coordinates
+      const reqLat = requirements.pickup_lat || requirements.pickupLat;
+      const reqLng = requirements.pickup_lng || requirements.pickupLng;
+      const jobLat = job.lat;
+      const jobLng = job.lng;
+      const lat = reqLat || jobLat;
+      const lng = reqLng || jobLng;
+      
+      if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
         const mapContainer = document.createElement("div");
         const mapId = `map-${job.id}-${Date.now()}`;
         mapContainer.id = mapId;
-        mapContainer.style.cssText = "width: 100%; height: 200px; border-radius: 8px; overflow: hidden; background: #e5e7eb; margin-top: 0.75rem;";
+        mapContainer.style.cssText = "width: 100%; height: 200px; border-radius: 8px; overflow: hidden; border: 2px solid var(--border); cursor: pointer; position: relative; margin-top: 0.75rem; background: #f3f4f6;";
         locationSection.appendChild(mapContainer);
         
-        // Initialize Mapbox map after a short delay to ensure token is loaded and container is in DOM
-        setTimeout(() => {
+        // Loading indicator
+        const loadingDiv = document.createElement("div");
+        loadingDiv.style.cssText = "position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #f3f4f6; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.85rem; z-index: 1;";
+        loadingDiv.textContent = "Loading map...";
+        mapContainer.appendChild(loadingDiv);
+        
+        // Initialize Mapbox map after a short delay
+        setTimeout(async () => {
           // Check if container exists in DOM before initializing
           const containerElement = document.getElementById(mapId);
           if (!containerElement || !document.body.contains(containerElement)) {
-            // Container not in DOM yet, skip map initialization
             return;
           }
           
-          if (window.mapboxgl && window.MAPBOX_TOKEN) {
-            try {
-              mapboxgl.accessToken = window.MAPBOX_TOKEN;
-              const map = new mapboxgl.Map({
-                container: mapId,
-                style: 'mapbox://styles/mapbox/streets-v12',
-                center: [job.lng, job.lat],
-                zoom: 13,
-                interactive: false // Static preview
-              });
+          try {
+            const token = await getMapboxToken();
+            if (!token || !window.mapboxgl) {
+              loadingDiv.textContent = "Map unavailable";
+              return;
+            }
+            
+            mapboxgl.accessToken = token;
+            const map = new mapboxgl.Map({
+              container: mapId,
+              style: 'mapbox://styles/mapbox/streets-v12',
+              center: [parseFloat(lng), parseFloat(lat)],
+              zoom: 14,
+              interactive: false // Static preview
+            });
+            
+            map.on('load', () => {
+              // Remove loading indicator
+              if (loadingDiv.parentNode) {
+                loadingDiv.remove();
+              }
               
               // Add marker
-              new mapboxgl.Marker({ color: '#2563eb' })
-                .setLngLat([job.lng, job.lat])
+              new mapboxgl.Marker({
+                color: '#3b82f6',
+                anchor: 'center'
+              })
+                .setLngLat([parseFloat(lng), parseFloat(lat)])
                 .addTo(map);
-            } catch (mapError) {
-              console.warn('Could not initialize Mapbox map:', mapError);
-              // Fallback to Google Maps link
-              const mapLink = document.createElement("a");
-              mapLink.href = `https://maps.google.com/?q=${encodeURIComponent(fullAddress)}`;
-              mapLink.target = "_blank";
-              mapLink.style.cssText = "display: block; padding: 1rem; text-align: center; color: var(--primary); text-decoration: none; font-weight: 600;";
-              mapLink.textContent = "🗺️ View on Google Maps";
-              mapContainer.appendChild(mapLink);
-            }
-          } else {
-            // Fallback to Google Maps link if Mapbox not available
+            });
+            
+            // Click to open full map view
+            mapContainer.addEventListener('click', () => {
+              // Switch to map view in browse jobs
+              if (typeof toggleJobsView === 'function') {
+                toggleJobsView('map');
+                // Scroll to map
+                setTimeout(() => {
+                  const mapContainer = document.getElementById('jobsMapContainer');
+                  if (mapContainer) {
+                    mapContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }, 300);
+              }
+            });
+          } catch (mapError) {
+            console.warn('Could not initialize Mapbox map:', mapError);
+            loadingDiv.textContent = "Map unavailable";
+            // Fallback to Google Maps link
             const mapLink = document.createElement("a");
-            mapLink.href = `https://maps.google.com/?q=${encodeURIComponent(fullAddress)}`;
+            mapLink.href = `https://maps.google.com/?q=${encodeURIComponent(locationDisplay)}`;
             mapLink.target = "_blank";
             mapLink.style.cssText = "display: block; padding: 1rem; text-align: center; color: var(--primary); text-decoration: none; font-weight: 600;";
             mapLink.textContent = "🗺️ View on Google Maps";
+            if (loadingDiv.parentNode) {
+              loadingDiv.remove();
+            }
             mapContainer.appendChild(mapLink);
           }
-        }, 100);
+        }, 200);
+      }
+      
+      // Add click hint text below map
+      if (lat && lng) {
+        const mapHint = document.createElement("div");
+        mapHint.style.cssText = "margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-muted); text-align: center;";
+        mapHint.textContent = "Click to view full map";
+        locationSection.appendChild(mapHint);
       }
       
       contentSection.appendChild(locationSection);
