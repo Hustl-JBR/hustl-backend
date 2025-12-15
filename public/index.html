@@ -9277,7 +9277,7 @@ async function renderJobs(reset = false) {
         contentSection.appendChild(equipmentSection);
       }
       
-      // Estimated Time/Difficulty
+      // Maximum Time/Difficulty
       if (job.estHours || job.maxHours || job.difficulty) {
         const timeSection = document.createElement("div");
         timeSection.style.cssText = "margin-bottom: 1.5rem; padding: 1rem; background: #f9fafb; border-radius: 8px;";
@@ -9285,8 +9285,28 @@ async function renderJobs(reset = false) {
         if (job.estHours || job.maxHours) {
           const timeInfo = document.createElement("div");
           timeInfo.style.cssText = "font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.5rem;";
-          timeInfo.textContent = `⏱️ Estimated Time: ${job.estHours || job.maxHours} ${(job.estHours || job.maxHours) === 1 ? 'hour' : 'hours'}`;
+          timeInfo.textContent = `⏱️ Maximum Time: ${job.estHours || job.maxHours} ${(job.estHours || job.maxHours) === 1 ? 'hour' : 'hours'}`;
           timeSection.appendChild(timeInfo);
+          
+          // Add maximum payment amount info
+          const maxPaymentInfo = document.createElement("div");
+          maxPaymentInfo.style.cssText = "font-size: 0.9rem; color: var(--text-main); margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #e5e7eb;";
+          let maxPaymentText = "";
+          if (job.payType === "flat" || !job.payType) {
+            const amount = Number(job.flatAmount || job.amount || 0);
+            maxPaymentText = `The person is willing to pay a maximum amount of ${formatMoney(amount)} flat`;
+          } else {
+            const hourlyRate = Number(job.hourlyRate || 0);
+            const maxHours = Number(job.maxHours || job.estHours || 0);
+            if (maxHours > 0) {
+              const maxTotal = hourlyRate * maxHours;
+              maxPaymentText = `The person is willing to pay a maximum amount of ${formatMoney(maxTotal)} (${formatMoney(hourlyRate)}/hr × ${maxHours} hours)`;
+            } else {
+              maxPaymentText = `The person is willing to pay a maximum amount of ${formatMoney(hourlyRate)}/hr`;
+            }
+          }
+          maxPaymentInfo.textContent = maxPaymentText;
+          timeSection.appendChild(maxPaymentInfo);
         }
         
         if (job.difficulty) {
@@ -9425,161 +9445,91 @@ async function renderJobs(reset = false) {
           applySection.appendChild(charCounter);
           
           // For hustler-suggested-price jobs, show price input directly (required)
-          // For customer-set-price jobs, show optional checkbox
-          if (!isHustlerSuggestedPrice) {
-            // Suggest Different Price (Optional) - with checkbox toggle
-            const priceCheckboxContainer = document.createElement("div");
-            priceCheckboxContainer.style.cssText = "margin-bottom: 1rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;";
-            
-            const priceCheckboxLabel = document.createElement("label");
-            priceCheckboxLabel.style.cssText = "display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 600; font-size: 0.95rem; color: var(--text-main);";
-            
-            const priceCheckbox = document.createElement("input");
-            priceCheckbox.type = "checkbox";
-            priceCheckbox.id = `suggestPriceCheckbox_${job.id}`;
-            priceCheckbox.style.cssText = "width: 20px; height: 20px; min-width: 20px; min-height: 20px; margin: 0; padding: 0; cursor: pointer; accent-color: var(--primary); flex-shrink: 0;";
-            
-            const priceCheckboxText = document.createElement("span");
-            priceCheckboxText.textContent = "💵 Suggest a different price";
-            
-            priceCheckboxLabel.appendChild(priceCheckbox);
-            priceCheckboxLabel.appendChild(priceCheckboxText);
-            priceCheckboxContainer.appendChild(priceCheckboxLabel);
-            applySection.appendChild(priceCheckboxContainer);
-          }
+          // For customer-set-price jobs, price negotiation is removed
           
-          // Price negotiation fields (shown directly for hustler-suggested-price, hidden by default for customer-set-price)
-          const priceNegotiationSection = document.createElement("div");
-          priceNegotiationSection.id = `priceNegotiationSection_${job.id}`;
-          priceNegotiationSection.style.cssText = isHustlerSuggestedPrice 
-            ? "margin-top: 1rem; padding: 1rem; background: white; border: 2px solid #e5e7eb; border-radius: 8px;"
-            : "display: none; margin-top: 1rem; padding: 1rem; background: white; border: 2px solid #e5e7eb; border-radius: 8px;";
-          
-          const priceLabel = document.createElement("label");
-          priceLabel.style.cssText = "display: block; font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.75rem;";
-          priceLabel.textContent = isHustlerSuggestedPrice ? "Your Proposed Price *" : "Your Proposed Price";
-          priceNegotiationSection.appendChild(priceLabel);
-          
-          // Show current price (only for customer-set-price jobs, not for hustler-suggested-price)
-          if (!isHustlerSuggestedPrice) {
-            const currentPriceDisplay = document.createElement("div");
-            currentPriceDisplay.style.cssText = "padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 2px solid var(--border);";
-            const currentPrice = job.payType === "flat" ? formatMoney(job.flatAmount || job.amount || 0) : formatMoney(job.hourlyRate || 0) + "/hr";
-            const priceTypeLabel = job.payType === "flat" ? "Flat Rate" : "Hourly Rate";
-            currentPriceDisplay.innerHTML = `
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Current ${priceTypeLabel}:</div>
-              <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">${currentPrice}</div>
-            `;
-            priceNegotiationSection.appendChild(currentPriceDisplay);
-          }
-          
-          // Price input container with dollar sign
-          const priceInputWrapper = document.createElement("div");
-          priceInputWrapper.style.cssText = "position: relative; margin-bottom: 1rem;";
-          
-          const dollarSign = document.createElement("span");
-          dollarSign.style.cssText = "position: absolute; left: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 2.5rem; font-weight: 700; color: var(--primary); z-index: 1;";
-          dollarSign.textContent = "$";
-          priceInputWrapper.appendChild(dollarSign);
-          
-          const priceInput = document.createElement("input");
-          priceInput.type = "number";
-          priceInput.id = `proposedPrice_${job.id}`;
-          priceInput.placeholder = job.payType === "flat" ? "e.g., 150.00" : "e.g., 25.00";
-          priceInput.min = "0";
-          priceInput.step = "0.01";
-          priceInput.required = isHustlerSuggestedPrice; // Required for hustler-suggested-price jobs
-          priceInput.style.cssText = "width: 100%; padding: 2rem 1.5rem 2rem 4rem; border: 4px solid var(--primary); border-radius: 16px; font-size: 2.5rem; font-weight: 700; text-align: left; background: #f0fdf4; color: var(--text-main); min-height: 85px; box-sizing: border-box; transition: all 0.2s; font-family: inherit;";
-          priceInputWrapper.appendChild(priceInput);
-          
-          // Add /hr suffix for hourly rates (initial state)
-          if (job.payType === "hourly") {
-            const hrSuffix = document.createElement("span");
-            hrSuffix.className = "hr-suffix";
-            hrSuffix.style.cssText = "position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 1.75rem; font-weight: 600; color: var(--text-muted); z-index: 1;";
-            hrSuffix.textContent = "/hr";
-            priceInputWrapper.appendChild(hrSuffix);
-            priceInput.placeholder = "e.g., 60.00 (total for all workers)";
-          }
-          
-          priceNegotiationSection.appendChild(priceInputWrapper);
-          
-          // Price type selector - always visible, allows switching between flat and hourly
-          const priceTypeSelect = document.createElement("select");
-          priceTypeSelect.id = `proposedPriceType_${job.id}`;
-          priceTypeSelect.style.cssText = "width: 100%; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; font-weight: 600; font-family: inherit; background: white; margin-bottom: 0.75rem;";
-          priceTypeSelect.innerHTML = `
-            <option value="flat">Flat Rate (one-time payment)</option>
-            <option value="hourly">Per Hour (total hourly rate)</option>
-          `;
-          // Set default to match job pay type
-          priceTypeSelect.value = job.payType || "flat";
-          
-          // Update input placeholder and /hr suffix when type changes
-          priceTypeSelect.addEventListener("change", () => {
-            const existingHrSuffix = priceInputWrapper.querySelector('.hr-suffix');
-            if (priceTypeSelect.value === "hourly") {
-              priceInput.placeholder = "e.g., 60.00 (total for all workers)";
-              // Show /hr suffix if not already there
-              if (!existingHrSuffix) {
-                const hrSuffix = document.createElement("span");
-                hrSuffix.className = "hr-suffix";
-                hrSuffix.style.cssText = "position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 1.75rem; font-weight: 600; color: var(--text-muted); z-index: 1;";
-                hrSuffix.textContent = "/hr";
-                priceInputWrapper.appendChild(hrSuffix);
-              }
-            } else {
-              priceInput.placeholder = "e.g., 150.00";
-              // Remove /hr suffix
-              if (existingHrSuffix) existingHrSuffix.remove();
-            }
-          });
-          
-          priceNegotiationSection.appendChild(priceTypeSelect);
-          
-          const priceHint = document.createElement("div");
-          priceHint.style.cssText = "padding: 0.75rem; background: #dbeafe; border-radius: 8px; font-size: 0.85rem; color: #1e40af;";
+          // Price negotiation fields (only for hustler-suggested-price jobs)
           if (isHustlerSuggestedPrice) {
-            priceHint.textContent = `💡 The customer will see your proposed price and compare it with other hustlers' proposals to decide who's the best fit.`;
-          } else {
-            const priceTypeLabel = job.payType === "flat" ? "Flat Rate" : "Hourly Rate";
-            priceHint.textContent = `💡 Customer will see your proposed ${priceTypeLabel.toLowerCase()} when reviewing your application`;
-          }
-          priceNegotiationSection.appendChild(priceHint);
-          
-          applySection.appendChild(priceNegotiationSection);
-          
-          // Toggle price negotiation section when checkbox is clicked (only for customer-set-price jobs)
-          if (!isHustlerSuggestedPrice) {
-            const priceCheckbox = document.getElementById(`suggestPriceCheckbox_${job.id}`);
-            if (priceCheckbox) {
-              priceCheckbox.addEventListener("change", (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (priceCheckbox.checked) {
-                  // Show popup modal instead of inline input
-                  try {
-                    if (typeof window.showPriceSuggestionPopup === 'function') {
-                      window.showPriceSuggestionPopup(job.id, job.payType || 'flat', priceInput, priceNegotiationSection, priceCheckbox);
-                    } else {
-                      console.error('showPriceSuggestionPopup function not found on window');
-                      // Fallback: show inline input
-                      priceNegotiationSection.style.display = "block";
-                      priceInput.focus();
-                    }
-                  } catch (error) {
-                    console.error('Error showing price popup:', error);
-                    // Fallback: show inline input
-                    priceNegotiationSection.style.display = "block";
-                    priceInput.focus();
-                  }
-                } else {
-                  priceNegotiationSection.style.display = "none";
-                  priceInput.value = "";
-                }
-              });
+            const priceNegotiationSection = document.createElement("div");
+            priceNegotiationSection.id = `priceNegotiationSection_${job.id}`;
+            priceNegotiationSection.style.cssText = "margin-top: 1rem; padding: 1rem; background: white; border: 2px solid #e5e7eb; border-radius: 8px;";
+            
+            const priceLabel = document.createElement("label");
+            priceLabel.style.cssText = "display: block; font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.75rem;";
+            priceLabel.textContent = "Your Proposed Price *";
+            priceNegotiationSection.appendChild(priceLabel);
+            
+            // Price input container with dollar sign
+            const priceInputWrapper = document.createElement("div");
+            priceInputWrapper.style.cssText = "position: relative; margin-bottom: 1rem;";
+            
+            const dollarSign = document.createElement("span");
+            dollarSign.style.cssText = "position: absolute; left: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 2.5rem; font-weight: 700; color: var(--primary); z-index: 1;";
+            dollarSign.textContent = "$";
+            priceInputWrapper.appendChild(dollarSign);
+            
+            const priceInput = document.createElement("input");
+            priceInput.type = "number";
+            priceInput.id = `proposedPrice_${job.id}`;
+            priceInput.placeholder = job.payType === "flat" ? "e.g., 150.00" : "e.g., 25.00";
+            priceInput.min = "0";
+            priceInput.step = "0.01";
+            priceInput.required = true;
+            priceInput.style.cssText = "width: 100%; padding: 2rem 1.5rem 2rem 4rem; border: 4px solid var(--primary); border-radius: 16px; font-size: 2.5rem; font-weight: 700; text-align: left; background: #f0fdf4; color: var(--text-main); min-height: 85px; box-sizing: border-box; transition: all 0.2s; font-family: inherit;";
+            priceInputWrapper.appendChild(priceInput);
+            
+            // Add /hr suffix for hourly rates (initial state)
+            if (job.payType === "hourly") {
+              const hrSuffix = document.createElement("span");
+              hrSuffix.className = "hr-suffix";
+              hrSuffix.style.cssText = "position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 1.75rem; font-weight: 600; color: var(--text-muted); z-index: 1;";
+              hrSuffix.textContent = "/hr";
+              priceInputWrapper.appendChild(hrSuffix);
+              priceInput.placeholder = "e.g., 60.00 (total for all workers)";
             }
+            
+            priceNegotiationSection.appendChild(priceInputWrapper);
+            
+            // Price type selector - always visible, allows switching between flat and hourly
+            const priceTypeSelect = document.createElement("select");
+            priceTypeSelect.id = `proposedPriceType_${job.id}`;
+            priceTypeSelect.style.cssText = "width: 100%; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; font-weight: 600; font-family: inherit; background: white; margin-bottom: 0.75rem;";
+            priceTypeSelect.innerHTML = `
+              <option value="flat">Flat Rate (one-time payment)</option>
+              <option value="hourly">Per Hour (total hourly rate)</option>
+            `;
+            // Set default to match job pay type
+            priceTypeSelect.value = job.payType || "flat";
+            
+            // Update input placeholder and /hr suffix when type changes
+            priceTypeSelect.addEventListener("change", () => {
+              const existingHrSuffix = priceInputWrapper.querySelector('.hr-suffix');
+              if (priceTypeSelect.value === "hourly") {
+                priceInput.placeholder = "e.g., 60.00 (total for all workers)";
+                // Show /hr suffix if not already there
+                if (!existingHrSuffix) {
+                  const hrSuffix = document.createElement("span");
+                  hrSuffix.className = "hr-suffix";
+                  hrSuffix.style.cssText = "position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 1.75rem; font-weight: 600; color: var(--text-muted); z-index: 1;";
+                  hrSuffix.textContent = "/hr";
+                  priceInputWrapper.appendChild(hrSuffix);
+                }
+              } else {
+                priceInput.placeholder = "e.g., 150.00";
+                // Remove /hr suffix
+                if (existingHrSuffix) existingHrSuffix.remove();
+              }
+            });
+            
+            priceNegotiationSection.appendChild(priceTypeSelect);
+            
+            const priceHint = document.createElement("div");
+            priceHint.style.cssText = "padding: 0.75rem; background: #dbeafe; border-radius: 8px; font-size: 0.85rem; color: #1e40af;";
+            priceHint.textContent = `💡 The customer will see your proposed price and compare it with other hustlers' proposals to decide who's the best fit.`;
+            priceNegotiationSection.appendChild(priceHint);
+            
+            applySection.appendChild(priceNegotiationSection);
           }
+          
           
           // Stripe requirement check - TEMPORARILY DISABLED FOR SANDBOX MODE
           // const stripeCheck = document.createElement("div");
@@ -9689,20 +9639,8 @@ async function renderJobs(reset = false) {
                 requestBody.proposedAmount = proposedPrice;
                 requestBody.proposedPriceType = priceTypeSelect ? priceTypeSelect.value : (job.payType || "flat");
               } else {
-                // Price is optional for customer-set-price jobs (only if checkbox checked)
-                const priceCheckbox = document.getElementById(`suggestPriceCheckbox_${job.id}`);
-                if (priceCheckbox && priceCheckbox.checked) {
-                  const proposedPrice = priceInput && priceInput.value ? parseFloat(priceInput.value) : null;
-                  if (proposedPrice && proposedPrice > 0) {
-                    requestBody.proposedAmount = proposedPrice;
-                    requestBody.proposedPriceType = priceTypeSelect ? priceTypeSelect.value : (job.payType || "flat");
-                  } else {
-                    showToast("Please enter a proposed price or uncheck the price suggestion option.");
-                    applyNowBtn.disabled = false;
-                    applyNowBtn.textContent = "Submit Application";
-                    return;
-                  }
-                }
+                // For customer-set-price jobs, price negotiation is no longer available
+                // Do not include proposedAmount or proposedPriceType
               }
               
               const token = localStorage.getItem("hustl_token");
