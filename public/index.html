@@ -7529,266 +7529,219 @@ async function renderJobs(reset = false) {
         if (existingCard) return; // Skip if already rendered
       }
 
-      const card = document.createElement("div");
-      card.className = "job-card";
-      card.dataset.jobId = job.id;
-
-      // Category icon mapping
-      const categoryIcons = {
-        'moving': '🚚', 'yard-work': '🌿', 'dump-run': '🗑️', 'cleaning': '🧹',
-        'power-washing': '💦', 'furniture-assembly': '🔧', 'painting': '🎨',
-        'handyman': '🔨', 'landscaping': '🌳', 'pet-care': '🐕', 'delivery': '📦',
-        'car-cleaning': '🚿', 'event-setup': '🎪', 'snow-removal': '❄️', 'other': '✨',
-        'yard': '🌿', 'furniture': '🔧'
-      };
-      const categoryNames = {
-        'moving': 'Moving', 'yard-work': 'Yard Work', 'dump-run': 'Dump Run',
-        'cleaning': 'Cleaning', 'power-washing': 'Power Wash', 'furniture-assembly': 'Assembly',
-        'painting': 'Painting', 'handyman': 'Handyman', 'landscaping': 'Landscaping',
-        'pet-care': 'Pet Care', 'delivery': 'Delivery', 'car-cleaning': 'Car Clean',
-        'event-setup': 'Event Setup', 'snow-removal': 'Snow Removal', 'other': 'Other',
-        'yard': 'Yard Work', 'furniture': 'Assembly'
-      };
-      
-      const jobCategory = (job.category || 'other').toLowerCase();
-      const catIcon = categoryIcons[jobCategory] || '⭐';
-      const catName = categoryNames[jobCategory] || job.category || 'Job';
-      
-      // Simplified job card structure
-      const textContent = document.createElement("div");
-      textContent.style.cssText = "flex: 1; min-width: 0;";
-      
-      // Check if this is the user's posted job
-      const isUserJob = currentUserId && job.customerId === currentUserId;
-      
-      // Add different border color for user's jobs
-      if (isUserJob) {
-        card.style.border = "2px solid #3b82f6";
-        card.style.background = "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)";
-      }
-
-      // 1. Job title (large + bold)
-      const titleEl = document.createElement("div");
-      titleEl.className = "job-title";
-      titleEl.style.cssText = "font-size: 1.1rem; font-weight: 700; line-height: 1.4; margin-bottom: 0.5rem; color: var(--text-main);";
-      
-      if (isUserJob) {
-        // Add "Your job" badge
-        const yourJobBadge = document.createElement("span");
-        yourJobBadge.style.cssText = "display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; margin-right: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;";
-        yourJobBadge.textContent = "Your Job";
-        titleEl.appendChild(yourJobBadge);
-      }
-      
-      const titleText = document.createElement("span");
-      titleText.textContent = job.title;
-      titleEl.appendChild(titleText);
-      textContent.appendChild(titleEl);
-
-      // 2. Category + time posted (with both relative and absolute date)
-      const meta = document.createElement("div");
-      meta.className = "job-meta";
-      meta.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
-
-      const createdDate = job.createdAt ? new Date(job.createdAt) : new Date();
-      const createdMs = createdDate.getTime();
-      const relativeTime = timeAgo(createdMs);
-      const absoluteDate = createdDate.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric',
-        year: 'numeric'
-      });
-
-      meta.textContent = `${catIcon} ${catName} • 🕒 Posted ${relativeTime} (${absoluteDate})`;
-      textContent.appendChild(meta);
-      
-      // 3. Needed By / Deadline info
+      // Get requirements for formatting
       const requirements = job.requirements || {};
-      let neededByText = '';
+      const teamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
+      const payType = job.payType || 'flat';
       
+      // Format pay display
+      let payDisplay = '';
+      const pricingOption = requirements.pricing_option;
+      if (pricingOption === 'hustlers_quote') {
+        payDisplay = 'Hustler suggests price';
+      } else if (payType === 'hourly') {
+        const hourlyRate = parseFloat(job.hourlyRate || 0);
+        const estHours = job.estHours || '?';
+        if (teamSize > 1) {
+          const perPersonRate = hourlyRate / teamSize;
+          payDisplay = `$${hourlyRate.toFixed(0)}/hr total (Max ${estHours} hrs) · ${teamSize} workers → $${perPersonRate.toFixed(0)}/hr each`;
+        } else {
+          payDisplay = `$${hourlyRate.toFixed(0)}/hr total (Max ${estHours} hrs)`;
+        }
+      } else {
+        payDisplay = `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
+      }
+      
+      // Format workers
+      let workersDisplay = '';
+      if (teamSize === 0 || teamSize === 'company') {
+        workersDisplay = 'Company/crew';
+      } else if (teamSize === 1) {
+        workersDisplay = '1 worker';
+      } else {
+        workersDisplay = `${teamSize} workers`;
+      }
+      
+      // Format date
+      let dateStr = '';
       const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
-      
       if (deadlinePreference === "specific_date" && job.startTime) {
         try {
           const deadlineDate = new Date(job.startTime);
           if (!isNaN(deadlineDate.getTime())) {
-            // Format date and time in user's local timezone (browser default)
-            const dateStr = deadlineDate.toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric'
-            });
-            const timeStr = deadlineDate.toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              minute: '2-digit',
-              hour12: true
-            });
-            neededByText = `📅 Needed by ${dateStr}, ${timeStr}`;
+            dateStr = deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           }
         } catch (e) {}
       } else if (job.expiresAt) {
-        // Use expiresAt if available - this is the primary source for expiration
         try {
           const expiresDate = new Date(job.expiresAt);
           if (!isNaN(expiresDate.getTime())) {
-            // Format date and time in user's local timezone (browser default)
-            const dateStr = expiresDate.toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric'
-            });
-            const timeStr = expiresDate.toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              minute: '2-digit',
-              hour12: true
-            });
-            neededByText = `📅 Needed by ${dateStr}, ${timeStr}`;
+            dateStr = expiresDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           }
         } catch (e) {}
       } else if (job.date) {
-        // Fallback to job.date if expiresAt is not set
         try {
           const deadlineDate = new Date(job.date);
           if (!isNaN(deadlineDate.getTime())) {
-            // If date doesn't have time, assume end of day
-            if (deadlineDate.getHours() === 0 && deadlineDate.getMinutes() === 0) {
-              deadlineDate.setHours(23, 59, 0, 0);
-            }
-            const dateStr = deadlineDate.toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric'
-            });
-            const timeStr = deadlineDate.toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              minute: '2-digit',
-              hour12: true
-            });
-            neededByText = `📅 Needed by ${dateStr}, ${timeStr}`;
+            dateStr = deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           }
         } catch (e) {}
       }
-      
-      if (neededByText) {
-        const neededByMeta = document.createElement("div");
-        neededByMeta.className = "job-meta";
-        neededByMeta.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
-        neededByMeta.textContent = neededByText;
-        textContent.appendChild(neededByMeta);
+      if (!dateStr) {
+        dateStr = 'Not specified';
       }
       
-      // 4. Preferred Time (informational only)
-      const preferredTime = requirements.preferredTime || job.preferredTime || 'anytime';
-      const preferredTimeLabels = {
-        'morning': 'Morning',
-        'afternoon': 'Afternoon',
-        'evening': 'Evening',
-        'anytime': 'Anytime'
-      };
-      const preferredTimeLabel = preferredTimeLabels[preferredTime] || 'Anytime';
-      
-      const preferredTimeMeta = document.createElement("div");
-      preferredTimeMeta.className = "job-meta";
-      preferredTimeMeta.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
-      preferredTimeMeta.textContent = `⏰ Preferred: ${preferredTimeLabel}`;
-      textContent.appendChild(preferredTimeMeta);
-
-      // 4. Workers needed
-      const teamSize = job.teamSize || job.requirements?.teamSize || job.requirements?.team_size || 1;
-      if (teamSize === 0 || teamSize === 'company') {
-        const workersBadge = document.createElement("div");
-        workersBadge.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
-        workersBadge.textContent = "👥 Company/crew";
-        textContent.appendChild(workersBadge);
-      } else if (teamSize > 1) {
-        const workersBadge = document.createElement("div");
-        workersBadge.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
-        workersBadge.textContent = `👥 ${teamSize} workers`;
-        textContent.appendChild(workersBadge);
-      } else {
-        const workersBadge = document.createElement("div");
-        workersBadge.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
-        workersBadge.textContent = "👥 1 worker";
-        textContent.appendChild(workersBadge);
-      }
-      
-      // 5. Location logic
+      // Format location
+      let locationDisplay = job.address || 'Location not specified';
       const pickupArea = requirements.pickup_area || requirements.pickupArea;
-      const pickupAddress = requirements.pickup_address || requirements.pickupAddress;
+      const pickupCity = requirements.pickup_city || requirements.pickupCity;
+      const pickupZip = requirements.pickup_zip;
+      const dropoffArea = requirements.dropoff_area || requirements.dropoffArea;
+      const dropoffCity = requirements.dropoff_city || requirements.dropoffCity;
+      const dropoffZip = requirements.dropoff_zip;
+      const onSiteOnly = requirements.on_site_only || requirements.onSiteOnly;
       
-      // Check if address should be hidden based on customer preference
-      const hidePickupAddressUntilAssigned = requirements.hide_pickup_address_until_assigned || requirements.hidePickupAddressUntilAssigned;
-      let showFullPickupAddress = true;
-      
-      if (hidePickupAddressUntilAssigned) {
-        try {
-          const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
-          if (user) {
-            const isHustler = user && !user.roles?.includes('CUSTOMER');
-            const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS' || job.status === 'COMPLETED_BY_HUSTLER');
-            showFullPickupAddress = !isHustler || jobAccepted;
-          }
-        } catch (e) {
-          showFullPickupAddress = true;
+      if (pickupArea || pickupCity) {
+        const pickupParts = [];
+        if (pickupArea) pickupParts.push(pickupArea);
+        if (pickupCity) pickupParts.push(pickupCity);
+        if (pickupZip) pickupParts.push(pickupZip);
+        locationDisplay = pickupParts.join(', ');
+        
+        if (!onSiteOnly && (dropoffArea || dropoffCity)) {
+          const dropoffParts = [];
+          if (dropoffArea) dropoffParts.push(dropoffArea);
+          if (dropoffCity) dropoffParts.push(dropoffCity);
+          if (dropoffZip) dropoffParts.push(dropoffZip);
+          locationDisplay += ` → ${dropoffParts.join(', ')}`;
+        } else if (onSiteOnly) {
+          locationDisplay += ' (Single location)';
         }
       }
       
-      // Show location label: "Street Address *" when not hidden, "Neighborhood / Area" when hidden
-      let locationText = "";
-      if (showFullPickupAddress && pickupAddress) {
-        // Show "Street Address *" when not hiding
-        locationText = "Street Address *";
-      } else if (hidePickupAddressUntilAssigned && pickupArea) {
-        // Show "Neighborhood / Area" when hiding location
-        locationText = "Neighborhood / Area";
+      // Format expiration
+      const expiresAt = requirements.expiresAt ? new Date(requirements.expiresAt) : (job.expiresAt ? new Date(job.expiresAt) : null);
+      let expirationDisplay = '';
+      if (expiresAt && expiresAt > new Date()) {
+        const daysLeft = Math.ceil((expiresAt - new Date()) / (1000 * 60 * 60 * 24));
+        expirationDisplay = `Expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
       }
       
-      if (locationText) {
-        const loc = document.createElement("div");
-        loc.className = "job-meta";
-        loc.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
-        loc.textContent = `📍 ${locationText}`;
-        textContent.appendChild(loc);
-      }
-      
-      // 6. Price (flat/hourly)
-      const pricingOption = requirements.pricing_option;
-      const pay = document.createElement("div");
-      pay.style.cssText = "font-weight: 700; color: var(--success); font-size: 1rem; margin-top: 0.25rem;";
-      
-      if (pricingOption === "hustlers_quote") {
-        pay.textContent = "💰 Hustler suggests price";
-        pay.style.color = "#f59e0b";
-      } else if (job.payType === "flat") {
-        const total = Number(job.amount) || 0;
-        pay.textContent = `💰 $${total.toFixed(0)} flat`;
-      } else if (job.payType === "hourly") {
-        const hr = Number(job.hourlyRate) || 0;
-        pay.textContent = `💰 $${hr.toFixed(0)}/hr`;
+      // Format time ago
+      const postedDate = new Date(job.createdAt);
+      const hoursAgo = Math.floor((Date.now() - postedDate.getTime()) / (1000 * 60 * 60));
+      const minutesAgo = Math.floor((Date.now() - postedDate.getTime()) / (1000 * 60));
+      let timeAgo = '';
+      if (minutesAgo < 60) {
+        timeAgo = minutesAgo < 1 ? 'Just now' : `${minutesAgo} ${minutesAgo === 1 ? 'minute' : 'minutes'} ago`;
+      } else if (hoursAgo < 24) {
+        timeAgo = `${hoursAgo} ${hoursAgo === 1 ? 'hour' : 'hours'} ago`;
       } else {
-        const total = Number(job.amount) || 0;
-        pay.textContent = `💰 $${total.toFixed(0)}`;
+        const daysAgo = Math.floor((Date.now() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
+        timeAgo = daysAgo === 1 ? '1 day ago' : `${daysAgo} days ago`;
       }
-      textContent.appendChild(pay);
       
-      // Add textContent to card
-      card.appendChild(textContent);
-
-      // Actions row
-      const actions = document.createElement("div");
-      actions.className = "job-card-actions";
-
-      const right = document.createElement("div");
-      right.style.cssText = "display: flex; gap: 0.5rem; align-items: center;";
+      // Get category icon
+      const categoryMap = {
+        'Moving / Hauling': '🚚',
+        'moving': '🚚',
+        'Yard work / Outdoor': '🌿',
+        'yard-work': '🌿',
+        'yard': '🌿',
+        'Cleaning / Organizing': '🧹',
+        'cleaning': '🧹',
+        'Furniture / Assembly': '🛠',
+        'furniture-assembly': '🛠',
+        'furniture': '🛠',
+        'Other': '⭐',
+        'other': '⭐'
+      };
+      const categoryIcon = categoryMap[job.category] || '📋';
       
-      const viewBtn = document.createElement("button");
-      viewBtn.className = "small-btn outline";
-      viewBtn.textContent = "View";
-      viewBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        openJobDetails(job.id);
-      });
-      right.appendChild(viewBtn);
-      actions.appendChild(right);
-
-      card.appendChild(actions);
+      // Normalize category name
+      const categoryDisplayNames = {
+        'moving': 'Moving / Hauling',
+        'yard-work': 'Yard work / Outdoor',
+        'yard': 'Yard work / Outdoor',
+        'cleaning': 'Cleaning / Organizing',
+        'furniture-assembly': 'Furniture / Assembly',
+        'furniture': 'Furniture / Assembly',
+        'other': 'Other'
+      };
+      const categoryDisplay = categoryDisplayNames[job.category] || job.category || 'General';
+      
+      // Check if this is the user's posted job
+      const isUserJob = currentUserId && job.customerId === currentUserId;
+      
+      const card = document.createElement("div");
+      card.className = "job-card";
+      card.dataset.jobId = job.id;
+      card.style.cssText = "padding: 0; border: 2px solid var(--border); border-radius: 16px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.08); transition: all 0.3s; overflow: hidden; margin-bottom: 1.5rem; cursor: pointer;";
+      
+      if (isUserJob) {
+        card.style.border = "2px solid #3b82f6";
+        card.style.background = "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)";
+      }
+      
+      card.onmouseenter = () => { 
+        card.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+        card.style.transform = 'translateY(-2px)';
+        card.style.borderColor = isUserJob ? '#3b82f6' : 'var(--primary)';
+      };
+      card.onmouseleave = () => { 
+        card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+        card.style.transform = 'translateY(0)';
+        card.style.borderColor = isUserJob ? '#3b82f6' : 'var(--border)';
+      };
+      
+      card.innerHTML = `
+        <div style="padding: 1.5rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border-bottom: 2px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+            <span style="font-size: 2rem;">${categoryIcon}</span>
+            <div style="flex: 1;">
+              <h3 style="margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main); line-height: 1.2;">
+                ${isUserJob ? '<span style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; margin-right: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Your Job</span>' : ''}
+                ${job.title || 'Untitled Job'}
+              </h3>
+              <div style="margin-top: 0.25rem; font-size: 0.9rem; color: var(--text-muted);">${categoryDisplay}</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.9rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-weight: 700; color: var(--text-main);">💰</span>
+              <span style="font-weight: 700; color: ${pricingOption === 'hustlers_quote' ? '#f59e0b' : 'var(--text-main)'}; font-size: 1.1rem;">${payDisplay}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span>⏰</span>
+              <span style="color: var(--text-muted);">${dateStr}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span>👥</span>
+              <span style="color: var(--text-muted);">${workersDisplay}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span>📍</span>
+              <span style="color: var(--text-muted);">${locationDisplay}</span>
+            </div>
+            ${expirationDisplay ? `
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span>⏳</span>
+              <span style="color: #d97706; font-weight: 600;">${expirationDisplay}</span>
+            </div>
+            ` : ''}
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span>📅</span>
+              <span style="color: var(--text-muted);">${timeAgo}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div style="padding: 1.5rem;">
+          <button class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1rem; font-weight: 700; border-radius: 10px;" onclick="event.stopPropagation(); openJobDetails('${job.id}');">
+            🔍 View Job Details
+          </button>
+        </div>
+      `;
 
       // Clicking the whole card opens details
       card.addEventListener("click", () => openJobDetails(job.id));
