@@ -19723,37 +19723,69 @@ meta.textContent =
         } else {
           // Event listeners for hustler view
           // Negotiate price checkbox - Make sure it works
-          const negotiateCheck = modalOverlay.querySelector('#negotiatePriceCheck');
-          const priceContainer = modalOverlay.querySelector('#proposedPriceContainer');
-          if (negotiateCheck && priceContainer) {
-            // Set initial state
-            priceContainer.style.display = negotiateCheck.checked ? 'block' : 'none';
-            
-            // Add event listener
-            negotiateCheck.addEventListener('change', (e) => {
-              const isChecked = e.target.checked;
-              priceContainer.style.display = isChecked ? 'block' : 'none';
-              if (isChecked) {
-                // Focus the input when shown
-                setTimeout(() => {
-                  const input = priceContainer.querySelector('#proposedPriceInput');
-                  if (input) {
-                    input.focus();
-                    // Set default value to job amount if empty
-                    if (!input.value) {
-                      input.value = job.payType === 'hourly' ? (job.hourlyRate || job.amount || '').toString() : (job.amount || '').toString();
+          // Use setTimeout to ensure DOM is fully rendered
+          setTimeout(() => {
+            const negotiateCheck = modalOverlay.querySelector('#negotiatePriceCheck');
+            const priceContainer = modalOverlay.querySelector('#proposedPriceContainer');
+            console.log('🔵 Looking for negotiate checkbox:', { negotiateCheck, priceContainer, modalHasContent: modalOverlay.innerHTML.includes('negotiatePriceCheck') });
+            if (negotiateCheck && priceContainer) {
+              // Set initial state
+              priceContainer.style.display = negotiateCheck.checked ? 'block' : 'none';
+              
+              // Add event listener
+              negotiateCheck.addEventListener('change', (e) => {
+                console.log('🔵 Negotiate checkbox changed:', e.target.checked);
+                const isChecked = e.target.checked;
+                priceContainer.style.display = isChecked ? 'block' : 'none';
+                if (isChecked) {
+                  // Focus the input when shown
+                  setTimeout(() => {
+                    const input = priceContainer.querySelector('#proposedPriceInput');
+                    if (input) {
+                      input.focus();
+                      // Set default value to job amount if empty
+                      if (!input.value) {
+                        input.value = job.payType === 'hourly' ? (job.hourlyRate || job.amount || '').toString() : (job.amount || '').toString();
+                      }
                     }
-                  }
-                }, 100);
-              } else {
-                // Clear input when unchecked
-                const input = priceContainer.querySelector('#proposedPriceInput');
-                if (input) input.value = '';
+                  }, 100);
+                } else {
+                  // Clear input when unchecked
+                  const input = priceContainer.querySelector('#proposedPriceInput');
+                  if (input) input.value = '';
+                }
+              });
+              
+              // Also add click listener to the label for better UX
+              const checkboxLabel = negotiateCheck.closest('label');
+              if (checkboxLabel) {
+                checkboxLabel.addEventListener('click', (e) => {
+                  // Let the default checkbox behavior handle the state change
+                  // This just ensures the change event fires
+                  setTimeout(() => {
+                    if (negotiateCheck.checked) {
+                      priceContainer.style.display = 'block';
+                      const input = priceContainer.querySelector('#proposedPriceInput');
+                      if (input && !input.value) {
+                        input.value = job.payType === 'hourly' ? (job.hourlyRate || job.amount || '').toString() : (job.amount || '').toString();
+                        input.focus();
+                      }
+                    } else {
+                      priceContainer.style.display = 'none';
+                      const input = priceContainer.querySelector('#proposedPriceInput');
+                      if (input) input.value = '';
+                    }
+                  }, 10);
+                });
               }
-            });
-          } else {
-            console.warn('Negotiate price checkbox or container not found:', { negotiateCheck, priceContainer });
-          }
+            } else {
+              console.warn('⚠️ Negotiate price checkbox or container not found:', { 
+                negotiateCheck: !!negotiateCheck, 
+                priceContainer: !!priceContainer,
+                modalContent: modalOverlay.innerHTML.substring(0, 500)
+              });
+            }
+          }, 100);
           
           // Apply to job
           modalOverlay.querySelector('.applyToJobBtn')?.addEventListener('click', async (e) => {
