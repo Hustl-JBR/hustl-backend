@@ -19328,20 +19328,20 @@ meta.textContent =
                       <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">${payType === 'hourly' ? 'Hourly Rate' : 'Flat Rate'}</div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 8px; border: 2px solid #10b981;">
-                      <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; flex: 1;" onclick="var cb = document.getElementById('negotiatePriceCheck'); if(cb) cb.click();">
-                        <input type="checkbox" id="negotiatePriceCheck" class="negotiate-price-checkbox" data-job-id="${job.id}" data-default-price="${job.payType === 'hourly' ? (job.hourlyRate || job.amount || '0') : (job.amount || '0')}" data-default-pay-type="${job.payType || 'flat'}" onchange="var c = document.getElementById('proposedPriceContainer'); if(c) { c.style.display = this.checked ? 'block' : 'none'; if(!this.checked) { var i = document.getElementById('proposedPriceInput'); var pt = document.querySelector('input[name=\"proposedPriceType\"]:checked'); if(i) i.value = ''; if(pt) pt.checked = false; var defaultType = this.getAttribute('data-default-pay-type') || 'flat'; var defaultRadio = document.querySelector('input[name=\"proposedPriceType\"][value=\"' + defaultType + '\"]'); if(defaultRadio) defaultRadio.checked = true; } else { setTimeout(function(){ var i = document.getElementById('proposedPriceInput'); if(i && !i.value) { var d = document.getElementById('negotiatePriceCheck').getAttribute('data-default-price'); if(d) i.value = d; i.focus(); } }, 100); } }" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+                      <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; flex: 1;">
+                        <input type="checkbox" id="negotiatePriceCheck" class="negotiate-price-checkbox" data-job-id="${job.id}" data-default-price="${job.payType === 'hourly' ? (job.hourlyRate || job.amount || '0') : (job.amount || '0')}" data-default-pay-type="${job.payType || 'flat'}" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
                         <span style="font-size: 0.95rem; font-weight: 600; color: var(--text-main);">💵 Suggest a different price</span>
                       </label>
                     </div>
                     <div id="proposedPriceContainer" style="display: none; margin-top: 1rem; padding: 1rem; background: #f9fafb; border-radius: 8px; border: 2px solid var(--border);">
                       <label style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">Price Type</label>
                       <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem;">
-                        <label style="flex: 1; display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${job.payType === 'hourly' ? '#dbeafe' : '#f3f4f6'}; border: 2px solid ${job.payType === 'hourly' ? '#3b82f6' : '#e5e7eb'}; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="if(this.querySelector('input').checked === false) { this.style.background='#f3f4f6'; this.style.borderColor='#d1d5db'; }" onmouseout="if(this.querySelector('input').checked === false) { this.style.background='${job.payType === 'hourly' ? '#dbeafe' : '#f3f4f6'}'; this.style.borderColor='${job.payType === 'hourly' ? '#3b82f6' : '#e5e7eb'}'; }">
-                          <input type="radio" name="proposedPriceType" value="hourly" ${job.payType === 'hourly' ? 'checked' : ''} onchange="this.parentElement.style.background='#dbeafe'; this.parentElement.style.borderColor='#3b82f6'; var flatLabel = this.parentElement.nextElementSibling; if(flatLabel) { flatLabel.style.background='#f3f4f6'; flatLabel.style.borderColor='#e5e7eb'; } var label = document.getElementById('proposedPriceTypeLabel'); if(label) label.textContent = '/hr';" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                        <label class="price-type-label-hourly" style="flex: 1; display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${job.payType === 'hourly' ? '#dbeafe' : '#f3f4f6'}; border: 2px solid ${job.payType === 'hourly' ? '#3b82f6' : '#e5e7eb'}; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                          <input type="radio" name="proposedPriceType" value="hourly" ${job.payType === 'hourly' ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
                           <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">Hourly</span>
                         </label>
-                        <label style="flex: 1; display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${job.payType === 'flat' ? '#dbeafe' : '#f3f4f6'}; border: 2px solid ${job.payType === 'flat' ? '#3b82f6' : '#e5e7eb'}; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="if(this.querySelector('input').checked === false) { this.style.background='#f3f4f6'; this.style.borderColor='#d1d5db'; }" onmouseout="if(this.querySelector('input').checked === false) { this.style.background='${job.payType === 'flat' ? '#dbeafe' : '#f3f4f6'}'; this.style.borderColor='${job.payType === 'flat' ? '#3b82f6' : '#e5e7eb'}'; }">
-                          <input type="radio" name="proposedPriceType" value="flat" ${job.payType === 'flat' ? 'checked' : ''} onchange="this.parentElement.style.background='#dbeafe'; this.parentElement.style.borderColor='#3b82f6'; var hourlyLabel = this.parentElement.previousElementSibling; if(hourlyLabel) { hourlyLabel.style.background='#f3f4f6'; hourlyLabel.style.borderColor='#e5e7eb'; } var label = document.getElementById('proposedPriceTypeLabel'); if(label) label.textContent = '';" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                        <label class="price-type-label-flat" style="flex: 1; display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${job.payType === 'flat' ? '#dbeafe' : '#f3f4f6'}; border: 2px solid ${job.payType === 'flat' ? '#3b82f6' : '#e5e7eb'}; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                          <input type="radio" name="proposedPriceType" value="flat" ${job.payType === 'flat' ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
                           <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">Flat Rate</span>
                         </label>
                       </div>
@@ -20019,48 +20019,51 @@ meta.textContent =
             const priceContainer = modalOverlay.querySelector('#proposedPriceContainer');
             const priceInput = modalOverlay.querySelector('#proposedPriceInput');
             
-            console.log('🔵 Looking for negotiate checkbox elements:', {
-              checkbox: !!negotiateCheck,
-              container: !!priceContainer,
-              input: !!priceInput,
-              modalHTML: modalOverlay.innerHTML.includes('negotiatePriceCheck')
-            });
-            
             if (negotiateCheck && priceContainer && priceInput) {
-              console.log('🔵 Found all elements, setting up backup event listener');
-              
               // Set initial state
               priceContainer.style.display = negotiateCheck.checked ? 'block' : 'none';
               
-              // Add change event listener as backup (inline onclick should handle it, but this is backup)
+              // Handle checkbox change
               negotiateCheck.addEventListener('change', function(e) {
-                console.log('🔵 Checkbox changed via event listener:', this.checked);
                 const isChecked = this.checked;
                 priceContainer.style.display = isChecked ? 'block' : 'none';
                 
                 if (isChecked) {
-                  // Set default value if empty
+                  // Set default price if empty
                   if (!priceInput.value) {
                     const defaultPrice = this.dataset.defaultPrice || 
                                       (job.payType === 'hourly' ? (job.hourlyRate || job.amount || '').toString() : (job.amount || '').toString());
                     priceInput.value = defaultPrice;
                   }
+                  // Ensure default price type is selected
+                  const defaultPayType = this.dataset.defaultPayType || job.payType || 'flat';
+                  const defaultRadio = modalOverlay.querySelector('input[name="proposedPriceType"][value="' + defaultPayType + '"]');
+                  if (defaultRadio) {
+                    defaultRadio.checked = true;
+                    // Update /hr label
+                    const typeLabel = modalOverlay.querySelector('#proposedPriceTypeLabel');
+                    if (typeLabel) {
+                      typeLabel.textContent = defaultPayType === 'hourly' ? '/hr' : '';
+                    }
+                  }
                   // Focus the input
                   setTimeout(() => {
                     priceInput.focus();
-                  }, 50);
+                  }, 100);
                 } else {
                   // Clear input when unchecked
                   priceInput.value = '';
+                  // Reset price type to default
+                  const defaultPayType = this.dataset.defaultPayType || job.payType || 'flat';
+                  const defaultRadio = modalOverlay.querySelector('input[name="proposedPriceType"][value="' + defaultPayType + '"]');
+                  if (defaultRadio) {
+                    defaultRadio.checked = true;
+                    const typeLabel = modalOverlay.querySelector('#proposedPriceTypeLabel');
+                    if (typeLabel) {
+                      typeLabel.textContent = defaultPayType === 'hourly' ? '/hr' : '';
+                    }
+                  }
                 }
-              });
-            } else {
-              console.error('❌ Could not find negotiate price elements:', {
-                checkbox: !!negotiateCheck,
-                container: !!priceContainer,
-                input: !!priceInput,
-                modalHasCheckbox: modalOverlay.innerHTML.includes('negotiatePriceCheck'),
-                modalHasContainer: modalOverlay.innerHTML.includes('proposedPriceContainer')
               });
             }
           }, 100);
@@ -20104,15 +20107,44 @@ meta.textContent =
             // showToast is handled inside applyToJob function
           });
           
-          // Update "/hr" label when price type changes
-          modalOverlay.querySelectorAll('input[name="proposedPriceType"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-              const label = document.getElementById('proposedPriceTypeLabel');
-              if (label) {
-                label.textContent = e.target.value === 'hourly' ? '/hr' : '';
+          // Update "/hr" label and radio button styling when price type changes
+          setTimeout(() => {
+            const hourlyRadio = modalOverlay.querySelector('input[name="proposedPriceType"][value="hourly"]');
+            const flatRadio = modalOverlay.querySelector('input[name="proposedPriceType"][value="flat"]');
+            const hourlyLabel = hourlyRadio?.parentElement;
+            const flatLabel = flatRadio?.parentElement;
+            const typeLabel = modalOverlay.querySelector('#proposedPriceTypeLabel');
+            
+            if (hourlyRadio && flatRadio) {
+              const updateRadioStyling = (selectedValue) => {
+                if (typeLabel) {
+                  typeLabel.textContent = selectedValue === 'hourly' ? '/hr' : '';
+                }
+                if (hourlyLabel && flatLabel) {
+                  if (selectedValue === 'hourly') {
+                    hourlyLabel.style.background = '#dbeafe';
+                    hourlyLabel.style.borderColor = '#3b82f6';
+                    flatLabel.style.background = '#f3f4f6';
+                    flatLabel.style.borderColor = '#e5e7eb';
+                  } else {
+                    flatLabel.style.background = '#dbeafe';
+                    flatLabel.style.borderColor = '#3b82f6';
+                    hourlyLabel.style.background = '#f3f4f6';
+                    hourlyLabel.style.borderColor = '#e5e7eb';
+                  }
+                }
+              };
+              
+              hourlyRadio.addEventListener('change', () => updateRadioStyling('hourly'));
+              flatRadio.addEventListener('change', () => updateRadioStyling('flat'));
+              
+              // Set initial styling
+              const checkedRadio = modalOverlay.querySelector('input[name="proposedPriceType"]:checked');
+              if (checkedRadio) {
+                updateRadioStyling(checkedRadio.value);
               }
-            });
-          });
+            }
+          }, 100);
           
           // Cancel application (for negotiation view)
           modalOverlay.querySelectorAll('.cancelApplicationBtn').forEach(btn => {
