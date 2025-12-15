@@ -691,25 +691,24 @@
       position: relative;
     }
     
-    /* Job markers on map - pin style */
+    /* Job markers on map - circle style */
     .job-marker {
-      width: 40px;
-      height: 40px;
-      font-size: 32px;
+      width: 32px;
+      height: 32px;
+      background: #3b82f6;
+      border: 3px solid white;
+      border-radius: 50%;
       cursor: pointer;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       transition: transform 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transform-origin: bottom center;
+      position: relative;
       user-select: none;
       pointer-events: auto;
     }
     
     .job-marker:hover {
-      transform: scale(1.2) translateY(-5px);
-      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+      transform: scale(1.15);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
     }
 
     /* Mobile responsive for hamburger */
@@ -7399,14 +7398,26 @@ function renderJobsOnMap(jobs) {
     const reqLat = requirements.pickup_lat || requirements.pickupLat;
     const reqLng = requirements.pickup_lng || requirements.pickupLng;
     if (reqLat && reqLng) {
-      job.lat = parseFloat(reqLat);
-      job.lng = parseFloat(reqLng);
-      return true;
+      // Ensure coordinates are numbers and valid
+      const lat = parseFloat(reqLat);
+      const lng = parseFloat(reqLng);
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        job.lat = lat;
+        job.lng = lng;
+        return true;
+      }
     }
     
     // Fallback to job-level coordinates if requirements don't have them
     if (job.lat && job.lng) {
-      return true;
+      // Validate coordinates
+      const lat = parseFloat(job.lat);
+      const lng = parseFloat(job.lng);
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        job.lat = lat;
+        job.lng = lng;
+        return true;
+      }
     }
     
     return false;
@@ -7484,30 +7495,28 @@ function renderJobsOnMap(jobs) {
       </button>
     `;
     
-    // Create marker element - styled as a pin
+    // Create marker element - circle style
     const el = document.createElement('div');
     el.className = 'job-marker';
-    el.innerHTML = '📍'; // Pin emoji
     el.style.cssText = `
-      width: 40px;
-      height: 40px;
-      font-size: 32px;
+      width: 32px;
+      height: 32px;
+      background: #3b82f6;
+      border: 3px solid white;
+      border-radius: 50%;
       cursor: pointer;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       transition: transform 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transform-origin: bottom center;
+      position: relative;
     `;
     el.title = job.title || 'Job';
     
     // Hover effect
     el.addEventListener('mouseenter', () => {
-      el.style.transform = 'scale(1.2) translateY(-5px)';
+      el.style.transform = 'scale(1.15)';
     });
     el.addEventListener('mouseleave', () => {
-      el.style.transform = 'scale(1) translateY(0)';
+      el.style.transform = 'scale(1)';
     });
     
     // Make marker clickable to open job details
@@ -7519,15 +7528,14 @@ function renderJobsOnMap(jobs) {
       }
     });
     
-    // Create marker with offset to position pin point at coordinates
-    // The pin emoji's point should be at the actual location
+    // Create marker - anchor to center so it stays stationary
     const marker = new mapboxgl.Marker({
       element: el,
-      anchor: 'bottom' // Anchor the bottom of the pin (the point) to the coordinates
+      anchor: 'center' // Center anchor keeps marker stationary at coordinates
     })
-      .setLngLat([job.lng, job.lat])
+      .setLngLat([parseFloat(job.lng), parseFloat(job.lat)]) // Ensure coordinates are numbers
       .setPopup(new mapboxgl.Popup({ 
-        offset: 25,
+        offset: 15,
         anchor: 'bottom'
       }).setDOMContent(popupContent))
       .addTo(jobsMap);
