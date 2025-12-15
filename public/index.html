@@ -767,6 +767,40 @@
       
       /* If there's a fixed bottom nav, ensure it doesn't overlap content */
       /* This assumes bottom nav exists - if it's injected by JS, the padding above will handle it */
+      
+      /* Mobile: Reduce font sizes globally */
+      h1 { font-size: 1.4rem !important; }
+      h2 { font-size: 1.2rem !important; }
+      h3 { font-size: 1.1rem !important; }
+      
+      /* Mobile: More compact spacing */
+      .card {
+        padding: 1rem !important;
+        margin-bottom: 0.75rem !important;
+      }
+      
+      .field {
+        margin-bottom: 0.75rem !important;
+      }
+      
+      /* Mobile: Optimize buttons */
+      .btn {
+        padding: 0.7rem 1rem !important;
+        font-size: 0.85rem !important;
+        min-height: 44px; /* Touch target */
+      }
+      
+      /* Mobile: Compact labels */
+      .field label {
+        font-size: 0.85rem !important;
+        margin-bottom: 0.4rem !important;
+      }
+      
+      /* Mobile: Section titles */
+      .section-title {
+        font-size: 0.95rem !important;
+        margin-bottom: 0.5rem !important;
+      }
     }
 
     /* Floating animation */
@@ -855,32 +889,55 @@
       appearance: checkbox;
     }
     
-    /* Mobile: Larger, more touch-friendly checkboxes with minimal spacing */
+    /* Mobile: Touch-friendly checkboxes with optimized sizing */
     @media (max-width: 768px) {
       .checkbox-field {
         gap: 0.5rem;
-        padding: 0;
-        margin-bottom: 0.75rem;
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
         align-items: center;
+        min-height: 44px; /* iOS touch target minimum */
       }
       
       .checkbox-field input[type="checkbox"] {
-        width: 24px;
-        height: 24px;
-        min-width: 24px;
-        min-height: 24px;
+        width: 22px;
+        height: 22px;
+        min-width: 22px;
+        min-height: 22px;
         margin: 0;
         padding: 0;
         cursor: pointer;
         touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
+        flex-shrink: 0;
       }
       
       .checkbox-field label {
-        font-size: 0.9rem;
-        line-height: 1.5;
+        font-size: 0.85rem;
+        line-height: 1.4;
         padding: 0;
         margin: 0;
+        flex: 1;
+      }
+      
+      /* All checkboxes in forms - ensure they're touch-friendly */
+      input[type="checkbox"] {
+        width: 22px !important;
+        height: 22px !important;
+        min-width: 22px !important;
+        min-height: 22px !important;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      /* Labels with checkboxes - better spacing */
+      label:has(input[type="checkbox"]) {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        min-height: 44px;
+        cursor: pointer;
       }
     }
 
@@ -2426,7 +2483,7 @@
     
     /* ========== COMPREHENSIVE MOBILE RESPONSIVE FIXES ========== */
     
-    /* Phone (up to 480px) */
+    /* Phone (up to 480px) - Comprehensive Mobile Optimizations */
     @media (max-width: 480px) {
       main {
         padding: 0 0.75rem 0.75rem 0.75rem !important;
@@ -2435,25 +2492,44 @@
       
       .card {
         padding: 1rem !important;
-        margin-bottom: 1rem !important;
+        margin-bottom: 0.75rem !important;
       }
       
       .card-title {
-        font-size: 1.1rem !important;
+        font-size: 1rem !important;
+        margin-bottom: 0.5rem !important;
+      }
+      
+      .muted, .card-subtitle {
+        font-size: 0.8rem !important;
+        margin-bottom: 0.5rem !important;
       }
       
       .btn {
-        padding: 0.75rem 1rem !important;
-        font-size: 0.9rem !important;
+        padding: 0.7rem 1rem !important;
+        font-size: 0.85rem !important;
+        min-height: 44px; /* Touch target */
       }
       
       .field {
-        margin-bottom: 1rem !important;
+        margin-bottom: 0.75rem !important;
+      }
+      
+      .field label {
+        font-size: 0.85rem !important;
+        margin-bottom: 0.4rem !important;
       }
       
       input, textarea, select {
         font-size: 16px !important; /* Prevents zoom on iOS */
-        padding: 0.75rem !important;
+        padding: 0.7rem !important;
+        min-height: 44px; /* Touch target */
+      }
+      
+      /* Section titles - smaller on mobile */
+      .section-title {
+        font-size: 0.95rem !important;
+        margin-bottom: 0.5rem !important;
       }
       
       .profile-hero-card {
@@ -2464,11 +2540,11 @@
       .profile-hero-avatar {
         width: 48px !important;
         height: 48px !important;
-        font-size: 1.2rem !important;
+        font-size: 1.1rem !important;
       }
       
       .profile-hero-name {
-        font-size: 1.2rem !important;
+        font-size: 1.1rem !important;
       }
       
       .profile-quick-stats {
@@ -2478,17 +2554,19 @@
       
       .quick-stat-card {
         padding: 0.6rem !important;
+        font-size: 0.8rem !important;
       }
       
       .profile-tabs {
         gap: 0.25rem !important;
-        margin-bottom: 0.75rem !important;
+        margin-bottom: 0.5rem !important;
         padding-bottom: 0.35rem !important;
       }
       
       .profile-tab {
         padding: 0.5rem 0.75rem !important;
-        font-size: 0.85rem !important;
+        font-size: 0.8rem !important;
+        min-height: 44px; /* Touch target */
       }
       
       /* Remove excessive white space */
@@ -2499,6 +2577,23 @@
       
       #view-profile > *:first-child {
         margin-top: 0 !important;
+      }
+      
+      /* Job cards - more compact */
+      .job-card, [class*="job-card"] {
+        padding: 0.75rem !important;
+        margin-bottom: 0.75rem !important;
+      }
+      
+      /* Headers - smaller */
+      h1 { font-size: 1.3rem !important; }
+      h2 { font-size: 1.1rem !important; }
+      h3 { font-size: 1rem !important; }
+      
+      /* Text content - more compact */
+      p, div[style*="font-size"] {
+        font-size: 0.85rem !important;
+        line-height: 1.4 !important;
       }
     }
     
@@ -3428,7 +3523,7 @@
             <div class="card-title">Post a job</div>
           </div>
           <div class="muted" style="margin-bottom:0.5rem;">
-            Post your job and hustlers will see it in the Jobs list.
+            Post your job and hustlers will see it.
           </div>
 
           <div class="field">
@@ -3681,7 +3776,7 @@
 
           <!-- Workers Needed -->
           <div class="field">
-            <label for="workersNeeded">👥 How many workers needed?</label>
+            <label for="workersNeeded">👥 Workers needed</label>
             <select id="workersNeeded">
               <option value="1">1 person</option>
               <option value="2">2 people</option>
@@ -3704,12 +3799,12 @@
 
           <!-- Pickup Location -->
           <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
-            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem; font-size: 0.95rem;">📍 Pickup Location (Required)</div>
+            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem; font-size: 0.9rem;">📍 Pickup (Required)</div>
             
             <div class="field" style="margin-bottom: 0.75rem;">
               <label for="pickupAddress">Street Address *</label>
               <input id="pickupAddress" type="text" placeholder="Start typing address..." autocomplete="off" required />
-              <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">✔ Autocomplete fills ALL fields below automatically.</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">✔ Autocomplete fills fields</div>
               <div id="pickupAddressSuggestions" style="display: none; position: absolute; z-index: 1000; background: white; border: 1px solid #ddd; border-radius: 8px; max-height: 300px; overflow-y: auto; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
               <input type="hidden" id="pickupLat" />
               <input type="hidden" id="pickupLng" />
@@ -3736,25 +3831,25 @@
             </div>
 
             <div class="field" style="margin-top: 0.75rem;">
-              <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer;">
-                <input type="checkbox" id="hidePickupAddressUntilAssigned" style="margin-top: 0.25rem; cursor: pointer;" />
-                <div style="font-size: 0.9rem; color: var(--text-main);">
-                  <strong>Hide full address until hustler is assigned</strong>
+              <label class="checkbox-field" style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; padding: 0.5rem; min-height: 44px;">
+                <input type="checkbox" id="hidePickupAddressUntilAssigned" style="margin-top: 0.25rem; cursor: pointer; width: 22px; height: 22px; min-width: 22px; min-height: 22px; flex-shrink: 0;" />
+                <div style="font-size: 0.85rem; color: var(--text-main); line-height: 1.4;">
+                  <strong>Hide address until assigned</strong>
                 </div>
               </label>
             </div>
           </div>
 
           <div class="field" style="margin-bottom: 1.5rem;">
-            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-              <input type="checkbox" id="jobOnSiteOnly" style="width: 20px; height: 20px; min-width: 20px; min-height: 20px; margin: 0; padding: 0; accent-color: var(--primary); cursor: pointer; flex-shrink: 0;" />
-              This job happens only at the pickup location (no separate dropoff).
+            <label class="checkbox-field" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; min-height: 44px;">
+              <input type="checkbox" id="jobOnSiteOnly" style="width: 22px; height: 22px; min-width: 22px; min-height: 22px; margin: 0; padding: 0; accent-color: var(--primary); cursor: pointer; flex-shrink: 0;" />
+              <span style="font-size: 0.85rem; line-height: 1.4;">Single location only (no dropoff)</span>
             </label>
           </div>
 
           <!-- Dropoff Location -->
           <div id="dropoffFields" style="padding: 1rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
-            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem; font-size: 0.95rem;">📦 Dropoff Location (Only if the job type needs it)</div>
+            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem; font-size: 0.9rem;">📦 Dropoff (If needed)</div>
             
             <div class="field" style="margin-bottom: 0.75rem;">
               <label for="dropoffAddress">Street Address *</label>
@@ -3785,10 +3880,10 @@
             </div>
 
             <div class="field" style="margin-top: 0.75rem;">
-              <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer;">
-                <input type="checkbox" id="hideDropoffAddressUntilAssigned" style="margin-top: 0.25rem; cursor: pointer;" />
-                <div style="font-size: 0.9rem; color: var(--text-main);">
-                  <strong>Hide full address until hustler is assigned</strong>
+              <label class="checkbox-field" style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; padding: 0.5rem; min-height: 44px;">
+                <input type="checkbox" id="hideDropoffAddressUntilAssigned" style="margin-top: 0.25rem; cursor: pointer; width: 22px; height: 22px; min-width: 22px; min-height: 22px; flex-shrink: 0;" />
+                <div style="font-size: 0.85rem; color: var(--text-main); line-height: 1.4;">
+                  <strong>Hide address until assigned</strong>
                 </div>
               </label>
             </div>
@@ -3798,7 +3893,7 @@
           
           <!-- Pricing Option -->
           <div class="field">
-            <label for="pricingOption">How do you want to set the price?</label>
+            <label for="pricingOption">Set price</label>
             <select id="pricingOption">
               <option value="set_price">I want to set a price</option>
               <option value="hustlers_quote">Let hustlers give their own price</option>
@@ -3849,7 +3944,7 @@
           <!-- Note when hustlers quote -->
           <div id="hustlersQuoteNote" style="display: none; padding: 0.75rem; background: #fef3c7; border-radius: 8px; border-left: 3px solid #f59e0b; margin-top: 0.5rem;">
             <p style="margin: 0; font-size: 0.85rem; color: #92400e;">
-              💡 Hustlers will propose their own prices when applying. You can accept, decline, or negotiate.
+              💡 Hustlers propose prices. You can accept, decline, or negotiate.
             </p>
           </div>
 
@@ -20005,14 +20100,14 @@ meta.textContent =
                       <span>Setting Active: Job will stay open until you accept a hustler</span>
                     </div>
                     ` : ''}
-                    <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
-                      <input type="checkbox" id="keepOpenUntilAccepted" ${isKeepOpenEnabled ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
-                      <span style="font-size: 0.95rem; color: var(--text-main); font-weight: 600;">✓ Keep active until hustler assigned</span>
+                    <label class="checkbox-field" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; min-height: 44px;">
+                      <input type="checkbox" id="keepOpenUntilAccepted" ${isKeepOpenEnabled ? 'checked' : ''} style="width: 22px; height: 22px; min-width: 22px; min-height: 22px; accent-color: var(--primary); cursor: pointer; flex-shrink: 0;">
+                      <span style="font-size: 0.85rem; color: var(--text-main); font-weight: 600; line-height: 1.4;">Keep active until assigned</span>
                     </label>
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; margin-left: 2rem;">
-                      ${isKeepOpenEnabled ? '✅ Active - Job will automatically close once you assign a hustler' : 'Job will automatically close once you assign a hustler'}
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; margin-left: 0;">
+                      ${isKeepOpenEnabled ? '✅ Active - Auto-closes when assigned' : 'Auto-closes when assigned'}
                     </div>
-                    <button class="btn btn-primary saveKeepOpenSettingBtn" data-job-id="${job.id}" style="margin-top: 0.75rem; padding: 0.5rem 1rem; font-size: 0.9rem; font-weight: 600;">💾 Save Setting</button>
+                    <button class="btn btn-primary saveKeepOpenSettingBtn" data-job-id="${job.id}" style="margin-top: 0.5rem; padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 600; min-height: 44px;">💾 Save</button>
                   </div>
                   `;
                   })()}
