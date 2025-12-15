@@ -15531,7 +15531,7 @@ async function openUserProfile(userId) {
   
   card.appendChild(jobsCount);
 
-  // 4. Last 5 Reviews (with ratings)
+  // 4. Last 5 Reviews (with ratings) - Load from API
   const reviewsWrap = document.createElement("div");
   reviewsWrap.className = "field";
   reviewsWrap.style.cssText = "padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);";
@@ -15541,52 +15541,143 @@ async function openUserProfile(userId) {
   reviewLabel.textContent = "Reviews";
   reviewsWrap.appendChild(reviewLabel);
 
-  const reviews = user.reviews || [];
-  if (reviews.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "muted";
-    empty.style.cssText = "margin-top: 0.5rem;";
-    empty.textContent = "No reviews yet.";
-    reviewsWrap.appendChild(empty);
-  } else {
-    // Show last 5 reviews
-    const last5Reviews = reviews.slice(-5).reverse(); // Most recent first
-    last5Reviews.forEach((r) => {
-      const rCard = document.createElement("div");
-      rCard.style.cssText = "margin-top: 0.75rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px;";
-
-      const top = document.createElement("div");
-      top.style.cssText = "display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;";
-      
-      // Rating stars
-      if (r.rating) {
-        const stars = document.createElement("div");
-        stars.style.cssText = "color: #fbbf24; font-size: 1rem;";
-        stars.textContent = "★".repeat(r.rating) + "☆".repeat(5 - r.rating);
-        top.appendChild(stars);
-      }
-      
-      // Reviewer name
-      const reviewerName = document.createElement("div");
-      reviewerName.style.cssText = "font-weight: 600; color: var(--text-main); font-size: 0.9rem;";
-      reviewerName.textContent = r.fromName || "Someone on Hustl";
-      top.appendChild(reviewerName);
-      
-      rCard.appendChild(top);
-
-      // Review text
-      if (r.text) {
-        const body = document.createElement("div");
-        body.style.cssText = "color: var(--text-main); line-height: 1.5; font-size: 0.9rem;";
-        body.textContent = r.text;
-        rCard.appendChild(body);
-      }
-
-      reviewsWrap.appendChild(rCard);
-    });
-  }
-
+  // Loading state
+  const reviewsLoading = document.createElement("div");
+  reviewsLoading.style.cssText = "margin-top: 0.5rem; color: var(--text-muted); font-size: 0.9rem;";
+  reviewsLoading.textContent = "Loading reviews...";
+  reviewsWrap.appendChild(reviewsLoading);
+  
   card.appendChild(reviewsWrap);
+
+  // Load reviews from API
+  (async () => {
+    try {
+      const reviewsResult = await window.loadUserReviews(userId, 5, 0);
+      const reviews = reviewsResult.reviews || [];
+      
+      // Remove loading state
+      reviewsLoading.remove();
+      
+      if (reviews.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "muted";
+        empty.style.cssText = "margin-top: 0.5rem;";
+        empty.textContent = "No reviews yet.";
+        reviewsWrap.appendChild(empty);
+      } else {
+        // Show last 5 reviews (most recent first)
+        reviews.forEach((r) => {
+          const rCard = document.createElement("div");
+          rCard.style.cssText = "margin-top: 0.75rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px;";
+
+          const top = document.createElement("div");
+          top.style.cssText = "display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;";
+          
+          // Rating stars (API uses 'stars' field)
+          const rating = r.stars || r.rating || 5;
+          if (rating) {
+            const stars = document.createElement("div");
+            stars.style.cssText = "color: #fbbf24; font-size: 1rem;";
+            stars.textContent = "★".repeat(rating) + "☆".repeat(5 - rating);
+            top.appendChild(stars);
+          }
+          
+          // Reviewer name (API uses reviewer.name or fromName)
+          const reviewerName = document.createElement("div");
+          reviewerName.style.cssText = "font-weight: 600; color: var(--text-main); font-size: 0.9rem;";
+          reviewerName.textContent = r.reviewer?.name || r.fromName || "Someone on Hustl";
+          top.appendChild(reviewerName);
+          
+          rCard.appendChild(top);
+
+          // Review text (API uses 'text' field)
+          if (r.text) {
+            const body = document.createElement("div");
+            body.style.cssText = "color: var(--text-main); line-height: 1.5; font-size: 0.9rem;";
+            body.textContent = r.text;
+            rCard.appendChild(body);
+          }
+
+          reviewsWrap.appendChild(rCard);
+        });
+        
+        // Add "Load More" button if there are more reviews
+        if (reviewsResult.hasMore && reviewsResult.total > 5) {
+          const loadMoreBtn = document.createElement("button");
+          loadMoreBtn.className = "btn btn-ghost";
+          loadMoreBtn.style.cssText = "width: 100%; padding: 0.75rem; margin-top: 1rem;";
+          loadMoreBtn.textContent = `Load More Reviews (${reviewsResult.total - reviews.length} remaining)`;
+          
+          let currentOffset = reviews.length;
+          let allLoadedReviews = [...reviews];
+          
+          loadMoreBtn.addEventListener('click', async () => {
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.textContent = 'Loading...';
+            
+            const result = await window.loadUserReviews(userId, 5, currentOffset);
+            const newReviews = result.reviews || [];
+            
+            if (newReviews.length > 0) {
+              newReviews.forEach((r) => {
+                const rCard = document.createElement("div");
+                rCard.style.cssText = "margin-top: 0.75rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px;";
+
+                const top = document.createElement("div");
+                top.style.cssText = "display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;";
+                
+                const rating = r.stars || r.rating || 5;
+                if (rating) {
+                  const stars = document.createElement("div");
+                  stars.style.cssText = "color: #fbbf24; font-size: 1rem;";
+                  stars.textContent = "★".repeat(rating) + "☆".repeat(5 - rating);
+                  top.appendChild(stars);
+                }
+                
+                const reviewerName = document.createElement("div");
+                reviewerName.style.cssText = "font-weight: 600; color: var(--text-main); font-size: 0.9rem;";
+                reviewerName.textContent = r.reviewer?.name || r.fromName || "Someone on Hustl";
+                top.appendChild(reviewerName);
+                
+                rCard.appendChild(top);
+
+                if (r.text) {
+                  const body = document.createElement("div");
+                  body.style.cssText = "color: var(--text-main); line-height: 1.5; font-size: 0.9rem;";
+                  body.textContent = r.text;
+                  rCard.appendChild(body);
+                }
+
+                loadMoreBtn.parentNode.insertBefore(rCard, loadMoreBtn);
+              });
+              
+              allLoadedReviews = [...allLoadedReviews, ...newReviews];
+              currentOffset = allLoadedReviews.length;
+              
+              if (result.hasMore && currentOffset < reviewsResult.total) {
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.textContent = `Load More Reviews (${reviewsResult.total - currentOffset} remaining)`;
+              } else {
+                loadMoreBtn.remove();
+              }
+            } else {
+              loadMoreBtn.remove();
+            }
+          });
+          
+          reviewsWrap.appendChild(loadMoreBtn);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading reviews:", error);
+      reviewsLoading.remove();
+      const errorMsg = document.createElement("div");
+      errorMsg.className = "muted";
+      errorMsg.style.cssText = "margin-top: 0.5rem; color: var(--danger);";
+      errorMsg.textContent = "Error loading reviews.";
+      reviewsWrap.appendChild(errorMsg);
+    }
+  })();
 
   // 5. Bio / About this person
   const bioWrap = document.createElement("div");
