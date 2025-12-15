@@ -691,20 +691,25 @@
       position: relative;
     }
     
-    /* Job markers on map */
+    /* Job markers on map - pin style */
     .job-marker {
-      width: 32px;
-      height: 32px;
-      background: #3b82f6;
-      border: 3px solid white;
-      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 32px;
       cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
       transition: transform 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-origin: bottom center;
+      user-select: none;
+      pointer-events: auto;
     }
     
     .job-marker:hover {
-      transform: scale(1.1);
+      transform: scale(1.2) translateY(-5px);
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
     }
 
     /* Mobile responsive for hamburger */
@@ -7389,17 +7394,18 @@ function renderJobsOnMap(jobs) {
       return false;
     }
     
-    // Use exact coordinates if available
-    if (job.lat && job.lng) {
-      return true;
-    }
-    
-    // Fallback to requirements coordinates
+    // Priority: Use pickup address coordinates (street-level, not exact house)
+    // These are geocoded from the street address and are more appropriate for map display
     const reqLat = requirements.pickup_lat || requirements.pickupLat;
     const reqLng = requirements.pickup_lng || requirements.pickupLng;
     if (reqLat && reqLng) {
       job.lat = parseFloat(reqLat);
       job.lng = parseFloat(reqLng);
+      return true;
+    }
+    
+    // Fallback to job-level coordinates if requirements don't have them
+    if (job.lat && job.lng) {
       return true;
     }
     
@@ -7478,11 +7484,31 @@ function renderJobsOnMap(jobs) {
       </button>
     `;
     
-    // Create marker element
+    // Create marker element - styled as a pin
     const el = document.createElement('div');
     el.className = 'job-marker';
-    el.style.cssText = 'width: 32px; height: 32px; background: #3b82f6; border: 3px solid white; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3); transition: transform 0.2s;';
+    el.innerHTML = '📍'; // Pin emoji
+    el.style.cssText = `
+      width: 40px;
+      height: 40px;
+      font-size: 32px;
+      cursor: pointer;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+      transition: transform 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-origin: bottom center;
+    `;
     el.title = job.title || 'Job';
+    
+    // Hover effect
+    el.addEventListener('mouseenter', () => {
+      el.style.transform = 'scale(1.2) translateY(-5px)';
+    });
+    el.addEventListener('mouseleave', () => {
+      el.style.transform = 'scale(1) translateY(0)';
+    });
     
     // Make marker clickable to open job details
     el.addEventListener('click', (e) => {
@@ -7493,10 +7519,17 @@ function renderJobsOnMap(jobs) {
       }
     });
     
-    // Create marker
-    const marker = new mapboxgl.Marker(el)
+    // Create marker with offset to position pin point at coordinates
+    // The pin emoji's point should be at the actual location
+    const marker = new mapboxgl.Marker({
+      element: el,
+      anchor: 'bottom' // Anchor the bottom of the pin (the point) to the coordinates
+    })
       .setLngLat([job.lng, job.lat])
-      .setPopup(new mapboxgl.Popup({ offset: 25 }).setDOMContent(popupContent))
+      .setPopup(new mapboxgl.Popup({ 
+        offset: 25,
+        anchor: 'bottom'
+      }).setDOMContent(popupContent))
       .addTo(jobsMap);
     
     mapMarkers.push(marker);
