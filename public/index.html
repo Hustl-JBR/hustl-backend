@@ -9744,8 +9744,10 @@ async function renderJobs(reset = false) {
             
             // Click to open full map view
             mapContainer.addEventListener('click', () => {
-              // Store job ID for navigation
+              // Store job ID and coordinates for navigation
               const targetJobId = job.id;
+              const targetLat = parseFloat(lat);
+              const targetLng = parseFloat(lng);
               
               // Close the popup first - find the modal by ID
               const jobDetailModal = document.getElementById('jobDetailModal');
@@ -9758,54 +9760,63 @@ async function renderJobs(reset = false) {
               if (typeof toggleJobsView === 'function') {
                 toggleJobsView('map');
                 
-                // Wait for map to be ready, then navigate to job location and open marker popup
-                setTimeout(() => {
-                  const navigateToJobMarker = () => {
-                    if (!jobsMap || !jobsMap.loaded()) return;
-                    
-                    // Fly to the job location
-                    jobsMap.flyTo({
-                      center: [parseFloat(lng), parseFloat(lat)],
-                      zoom: 15,
-                      duration: 1000
-                    });
-                    
-                    // After fly animation, find and open the marker popup
-                    setTimeout(() => {
-                      // Find the marker for this job
-                      const marker = mapMarkers.find(m => {
-                        const markerLngLat = m.getLngLat();
-                        const markerLng = markerLngLat.lng;
-                        const markerLat = markerLngLat.lat;
-                        // Check if coordinates match (with small tolerance)
-                        return Math.abs(markerLng - parseFloat(lng)) < 0.0001 && 
-                               Math.abs(markerLat - parseFloat(lat)) < 0.0001;
-                      });
-                      
-                      if (marker) {
-                        // Open the marker's popup
-                        if (!marker.getPopup().isOpen()) {
-                          marker.togglePopup();
-                        }
-                      }
-                    }, 1100); // Wait for flyTo animation to complete
-                    
-                    // Scroll to map
-                    const mapContainerEl = document.getElementById('jobsMapContainer');
-                    if (mapContainerEl) {
-                      mapContainerEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                  };
-                  
-                  if (jobsMap && jobsMap.loaded()) {
-                    navigateToJobMarker();
-                  } else {
-                    // If map not ready, wait for it to load
+                // Wait for map to be ready and jobs to be rendered, then navigate
+                const navigateToJobMarker = () => {
+                  if (!jobsMap || !jobsMap.loaded()) {
+                    // If map not ready, wait for it
                     if (jobsMap) {
                       jobsMap.once('load', navigateToJobMarker);
                     }
+                    return;
                   }
-                }, 300);
+                  
+                  // Ensure jobs are rendered on map - trigger render if needed
+                  if (mapMarkers.length === 0 && allLoadedJobs && allLoadedJobs.length > 0) {
+                    console.log('No markers found, rendering jobs on map...');
+                    renderJobsOnMap(allLoadedJobs);
+                    // Wait a bit for markers to be created
+                    setTimeout(navigateToJobMarker, 500);
+                    return;
+                  }
+                  
+                  // Fly to the job location
+                  jobsMap.flyTo({
+                    center: [targetLng, targetLat],
+                    zoom: 15,
+                    duration: 1000
+                  });
+                  
+                  // After fly animation, find and open the marker popup
+                  setTimeout(() => {
+                    // Find the marker for this job by coordinates
+                    const marker = mapMarkers.find(m => {
+                      const markerLngLat = m.getLngLat();
+                      const markerLng = markerLngLat.lng;
+                      const markerLat = markerLngLat.lat;
+                      // Check if coordinates match (with small tolerance)
+                      return Math.abs(markerLng - targetLng) < 0.0001 && 
+                             Math.abs(markerLat - targetLat) < 0.0001;
+                    });
+                    
+                    if (marker) {
+                      // Open the marker's popup
+                      if (!marker.getPopup().isOpen()) {
+                        marker.togglePopup();
+                      }
+                    } else {
+                      console.log('Marker not found for job, coordinates:', targetLng, targetLat);
+                    }
+                  }, 1100); // Wait for flyTo animation to complete
+                  
+                  // Scroll to map
+                  const mapContainerEl = document.getElementById('jobsMapContainer');
+                  if (mapContainerEl) {
+                    mapContainerEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                };
+                
+                // Wait a bit for view to switch and map to initialize
+                setTimeout(navigateToJobMarker, 500);
               }
             });
           } catch (mapError) {
@@ -20709,8 +20720,8 @@ meta.textContent =
               // Click to open full map view
               preview.addEventListener('click', () => {
                 // Store coordinates for navigation
-                const targetLat = lat;
-                const targetLng = lng;
+                const targetLat = parseFloat(lat);
+                const targetLng = parseFloat(lng);
                 
                 // Close modal first
                 closeModal();
@@ -20719,54 +20730,63 @@ meta.textContent =
                 if (typeof toggleJobsView === 'function') {
                   toggleJobsView('map');
                   
-                  // Wait for map to be ready, then navigate to job location and open marker popup
-                  setTimeout(() => {
-                    const navigateToJobMarker = () => {
-                      if (!jobsMap || !jobsMap.loaded()) return;
-                      
-                      // Fly to the job location
-                      jobsMap.flyTo({
-                        center: [targetLng, targetLat],
-                        zoom: 15,
-                        duration: 1000
-                      });
-                      
-                      // After fly animation, find and open the marker popup
-                      setTimeout(() => {
-                        // Find the marker for this job by coordinates
-                        const marker = mapMarkers.find(m => {
-                          const markerLngLat = m.getLngLat();
-                          const markerLng = markerLngLat.lng;
-                          const markerLat = markerLngLat.lat;
-                          // Check if coordinates match (with small tolerance)
-                          return Math.abs(markerLng - targetLng) < 0.0001 && 
-                                 Math.abs(markerLat - targetLat) < 0.0001;
-                        });
-                        
-                        if (marker) {
-                          // Open the marker's popup
-                          if (!marker.getPopup().isOpen()) {
-                            marker.togglePopup();
-                          }
-                        }
-                      }, 1100); // Wait for flyTo animation to complete
-                      
-                      // Scroll to map
-                      const mapContainer = document.getElementById('jobsMapContainer');
-                      if (mapContainer) {
-                        mapContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }
-                    };
-                    
-                    if (jobsMap && jobsMap.loaded()) {
-                      navigateToJobMarker();
-                    } else {
-                      // If map not ready, wait for it to load
+                  // Wait for map to be ready and jobs to be rendered, then navigate
+                  const navigateToJobMarker = () => {
+                    if (!jobsMap || !jobsMap.loaded()) {
+                      // If map not ready, wait for it
                       if (jobsMap) {
                         jobsMap.once('load', navigateToJobMarker);
                       }
+                      return;
                     }
-                  }, 300);
+                    
+                    // Ensure jobs are rendered on map - trigger render if needed
+                    if (mapMarkers.length === 0 && allLoadedJobs && allLoadedJobs.length > 0) {
+                      console.log('No markers found, rendering jobs on map...');
+                      renderJobsOnMap(allLoadedJobs);
+                      // Wait a bit for markers to be created
+                      setTimeout(navigateToJobMarker, 500);
+                      return;
+                    }
+                    
+                    // Fly to the job location
+                    jobsMap.flyTo({
+                      center: [targetLng, targetLat],
+                      zoom: 15,
+                      duration: 1000
+                    });
+                    
+                    // After fly animation, find and open the marker popup
+                    setTimeout(() => {
+                      // Find the marker for this job by coordinates
+                      const marker = mapMarkers.find(m => {
+                        const markerLngLat = m.getLngLat();
+                        const markerLng = markerLngLat.lng;
+                        const markerLat = markerLngLat.lat;
+                        // Check if coordinates match (with small tolerance)
+                        return Math.abs(markerLng - targetLng) < 0.0001 && 
+                               Math.abs(markerLat - targetLat) < 0.0001;
+                      });
+                      
+                      if (marker) {
+                        // Open the marker's popup
+                        if (!marker.getPopup().isOpen()) {
+                          marker.togglePopup();
+                        }
+                      } else {
+                        console.log('Marker not found for job, coordinates:', targetLng, targetLat);
+                      }
+                    }, 1100); // Wait for flyTo animation to complete
+                    
+                    // Scroll to map
+                    const mapContainer = document.getElementById('jobsMapContainer');
+                    if (mapContainer) {
+                      mapContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                  };
+                  
+                  // Wait a bit for view to switch and map to initialize
+                  setTimeout(navigateToJobMarker, 500);
                 }
               });
             } catch (error) {
