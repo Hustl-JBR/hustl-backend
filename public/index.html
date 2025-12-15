@@ -19101,7 +19101,7 @@ meta.textContent =
                       <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 2px solid var(--border);">
                         <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Most recent offer:</div>
                         <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.25rem;">
-                          $${hustlerAcceptedCounter ? current.toFixed(2) : original.toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}
+                          $${hustlerAcceptedCounter ? currentProposed.toFixed(2) : (currentProposed || jobAmount).toFixed(2)} ${payType === 'hourly' ? '/hr' : 'flat'}
                         </div>
                         <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">Sent by you</div>
                         ${hustlerAcceptedCounter ? `
