@@ -19053,12 +19053,12 @@ meta.textContent =
                       <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">${payType === 'hourly' ? 'Hourly Rate' : 'Flat Rate'}</div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 8px; border: 2px solid #10b981;">
-                      <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; flex: 1;">
-                        <input type="checkbox" id="negotiatePriceCheck" class="negotiate-price-checkbox" data-job-id="${job.id}" data-default-price="${job.payType === 'hourly' ? (job.hourlyRate || job.amount || '0') : (job.amount || '0')}" onclick="var container = document.getElementById('proposedPriceContainer'); var input = document.getElementById('proposedPriceInput'); if(container){ container.style.display = this.checked ? 'block' : 'none'; if(this.checked && input){ var defaultVal = this.getAttribute('data-default-price') || ''; if(!input.value && defaultVal) input.value = defaultVal; setTimeout(function(){ input.focus(); }, 50); } else if(!this.checked && input){ input.value = ''; } }" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+                      <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; flex: 1;" onclick="var cb = document.getElementById('negotiatePriceCheck'); if(cb) cb.click();">
+                        <input type="checkbox" id="negotiatePriceCheck" class="negotiate-price-checkbox" data-job-id="${job.id}" data-default-price="${job.payType === 'hourly' ? (job.hourlyRate || job.amount || '0') : (job.amount || '0')}" onchange="var c = document.getElementById('proposedPriceContainer'); var i = document.getElementById('proposedPriceInput'); if(c) c.style.display = this.checked ? 'block' : 'none'; if(this.checked && i) { var d = this.getAttribute('data-default-price'); if(d && !i.value) i.value = d; setTimeout(function(){ i.focus(); }, 100); } else if(!this.checked && i) i.value = '';" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
                         <span style="font-size: 0.95rem; font-weight: 600; color: var(--text-main);">💵 Suggest a different ${payType === 'hourly' ? 'hourly' : 'flat'} rate</span>
                       </label>
                     </div>
-                    <div id="proposedPriceContainer" style="display: none; margin-top: 1rem;">
+                    <div id="proposedPriceContainer" style="display: none !important; margin-top: 1rem;">
                       <label style="display: block; font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.75rem;">💰 Your Proposed ${payType === 'hourly' ? 'Hourly' : 'Flat'} Rate</label>
                       <div style="position: relative;">
                         <span style="position: absolute; left: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 2rem; font-weight: 700; color: var(--primary); z-index: 1;">$</span>
