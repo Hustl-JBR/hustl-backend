@@ -1571,8 +1571,14 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
     const job = await prisma.job.findUnique({
       where: { id: req.params.id },
       include: {
-        offers: true,
+        offers: {
+          include: {
+            hustler: { select: { id: true, email: true, name: true } }
+          }
+        },
         payment: true,
+        customer: { select: { id: true, email: true, name: true } },
+        hustler: { select: { id: true, email: true, name: true } }
       },
     });
 
@@ -1592,10 +1598,45 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
       });
     }
 
+    // Store info for email before deleting
+    const jobTitle = job.title;
+    const hustlerEmail = job.hustler?.email;
+    const hustlerName = job.hustler?.name;
+    const customerEmail = job.customer?.email;
+    const customerName = job.customer?.name;
+
     // Delete the job (cascade will handle offers, threads, etc.)
     await prisma.job.delete({
       where: { id: req.params.id },
     });
+
+    // Send notification emails (non-blocking)
+    try {
+      const emailService = require('../services/email');
+      
+      // Notify hustler if they were assigned
+      if (hustlerEmail && hustlerName) {
+        if (emailService.sendJobDeletedEmail) {
+          await emailService.sendJobDeletedEmail(
+            hustlerEmail,
+            hustlerName,
+            jobTitle,
+            customerName || 'Customer'
+          );
+        }
+      }
+      
+      // Notify customer (confirmation)
+      if (customerEmail && customerName && emailService.sendJobDeletedConfirmationEmail) {
+        await emailService.sendJobDeletedConfirmationEmail(
+          customerEmail,
+          customerName,
+          jobTitle
+        );
+      }
+    } catch (emailError) {
+      console.error('Error sending delete notification emails (non-fatal):', emailError);
+    }
 
     res.json({ message: 'Job deleted successfully' });
   } catch (error) {
@@ -1660,15 +1701,35 @@ router.post('/:id/unassign', authenticate, requireRole('CUSTOMER'), async (req, 
     // Send notification email to hustler (non-blocking)
     if (job.hustler) {
       try {
-        const { sendJobUnacceptedEmail } = require('../services/email');
-        await sendJobUnacceptedEmail(
-          job.hustler.email,
-          job.hustler.name,
-          job.title,
-          job.id
-        );
+        const emailService = require('../services/email');
+        if (emailService.sendJobUnacceptedEmail) {
+          await emailService.sendJobUnacceptedEmail(
+            job.hustler.email,
+            job.hustler.name,
+            job.title,
+            job.id,
+            job.customer?.name || 'Customer'
+          );
+        }
       } catch (emailError) {
         console.error('Error sending unaccept email:', emailError);
+      }
+    }
+    
+    // Send notification email to customer (confirmation)
+    if (job.customer) {
+      try {
+        const emailService = require('../services/email');
+        if (emailService.sendHustlerUnassignedConfirmationEmail) {
+          await emailService.sendHustlerUnassignedConfirmationEmail(
+            job.customer.email,
+            job.customer.name,
+            job.title,
+            job.hustler?.name || 'Hustler'
+          );
+        }
+      } catch (emailError) {
+        console.error('Error sending unassign confirmation email:', emailError);
       }
     }
 
@@ -1753,6 +1814,21 @@ router.post('/:id/leave', authenticate, requireRole('HUSTLER'), async (req, res)
       } catch (emailError) {
         console.error('Error sending cancellation email (non-fatal):', emailError);
       }
+    }
+    
+    // Send notification email to hustler (confirmation)
+    try {
+      const emailService = require('../services/email');
+      if (emailService.sendHustlerLeftConfirmationEmail) {
+        await emailService.sendHustlerLeftConfirmationEmail(
+          req.user.email,
+          req.user.name,
+          job.title,
+          job.customer?.name || 'Customer'
+        );
+      }
+    } catch (emailError) {
+      console.error('Error sending leave confirmation email:', emailError);
     }
 
     res.json({

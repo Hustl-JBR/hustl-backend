@@ -657,6 +657,231 @@ async function sendJobExpiringEmail(email, name, jobTitle, jobId) {
   }
 }
 
+async function sendJobUnacceptedEmail(email, name, jobTitle, jobId, customerName) {
+  if (!isEmailConfigured()) return;
+  try {
+    const jobUrl = `${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'https://hustljobs.com'}/jobs/${jobId}`;
+    
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `Job Unassigned: "${jobTitle}"`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <h1 style="color: #dc2626; font-size: 1.75rem; margin-bottom: 1rem;">Job Unassigned</h1>
+          <p style="font-size: 1.1rem; color: #1f2937; margin-bottom: 1.5rem;">Hi <strong>${name}</strong>,</p>
+          
+          <div style="background: #fef2f2; border: 2px solid #fca5a5; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
+            <p style="font-size: 1.05rem; color: #991b1b; margin: 0 0 0.5rem 0; font-weight: 600;">
+              The customer has unassigned you from this job:
+            </p>
+            <h2 style="color: #dc2626; font-size: 1.5rem; margin: 0.5rem 0;">
+              ${jobTitle}
+            </h2>
+            ${customerName ? `<p style="color: #991b1b; margin: 0.5rem 0 0 0;">by ${customerName}</p>` : ''}
+          </div>
+          
+          <p style="color: #374151; line-height: 1.6; margin: 1.5rem 0;">
+            The job is now open for other applicants. Don't worry - there are plenty of other opportunities available!
+          </p>
+          
+          <div style="margin: 2rem 0; text-align: center;">
+            <a href="${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'https://hustljobs.com'}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+              Browse More Jobs →
+            </a>
+          </div>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error('Send job unaccepted email error:', error);
+  }
+}
+
+async function sendHustlerCancelledEmail(email, name, jobTitle, hustlerName, jobId) {
+  if (!isEmailConfigured()) return;
+  try {
+    const jobUrl = `${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'https://hustljobs.com'}/jobs/${jobId}`;
+    
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `Hustler Left: "${jobTitle}"`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <h1 style="color: #dc2626; font-size: 1.75rem; margin-bottom: 1rem;">Hustler Left Job</h1>
+          <p style="font-size: 1.1rem; color: #1f2937; margin-bottom: 1.5rem;">Hi <strong>${name}</strong>,</p>
+          
+          <div style="background: #fef2f2; border: 2px solid #fca5a5; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
+            <p style="font-size: 1.05rem; color: #991b1b; margin: 0 0 0.5rem 0; font-weight: 600;">
+              The hustler has left this job:
+            </p>
+            <h2 style="color: #dc2626; font-size: 1.5rem; margin: 0.5rem 0;">
+              ${jobTitle}
+            </h2>
+            <p style="color: #991b1b; margin: 0.5rem 0 0 0;">Hustler: ${hustlerName}</p>
+          </div>
+          
+          <p style="color: #374151; line-height: 1.6; margin: 1.5rem 0;">
+            The job is now open for other applicants. You can review new applications or repost the job.
+          </p>
+          
+          <div style="margin: 2rem 0; text-align: center;">
+            <a href="${jobUrl}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+              View Job Details →
+            </a>
+          </div>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error('Send hustler cancelled email error:', error);
+  }
+}
+
+async function sendJobDeletedEmail(email, name, jobTitle, customerName) {
+  if (!isEmailConfigured()) return;
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `Job Deleted: "${jobTitle}"`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <h1 style="color: #dc2626; font-size: 1.75rem; margin-bottom: 1rem;">Job Deleted</h1>
+          <p style="font-size: 1.1rem; color: #1f2937; margin-bottom: 1.5rem;">Hi <strong>${name}</strong>,</p>
+          
+          <div style="background: #fef2f2; border: 2px solid #fca5a5; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
+            <p style="font-size: 1.05rem; color: #991b1b; margin: 0 0 0.5rem 0; font-weight: 600;">
+              The customer has deleted this job:
+            </p>
+            <h2 style="color: #dc2626; font-size: 1.5rem; margin: 0.5rem 0;">
+              ${jobTitle}
+            </h2>
+            ${customerName ? `<p style="color: #991b1b; margin: 0.5rem 0 0 0;">by ${customerName}</p>` : ''}
+          </div>
+          
+          <p style="color: #374151; line-height: 1.6; margin: 1.5rem 0;">
+            This job is no longer available. Don't worry - there are plenty of other opportunities available!
+          </p>
+          
+          <div style="margin: 2rem 0; text-align: center;">
+            <a href="${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'https://hustljobs.com'}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+              Browse More Jobs →
+            </a>
+          </div>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error('Send job deleted email error:', error);
+  }
+}
+
+async function sendJobDeletedConfirmationEmail(email, name, jobTitle) {
+  if (!isEmailConfigured()) return;
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `Job Deleted: "${jobTitle}"`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <h1 style="color: #059669; font-size: 1.75rem; margin-bottom: 1rem;">✅ Job Deleted</h1>
+          <p style="font-size: 1.1rem; color: #1f2937; margin-bottom: 1.5rem;">Hi <strong>${name}</strong>,</p>
+          
+          <div style="background: #f0fdf4; border: 2px solid #10b981; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
+            <p style="font-size: 1.05rem; color: #065f46; margin: 0 0 0.5rem 0; font-weight: 600;">
+              Your job has been successfully deleted:
+            </p>
+            <h2 style="color: #047857; font-size: 1.5rem; margin: 0.5rem 0;">
+              ${jobTitle}
+            </h2>
+          </div>
+          
+          <p style="color: #374151; line-height: 1.6; margin: 1.5rem 0;">
+            The job and all associated data have been removed from the system.
+          </p>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error('Send job deleted confirmation email error:', error);
+  }
+}
+
+async function sendHustlerUnassignedConfirmationEmail(email, name, jobTitle, hustlerName) {
+  if (!isEmailConfigured()) return;
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `Hustler Unassigned: "${jobTitle}"`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <h1 style="color: #059669; font-size: 1.75rem; margin-bottom: 1rem;">✅ Hustler Unassigned</h1>
+          <p style="font-size: 1.1rem; color: #1f2937; margin-bottom: 1.5rem;">Hi <strong>${name}</strong>,</p>
+          
+          <div style="background: #f0fdf4; border: 2px solid #10b981; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
+            <p style="font-size: 1.05rem; color: #065f46; margin: 0 0 0.5rem 0; font-weight: 600;">
+              You have successfully unassigned the hustler from:
+            </p>
+            <h2 style="color: #047857; font-size: 1.5rem; margin: 0.5rem 0;">
+              ${jobTitle}
+            </h2>
+            <p style="color: #065f46; margin: 0.5rem 0 0 0;">Hustler: ${hustlerName}</p>
+          </div>
+          
+          <p style="color: #374151; line-height: 1.6; margin: 1.5rem 0;">
+            The job is now open for other applicants. You can review new applications or accept a different hustler.
+          </p>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error('Send hustler unassigned confirmation email error:', error);
+  }
+}
+
+async function sendHustlerLeftConfirmationEmail(email, name, jobTitle, customerName) {
+  if (!isEmailConfigured()) return;
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `You Left: "${jobTitle}"`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <h1 style="color: #059669; font-size: 1.75rem; margin-bottom: 1rem;">✅ You Left Job</h1>
+          <p style="font-size: 1.1rem; color: #1f2937; margin-bottom: 1.5rem;">Hi <strong>${name}</strong>,</p>
+          
+          <div style="background: #f0fdf4; border: 2px solid #10b981; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
+            <p style="font-size: 1.05rem; color: #065f46; margin: 0 0 0.5rem 0; font-weight: 600;">
+              You have successfully left this job:
+            </p>
+            <h2 style="color: #047857; font-size: 1.5rem; margin: 0.5rem 0;">
+              ${jobTitle}
+            </h2>
+            ${customerName ? `<p style="color: #065f46; margin: 0.5rem 0 0 0;">Customer: ${customerName}</p>` : ''}
+          </div>
+          
+          <p style="color: #374151; line-height: 1.6; margin: 1.5rem 0;">
+            The job is now open for other applicants. You can browse and apply to other jobs.
+          </p>
+          
+          <div style="margin: 2rem 0; text-align: center;">
+            <a href="${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'https://hustljobs.com'}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+              Browse More Jobs →
+            </a>
+          </div>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error('Send hustler left confirmation email error:', error);
+  }
+}
+
 module.exports = {
   sendSignupEmail,
   sendEmailVerificationEmail,
@@ -676,6 +901,12 @@ module.exports = {
   sendFeedbackEmail,
   sendNewMessageEmail,
   sendJobExpiringEmail,
+  sendJobUnacceptedEmail,
+  sendHustlerCancelledEmail,
+  sendJobDeletedEmail,
+  sendJobDeletedConfirmationEmail,
+  sendHustlerUnassignedConfirmationEmail,
+  sendHustlerLeftConfirmationEmail,
 };
 
 async function sendJobPostedEmail(email, name, jobTitle, jobId, jobDate, amount, payType, hourlyRate, estHours) {
