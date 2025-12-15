@@ -961,47 +961,188 @@ router.post('/:id/accept-negotiation', authenticate, requireRole('HUSTLER'), asy
       });
     }
 
-    // Hustler accepted customer's counter-offer
-    // Mark this in job requirements so customer can see it and confirm
+    // CRITICAL: Check if job was already accepted by another hustler
+    if ((offer.job.status === 'SCHEDULED' || offer.job.status === 'ASSIGNED' || offer.job.status === 'IN_PROGRESS') && 
+        offer.job.hustlerId && 
+        offer.job.hustlerId !== offer.hustlerId) {
+      return res.status(400).json({ 
+        error: 'This job has already been accepted by another hustler. The customer accepted a different applicant.',
+        jobStatus: offer.job.status,
+        acceptedHustlerId: offer.job.hustlerId
+      });
+    }
+
+    // Check if job is still available (not already accepted/in progress)
+    if (offer.job.status !== 'OPEN' && offer.job.status !== 'REQUESTED') {
+      if (offer.job.hustlerId && offer.job.hustlerId !== offer.hustlerId) {
+        return res.status(400).json({ 
+          error: 'This job has already been accepted by another hustler. The customer accepted a different applicant.',
+          jobStatus: offer.job.status
+        });
+      }
+      return res.status(400).json({ 
+        error: 'Job is no longer available for acceptance',
+        jobStatus: offer.job.status 
+      });
+    }
+
+    // Check if customer has actually countered (proposedAmount should exist)
+    if (!offer.proposedAmount) {
+      return res.status(400).json({ 
+        error: 'No counter-offer found. Customer must suggest a price first.' 
+      });
+    }
+
+    // CHECK ACTIVE JOBS LIMIT - Hustlers can only have 2 active jobs at once
+    const activeJobsCount = await prisma.job.count({
+      where: {
+        hustlerId: offer.hustlerId,
+        status: 'IN_PROGRESS'
+      }
+    });
+    
+    const MAX_ACTIVE_JOBS = 2;
+    if (activeJobsCount >= MAX_ACTIVE_JOBS) {
+      return res.status(400).json({ 
+        error: `You already have ${MAX_ACTIVE_JOBS} active jobs. Complete one to take another.`,
+        maxActiveJobs: MAX_ACTIVE_JOBS,
+        currentActiveJobs: activeJobsCount
+      });
+    }
+
+    // Update offer status to ACCEPTED
+    await prisma.offer.update({
+      where: { id: req.params.id },
+      data: { status: 'ACCEPTED' },
+    });
+
+    // Decline other offers for this job
+    await prisma.offer.updateMany({
+      where: {
+        jobId: offer.job.id,
+        id: { not: req.params.id },
+        status: 'PENDING',
+      },
+      data: { status: 'DECLINED' },
+    });
+
+    // Generate 6-digit verification codes
+    const generateCode = () => String(Math.floor(100000 + Math.random() * 900000));
+    const startCode = generateCode();
+    const completionCode = generateCode();
+    
+    // Set expiration: 78 hours from now
+    const startCodeExpiresAt = new Date();
+    startCodeExpiresAt.setHours(startCodeExpiresAt.getHours() + 78);
+
+    // Update job with hustler and move to SCHEDULED (active, ready to start)
     const jobRequirements = offer.job.requirements || {};
+    const shouldAutoClose = jobRequirements.keepOpenUntilAccepted === true;
+
     const updatedJob = await prisma.job.update({
       where: { id: offer.job.id },
       data: {
+        status: 'SCHEDULED', // Job is now active and scheduled - hustler accepted customer's counter-offer
+        hustlerId: offer.hustlerId,
+        startCode,
+        startCodeExpiresAt,
+        completionCode,
+        // Update job amount to the negotiated price
+        amount: offer.proposedAmount,
         requirements: {
           ...jobRequirements,
           negotiationAccepted: {
             offerId: offer.id,
             acceptedAt: new Date().toISOString(),
             acceptedAmount: offer.proposedAmount?.toString(),
-          }
-        }
-      }
+          },
+          ...(shouldAutoClose ? {
+            keepOpenUntilAccepted: false,
+          } : {}),
+        },
+      },
     });
-    
-    // Send notification email to customer (non-blocking)
+
+    // Create or update payment record (use negotiated amount)
+    const jobAmount = parseFloat(offer.proposedAmount);
+    const tipPercent = Math.min(parseFloat(offer.job.tipPercent || 0), 25);
+    const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50);
+    const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10);
+    const total = jobAmount + tipAmount + customerFee;
+
+    let existingPayment = await prisma.payment.findUnique({
+      where: { jobId: offer.job.id },
+    });
+
+    if (existingPayment) {
+      await prisma.payment.update({
+        where: { id: existingPayment.id },
+        data: {
+          hustlerId: offer.hustlerId,
+          amount: jobAmount,
+          tip: tipAmount,
+          feeCustomer: customerFee,
+          total,
+        },
+      });
+    } else {
+      await prisma.payment.create({
+        data: {
+          jobId: offer.job.id,
+          customerId: offer.job.customerId,
+          hustlerId: offer.hustlerId,
+          amount: jobAmount,
+          tip: tipAmount,
+          feeCustomer: customerFee,
+          feeHustler: 0,
+          total,
+          status: 'PREAUTHORIZED',
+        },
+      });
+    }
+
+    // Create thread for messaging
+    try {
+      await prisma.thread.upsert({
+        where: { jobId: offer.job.id },
+        update: {},
+        create: {
+          jobId: offer.job.id,
+          userAId: offer.job.customerId,
+          userBId: offer.hustlerId,
+        },
+      });
+    } catch (error) {
+      console.error(`[THREAD] Error creating thread for job ${offer.job.id}:`, error);
+    }
+
+    // Send notification email to customer that hustler accepted their price
     try {
       const emailService = require('../services/email');
-      if (emailService.sendPriceNegotiationEmail) {
-        await emailService.sendPriceNegotiationEmail(
+      if (emailService.sendJobAssignedEmail) {
+        await emailService.sendJobAssignedEmail(
           offer.job.customer.email,
           offer.job.customer.name,
-          offer.job.title,
-          offer.job.id,
-          offer.hustler.name,
-          offer.proposedAmount,
-          true // isAccepted = true
+          updatedJob.title,
+          updatedJob.id,
+          offer.hustler.name
         );
       }
     } catch (emailError) {
-      console.error('Error sending negotiation acceptance email:', emailError);
-      // Don't fail the request if email fails
+      console.error('Error sending job assigned email:', emailError);
     }
 
     res.json({
       success: true,
-      message: 'You accepted the customer\'s counter-offer. The customer can now officially accept the job.',
-      offer: offer,
+      message: 'You accepted the customer\'s price. The job is now active and you can start working!',
       job: updatedJob,
+      offer: {
+        ...offer,
+        status: 'ACCEPTED',
+      },
+      startCode,
+      completionCode,
+      startCodeExpiresAt,
     });
   } catch (error) {
     console.error('Hustler accept negotiation error:', error);
