@@ -9744,6 +9744,9 @@ async function renderJobs(reset = false) {
             
             // Click to open full map view
             mapContainer.addEventListener('click', () => {
+              // Store job ID for navigation
+              const targetJobId = job.id;
+              
               // Close the popup first - find the modal by ID
               const jobDetailModal = document.getElementById('jobDetailModal');
               if (jobDetailModal && jobDetailModal.parentNode) {
@@ -9755,9 +9758,11 @@ async function renderJobs(reset = false) {
               if (typeof toggleJobsView === 'function') {
                 toggleJobsView('map');
                 
-                // Wait for map to be ready, then navigate to job location
+                // Wait for map to be ready, then navigate to job location and open marker popup
                 setTimeout(() => {
-                  if (jobsMap && jobsMap.loaded()) {
+                  const navigateToJobMarker = () => {
+                    if (!jobsMap || !jobsMap.loaded()) return;
+                    
                     // Fly to the job location
                     jobsMap.flyTo({
                       center: [parseFloat(lng), parseFloat(lat)],
@@ -9765,26 +9770,39 @@ async function renderJobs(reset = false) {
                       duration: 1000
                     });
                     
+                    // After fly animation, find and open the marker popup
+                    setTimeout(() => {
+                      // Find the marker for this job
+                      const marker = mapMarkers.find(m => {
+                        const markerLngLat = m.getLngLat();
+                        const markerLng = markerLngLat.lng;
+                        const markerLat = markerLngLat.lat;
+                        // Check if coordinates match (with small tolerance)
+                        return Math.abs(markerLng - parseFloat(lng)) < 0.0001 && 
+                               Math.abs(markerLat - parseFloat(lat)) < 0.0001;
+                      });
+                      
+                      if (marker) {
+                        // Open the marker's popup
+                        if (!marker.getPopup().isOpen()) {
+                          marker.togglePopup();
+                        }
+                      }
+                    }, 1100); // Wait for flyTo animation to complete
+                    
                     // Scroll to map
                     const mapContainerEl = document.getElementById('jobsMapContainer');
                     if (mapContainerEl) {
                       mapContainerEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
+                  };
+                  
+                  if (jobsMap && jobsMap.loaded()) {
+                    navigateToJobMarker();
                   } else {
-                    // If map not ready, wait a bit more
+                    // If map not ready, wait for it to load
                     if (jobsMap) {
-                      jobsMap.once('load', () => {
-                        jobsMap.flyTo({
-                          center: [parseFloat(lng), parseFloat(lat)],
-                          zoom: 15,
-                          duration: 1000
-                        });
-                        
-                        const mapContainerEl = document.getElementById('jobsMapContainer');
-                        if (mapContainerEl) {
-                          mapContainerEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }
-                      });
+                      jobsMap.once('load', navigateToJobMarker);
                     }
                   }
                 }, 300);
@@ -20669,6 +20687,10 @@ meta.textContent =
               
               // Click to open full map view
               preview.addEventListener('click', () => {
+                // Store coordinates for navigation
+                const targetLat = lat;
+                const targetLng = lng;
+                
                 // Close modal first
                 closeModal();
                 
@@ -20676,36 +20698,51 @@ meta.textContent =
                 if (typeof toggleJobsView === 'function') {
                   toggleJobsView('map');
                   
-                  // Wait for map to be ready, then navigate to job location
+                  // Wait for map to be ready, then navigate to job location and open marker popup
                   setTimeout(() => {
-                    if (jobsMap && jobsMap.loaded()) {
+                    const navigateToJobMarker = () => {
+                      if (!jobsMap || !jobsMap.loaded()) return;
+                      
                       // Fly to the job location
                       jobsMap.flyTo({
-                        center: [lng, lat],
+                        center: [targetLng, targetLat],
                         zoom: 15,
                         duration: 1000
                       });
+                      
+                      // After fly animation, find and open the marker popup
+                      setTimeout(() => {
+                        // Find the marker for this job by coordinates
+                        const marker = mapMarkers.find(m => {
+                          const markerLngLat = m.getLngLat();
+                          const markerLng = markerLngLat.lng;
+                          const markerLat = markerLngLat.lat;
+                          // Check if coordinates match (with small tolerance)
+                          return Math.abs(markerLng - targetLng) < 0.0001 && 
+                                 Math.abs(markerLat - targetLat) < 0.0001;
+                        });
+                        
+                        if (marker) {
+                          // Open the marker's popup
+                          if (!marker.getPopup().isOpen()) {
+                            marker.togglePopup();
+                          }
+                        }
+                      }, 1100); // Wait for flyTo animation to complete
                       
                       // Scroll to map
                       const mapContainer = document.getElementById('jobsMapContainer');
                       if (mapContainer) {
                         mapContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
                       }
+                    };
+                    
+                    if (jobsMap && jobsMap.loaded()) {
+                      navigateToJobMarker();
                     } else {
-                      // If map not ready, wait a bit more
+                      // If map not ready, wait for it to load
                       if (jobsMap) {
-                        jobsMap.once('load', () => {
-                          jobsMap.flyTo({
-                            center: [lng, lat],
-                            zoom: 15,
-                            duration: 1000
-                          });
-                          
-                          const mapContainer = document.getElementById('jobsMapContainer');
-                          if (mapContainer) {
-                            mapContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                          }
-                        });
+                        jobsMap.once('load', navigateToJobMarker);
                       }
                     }
                   }, 300);
