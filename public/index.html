@@ -19054,7 +19054,7 @@ meta.textContent =
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 8px; border: 2px solid #10b981;">
                       <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; flex: 1;">
-                        <input type="checkbox" id="negotiatePriceCheck" class="negotiate-price-checkbox" data-job-id="${job.id}" data-default-price="${job.payType === 'hourly' ? (job.hourlyRate || job.amount || '0') : (job.amount || '0')}" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+                        <input type="checkbox" id="negotiatePriceCheck" class="negotiate-price-checkbox" data-job-id="${job.id}" data-default-price="${job.payType === 'hourly' ? (job.hourlyRate || job.amount || '0') : (job.amount || '0')}" onclick="var container = document.getElementById('proposedPriceContainer'); var input = document.getElementById('proposedPriceInput'); if(container){ container.style.display = this.checked ? 'block' : 'none'; if(this.checked && input){ var defaultVal = this.getAttribute('data-default-price') || ''; if(!input.value && defaultVal) input.value = defaultVal; setTimeout(function(){ input.focus(); }, 50); } else if(!this.checked && input){ input.value = ''; } }" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
                         <span style="font-size: 0.95rem; font-weight: 600; color: var(--text-main);">💵 Suggest a different ${payType === 'hourly' ? 'hourly' : 'flat'} rate</span>
                       </label>
                     </div>
@@ -19727,21 +19727,28 @@ meta.textContent =
           });
         } else {
           // Event listeners for hustler view
-          // Negotiate price checkbox - Simple direct event listener like showApplyJobModal
+          // Negotiate price checkbox - Use both inline onclick (for immediate response) and event listener (as backup)
           setTimeout(() => {
             const negotiateCheck = modalOverlay.querySelector('#negotiatePriceCheck');
             const priceContainer = modalOverlay.querySelector('#proposedPriceContainer');
             const priceInput = modalOverlay.querySelector('#proposedPriceInput');
             
+            console.log('🔵 Looking for negotiate checkbox elements:', {
+              checkbox: !!negotiateCheck,
+              container: !!priceContainer,
+              input: !!priceInput,
+              modalHTML: modalOverlay.innerHTML.includes('negotiatePriceCheck')
+            });
+            
             if (negotiateCheck && priceContainer && priceInput) {
-              console.log('🔵 Setting up negotiate price checkbox handler');
+              console.log('🔵 Found all elements, setting up backup event listener');
               
               // Set initial state
               priceContainer.style.display = negotiateCheck.checked ? 'block' : 'none';
               
-              // Add change event listener - simple and direct
+              // Add change event listener as backup (inline onclick should handle it, but this is backup)
               negotiateCheck.addEventListener('change', function(e) {
-                console.log('🔵 Checkbox changed:', this.checked);
+                console.log('🔵 Checkbox changed via event listener:', this.checked);
                 const isChecked = this.checked;
                 priceContainer.style.display = isChecked ? 'block' : 'none';
                 
@@ -19761,34 +19768,16 @@ meta.textContent =
                   priceInput.value = '';
                 }
               });
-              
-              // Also handle label clicks
-              const checkboxLabel = negotiateCheck.closest('label');
-              if (checkboxLabel) {
-                checkboxLabel.addEventListener('click', function(e) {
-                  // Let checkbox handle the state, then update display
-                  setTimeout(() => {
-                    const isChecked = negotiateCheck.checked;
-                    priceContainer.style.display = isChecked ? 'block' : 'none';
-                    if (isChecked && !priceInput.value) {
-                      const defaultPrice = negotiateCheck.dataset.defaultPrice || 
-                                        (job.payType === 'hourly' ? (job.hourlyRate || job.amount || '').toString() : (job.amount || '').toString());
-                      priceInput.value = defaultPrice;
-                      setTimeout(() => priceInput.focus(), 50);
-                    } else if (!isChecked) {
-                      priceInput.value = '';
-                    }
-                  }, 10);
-                });
-              }
             } else {
-              console.warn('⚠️ Could not find negotiate price elements:', {
+              console.error('❌ Could not find negotiate price elements:', {
                 checkbox: !!negotiateCheck,
                 container: !!priceContainer,
-                input: !!priceInput
+                input: !!priceInput,
+                modalHasCheckbox: modalOverlay.innerHTML.includes('negotiatePriceCheck'),
+                modalHasContainer: modalOverlay.innerHTML.includes('proposedPriceContainer')
               });
             }
-          }, 200);
+          }, 100);
           
           // Apply to job
           modalOverlay.querySelector('.applyToJobBtn')?.addEventListener('click', async (e) => {
