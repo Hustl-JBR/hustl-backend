@@ -9672,6 +9672,9 @@ async function renderJobs(reset = false) {
       locationTitle.textContent = "📍 Location";
       locationSection.appendChild(locationTitle);
       
+      // Get requirements for location formatting
+      const requirements = job.requirements || {};
+      
       // Use formatPublicLocation for consistent display
       const locationDisplay = formatPublicLocation(job, requirements, false);
       const locationText = document.createElement("div");
