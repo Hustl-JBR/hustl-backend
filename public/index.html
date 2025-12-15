@@ -4985,11 +4985,23 @@ heart of Hustl.
         
         // Initialize jobs view toggle when jobs view is shown
         if (view === 'jobs') {
+          // Use multiple attempts to ensure buttons are in DOM
           setTimeout(() => {
             initJobsViewToggle();
             // Ensure correct view is shown
             toggleJobsView(currentJobsView);
           }, 100);
+          
+          // Also try after a longer delay in case DOM isn't ready
+          setTimeout(() => {
+            const listBtn = document.getElementById('jobsViewListBtn');
+            const mapBtn = document.getElementById('jobsViewMapBtn');
+            if (listBtn && mapBtn && !listBtn.hasAttribute('data-listener-added')) {
+              initJobsViewToggle();
+              listBtn.setAttribute('data-listener-added', 'true');
+              mapBtn.setAttribute('data-listener-added', 'true');
+            }
+          }, 500);
         }
       }
       
@@ -7524,24 +7536,64 @@ function toggleJobsView(view) {
 }
 
 // Initialize view toggle buttons
+let toggleInitialized = false;
 function initJobsViewToggle() {
   const listBtn = document.getElementById('jobsViewListBtn');
   const mapBtn = document.getElementById('jobsViewMapBtn');
   
-  if (listBtn) {
-    listBtn.addEventListener('click', () => toggleJobsView('list'));
+  if (!listBtn || !mapBtn) {
+    console.warn('Toggle buttons not found, retrying...');
+    if (!toggleInitialized) {
+      setTimeout(initJobsViewToggle, 200);
+    }
+    return;
   }
   
-  if (mapBtn) {
-    mapBtn.addEventListener('click', () => toggleJobsView('map'));
+  // Only initialize once
+  if (toggleInitialized && listBtn.hasAttribute('data-initialized')) {
+    return;
   }
+  
+  // Add event listeners directly
+  listBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('List button clicked');
+    toggleJobsView('list');
+  });
+  
+  mapBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Map button clicked');
+    toggleJobsView('map');
+  });
+  
+  // Mark as initialized
+  listBtn.setAttribute('data-initialized', 'true');
+  mapBtn.setAttribute('data-initialized', 'true');
+  toggleInitialized = true;
+  console.log('Jobs view toggle initialized');
 }
+
+// Make functions globally accessible
+window.initJobsViewToggle = initJobsViewToggle;
+window.toggleJobsView = toggleJobsView;
 
 async function renderJobs(reset = false) {
   console.log('🔵 NEW RENDERJOBS VERSION LOADED - v3.0');
   const jobsList = document.getElementById("jobsList");
   const jobsCardTitle = document.getElementById("jobsCardTitle");
   const jobsFilterSummary = document.getElementById("jobsFilterSummary");
+  
+  // Ensure toggle is initialized when rendering jobs
+  if (activeView === 'jobs') {
+    setTimeout(() => {
+      if (typeof initJobsViewToggle === 'function') {
+        initJobsViewToggle();
+      }
+    }, 50);
+  }
 
   // Reset pagination if needed
   if (reset) {
