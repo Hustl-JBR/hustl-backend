@@ -16986,52 +16986,36 @@ meta.textContent =
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
           `;
           
+          // Check if there's a new counter-offer from customer
+          const currentProposed = offer.proposedAmount ? parseFloat(offer.proposedAmount) : null;
+          const jobAmount = parseFloat(job.amount || 0);
+          const hasNewOffer = currentProposed !== null && Math.abs(currentProposed - jobAmount) > 0.01 && offer.status === 'PENDING';
+          
           jobCard.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
               <div style="flex: 1;">
-                <h3 style="font-size: 1.25rem; font-weight: 700; margin: 0 0 0.5rem 0; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
-                <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;">
-                  📍 ${locationDisplay}
-                </div>
-                <div style="color: var(--text-muted); font-size: 0.9rem;">
-                  💰 ${payDisplay}
-                </div>
+                <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
               </div>
-              <div style="padding: 0.5rem 1rem; background: ${statusColor}20; color: ${statusColor}; border-radius: 8px; font-weight: 700; font-size: 0.85rem; border: 2px solid ${statusColor}40; white-space: nowrap; margin-left: 1rem;">
+              ${hasNewOffer ? `
+              <div style="position: relative;">
+                <div style="padding: 0.5rem 1rem; background: #3b82f6; color: white; border-radius: 8px; font-weight: 700; font-size: 0.85rem; white-space: nowrap;">
+                  💰 New Offer
+                </div>
+                <div style="position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background: #ef4444; border-radius: 50%; border: 2px solid white;"></div>
+              </div>
+              ` : `
+              <div style="padding: 0.5rem 1rem; background: ${statusColor}20; color: ${statusColor}; border-radius: 8px; font-weight: 700; font-size: 0.85rem; border: 2px solid ${statusColor}40; white-space: nowrap;">
                 ${statusBadge}
               </div>
+              `}
             </div>
-            
-            <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem;">
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Status:</div>
-              <div style="color: var(--text-main); font-weight: 600; margin-bottom: 0.75rem;">${offer.status === 'PENDING' ? 'Waiting for customer review' : offer.status === 'ACCEPTED' ? 'Customer accepted your offer' : offer.status}</div>
-              
-              ${hasHustlerProposedPrice ? `
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Your offer:</div>
-              <div style="color: var(--primary); font-weight: 600; margin-bottom: 0.75rem;">${proposedPriceDisplay}</div>
-              ` : ''}
-              
-              ${pricingOption !== 'hustlers_quote' && !hasHustlerProposedPrice ? `
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Job price:</div>
-              <div style="color: var(--text-main); margin-bottom: ${offer.note ? '0.75rem' : '0'};">${originalPriceDisplay}</div>
-              ` : pricingOption === 'hustlers_quote' && hasHustlerProposedPrice ? `
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem; margin-top: 0.5rem;">Note: You can negotiate this price if needed</div>
-              ` : ''}
-            </div>
-            
-            ${offer.note ? `
-            <div style="padding: 1rem; background: #f0fdf4; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #10b981;">
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">You wrote:</div>
-              <div style="color: var(--text-main); line-height: 1.5;">"${offer.note}"</div>
-            </div>
-            ` : ''}
             
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 150px; padding: 0.75rem 1.5rem; font-weight: 600; border-radius: 10px;">View Full Job →</button>
+              <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 120px; padding: 0.75rem; font-weight: 600; border-radius: 10px; font-size: 0.9rem;">View Job →</button>
               ${offer.status === 'PENDING' ? `
-              <button class="btn btn-ghost cancelApplicationBtn" data-offer-id="${offer.id}" style="padding: 0.75rem 1.5rem; font-weight: 600; border-radius: 10px; color: #dc2626; border-color: #fecaca;">Cancel Application</button>
+              <button class="btn btn-ghost cancelApplicationBtn" data-offer-id="${offer.id}" style="padding: 0.75rem 1rem; font-weight: 600; border-radius: 10px; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">Cancel</button>
               ` : offer.status === 'ACCEPTED' && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified ? `
-              <button class="btn btn-ghost cancelApplicationBtn" data-job-id="${job.id}" style="padding: 0.75rem 1.5rem; font-weight: 600; border-radius: 10px; color: #dc2626; border-color: #fecaca;">🚫 Cancel - Can't Do Job</button>
+              <button class="btn btn-ghost cancelApplicationBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-weight: 600; border-radius: 10px; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">Cancel</button>
               ` : ''}
             </div>
           `;
@@ -19722,20 +19706,37 @@ meta.textContent =
           });
         } else {
           // Event listeners for hustler view
-          // Negotiate price checkbox
+          // Negotiate price checkbox - Make sure it works
           const negotiateCheck = modalOverlay.querySelector('#negotiatePriceCheck');
           const priceContainer = modalOverlay.querySelector('#proposedPriceContainer');
           if (negotiateCheck && priceContainer) {
+            // Set initial state
+            priceContainer.style.display = negotiateCheck.checked ? 'block' : 'none';
+            
+            // Add event listener
             negotiateCheck.addEventListener('change', (e) => {
-              priceContainer.style.display = e.target.checked ? 'block' : 'none';
-              if (e.target.checked) {
+              const isChecked = e.target.checked;
+              priceContainer.style.display = isChecked ? 'block' : 'none';
+              if (isChecked) {
                 // Focus the input when shown
                 setTimeout(() => {
                   const input = priceContainer.querySelector('#proposedPriceInput');
-                  if (input) input.focus();
+                  if (input) {
+                    input.focus();
+                    // Set default value to job amount if empty
+                    if (!input.value) {
+                      input.value = job.payType === 'hourly' ? (job.hourlyRate || job.amount || '').toString() : (job.amount || '').toString();
+                    }
+                  }
                 }, 100);
+              } else {
+                // Clear input when unchecked
+                const input = priceContainer.querySelector('#proposedPriceInput');
+                if (input) input.value = '';
               }
             });
+          } else {
+            console.warn('Negotiate price checkbox or container not found:', { negotiateCheck, priceContainer });
           }
           
           // Apply to job
