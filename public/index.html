@@ -691,24 +691,16 @@
       position: relative;
     }
     
-    /* Job markers on map - circle style */
+    /* Job markers on map - simplified, stationary */
     .job-marker {
-      width: 32px;
-      height: 32px;
-      background: #3b82f6;
-      border: 3px solid white;
-      border-radius: 50%;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      transition: transform 0.2s;
-      position: relative;
       user-select: none;
-      pointer-events: auto;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
     }
     
     .job-marker:hover {
-      transform: scale(1.15);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      opacity: 0.9;
     }
 
     /* Mobile responsive for hamburger */
@@ -7340,147 +7332,148 @@ async function initJobsMap() {
   }
 }
 
-// Render jobs on map
+// Render jobs on map - SIMPLIFIED and STABLE
 function renderJobsOnMap(jobs) {
-  console.log('renderJobsOnMap called with', jobs?.length || 0, 'jobs');
-  if (!jobsMap) {
-    console.warn('Map not initialized yet');
+  if (!jobsMap) return;
+  
+  // Wait for map to be fully loaded
+  if (!jobsMap.loaded()) {
+    jobsMap.once('load', () => {
+      renderJobsOnMap(jobs);
+    });
     return;
   }
+  
   if (!jobs || jobs.length === 0) {
-    console.warn('No jobs to render on map');
+    // Center on Tennessee if no jobs
+    jobsMap.flyTo({
+      center: [-86.7816, 35.7471],
+      zoom: 7
+    });
     return;
   }
   
-  // Clear existing markers
-  mapMarkers.forEach(marker => marker.remove());
+  // Clear ALL existing markers first
+  mapMarkers.forEach(marker => {
+    try {
+      marker.remove();
+    } catch (e) {
+      // Ignore errors when removing
+    }
+  });
   mapMarkers = [];
-  console.log('Cleared existing markers');
   
-  // Get user location for distance calculation
+  // Deduplicate jobs by ID to ensure one marker per job
+  const uniqueJobs = [];
+  const seenIds = new Set();
+  jobs.forEach(job => {
+    if (job.id && !seenIds.has(job.id)) {
+      seenIds.add(job.id);
+      uniqueJobs.push(job);
+    }
+  });
+  
+  // Get user location for distance
   const userLoc = userLocation || null;
   
-  // Filter jobs that have valid coordinates
-  const jobsWithCoords = jobs.filter(job => {
+  // Process each unique job
+  const validJobs = [];
+  uniqueJobs.forEach(job => {
     const requirements = job.requirements || {};
-    const hidePickupAddress = requirements.hide_pickup_address_until_assigned || requirements.hidePickupAddressUntilAssigned;
     
-    // Check if user is accepted (for hidden addresses)
-    let showExactLocation = true;
+    // Determine address visibility
+    const hidePickupAddress = requirements.hide_pickup_address_until_assigned || requirements.hidePickupAddressUntilAssigned;
+    let isAreaBased = false;
+    
     if (hidePickupAddress) {
       try {
         const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
         if (user) {
           const isHustler = user && !user.roles?.includes('CUSTOMER');
           const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
-          showExactLocation = !isHustler || jobAccepted;
+          isAreaBased = isHustler && !jobAccepted;
         }
       } catch (e) {
-        showExactLocation = true;
+        // Default to exact if error
       }
     }
     
-    // If address is hidden and user not accepted, use general area (ZIP/neighborhood)
-    if (hidePickupAddress && !showExactLocation) {
-      // Use ZIP code center or neighborhood center if available
-      const zip = requirements.pickup_zip;
-      const city = requirements.pickup_city || requirements.pickupCity;
-      if (zip || city) {
-        // We'll use approximate location based on ZIP/city
-        // For now, skip these jobs or use approximate coordinates
-        return false; // Skip jobs with hidden addresses for now
-      }
-      return false;
-    }
+    // Get coordinates - priority: requirements pickup coordinates
+    let lat = null;
+    let lng = null;
     
-    // Priority: Use pickup address coordinates (street-level, not exact house)
-    // These are geocoded from the street address and are more appropriate for map display
     const reqLat = requirements.pickup_lat || requirements.pickupLat;
     const reqLng = requirements.pickup_lng || requirements.pickupLng;
     if (reqLat && reqLng) {
-      // Ensure coordinates are numbers and valid
-      const lat = parseFloat(reqLat);
-      const lng = parseFloat(reqLng);
-      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-        job.lat = lat;
-        job.lng = lng;
-        return true;
-      }
+      lat = parseFloat(reqLat);
+      lng = parseFloat(reqLng);
+    } else if (job.lat && job.lng) {
+      lat = parseFloat(job.lat);
+      lng = parseFloat(job.lng);
     }
     
-    // Fallback to job-level coordinates if requirements don't have them
-    if (job.lat && job.lng) {
-      // Validate coordinates
-      const lat = parseFloat(job.lat);
-      const lng = parseFloat(job.lng);
-      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-        job.lat = lat;
-        job.lng = lng;
-        return true;
-      }
-    }
-    
-    return false;
-  });
-  
-  if (jobsWithCoords.length === 0) {
-    // Center on Tennessee if no jobs
-    if (jobsMap) {
-      jobsMap.flyTo({
-        center: [-86.7816, 35.7471],
-        zoom: 7
+    // Validate coordinates
+    if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng) && 
+        lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      validJobs.push({
+        job: job,
+        lat: lat,
+        lng: lng,
+        isAreaBased: isAreaBased
       });
     }
-    // Show message if we have jobs but no coordinates
+  });
+  
+  if (validJobs.length === 0) {
     const mapLoading = document.getElementById('jobsMapLoading');
-    if (mapLoading && jobs.length > 0) {
+    if (mapLoading) {
       mapLoading.style.display = 'block';
-      mapLoading.textContent = 'No jobs with location data to display';
+      mapLoading.textContent = 'No jobs with location data';
     }
     return;
   }
   
-  // Hide loading message
+  // Hide loading
   const mapLoading = document.getElementById('jobsMapLoading');
   if (mapLoading) mapLoading.style.display = 'none';
   
-  // Calculate bounds
-  const lats = jobsWithCoords.map(j => j.lat);
-  const lngs = jobsWithCoords.map(j => j.lng);
-  const bounds = [
-    [Math.min(...lngs), Math.min(...lats)],
-    [Math.max(...lngs), Math.max(...lats)]
-  ];
+  // Calculate bounds and fit map
+  if (validJobs.length > 0) {
+    const lats = validJobs.map(j => j.lat);
+    const lngs = validJobs.map(j => j.lng);
+    const bounds = [
+      [Math.min(...lngs), Math.min(...lats)],
+      [Math.max(...lngs), Math.max(...lats)]
+    ];
+    
+    jobsMap.fitBounds(bounds, {
+      padding: { top: 50, bottom: 50, left: 50, right: 50 },
+      maxZoom: 14
+    });
+  }
   
-  // Fit map to bounds
-  jobsMap.fitBounds(bounds, {
-    padding: { top: 50, bottom: 50, left: 50, right: 50 },
-    maxZoom: 14
-  });
-  
-  // Add markers for each job
-  console.log('Adding markers for', jobsWithCoords.length, 'jobs with coordinates');
-  jobsWithCoords.forEach((job, index) => {
+  // Create ONE marker per job
+  validJobs.forEach(({ job, lat, lng, isAreaBased }) => {
     const requirements = job.requirements || {};
     const pickupArea = requirements.pickup_area || requirements.pickupArea;
     const pickupCity = requirements.pickup_city || requirements.pickupCity;
     const pickupZip = requirements.pickup_zip;
     
-    // Calculate distance if user location available
+    // Distance calculation
     let distanceText = '';
     if (userLoc && userLoc.lat && userLoc.lng) {
-      const distance = calculateDistance(userLoc.lat, userLoc.lng, job.lat, job.lng);
+      const distance = calculateDistance(userLoc.lat, userLoc.lng, lat, lng);
       distanceText = formatDistance(distance);
     }
     
-    // Build location text (neighborhood + ZIP, no apartment)
+    // Location text
     let locationText = '';
     if (pickupArea) locationText = pickupArea;
     if (pickupCity) locationText += (locationText ? ', ' : '') + pickupCity;
     if (pickupZip) locationText += (locationText ? ' ' : '') + pickupZip;
     if (!locationText) locationText = 'Location';
     
-    // Create popup content
+    // Popup content
     const popupContent = document.createElement('div');
     popupContent.style.cssText = 'padding: 0.75rem; min-width: 200px;';
     popupContent.innerHTML = `
@@ -7495,71 +7488,79 @@ function renderJobsOnMap(jobs) {
       </button>
     `;
     
-    // Create marker element - circle style
+    // Create marker element
     const el = document.createElement('div');
     el.className = 'job-marker';
-    el.style.cssText = `
-      width: 32px;
-      height: 32px;
-      background: #3b82f6;
-      border: 3px solid white;
-      border-radius: 50%;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      transition: transform 0.2s;
-      position: relative;
-    `;
+    
+    if (isAreaBased) {
+      // Soft circle for area-based (hidden address)
+      el.style.cssText = `
+        width: 20px;
+        height: 20px;
+        background: rgba(59, 130, 246, 0.6);
+        border: 2px solid rgba(59, 130, 246, 0.8);
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        position: absolute;
+        pointer-events: auto;
+      `;
+    } else {
+      // Precise pin for exact address
+      el.style.cssText = `
+        width: 20px;
+        height: 20px;
+        background: #3b82f6;
+        border: 2px solid white;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        position: absolute;
+        pointer-events: auto;
+      `;
+    }
+    
     el.title = job.title || 'Job';
     
-    // Hover effect
-    el.addEventListener('mouseenter', () => {
-      el.style.transform = 'scale(1.15)';
-    });
-    el.addEventListener('mouseleave', () => {
-      el.style.transform = 'scale(1)';
-    });
-    
-    // Make marker clickable to open job details
+    // Click handler - opens job details
     el.addEventListener('click', (e) => {
       e.stopPropagation();
-      console.log('Marker clicked for job:', job.id);
+      e.preventDefault();
       if (typeof openJobDetails === 'function') {
         openJobDetails(job.id);
       }
     });
     
-    // Create marker - anchor to center so it stays stationary
+    // Create marker - NO animations, completely stationary
     const marker = new mapboxgl.Marker({
       element: el,
-      anchor: 'center' // Center anchor keeps marker stationary at coordinates
+      anchor: 'center',
+      draggable: false
     })
-      .setLngLat([parseFloat(job.lng), parseFloat(job.lat)]) // Ensure coordinates are numbers
+      .setLngLat([lng, lat])
       .setPopup(new mapboxgl.Popup({ 
-        offset: 15,
-        anchor: 'bottom'
+        offset: 12,
+        anchor: 'bottom',
+        closeOnClick: false
       }).setDOMContent(popupContent))
       .addTo(jobsMap);
     
-    mapMarkers.push(marker);
-    console.log(`Added marker ${index + 1}/${jobsWithCoords.length} at [${job.lng}, ${job.lat}]`);
-    
-    // Add click handler to popup button
+    // Popup button handler
     setTimeout(() => {
       const btn = popupContent.querySelector('.view-job-map-btn');
       if (btn) {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
-          const jobId = e.target.getAttribute('data-job-id');
-          console.log('Popup button clicked for job:', jobId);
-          if (jobId && typeof openJobDetails === 'function') {
-            openJobDetails(jobId);
+          e.preventDefault();
+          if (typeof openJobDetails === 'function') {
+            openJobDetails(job.id);
           }
         });
       }
-    }, 100);
+    }, 50);
+    
+    mapMarkers.push(marker);
   });
-  
-  console.log('Total markers added:', mapMarkers.length);
 }
 
 // Toggle between List and Map view
@@ -8338,9 +8339,10 @@ async function renderJobs(reset = false) {
       }
     });
 
-    // Render on map if in map view
+    // Render on map if in map view - only render when map is ready
     if (currentJobsView === 'map') {
       if (jobsMap) {
+        // Map exists, render jobs (will check if loaded inside function)
         renderJobsOnMap(filteredJobs);
       } else {
         // Initialize map if not already done
