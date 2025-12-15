@@ -19054,7 +19054,7 @@ meta.textContent =
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 8px; border: 2px solid #10b981;">
                       <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; flex: 1;">
-                        <input type="checkbox" id="negotiatePriceCheck" class="negotiate-price-checkbox" data-job-id="${job.id}" data-default-price="${job.payType === 'hourly' ? (job.hourlyRate || job.amount || '0') : (job.amount || '0')}" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+                        <input type="checkbox" id="negotiatePriceCheck" class="negotiate-price-checkbox" data-job-id="${job.id}" data-default-price="${job.payType === 'hourly' ? (job.hourlyRate || job.amount || '0') : (job.amount || '0')}" onchange="(function(){ var container = document.getElementById('proposedPriceContainer'); var input = document.getElementById('proposedPriceInput'); if(container){ container.style.display = this.checked ? 'block' : 'none'; if(this.checked && input){ if(!input.value){ var defaultVal = this.getAttribute('data-default-price') || ''; input.value = defaultVal; } setTimeout(function(){ input.focus(); }, 50); } else if(!this.checked && input){ input.value = ''; } } }).call(this);" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
                         <span style="font-size: 0.95rem; font-weight: 600; color: var(--text-main);">💵 Suggest a different ${payType === 'hourly' ? 'hourly' : 'flat'} rate</span>
                       </label>
                     </div>
