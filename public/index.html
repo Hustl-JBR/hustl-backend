@@ -19085,14 +19085,29 @@ meta.textContent =
                     
                     const originalKey = `hustlerOriginalOffer_${userOffer.id}`;
                     let originalAmount = localStorage.getItem(originalKey);
+                    
+                    // IMPORTANT: If customer countered, proposedAmount is now the customer's price
+                    // We need to compare against the job's original amount or the hustler's initial offer
+                    // If we don't have the original stored, and proposedAmount exists, it might already be a counter
+                    // So we check if it differs from job.amount - if so, customer likely countered
+                    const currentProposed = userOffer.proposedAmount ? parseFloat(userOffer.proposedAmount) : null;
+                    const jobAmount = parseFloat(job.amount || 0);
+                    
                     if (!originalAmount) {
-                      originalAmount = (userOffer.proposedAmount || job.amount || 0).toString();
+                      // If proposedAmount exists and is different from job amount, customer likely countered
+                      // Use job amount as the baseline (hustler's original would have matched or been close)
+                      if (currentProposed && Math.abs(currentProposed - jobAmount) > 0.01) {
+                        originalAmount = jobAmount.toString();
+                      } else {
+                        originalAmount = (currentProposed || jobAmount || 0).toString();
+                      }
                       localStorage.setItem(originalKey, originalAmount);
                     }
                     
                     const original = parseFloat(originalAmount);
-                    const current = userOffer.proposedAmount ? parseFloat(userOffer.proposedAmount) : original;
-                    const customerCountered = Math.abs(current - original) > 0.01;
+                    const current = currentProposed || original;
+                    // Customer countered if current is different from original AND from job amount (if original is job amount)
+                    const customerCountered = Math.abs(current - original) > 0.01 && (original === jobAmount || Math.abs(current - jobAmount) > 0.01);
                     
                     // Check if hustler already accepted customer's counter-offer
                     const jobIsScheduled = job.status === 'SCHEDULED' || job.status === 'ASSIGNED';
