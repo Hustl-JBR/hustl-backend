@@ -9072,8 +9072,15 @@ async function renderJobs(reset = false) {
         mapContainer.style.cssText = "width: 100%; height: 200px; border-radius: 8px; overflow: hidden; background: #e5e7eb; margin-top: 0.75rem;";
         locationSection.appendChild(mapContainer);
         
-        // Initialize Mapbox map after a short delay to ensure token is loaded
+        // Initialize Mapbox map after a short delay to ensure token is loaded and container is in DOM
         setTimeout(() => {
+          // Check if container exists in DOM before initializing
+          const containerElement = document.getElementById(mapId);
+          if (!containerElement || !document.body.contains(containerElement)) {
+            // Container not in DOM yet, skip map initialization
+            return;
+          }
+          
           if (window.mapboxgl && window.MAPBOX_TOKEN) {
             try {
               mapboxgl.accessToken = window.MAPBOX_TOKEN;
@@ -9187,7 +9194,7 @@ async function renderJobs(reset = false) {
             let userId = currentUser?.id;
             if (!userId && token) {
               try {
-                const userResponse = await fetch(`${API_BASE}/auth/me`, {
+                const userResponse = await fetch(`${API_BASE}/users/me`, {
                   headers: { "Authorization": `Bearer ${token}` }
                 });
                 if (userResponse.ok) {
