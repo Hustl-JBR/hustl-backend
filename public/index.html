@@ -8040,15 +8040,31 @@ async function renderJobs(reset = false) {
       // Show/hide proposed price input based on radio selection
       const priceRadios = [acceptPriceRadio, negotiatePriceRadio];
       priceRadios.forEach(radio => {
-        radio.addEventListener("change", () => {
-          if (radio.value === "negotiate") {
-            proposedPriceContainer.style.display = "block";
-            proposedPriceInput.focus();
+        radio.addEventListener("change", (e) => {
+          const isNegotiate = e.target.value === "negotiate";
+          proposedPriceContainer.style.display = isNegotiate ? "block" : "none";
+          if (isNegotiate) {
+            // Focus and set default value when showing
+            setTimeout(() => {
+              proposedPriceInput.focus();
+              // Set default value to job amount if empty
+              if (!proposedPriceInput.value) {
+                const defaultAmount = job.payType === "hourly" ? (job.hourlyRate || job.amount || 0) : (job.amount || 0);
+                proposedPriceInput.value = defaultAmount > 0 ? defaultAmount.toString() : '';
+              }
+            }, 100);
           } else {
-            proposedPriceContainer.style.display = "none";
             proposedPriceInput.value = "";
           }
         });
+      });
+      
+      // Also handle clicks on the label containers
+      negotiatePriceLabel.addEventListener("click", (e) => {
+        if (e.target !== negotiatePriceRadio && e.target !== negotiatePriceText) {
+          negotiatePriceRadio.checked = true;
+          negotiatePriceRadio.dispatchEvent(new Event('change'));
+        }
       });
 
       // Optional Add-Ons
