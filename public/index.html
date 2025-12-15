@@ -796,21 +796,31 @@
 
     /* Mobile UI Fix: Reduce checkbox and selectable card sizes on small screens */
     @media (max-width: 640px) {
-      /* Reduce checkbox sizes in selectable cards */
+      /* Reduce checkbox sizes in selectable cards - applies to all equipment checkboxes including post job form */
       .equipment-checkbox input[type="checkbox"],
-      label.equipment-checkbox input[type="checkbox"] {
+      label.equipment-checkbox input[type="checkbox"],
+      label[class*="equipment-checkbox"] input[type="checkbox"],
+      #equipmentContent input[type="checkbox"],
+      #equipmentContent label input[type="checkbox"] {
         width: 16px !important;
         height: 16px !important;
         min-width: 16px !important;
         min-height: 16px !important;
       }
 
-      /* Reduce padding in selectable card labels */
+      /* Reduce padding in selectable card labels - applies to all equipment checkboxes */
       .equipment-checkbox,
-      label.equipment-checkbox {
+      label.equipment-checkbox,
+      label[class*="equipment-checkbox"],
+      #equipmentContent label[class*="equipment-checkbox"] {
         padding: 0.4rem 0.5rem !important;
         gap: 0.35rem !important;
         font-size: 0.85rem !important;
+      }
+      
+      /* Fix grid gap for equipment cards in post job */
+      #equipmentContent div[style*="grid-template-columns"] {
+        gap: 0.35rem !important;
       }
 
       /* Reduce checkbox sizes in all checkbox fields */
@@ -3296,6 +3306,15 @@
               <div class="pill">⭐ Other local odd jobs</div>
             </div>
           </div>
+        </div>
+        
+        <!-- Bottom CTA: Sign Up -->
+        <div class="card" style="text-align: center; padding: 2rem 1.5rem; margin-top: 2rem; background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(14, 165, 233, 0.1) 100%); border: 2px solid rgba(37, 99, 235, 0.3);">
+          <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 0.75rem; color: var(--text-main);">Ready to get started?</h2>
+          <p style="color: var(--text-muted); font-size: 1rem; margin: 0 0 1.5rem; line-height: 1.5;">Join Hustl today and start posting jobs or earning money.</p>
+          <button class="btn btn-primary" id="homeBottomSignUpBtn" style="padding: 1rem 2rem; font-size: 1.1rem; font-weight: 600; border-radius: 10px; background: var(--primary); border: none; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
+            Sign Up Free →
+          </button>
         </div>
       </section>
 
@@ -22799,6 +22818,22 @@ meta.textContent =
             const target = document.getElementById("view-jobs");
             if (target) target.style.display = "block";
             window.scrollTo({ top: 0, behavior: 'instant' });
+          }
+        });
+      }
+      
+      // Home Bottom Sign Up button
+      const homeBottomSignUpBtn = document.getElementById("homeBottomSignUpBtn");
+      if (homeBottomSignUpBtn && !homeBottomSignUpBtn.dataset.listenerAttached) {
+        homeBottomSignUpBtn.dataset.listenerAttached = 'true';
+        homeBottomSignUpBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (window.openAuthModal && typeof window.openAuthModal === 'function') {
+            window.openAuthModal('create');
+          } else if (document.getElementById('authSection')) {
+            document.getElementById('authSection').style.display = 'block';
+            document.getElementById('authSection').scrollIntoView({ behavior: 'smooth' });
           }
         });
       }
