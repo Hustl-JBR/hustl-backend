@@ -15481,29 +15481,53 @@ async function openUserProfile(userId) {
   header.appendChild(closeBtn);
   card.appendChild(header);
 
-  // Avatar + basic info (role only, no money / jobs / email)
+  // Photo + Name + Role
   const row = document.createElement("div");
   row.className = "profile-row";
+  row.style.cssText = "display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;";
 
+  // Use renderUserAvatar for consistent photo display
+  const avatarHtml = renderUserAvatar(user, 64, {
+    showBorder: true,
+    borderWidth: '2px',
+    style: 'box-shadow: 0 2px 8px rgba(0,0,0,0.1);'
+  });
+  
   const avatar = document.createElement("div");
   avatar.className = "profile-avatar";
-  if (user.avatarDataUrl) {
-    const img = document.createElement("img");
-    img.src = user.avatarDataUrl;
-    avatar.appendChild(img);
-  } else {
-    avatar.textContent = user.name ? user.name[0].toUpperCase() : "?";
-  }
+  avatar.innerHTML = avatarHtml;
   row.appendChild(avatar);
 
   const info = document.createElement("div");
-  info.innerHTML =
-    "<span class='muted'>" +
-    (user.role === "hustler" ? "Hustler" : "Customer") +
-    "</span>";
+  info.style.cssText = "flex: 1;";
+  info.innerHTML = `
+    <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">${user.name || "User"}</div>
+    <div class="muted" style="font-size: 0.9rem;">${user.role === "hustler" ? "Hustler" : "Customer"}</div>
+  `;
   row.appendChild(info);
 
   card.appendChild(row);
+
+  // Gender (if available)
+  if (user.gender) {
+    const genderLabel = 
+      user.gender === 'male' ? 'Male' : 
+      user.gender === 'female' ? 'Female' : 
+      user.gender === 'other' ? 'Non-binary' : 
+      user.gender === 'prefer_not_to_say' ? 'Prefer not to say' : user.gender;
+    
+    const genderWrap = document.createElement("div");
+    genderWrap.className = "field";
+    genderWrap.style.cssText = "margin-top: 0.6rem; margin-bottom: 0.6rem;";
+    
+    const genderText = document.createElement("div");
+    genderText.className = "about-text";
+    genderText.style.cssText = "color: var(--text-muted); font-size: 0.9rem;";
+    genderText.textContent = genderLabel;
+    genderWrap.appendChild(genderText);
+    
+    card.appendChild(genderWrap);
+  }
 
   // Bio / description
   const bioWrap = document.createElement("div");
@@ -15521,7 +15545,9 @@ async function openUserProfile(userId) {
   bioText.textContent = user.bio || "This person hasn't added anything about themselves yet.";
   bioWrap.appendChild(bioText);
   
-  // Tools/Equipment if hustler
+  card.appendChild(bioWrap);
+  
+  // Tools/Equipment (if available)
   if (user.tools && user.tools.trim()) {
     const toolsWrap = document.createElement("div");
     toolsWrap.className = "field";
@@ -15557,8 +15583,6 @@ async function openUserProfile(userId) {
   jobsCount.appendChild(jobsText);
   
   card.appendChild(jobsCount);
-
-  card.appendChild(bioWrap);
 
   // Reviews (demo only – will show once we start filling user.reviews)
   const reviewsWrap = document.createElement("div");
