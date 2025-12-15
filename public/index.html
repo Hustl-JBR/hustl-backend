@@ -4558,74 +4558,105 @@ heart of Hustl.
 
     let toastTimeout = null;
     // Show popup modal for price suggestion
-    function showPriceSuggestionPopup(jobId, payType, priceInput, priceNegotiationSection, priceCheckbox) {
-      // Create modal overlay
-      const popupOverlay = document.createElement("div");
-      popupOverlay.style.cssText = "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem;";
-      
-      const popupModal = document.createElement("div");
-      popupModal.style.cssText = "background: white; border-radius: 16px; padding: 2rem; max-width: 500px; width: 100%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
-      
-      popupModal.innerHTML = `
-        <div style="margin-bottom: 1.5rem;">
-          <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.5rem 0;">💵 Suggest a Different Price</h3>
-          <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0;">Enter the price you'd like to propose for this job.</p>
-        </div>
+    window.showPriceSuggestionPopup = function(jobId, payType, priceInput, priceNegotiationSection, priceCheckbox) {
+      try {
+        // Create modal overlay
+        const popupOverlay = document.createElement("div");
+        popupOverlay.id = `pricePopupOverlay_${jobId}`;
+        popupOverlay.style.cssText = "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem;";
         
-        <div style="margin-bottom: 1.5rem;">
-          <label style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">Your Proposed ${payType === 'hourly' ? 'Hourly' : 'Flat'} Rate</label>
-          <div style="position: relative;">
-            <span style="position: absolute; left: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 2rem; font-weight: 700; color: var(--primary); z-index: 1;">$</span>
-            <input type="number" id="popupPriceInput_${jobId}" placeholder="${payType === 'hourly' ? 'e.g., 25.00' : 'e.g., 150.00'}" step="0.01" min="0" style="width: 100%; padding: 2rem 1.5rem 2rem 3.5rem; border: 4px solid var(--primary); border-radius: 16px; font-size: 2.5rem; font-weight: 700; text-align: left; background: #f0fdf4; color: var(--text-main); min-height: 80px; box-sizing: border-box; font-family: inherit;">
-            ${payType === 'hourly' ? '<span style="position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 1.5rem; font-weight: 600; color: var(--text-muted); z-index: 1;">/hr</span>' : ''}
+        const popupModal = document.createElement("div");
+        popupModal.style.cssText = "background: white; border-radius: 16px; padding: 2rem; max-width: 500px; width: 100%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
+        
+        const isHourly = payType === 'hourly';
+        popupModal.innerHTML = `
+          <div style="margin-bottom: 1.5rem;">
+            <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.5rem 0;">💵 Suggest a Different Price</h3>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0;">Enter the price you'd like to propose for this job.</p>
           </div>
-        </div>
+          
+          <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">Your Proposed ${isHourly ? 'Hourly' : 'Flat'} Rate</label>
+            <div style="position: relative;">
+              <span style="position: absolute; left: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 2rem; font-weight: 700; color: var(--primary); z-index: 1;">$</span>
+              <input type="number" id="popupPriceInput_${jobId}" placeholder="${isHourly ? 'e.g., 25.00' : 'e.g., 150.00'}" step="0.01" min="0" style="width: 100%; padding: 2rem 1.5rem 2rem 3.5rem; border: 4px solid var(--primary); border-radius: 16px; font-size: 2.5rem; font-weight: 700; text-align: left; background: #f0fdf4; color: var(--text-main); min-height: 80px; box-sizing: border-box; font-family: inherit;">
+              ${isHourly ? '<span style="position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 1.5rem; font-weight: 600; color: var(--text-muted); z-index: 1;">/hr</span>' : ''}
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 0.75rem;">
+            <button id="cancelPricePopup_${jobId}" class="btn btn-ghost" style="flex: 1; padding: 0.75rem; font-weight: 600;">Cancel</button>
+            <button id="confirmPricePopup_${jobId}" class="btn btn-primary" style="flex: 1; padding: 0.75rem; font-weight: 600;">Confirm</button>
+          </div>
+        `;
         
-        <div style="display: flex; gap: 0.75rem;">
-          <button id="cancelPricePopup_${jobId}" class="btn btn-ghost" style="flex: 1; padding: 0.75rem; font-weight: 600;">Cancel</button>
-          <button id="confirmPricePopup_${jobId}" class="btn btn-primary" style="flex: 1; padding: 0.75rem; font-weight: 600;">Confirm</button>
-        </div>
-      `;
-      
-      popupOverlay.appendChild(popupModal);
-      document.body.appendChild(popupOverlay);
-      
-      const popupPriceInput = document.getElementById(`popupPriceInput_${jobId}`);
-      if (popupPriceInput) {
-        popupPriceInput.focus();
-      }
-      
-      // Cancel button
-      document.getElementById(`cancelPricePopup_${jobId}`).addEventListener("click", () => {
-        document.body.removeChild(popupOverlay);
-        if (priceCheckbox) priceCheckbox.checked = false;
-      });
-      
-      // Confirm button
-      document.getElementById(`confirmPricePopup_${jobId}`).addEventListener("click", () => {
-        const proposedPrice = popupPriceInput ? parseFloat(popupPriceInput.value) : null;
-        if (!proposedPrice || proposedPrice <= 0) {
-          showToast("Please enter a valid price.");
-          return;
+        popupOverlay.appendChild(popupModal);
+        document.body.appendChild(popupOverlay);
+        
+        // Use setTimeout to ensure DOM is ready
+        setTimeout(() => {
+          const popupPriceInput = document.getElementById(`popupPriceInput_${jobId}`);
+          if (popupPriceInput) {
+            popupPriceInput.focus();
+          }
+          
+          // Cancel button
+          const cancelBtn = document.getElementById(`cancelPricePopup_${jobId}`);
+          if (cancelBtn) {
+            cancelBtn.addEventListener("click", () => {
+              if (document.body.contains(popupOverlay)) {
+                document.body.removeChild(popupOverlay);
+              }
+              if (priceCheckbox) priceCheckbox.checked = false;
+            });
+          }
+          
+          // Confirm button
+          const confirmBtn = document.getElementById(`confirmPricePopup_${jobId}`);
+          if (confirmBtn) {
+            confirmBtn.addEventListener("click", () => {
+              const input = document.getElementById(`popupPriceInput_${jobId}`);
+              const proposedPrice = input ? parseFloat(input.value) : null;
+              if (!proposedPrice || proposedPrice <= 0) {
+                showToast("Please enter a valid price.");
+                return;
+              }
+              
+              // Set the price in the hidden input and show the section
+              if (priceInput) {
+                priceInput.value = proposedPrice;
+              }
+              if (priceNegotiationSection) {
+                priceNegotiationSection.style.display = "block";
+              }
+              
+              if (document.body.contains(popupOverlay)) {
+                document.body.removeChild(popupOverlay);
+              }
+            });
+          }
+          
+          // Close on overlay click
+          popupOverlay.addEventListener("click", (e) => {
+            if (e.target === popupOverlay) {
+              if (document.body.contains(popupOverlay)) {
+                document.body.removeChild(popupOverlay);
+              }
+              if (priceCheckbox) priceCheckbox.checked = false;
+            }
+          });
+        }, 10);
+      } catch (error) {
+        console.error('Error in showPriceSuggestionPopup:', error);
+        // Fallback: show inline input
+        if (priceNegotiationSection) {
+          priceNegotiationSection.style.display = "block";
         }
-        
-        // Set the price in the hidden input and show the section
         if (priceInput) {
-          priceInput.value = proposedPrice;
+          priceInput.focus();
         }
-        priceNegotiationSection.style.display = "block";
-        
-        document.body.removeChild(popupOverlay);
-      });
-      
-      // Close on overlay click
-      popupOverlay.addEventListener("click", (e) => {
-        if (e.target === popupOverlay) {
-          document.body.removeChild(popupOverlay);
-          if (priceCheckbox) priceCheckbox.checked = false;
-        }
-      });
-    }
+      }
+    };
 
     function showToast(msg) {
       const el = document.getElementById("toast");
@@ -9381,10 +9412,26 @@ async function renderJobs(reset = false) {
           if (!isHustlerSuggestedPrice) {
             const priceCheckbox = document.getElementById(`suggestPriceCheckbox_${job.id}`);
             if (priceCheckbox) {
-              priceCheckbox.addEventListener("change", () => {
+              priceCheckbox.addEventListener("change", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 if (priceCheckbox.checked) {
                   // Show popup modal instead of inline input
-                  showPriceSuggestionPopup(job.id, job.payType, priceInput, priceNegotiationSection, priceCheckbox);
+                  try {
+                    if (typeof showPriceSuggestionPopup === 'function') {
+                      showPriceSuggestionPopup(job.id, job.payType || 'flat', priceInput, priceNegotiationSection, priceCheckbox);
+                    } else {
+                      console.error('showPriceSuggestionPopup function not found');
+                      // Fallback: show inline input
+                      priceNegotiationSection.style.display = "block";
+                      priceInput.focus();
+                    }
+                  } catch (error) {
+                    console.error('Error showing price popup:', error);
+                    // Fallback: show inline input
+                    priceNegotiationSection.style.display = "block";
+                    priceInput.focus();
+                  }
                 } else {
                   priceNegotiationSection.style.display = "none";
                   priceInput.value = "";
