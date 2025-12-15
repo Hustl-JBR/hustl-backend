@@ -7338,11 +7338,20 @@ async function initJobsMap() {
 
 // Render jobs on map
 function renderJobsOnMap(jobs) {
-  if (!jobsMap || !jobs || jobs.length === 0) return;
+  console.log('renderJobsOnMap called with', jobs?.length || 0, 'jobs');
+  if (!jobsMap) {
+    console.warn('Map not initialized yet');
+    return;
+  }
+  if (!jobs || jobs.length === 0) {
+    console.warn('No jobs to render on map');
+    return;
+  }
   
   // Clear existing markers
   mapMarkers.forEach(marker => marker.remove());
   mapMarkers = [];
+  console.log('Cleared existing markers');
   
   // Get user location for distance calculation
   const userLoc = userLocation || null;
@@ -7433,7 +7442,8 @@ function renderJobsOnMap(jobs) {
   });
   
   // Add markers for each job
-  jobsWithCoords.forEach(job => {
+  console.log('Adding markers for', jobsWithCoords.length, 'jobs with coordinates');
+  jobsWithCoords.forEach((job, index) => {
     const requirements = job.requirements || {};
     const pickupArea = requirements.pickup_area || requirements.pickupArea;
     const pickupCity = requirements.pickup_city || requirements.pickupCity;
@@ -7468,27 +7478,47 @@ function renderJobsOnMap(jobs) {
       </button>
     `;
     
-    // Create marker
+    // Create marker element
     const el = document.createElement('div');
     el.className = 'job-marker';
-    el.style.cssText = 'width: 32px; height: 32px; background: #3b82f6; border: 3px solid white; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3);';
+    el.style.cssText = 'width: 32px; height: 32px; background: #3b82f6; border: 3px solid white; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3); transition: transform 0.2s;';
+    el.title = job.title || 'Job';
     
+    // Make marker clickable to open job details
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      console.log('Marker clicked for job:', job.id);
+      if (typeof openJobDetails === 'function') {
+        openJobDetails(job.id);
+      }
+    });
+    
+    // Create marker
     const marker = new mapboxgl.Marker(el)
       .setLngLat([job.lng, job.lat])
       .setPopup(new mapboxgl.Popup({ offset: 25 }).setDOMContent(popupContent))
       .addTo(jobsMap);
     
     mapMarkers.push(marker);
+    console.log(`Added marker ${index + 1}/${jobsWithCoords.length} at [${job.lng}, ${job.lat}]`);
     
     // Add click handler to popup button
-    popupContent.querySelector('.view-job-map-btn')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const jobId = e.target.getAttribute('data-job-id');
-      if (jobId && typeof openJobDetails === 'function') {
-        openJobDetails(jobId);
+    setTimeout(() => {
+      const btn = popupContent.querySelector('.view-job-map-btn');
+      if (btn) {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const jobId = e.target.getAttribute('data-job-id');
+          console.log('Popup button clicked for job:', jobId);
+          if (jobId && typeof openJobDetails === 'function') {
+            openJobDetails(jobId);
+          }
+        });
       }
-    });
+    }, 100);
   });
+  
+  console.log('Total markers added:', mapMarkers.length);
 }
 
 // Toggle between List and Map view
@@ -7526,11 +7556,33 @@ function toggleJobsView(view) {
     if (listContainer) listContainer.style.display = 'none';
     if (mapContainer) mapContainer.style.display = 'block';
     
-    // Initialize map if not already done
+    // Initialize map if not already done, then render jobs
     if (!jobsMap) {
+      console.log('Initializing map...');
       initJobsMap().then(() => {
-        // Re-render will happen when renderJobs is called
+        console.log('Map initialized, rendering jobs...');
+        // Get current filtered jobs and render them
+        if (allLoadedJobs && allLoadedJobs.length > 0) {
+          // Re-apply filters to get current filtered jobs
+          // We'll trigger a re-render by calling renderJobs
+          setTimeout(() => {
+            if (typeof renderJobs === 'function') {
+              renderJobs(false); // Don't reset, just re-render
+            }
+          }, 300);
+        }
       });
+    } else {
+      // Map already initialized, just render jobs
+      console.log('Map already initialized, rendering jobs...');
+      if (allLoadedJobs && allLoadedJobs.length > 0) {
+        // Re-apply filters and render
+        setTimeout(() => {
+          if (typeof renderJobs === 'function') {
+            renderJobs(false); // Don't reset, just re-render
+          }
+        }, 100);
+      }
     }
   }
 }
