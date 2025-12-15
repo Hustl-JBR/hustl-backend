@@ -7646,14 +7646,14 @@ async function renderJobs(reset = false) {
         }
       }
       
-      // Show location: full address if not hidden, neighborhood/area if hidden
+      // Show location label: "Street Address *" when not hidden, "Neighborhood / Area" when hidden
       let locationText = "";
       if (showFullPickupAddress && pickupAddress) {
-        // Show full address when not hiding
-        locationText = pickupAddress;
+        // Show "Street Address *" when not hiding
+        locationText = "Street Address *";
       } else if (hidePickupAddressUntilAssigned && pickupArea) {
-        // Show only neighborhood/area when hiding location
-        locationText = pickupArea;
+        // Show "Neighborhood / Area" when hiding location
+        locationText = "Neighborhood / Area";
       }
       
       if (locationText) {
