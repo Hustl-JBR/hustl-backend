@@ -147,15 +147,18 @@ async function cleanupExpiredJobs() {
     
     // Find OPEN jobs where expiresAt has passed or is within 1 hour
     // Check both the expiresAt field and requirements.expiresAt for backward compatibility
+    // IMPORTANT: Exclude jobs with accepted hustlers - they should NOT expire
     const allOpenJobs = await prisma.job.findMany({
       where: {
         status: 'OPEN',
+        hustlerId: null, // Only expire jobs without accepted hustlers
       },
       select: {
         id: true,
         title: true,
         expiresAt: true, // Check the new expiresAt field
         requirements: true,
+        hustlerId: true, // Check if hustler is accepted
         customer: {
           select: {
             id: true,
@@ -165,6 +168,9 @@ async function cleanupExpiredJobs() {
         },
       },
     });
+    
+    // Filter out jobs with accepted hustlers - they should not expire
+    const jobsWithoutHustlers = allOpenJobs.filter(job => !job.hustlerId);
 
     // Helper function to get expiration date from job
     const getExpirationDate = (job) => {
@@ -190,8 +196,8 @@ async function cleanupExpiredJobs() {
       }
     };
 
-    // Find jobs expiring in 1 hour (for email warning)
-    const jobsExpiringSoon = allOpenJobs.filter(job => {
+    // Find jobs expiring in 1 hour (for email warning) - only jobs without accepted hustlers
+    const jobsExpiringSoon = jobsWithoutHustlers.filter(job => {
       const expirationDate = getExpirationDate(job);
       if (!expirationDate) return false;
       
@@ -237,8 +243,8 @@ async function cleanupExpiredJobs() {
       }
     }
 
-    // Filter jobs where expiresAt has passed
-    const expiredJobs = allOpenJobs.filter(job => {
+    // Filter jobs where expiresAt has passed (only jobs without accepted hustlers)
+    const expiredJobs = jobsWithoutHustlers.filter(job => {
       const expirationDate = getExpirationDate(job);
       if (!expirationDate) return false;
       return expirationDate <= now;

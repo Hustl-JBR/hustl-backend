@@ -3755,13 +3755,12 @@
           <div class="section-title" style="margin-top: 1rem; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">📅 When do you need this done?</div>
           
           <div class="field">
-            <label for="jobWhen">Deadline preference</label>
+            <label for="jobWhen">Done by</label>
             <select id="jobWhen">
-              <option value="today_asap">⚡ Today – ASAP</option>
-              <option value="tomorrow">📆 Tomorrow</option>
-              <option value="specific_date">📅 Specific date</option>
-              <option value="flexible_week">⏰ Flexible (this week)</option>
-              <option value="no_deadline">✅ No strict deadline</option>
+              <option value="today_asap">⚡ ASAP (expires in 3 days)</option>
+              <option value="flexible_week">📅 This week (expires in 7 days)</option>
+              <option value="specific_date">📆 Specific date (expires end of that day)</option>
+              <option value="no_deadline">✅ Until done (expires in 1 month)</option>
             </select>
           </div>
           
@@ -6121,26 +6120,24 @@ function showChangePasswordModal() {
         // Calculate expiresAt based on deadline preference
         let expiresAt = null;
         if (deadlinePreference === "today_asap") {
-          // Today/ASAP → expires today at 11:59 PM local time
+          // ASAP → expires in 3 days at 11:59 PM local time
           expiresAt = new Date(now);
-          expiresAt.setHours(23, 59, 59, 999);
-        } else if (deadlinePreference === "tomorrow") {
-          // Tomorrow → expires tomorrow at 11:59 PM local time
-          expiresAt = new Date(now);
-          expiresAt.setDate(expiresAt.getDate() + 1);
+          expiresAt.setDate(expiresAt.getDate() + 3);
           expiresAt.setHours(23, 59, 59, 999);
         } else if (deadlinePreference === "flexible_week") {
-          // This week → expires 7 days from post date at 11:59 PM
+          // This week → expires in 7 days at 11:59 PM
           expiresAt = new Date(now);
           expiresAt.setDate(expiresAt.getDate() + 7);
           expiresAt.setHours(23, 59, 59, 999);
         } else if (deadlinePreference === "specific_date" && startTime) {
-          // Custom date/time → expires exactly at the selected date & time
+          // Specific date → expires at end of that day (11:59 PM local time)
           expiresAt = new Date(startTime);
+          expiresAt.setHours(23, 59, 59, 999);
         } else if (deadlinePreference === "no_deadline") {
-          // No deadline → set far future expiration (1 year)
+          // Until done → expires in 1 month
           expiresAt = new Date(now);
-          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+          expiresAt.setMonth(expiresAt.getMonth() + 1);
+          expiresAt.setHours(23, 59, 59, 999);
         }
         
         // Build payment data
@@ -8017,6 +8014,79 @@ function initJobsViewToggle() {
 window.initJobsViewToggle = initJobsViewToggle;
 window.toggleJobsView = toggleJobsView;
 
+// Function to update countdown timers on job cards
+function updateCountdownTimers() {
+  try {
+    const timers = document.querySelectorAll('.countdown-timer[data-expires-at]');
+    const now = new Date();
+    
+    timers.forEach(timer => {
+      try {
+        const expiresAt = timer.getAttribute('data-expires-at');
+        const jobId = timer.getAttribute('data-job-id');
+        if (!expiresAt) return;
+        
+        const expiresDate = new Date(expiresAt);
+        const timeLeft = expiresDate - now;
+        
+        // Check if job has accepted hustler - if so, hide countdown
+        const jobCard = timer.closest('.job-card');
+        if (jobCard) {
+          const jobData = jobCard.dataset.jobData ? JSON.parse(jobCard.dataset.jobData) : null;
+          if (jobData && (jobData.hustlerId || jobData.status === 'SCHEDULED' || jobData.status === 'ASSIGNED' || jobData.status === 'IN_PROGRESS')) {
+            timer.style.display = 'none';
+            return;
+          }
+        }
+        
+        if (timeLeft > 0) {
+          const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          if (days > 0) {
+            timer.textContent = `⏱️ Expires in ${days}d ${hours}h`;
+          } else if (hours > 0) {
+            timer.textContent = `⏱️ Expires in ${hours}h`;
+          } else {
+            timer.textContent = `⏱️ Expires soon`;
+          }
+          timer.style.color = '#dc2626';
+        } else {
+          timer.textContent = `⏱️ Expired`;
+          timer.style.color = '#991b1b';
+        }
+      } catch (e) {
+        console.warn('Error updating countdown timer:', e);
+      }
+    });
+  } catch (e) {
+    console.warn('Error in updateCountdownTimers:', e);
+  }
+}
+
+// Initialize countdown timer updates
+function initCountdownTimers() {
+  if (typeof setInterval === 'undefined' || typeof document === 'undefined') return;
+  
+  // Update every minute
+  setInterval(() => {
+    updateCountdownTimers();
+  }, 60000);
+  
+  // Also update after a short delay
+  setTimeout(() => {
+    updateCountdownTimers();
+  }, 2000);
+}
+
+// Initialize when DOM is ready
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCountdownTimers);
+  } else {
+    initCountdownTimers();
+  }
+}
+
 async function renderJobs(reset = false) {
   console.log('🔵 NEW RENDERJOBS VERSION LOADED - v3.0');
   const jobsList = document.getElementById("jobsList");
@@ -8482,9 +8552,13 @@ async function renderJobs(reset = false) {
       meta.textContent = `${catIcon} ${catName} • 🕒 Posted ${relativeTime} (${absoluteDate})`;
       textContent.appendChild(meta);
       
-      // 3. Needed By / Deadline info
+      // 3. Done By / Deadline info with countdown
       const requirements = job.requirements || {};
       let neededByText = '';
+      let countdownText = '';
+      
+      // Check if Hustler is accepted/assigned - if so, don't show expiration countdown
+      const hasAcceptedHustler = job.hustlerId || job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS';
       
       const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
       
@@ -8502,10 +8576,30 @@ async function renderJobs(reset = false) {
               minute: '2-digit',
               hour12: true
             });
-            neededByText = `📅 Needed by ${dateStr}, ${timeStr}`;
+            neededByText = `📅 Done by ${dateStr}, ${timeStr}`;
+            
+            // Add countdown if not accepted and expiresAt exists
+            if (!hasAcceptedHustler && job.expiresAt) {
+              const expiresDate = new Date(job.expiresAt);
+              const now = new Date();
+              const timeLeft = expiresDate - now;
+              if (timeLeft > 0) {
+                const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                if (days > 0) {
+                  countdownText = `⏱️ Expires in ${days}d ${hours}h`;
+                } else if (hours > 0) {
+                  countdownText = `⏱️ Expires in ${hours}h`;
+                } else {
+                  countdownText = `⏱️ Expires soon`;
+                }
+              } else {
+                countdownText = `⏱️ Expired`;
+              }
+            }
           }
         } catch (e) {}
-      } else if (job.expiresAt) {
+      } else if (job.expiresAt && !hasAcceptedHustler) {
         // Use expiresAt if available - this is the primary source for expiration
         try {
           const expiresDate = new Date(job.expiresAt);
@@ -8520,7 +8614,24 @@ async function renderJobs(reset = false) {
               minute: '2-digit',
               hour12: true
             });
-            neededByText = `📅 Needed by ${dateStr}, ${timeStr}`;
+            neededByText = `📅 Done by ${dateStr}, ${timeStr}`;
+            
+            // Add countdown
+            const now = new Date();
+            const timeLeft = expiresDate - now;
+            if (timeLeft > 0) {
+              const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+              const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+              if (days > 0) {
+                countdownText = `⏱️ Expires in ${days}d ${hours}h`;
+              } else if (hours > 0) {
+                countdownText = `⏱️ Expires in ${hours}h`;
+              } else {
+                countdownText = `⏱️ Expires soon`;
+              }
+            } else {
+              countdownText = `⏱️ Expired`;
+            }
           }
         } catch (e) {}
       } else if (job.date) {
@@ -8541,7 +8652,7 @@ async function renderJobs(reset = false) {
               minute: '2-digit',
               hour12: true
             });
-            neededByText = `📅 Needed by ${dateStr}, ${timeStr}`;
+            neededByText = `📅 Done by ${dateStr}, ${timeStr}`;
           }
         } catch (e) {}
       }
@@ -8552,6 +8663,17 @@ async function renderJobs(reset = false) {
         neededByMeta.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
         neededByMeta.textContent = neededByText;
         textContent.appendChild(neededByMeta);
+      }
+      
+      // Add countdown timer if available and not accepted
+      if (countdownText && !hasAcceptedHustler && job.expiresAt) {
+        const countdownMeta = document.createElement("div");
+        countdownMeta.className = "job-meta countdown-timer";
+        countdownMeta.setAttribute("data-expires-at", job.expiresAt);
+        countdownMeta.setAttribute("data-job-id", job.id);
+        countdownMeta.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: #dc2626; font-weight: 600;";
+        countdownMeta.textContent = countdownText;
+        textContent.appendChild(countdownMeta);
       }
       
       // 4. Preferred Time (informational only)
@@ -8729,6 +8851,13 @@ async function renderJobs(reset = false) {
       });
       jobsList.appendChild(loadMoreBtn);
     }
+    
+    // Update countdown timers after rendering
+    setTimeout(() => {
+      if (typeof updateCountdownTimers === 'function') {
+        updateCountdownTimers();
+      }
+    }, 200);
 
   } catch (error) {
     console.error("Error loading jobs:", error);
@@ -9682,9 +9811,9 @@ async function renderJobs(reset = false) {
               minute: '2-digit',
               hour12: true
             });
-            deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Needed By:</span> <span style="color: #059669; font-weight: 600;">📅 ${deadlineStr}</span>`;
+            deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Done By:</span> <span style="color: #059669; font-weight: 600;">📅 ${deadlineStr}</span>`;
           } else {
-            deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Needed By:</span> <span style="color: var(--text-muted);">Not specified</span>`;
+            deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Done By:</span> <span style="color: var(--text-muted);">Not specified</span>`;
           }
         } else if (job.date) {
           const deadlineDate = new Date(job.date);
@@ -9694,17 +9823,17 @@ async function renderJobs(reset = false) {
               day: 'numeric',
               year: 'numeric'
             });
-            deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Needed By:</span> <span style="color: #059669; font-weight: 600;">📅 ${deadlineStr}</span>`;
+            deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Done By:</span> <span style="color: #059669; font-weight: 600;">📅 ${deadlineStr}</span>`;
           } else {
-            deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Needed By:</span> <span style="color: var(--text-muted);">Not specified</span>`;
+            deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Done By:</span> <span style="color: var(--text-muted);">Not specified</span>`;
           }
         } else {
-          deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Needed By:</span> <span style="color: var(--text-muted);">Not specified</span>`;
+          deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Done By:</span> <span style="color: var(--text-muted);">Not specified</span>`;
         }
         summaryGrid.appendChild(deadlineRow);
       } catch (e) {
         console.warn("Error formatting deadline:", e);
-        deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Needed By:</span> <span style="color: var(--text-muted);">Not specified</span>`;
+        deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Done By:</span> <span style="color: var(--text-muted);">Not specified</span>`;
         summaryGrid.appendChild(deadlineRow);
       }
 
