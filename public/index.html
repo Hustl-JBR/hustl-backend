@@ -8518,6 +8518,10 @@ async function renderJobs(reset = false) {
       const card = document.createElement("div");
       card.className = "job-card";
       card.dataset.jobId = job.id;
+      // Set position relative for absolute positioning of price and countdown
+      if (!card.style.position) {
+        card.style.position = "relative";
+      }
 
       // Category icon mapping
       const categoryIcons = {
