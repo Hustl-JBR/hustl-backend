@@ -7740,6 +7740,57 @@ function formatPublicLocation(job, requirements, showExactAddress = false) {
   return 'Location TBD';
 }
 
+// Format dropoff location with same privacy rules as pickup
+function formatDropoffLocation(job, requirements, showExactAddress = false) {
+  const req = requirements || job.requirements || {};
+  const hideDropoffAddress = req.hide_dropoff_address_until_assigned || req.hideDropoffAddressUntilAssigned;
+  const dropoffAddress = req.dropoff_address || '';
+  const dropoffCity = req.dropoff_city || req.dropoffCity || '';
+  const dropoffZip = req.dropoff_zip || '';
+  
+  // Helper function to remove apartment/unit numbers more thoroughly
+  function removeApartmentNumber(address) {
+    if (!address) return address;
+    // Remove common apartment/unit patterns (more comprehensive)
+    return address.replace(/\s*(?:Apt|Unit|#|Suite|Ste|Apt\.|Unit\.|Apartment|APT|UNIT|SUITE|#\s*)\s*[A-Z0-9-]+/gi, '').trim();
+  }
+  
+  // If exact address should be shown (assigned hustler), show full address but remove apartment/unit
+  if (showExactAddress && dropoffAddress) {
+    const cleanedAddress = removeApartmentNumber(dropoffAddress);
+    if (cleanedAddress && dropoffCity) {
+      return dropoffZip ? `${cleanedAddress}, ${dropoffCity} ${dropoffZip}` : `${cleanedAddress}, ${dropoffCity}`;
+    }
+  }
+  
+  // If address is NOT hidden: show full street address + ZIP (remove apartment/unit)
+  if (!hideDropoffAddress && dropoffAddress) {
+    const cleanedAddress = removeApartmentNumber(dropoffAddress);
+    if (cleanedAddress && dropoffCity) {
+      return dropoffZip ? `${cleanedAddress}, ${dropoffCity} ${dropoffZip}` : `${cleanedAddress}, ${dropoffCity}`;
+    }
+  }
+  
+  // If address IS hidden: show street name ONLY (no house number) + ZIP
+  if (hideDropoffAddress && dropoffAddress) {
+    // Remove apartment/unit numbers first
+    let cleanedAddress = removeApartmentNumber(dropoffAddress);
+    // Extract street name (remove house number) - match pattern like "123 Main St" -> "Main St"
+    const streetMatch = cleanedAddress.match(/^\d+\s+(.+)$/);
+    const streetName = streetMatch ? streetMatch[1] : cleanedAddress;
+    if (streetName && dropoffCity) {
+      return dropoffZip ? `${streetName}, ${dropoffCity} ${dropoffZip}` : `${streetName}, ${dropoffCity}`;
+    }
+  }
+  
+  // Fallback: City + ZIP
+  if (dropoffCity) {
+    return dropoffZip ? `${dropoffCity} ${dropoffZip}` : dropoffCity;
+  }
+  
+  return 'Location TBD';
+}
+
 // Calculate distance between two coordinates (Haversine formula)
 function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 3959; // Earth's radius in miles
