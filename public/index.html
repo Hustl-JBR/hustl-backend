@@ -411,16 +411,14 @@
       opacity: 1;
     }
 
-    .hamburger-btn.open span:nth-child(1) {
-      transform: rotate(45deg) translate(5px, 5px);
-    }
-
-    .hamburger-btn.open span:nth-child(2) {
+    .hamburger-btn.open span:nth-child(1),
+    .hamburger-btn.open span:nth-child(2),
+    .hamburger-btn.open span:nth-child(3) {
       opacity: 0;
     }
-
-    .hamburger-btn.open span:nth-child(3) {
-      transform: rotate(-45deg) translate(5px, -5px);
+    
+    .hamburger-btn.open .hamburger-close {
+      display: block !important;
     }
 
     /* Mobile menu overlay */
@@ -3239,6 +3237,7 @@
         <span></span>
         <span></span>
         <span></span>
+        <span class="hamburger-close" style="display: none; position: absolute; font-size: 1.2rem; font-weight: 700; color: var(--text-main);">✕</span>
       </button>
       
       <!-- Old auth pill (hidden but kept for JS compatibility) -->
@@ -4006,7 +4005,7 @@
             </button>
             
             <!-- Sort Dropdown -->
-            <div style="min-width: 150px;">
+            <div style="min-width: 120px;" class="sort-dropdown-container">
               <select id="jobsSortSelect" style="width: 100%; padding: 0.5rem; height: 2.25rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; background: white; cursor: pointer; box-sizing: border-box;">
                 <option value="newest">Newest</option>
                 <option value="highest_paid">Highest Paid</option>
