@@ -2931,7 +2931,19 @@
         word-wrap: break-word !important;
         overflow-wrap: break-word !important;
         margin: 0 0 0.5rem 0 !important;
-        padding-right: 4rem !important; /* Space for price in top right */
+        padding-right: 50% !important; /* More space for "Hustler suggests price" on mobile */
+      }
+      
+      /* Price on mobile - smaller and wraps */
+      .job-card-price {
+        font-size: 0.7rem !important;
+        line-height: 1.2 !important;
+        max-width: 48% !important;
+        word-wrap: break-word !important;
+        white-space: normal !important;
+        padding: 0.25rem 0.5rem !important;
+        background: rgba(255, 255, 255, 0.95) !important;
+        border-radius: 6px !important;
       }
       
       .job-meta {
@@ -3682,8 +3694,9 @@
           </div>
 
           <div class="field">
-            <label for="jobTitle">Job title</label>
-            <input id="jobTitle" type="text" placeholder="Example: Dump run from West Nashville" />
+            <label for="jobTitle">Job title <span style="color: var(--text-muted); font-size: 0.85rem;">(max 5 words)</span></label>
+            <input id="jobTitle" type="text" placeholder="Example: Dump run from West Nashville" maxlength="60" />
+            <div id="jobTitleError" style="display: none; color: #dc2626; font-size: 0.8rem; margin-top: 0.25rem;">Job title must be 5 words or less</div>
           </div>
 
           <!-- Category Selection - Mobile-friendly -->
@@ -6042,7 +6055,25 @@ function showChangePasswordModal() {
     async function updateJob(jobId) {
       try {
         // Collect all form data (same as post job)
-        const title = document.getElementById("jobTitle").value.trim();
+        const titleInput = document.getElementById("jobTitle");
+        const title = titleInput.value.trim();
+        
+        // Validate title is 5 words or less
+        const titleWords = title.split(/\s+/).filter(word => word.length > 0);
+        if (titleWords.length > 5) {
+          const errorDiv = document.getElementById("jobTitleError");
+          if (errorDiv) {
+            errorDiv.style.display = "block";
+          }
+          showToast("Job title must be 5 words or less. Please shorten it.");
+          titleInput.focus();
+          return;
+        } else {
+          const errorDiv = document.getElementById("jobTitleError");
+          if (errorDiv) {
+            errorDiv.style.display = "none";
+          }
+        }
         const category = document.getElementById("jobCategory").value;
         const desc = document.getElementById("jobDescription").value.trim();
         const pickupArea = document.getElementById("pickupArea").value.trim();
@@ -6972,7 +7003,25 @@ function showChangePasswordModal() {
             return;
           }
 
-          const title = document.getElementById("jobTitle").value.trim();
+          const titleInput = document.getElementById("jobTitle");
+          const title = titleInput.value.trim();
+          
+          // Validate title is 5 words or less
+          const titleWords = title.split(/\s+/).filter(word => word.length > 0);
+          if (titleWords.length > 5) {
+            const errorDiv = document.getElementById("jobTitleError");
+            if (errorDiv) {
+              errorDiv.style.display = "block";
+            }
+            showToast("Job title must be 5 words or less. Please shorten it.");
+            titleInput.focus();
+            return;
+          } else {
+            const errorDiv = document.getElementById("jobTitleError");
+            if (errorDiv) {
+              errorDiv.style.display = "none";
+            }
+          }
           const category = document.getElementById("jobCategory").value;
           const desc = document.getElementById("jobDescription").value.trim();
           const pickupArea = document
