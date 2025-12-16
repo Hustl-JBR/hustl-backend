@@ -8593,27 +8593,23 @@ async function renderJobs(reset = false) {
       // Check if this is the user's posted job
       const isUserJob = currentUserId && job.customerId === currentUserId;
       
-      // Add different border color for user's jobs
+      // Add yellow background for user's jobs instead of badge
       if (isUserJob) {
-        card.style.border = "2px solid #3b82f6";
-        card.style.background = "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)";
+        card.style.background = "#fef3c7"; // Yellow background
+        card.style.border = "2px solid #f59e0b"; // Yellow border
       }
 
-      // 1. Job title (large + bold)
+      // 1. Job title (large + bold) - limit to 5 words max
       const titleEl = document.createElement("div");
       titleEl.className = "job-title";
-      titleEl.style.cssText = "font-size: 1.1rem; font-weight: 700; line-height: 1.4; margin-bottom: 0.5rem; color: var(--text-main);";
+      titleEl.style.cssText = "font-size: 1.1rem; font-weight: 700; line-height: 1.4; margin-bottom: 0.5rem; color: var(--text-main); padding-right: 4rem; word-wrap: break-word; overflow-wrap: break-word;";
       
-      if (isUserJob) {
-        // Add "Your job" badge
-        const yourJobBadge = document.createElement("span");
-        yourJobBadge.style.cssText = "display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; margin-right: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;";
-        yourJobBadge.textContent = "Your Job";
-        titleEl.appendChild(yourJobBadge);
-      }
+      // Truncate title to max 5 words
+      const titleWords = job.title.split(' ');
+      const truncatedTitle = titleWords.length > 5 ? titleWords.slice(0, 5).join(' ') + '...' : job.title;
       
       const titleText = document.createElement("span");
-      titleText.textContent = job.title;
+      titleText.textContent = truncatedTitle;
       titleEl.appendChild(titleText);
       textContent.appendChild(titleEl);
 
