@@ -9694,6 +9694,12 @@ async function renderJobs(reset = false) {
       modalOverlay.id = "jobDetailModal";
       modalOverlay.className = "modal-overlay";
       modalOverlay.style.cssText = "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto;";
+      // Mobile-specific padding
+      if (window.innerWidth <= 768) {
+        modalOverlay.style.padding = "0.5rem";
+        modalOverlay.style.alignItems = "flex-start";
+        modalOverlay.style.paddingTop = "2rem";
+      }
       document.body.appendChild(modalOverlay);
       
       const modalContent = document.createElement("div");
