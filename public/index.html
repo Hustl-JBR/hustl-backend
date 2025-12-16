@@ -4084,11 +4084,6 @@
             </div>
 
             <div class="field" style="margin-bottom: 0.75rem;">
-              <label for="dropoffArea">Neighborhood / Area</label>
-              <input id="dropoffArea" type="text" placeholder="Example: East Nashville" />
-            </div>
-
-            <div class="field" style="margin-bottom: 0.75rem;">
               <label for="dropoffCity">City</label>
               <input id="dropoffCity" type="text" placeholder="Example: Nashville, TN" />
             </div>
@@ -5975,9 +5970,6 @@ function showChangePasswordModal() {
         }
         
         // Populate dropoff fields
-        if (document.getElementById("dropoffArea")) {
-          document.getElementById("dropoffArea").value = requirements.dropoff_area || requirements.dropoffArea || "";
-        }
         if (document.getElementById("dropoffCity")) {
           document.getElementById("dropoffCity").value = requirements.dropoff_city || requirements.dropoffCity || "";
         }
@@ -6126,7 +6118,6 @@ function showChangePasswordModal() {
         const pickupAddress = document.getElementById("pickupAddress").value.trim();
         const pickupApt = document.getElementById("pickupApt")?.value.trim() || "";
         const onSiteOnly = document.getElementById("jobOnSiteOnly").checked;
-        const dropoffArea = onSiteOnly ? "" : document.getElementById("dropoffArea").value.trim();
         const dropoffCity = onSiteOnly ? "" : document.getElementById("dropoffCity").value.trim();
         const dropoffZip = onSiteOnly ? "" : document.getElementById("dropoffZip").value.trim();
         const dropoffAddress = onSiteOnly ? "" : document.getElementById("dropoffAddress").value.trim();
@@ -6388,7 +6379,6 @@ function showChangePasswordModal() {
       document.getElementById("pickupZip").value = "";
       document.getElementById("pickupAddress").value = "";
       document.getElementById("jobOnSiteOnly").checked = false;
-      document.getElementById("dropoffArea").value = "";
       document.getElementById("dropoffCity").value = "";
       document.getElementById("dropoffZip").value = "";
       document.getElementById("dropoffAddress").value = "";
@@ -6619,7 +6609,6 @@ function showChangePasswordModal() {
             dropoffAddressInput.value = components.street;
           }
           if (components.neighborhood) {
-            const areaInput = document.getElementById('dropoffArea');
             if (areaInput) areaInput.value = components.neighborhood;
           }
           if (components.city) {
@@ -7104,9 +7093,6 @@ function showChangePasswordModal() {
             document.getElementById("hidePickupAddressUntilAssigned").checked;
           const hideDropoffAddressUntilAssigned =
             document.getElementById("hideDropoffAddressUntilAssigned")?.checked || false;
-          const dropoffArea = document
-            .getElementById("dropoffArea")
-            .value.trim();
           const dropoffCity = document
             .getElementById("dropoffCity")
             .value.trim();
@@ -7192,8 +7178,8 @@ function showChangePasswordModal() {
           if (!pickupZip) {
             return showToast("Please enter pickup ZIP code.");
           }
-          if (!onSiteOnly && (!dropoffCity || !dropoffArea)) {
-            return showToast("Please fill in dropoff location (city and area/neighborhood).");
+          if (!onSiteOnly && !dropoffCity) {
+            return showToast("Please fill in dropoff location (city).");
           }
           if (!onSiteOnly && !dropoffZip) {
             return showToast("Please enter dropoff ZIP code.");
@@ -7395,7 +7381,6 @@ function showChangePasswordModal() {
                 pickup_lat: document.getElementById('pickupLat')?.value || null,
                 pickup_lng: document.getElementById('pickupLng')?.value || null,
                 on_site_only: onSiteOnly,
-                dropoff_area: onSiteOnly ? null : dropoffArea,
                 dropoff_city: onSiteOnly ? null : dropoffCity,
                 dropoff_zip: onSiteOnly ? null : dropoffZip,
                 dropoff_address: onSiteOnly ? null : (dropoffAddress + (dropoffApt ? ', ' + dropoffApt : '')),
@@ -7896,42 +7881,8 @@ async function renderJobsOnMap(jobs) {
   // Get user location for distance
   const userLoc = userLocation || null;
   
-  // Helper function to extract street name from address
-  function extractStreetName(address) {
-    if (!address) return null;
-    // Remove apartment/unit numbers first
-    let cleaned = address.replace(/\s*(?:Apt|Unit|#|Suite|Ste|Apt\.|Unit\.)\s*[A-Z0-9-]+/i, '').trim();
-    // Extract street name (remove house number) - match pattern like "123 Main St" -> "Main St"
-    const streetMatch = cleaned.match(/^\d+\s+(.+)$/);
-    return streetMatch ? streetMatch[1] : cleaned;
-  }
-  
-  // Helper function to geocode street name for approximate coordinates
-  async function geocodeStreetName(streetName, city, zip) {
-    try {
-      const token = await getMapboxToken();
-      if (!token) return null;
-      
-      // Build query: street name + city + zip
-      const query = [streetName, city, zip].filter(Boolean).join(', ');
-      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&limit=1`;
-      
-      const response = await fetch(url);
-      const data = await response.json();
-      
-      if (data.features && data.features.length > 0) {
-        const [lng, lat] = data.features[0].center;
-        return { lat, lng };
-      }
-    } catch (e) {
-      console.warn('Geocoding failed:', e);
-    }
-    return null;
-  }
-  
   // Process each unique job
   const validJobs = [];
-  const geocodePromises = [];
   
   uniqueJobs.forEach((job, index) => {
     const requirements = job.requirements || {};
@@ -7975,40 +7926,21 @@ async function renderJobsOnMap(jobs) {
       lng = parseFloat(job.lng);
     }
     
-    // If address is hidden and we need street-level coordinates, geocode street name
-    if (isAreaBased && lat && lng && requirements.pickup_address) {
-      const streetName = extractStreetName(requirements.pickup_address);
-      const city = requirements.pickup_city || requirements.pickupCity || '';
-      const zip = requirements.pickup_zip || '';
-      
-      if (streetName) {
-        // Add to geocoding queue
-        geocodePromises.push(
-          geocodeStreetName(streetName, city, zip).then(streetCoords => {
-            if (streetCoords) {
-              validJobs.push({
-                job: job,
-                lat: streetCoords.lat,
-                lng: streetCoords.lng,
-                isAreaBased: true,
-                showExactAddress: showExactAddress
-              });
-            } else {
-              // Fallback to existing coordinates with small offset for privacy
-              const offsetLat = lat + (Math.random() - 0.5) * 0.002; // ~200m offset
-              const offsetLng = lng + (Math.random() - 0.5) * 0.002;
-              validJobs.push({
-                job: job,
-                lat: offsetLat,
-                lng: offsetLng,
-                isAreaBased: true,
-                showExactAddress: showExactAddress
-              });
-            }
-          })
-        );
-        return; // Skip adding to validJobs now, will be added after geocoding
-      }
+    // If address is hidden, use original coordinates but add small random offset for privacy
+    // This keeps the marker close to where the job was posted while not revealing exact location
+    if (isAreaBased && lat && lng) {
+      // Use original coordinates with small offset (~100-150m) to maintain proximity
+      // This is better than geocoding which can place markers far from original location
+      const offsetLat = lat + (Math.random() - 0.5) * 0.0015; // ~150m max offset
+      const offsetLng = lng + (Math.random() - 0.5) * 0.0015;
+      validJobs.push({
+        job: job,
+        lat: offsetLat,
+        lng: offsetLng,
+        isAreaBased: true,
+        showExactAddress: showExactAddress
+      });
+      return; // Skip adding to validJobs below
     }
     
     // Validate coordinates and add to validJobs
@@ -8023,9 +7955,6 @@ async function renderJobsOnMap(jobs) {
       });
     }
   });
-  
-  // Wait for all geocoding to complete
-  await Promise.all(geocodePromises);
   
   if (validJobs.length === 0) {
     const mapLoading = document.getElementById('jobsMapLoading');
@@ -9206,14 +9135,11 @@ async function renderJobs(reset = false) {
       
       let locationDisplay = formatPublicLocation(job, requirements, showExactAddress);
       
-      // Handle dropoff for multi-location jobs
-      if (!onSiteOnly && (dropoffArea || dropoffCity)) {
-        const dropoffParts = [];
-        if (dropoffArea) dropoffParts.push(dropoffArea);
-        if (dropoffCity) dropoffParts.push(dropoffCity);
-        if (dropoffZip) dropoffParts.push(dropoffZip);
-        if (dropoffParts.length > 0) {
-          locationDisplay += ` → ${dropoffParts.join(', ')}`;
+      // Handle dropoff for multi-location jobs - use formatDropoffLocation
+      if (!onSiteOnly) {
+        const dropoffLocationText = formatDropoffLocation(job, requirements, showExactAddress);
+        if (dropoffLocationText && dropoffLocationText !== 'Location TBD') {
+          locationDisplay += ` → ${dropoffLocationText}`;
         }
       } else if (onSiteOnly) {
         locationDisplay += ' (Single location)';
@@ -16406,9 +16332,28 @@ async function renderJobs(reset = false) {
                   locationDisplay = pickupParts.join(', ');
                   
                   if (!onSiteOnly && (dropoffArea || dropoffCity)) {
+                    // Use formatDropoffLocation for dropoff display
+                    const hideDropoffAddressUntilAssigned = requirements.hide_dropoff_address_until_assigned || requirements.hideDropoffAddressUntilAssigned;
+                    let showExactDropoffAddress = false;
+                    
+                    if (hideDropoffAddressUntilAssigned) {
+                      try {
+                        const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
+                        if (user) {
+                          const isAssignedHustler = job.hustlerId && job.hustlerId === user.id && 
+                                                    (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
+                          showExactDropoffAddress = isAssignedHustler;
+                        }
+                      } catch (e) {
+                        showExactDropoffAddress = false;
+                      }
+                    }
+                    
+                    const dropoffLocationText = formatDropoffLocation(job, requirements, showExactDropoffAddress);
                     const dropoffParts = [];
-                    if (dropoffArea) dropoffParts.push(dropoffArea);
-                    if (dropoffCity) dropoffParts.push(dropoffCity);
+                    if (dropoffLocationText && dropoffLocationText !== 'Location TBD') {
+                      dropoffParts.push(dropoffLocationText);
+                    }
                     if (dropoffZip) dropoffParts.push(dropoffZip);
                     locationDisplay += ` → ${dropoffParts.join(', ')}`;
                   } else if (onSiteOnly) {
