@@ -3757,7 +3757,8 @@
           <div class="field">
             <label for="jobWhen">Done by</label>
             <select id="jobWhen">
-              <option value="today_asap">⚡ ASAP (expires in 3 days)</option>
+              <option value="today">📅 Today - This job will be deleted after today unless you renew it.</option>
+              <option value="today_asap">⚡ ASAP - This job will be deleted in 3 days unless renewed.</option>
               <option value="flexible_week">📅 This week (expires in 7 days)</option>
               <option value="specific_date">📆 Specific date (expires end of that day)</option>
               <option value="no_deadline">✅ Until done (expires in 1 month)</option>
@@ -3800,9 +3801,15 @@
             </p>
           </div>
           
+          <div id="todayNote" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: #fee2e2; border-radius: 8px; border-left: 3px solid #ef4444;">
+            <p style="margin: 0; font-size: 0.85rem; color: #991b1b;">
+              <strong>📅 Today:</strong> This job will be deleted after today unless you renew it.
+            </p>
+          </div>
+          
           <div id="todayAsapNote" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: #fee2e2; border-radius: 8px; border-left: 3px solid #ef4444;">
             <p style="margin: 0; font-size: 0.85rem; color: #991b1b;">
-              <strong>⚡ Today – ASAP:</strong> This job will be deleted after today unless you renew it.
+              <strong>⚡ ASAP:</strong> This job will be deleted in 3 days unless renewed.
             </p>
           </div>
           
@@ -6044,7 +6051,23 @@ function showChangePasswordModal() {
         const now = new Date();
         let date, startTime, endTime, deadlinePreference;
         
-        if (jobWhen === "no_deadline") {
+        if (jobWhen === "today") {
+          // Today - deadline is today, expires at end of today
+          date = now.toISOString().split('T')[0];
+          startTime = new Date(now);
+          startTime.setHours(now.getHours(), 0, 0, 0);
+          endTime = new Date(now);
+          endTime.setHours(23, 59, 59, 999); // End of today
+          deadlinePreference = "today";
+        } else if (jobWhen === "today_asap") {
+          // ASAP - deadline is today, expires in 3 days
+          date = now.toISOString().split('T')[0];
+          startTime = new Date(now);
+          startTime.setHours(now.getHours(), 0, 0, 0);
+          endTime = new Date(now);
+          endTime.setHours(23, 59, 59, 999); // End of today
+          deadlinePreference = "today_asap";
+        } else if (jobWhen === "no_deadline") {
           const futureDate = new Date(now);
           futureDate.setFullYear(futureDate.getFullYear() + 1);
           date = futureDate.toISOString().split('T')[0];
@@ -6095,8 +6118,6 @@ function showChangePasswordModal() {
             endTime.setHours(23, 0, 0, 0);
           }
           
-          // If job is posted TODAY and user selects a specific time today, use that time
-          // If it's a future date, use the selected date + time (already set above)
           deadlinePreference = "specific_date";
         } else if (jobWhen === "tomorrow") {
           const targetDate = new Date(now);
@@ -6108,18 +6129,22 @@ function showChangePasswordModal() {
           endTime.setHours(21, 0, 0, 0);
           deadlinePreference = "tomorrow";
         } else {
-          // today_asap - set to today at 11:59 PM local time
+          // Default to ASAP
           date = now.toISOString().split('T')[0];
           startTime = new Date(now);
           startTime.setHours(now.getHours(), 0, 0, 0);
           endTime = new Date(now);
-          endTime.setHours(23, 59, 59, 999); // 11:59 PM local time
+          endTime.setHours(23, 59, 59, 999);
           deadlinePreference = "today_asap";
         }
         
         // Calculate expiresAt based on deadline preference
         let expiresAt = null;
-        if (deadlinePreference === "today_asap") {
+        if (deadlinePreference === "today") {
+          // Today → expires at end of today (11:59 PM local time)
+          expiresAt = new Date(now);
+          expiresAt.setHours(23, 59, 59, 999);
+        } else if (deadlinePreference === "today_asap") {
           // ASAP → expires in 3 days at 11:59 PM local time
           expiresAt = new Date(now);
           expiresAt.setDate(expiresAt.getDate() + 3);
@@ -6623,12 +6648,14 @@ function showChangePasswordModal() {
       const flexibleDeadlineNote = document.getElementById("flexibleDeadlineNote");
       if (jobWhenSelect) {
         jobWhenSelect.addEventListener("change", () => {
+          const todayNote = document.getElementById("todayNote");
           const todayAsapNote = document.getElementById("todayAsapNote");
           const tomorrowNote = document.getElementById("tomorrowNote");
           
           if (jobWhenSelect.value === "specific_date") {
             if (customDateFields) customDateFields.style.display = "block";
             if (flexibleDeadlineNote) flexibleDeadlineNote.style.display = "none";
+            if (todayNote) todayNote.style.display = "none";
             if (todayAsapNote) todayAsapNote.style.display = "none";
             if (tomorrowNote) tomorrowNote.style.display = "none";
             // Focus on date input immediately
@@ -6636,18 +6663,27 @@ function showChangePasswordModal() {
               const customDateInput = document.getElementById("customDate");
               if (customDateInput) customDateInput.focus();
             }, 100);
+          } else if (jobWhenSelect.value === "today") {
+            if (customDateFields) customDateFields.style.display = "none";
+            if (flexibleDeadlineNote) flexibleDeadlineNote.style.display = "none";
+            if (todayNote) todayNote.style.display = "block";
+            if (todayAsapNote) todayAsapNote.style.display = "none";
+            if (tomorrowNote) tomorrowNote.style.display = "none";
           } else if (jobWhenSelect.value === "today_asap") {
             if (customDateFields) customDateFields.style.display = "none";
             if (flexibleDeadlineNote) flexibleDeadlineNote.style.display = "none";
+            if (todayNote) todayNote.style.display = "none";
             if (todayAsapNote) todayAsapNote.style.display = "block";
             if (tomorrowNote) tomorrowNote.style.display = "none";
           } else if (jobWhenSelect.value === "tomorrow") {
             if (customDateFields) customDateFields.style.display = "none";
             if (flexibleDeadlineNote) flexibleDeadlineNote.style.display = "none";
+            if (todayNote) todayNote.style.display = "none";
             if (todayAsapNote) todayAsapNote.style.display = "none";
             if (tomorrowNote) tomorrowNote.style.display = "block";
           } else if (jobWhenSelect.value === "flexible_week") {
             if (customDateFields) customDateFields.style.display = "none";
+            if (todayNote) todayNote.style.display = "none";
             if (todayAsapNote) todayAsapNote.style.display = "none";
             if (tomorrowNote) tomorrowNote.style.display = "none";
             if (flexibleDeadlineNote) {
@@ -8563,9 +8599,11 @@ async function renderJobs(reset = false) {
       const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
       const now = new Date();
       
-      // Display "Done by" based on deadline preference - show text labels for non-specific dates
-      if (deadlinePreference === "today_asap") {
-        neededByText = `📅 Done by ASAP`;
+      // Display "Done by" based on deadline preference - show text labels with descriptions
+      if (deadlinePreference === "today") {
+        neededByText = `📅 Done by Today (needs done today)`;
+      } else if (deadlinePreference === "today_asap") {
+        neededByText = `📅 Done by ASAP (needs done in the next 3 days)`;
       } else if (deadlinePreference === "flexible_week") {
         neededByText = `📅 Done by This week`;
       } else if (deadlinePreference === "no_deadline") {
