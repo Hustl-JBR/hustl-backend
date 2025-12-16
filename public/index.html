@@ -8677,15 +8677,15 @@ async function renderJobs(reset = false) {
         textContent.appendChild(neededByMeta);
       }
       
-      // Add countdown timer if available and not accepted
+      // Add countdown timer if available and not accepted - positioned in bottom right
       if (countdownText && !hasAcceptedHustler && job.expiresAt) {
         const countdownMeta = document.createElement("div");
         countdownMeta.className = "job-meta countdown-timer";
         countdownMeta.setAttribute("data-expires-at", job.expiresAt);
         countdownMeta.setAttribute("data-job-id", job.id);
-        countdownMeta.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: #dc2626; font-weight: 600;";
+        countdownMeta.style.cssText = "position: absolute; bottom: 0.75rem; right: 0.75rem; font-size: 0.85rem; color: #dc2626; font-weight: 600; z-index: 10;";
         countdownMeta.textContent = countdownText;
-        textContent.appendChild(countdownMeta);
+        card.appendChild(countdownMeta); // Add to card, not textContent
       }
       
       // 4. Preferred Time (informational only)
@@ -8751,10 +8751,11 @@ async function renderJobs(reset = false) {
         textContent.appendChild(loc);
       }
       
-      // 6. Price (flat/hourly)
+      // 6. Price (flat/hourly) - positioned in top right
       const pricingOption = requirements.pricing_option;
       const pay = document.createElement("div");
-      pay.style.cssText = "font-weight: 700; color: var(--success); font-size: 1rem; margin-top: 0.25rem;";
+      pay.className = "job-card-price";
+      pay.style.cssText = "position: absolute; top: 0.75rem; right: 0.75rem; font-weight: 700; color: var(--success); font-size: 1rem; z-index: 10;";
       
       if (pricingOption === "hustlers_quote") {
         pay.textContent = "💰 Hustler suggests price";
@@ -8769,7 +8770,7 @@ async function renderJobs(reset = false) {
         const total = Number(job.amount) || 0;
         pay.textContent = `💰 $${total.toFixed(0)}`;
       }
-      textContent.appendChild(pay);
+      card.appendChild(pay); // Add to card, not textContent
       
       // Add textContent to card
       card.appendChild(textContent);
