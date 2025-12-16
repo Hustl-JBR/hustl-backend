@@ -4163,20 +4163,20 @@
       <!-- JOBS VIEW -->
       <section id="view-jobs" style="display:none;">
         <!-- Filter Button & Sort Row -->
-        <div class="card" style="margin-bottom: 0.75rem; padding: 1rem 1rem; display: flex; justify-content: flex-start; align-items: center; min-height: 4.5rem;">
-          <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin: 0 auto 0 0; flex: 1;">
+        <div class="card" style="margin-bottom: 0.75rem; padding: 1rem 1rem; display: flex; justify-content: flex-start; align-items: center; min-height: auto;">
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: nowrap; width: 100%;" class="filters-sort-row">
             <!-- Filters Button with Badge -->
-            <button id="filtersToggleBtn" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.9rem; height: 2.25rem; background: white; border: 1.5px solid var(--primary); border-radius: 8px; font-size: 0.85rem; font-weight: 600; color: var(--primary); cursor: pointer; position: relative; box-sizing: border-box;">
+            <button id="filtersToggleBtn" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.9rem; height: 2.25rem; background: white; border: 1.5px solid var(--primary); border-radius: 8px; font-size: 0.85rem; font-weight: 600; color: var(--primary); cursor: pointer; position: relative; box-sizing: border-box; flex-shrink: 0;" class="filters-btn-mobile">
               <span>Filters</span>
               <span id="filtersBadge" style="display: none; background: var(--primary); color: white; border-radius: 12px; padding: 0.15rem 0.5rem; font-size: 0.75rem; font-weight: 600; min-width: 20px; text-align: center;">0</span>
               <span>▾</span>
             </button>
             
             <!-- Sort Dropdown and List/Map Toggle Container -->
-            <div style="display: flex; gap: 0.5rem; align-items: center;" class="sort-and-toggle-container">
+            <div style="display: flex; gap: 0.5rem; align-items: center; flex: 1; min-width: 0;" class="sort-and-toggle-container">
               <!-- Sort Dropdown -->
-              <div style="min-width: 120px;" class="sort-dropdown-container">
-                <select id="jobsSortSelect" style="width: 100%; padding: 0.5rem; height: 2.25rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; background: white; cursor: pointer; box-sizing: border-box;">
+              <div style="min-width: 120px; flex: 1; min-width: 0;" class="sort-dropdown-container">
+                <select id="jobsSortSelect" style="width: 100%; padding: 0.5rem; height: 2.25rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; background: white; cursor: pointer; box-sizing: border-box;" class="sort-select-mobile">
                   <option value="newest">Newest</option>
                   <option value="highest_paid">Highest Paid</option>
                   <option value="lowest_paid">Lowest Paid</option>
@@ -4186,7 +4186,7 @@
               </div>
               
               <!-- List/Map Toggle -->
-              <div style="display: flex; background: #f3f4f6; border-radius: 6px; padding: 0.2rem; border: 1px solid #e5e7eb;">
+              <div style="display: flex; background: #f3f4f6; border-radius: 6px; padding: 0.2rem; border: 1px solid #e5e7eb; flex-shrink: 0;" class="toggle-container-mobile">
                 <button id="jobsViewListBtn" class="jobs-view-toggle active" style="padding: 0.4rem 0.75rem; background: white; border: none; border-radius: 4px; font-size: 0.75rem; font-weight: 600; color: #111827; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1); transition: all 0.2s;">
                   📋 List
                 </button>
