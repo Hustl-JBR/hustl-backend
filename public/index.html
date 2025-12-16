@@ -9105,28 +9105,19 @@ async function renderJobs(reset = false) {
       const teamSize = typeof rawTeamSize === 'string' ? parseInt(rawTeamSize, 10) : Number(rawTeamSize) || 1;
       const pricingOption = requirements.pricing_option;
       
-      // Format location
-      const pickupArea = requirements.pickup_area || requirements.pickupArea;
-      const pickupCity = requirements.pickup_city || requirements.pickupCity;
-      const pickupZip = requirements.pickup_zip;
-      const dropoffArea = requirements.dropoff_area || requirements.dropoffArea;
-      const dropoffCity = requirements.dropoff_city || requirements.dropoffCity;
-      const dropoffZip = requirements.dropoff_zip;
-      const onSiteOnly = requirements.on_site_only || requirements.onSiteOnly;
-      
-      // Format location - public view: street name + city + ZIP only
-      const hidePickupAddress = requirements.hide_pickup_address_until_assigned || requirements.hidePickupAddressUntilAssigned;
+      // Format location - use formatPublicLocation and formatDropoffLocation
+      const hidePickupAddressUntilAssigned = requirements.hide_pickup_address_until_assigned || requirements.hidePickupAddressUntilAssigned;
+      const hideDropoffAddressUntilAssigned = requirements.hide_dropoff_address_until_assigned || requirements.hideDropoffAddressUntilAssigned;
       let showExactAddress = false;
       
-      // Check if user is accepted hustler (can see exact address)
-      if (hidePickupAddress) {
+      // Check if user is assigned hustler (can see exact address)
+      if (hidePickupAddressUntilAssigned || hideDropoffAddressUntilAssigned) {
         try {
           const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
           if (user) {
-            const isHustler = user && !user.roles?.includes('CUSTOMER');
-            const jobAccepted = job.hustlerId && job.hustlerId === user.id && 
-                               (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
-            showExactAddress = isHustler && jobAccepted;
+            const isAssignedHustler = job.hustlerId && job.hustlerId === user.id && 
+                                      (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
+            showExactAddress = isAssignedHustler;
           }
         } catch (e) {
           showExactAddress = false;
@@ -9134,6 +9125,7 @@ async function renderJobs(reset = false) {
       }
       
       let locationDisplay = formatPublicLocation(job, requirements, showExactAddress);
+      const onSiteOnly = requirements.on_site_only || requirements.onSiteOnly;
       
       // Handle dropoff for multi-location jobs - use formatDropoffLocation
       if (!onSiteOnly) {
