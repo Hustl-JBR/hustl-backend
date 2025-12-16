@@ -25238,12 +25238,25 @@ try {
         freshMobileMenu.classList.remove('open');
         document.body.classList.remove('mobile-menu-open');
         document.body.style.overflow = '';
+        // Hide close button
+        const closeBtn = document.getElementById('mobileMenuClose');
+        if (closeBtn) {
+          closeBtn.style.display = 'none';
+          closeBtn.style.visibility = 'hidden';
+        }
       } else {
         // Opening menu
         freshHamburgerBtn.classList.add('open');
         freshMobileMenu.classList.add('open');
         document.body.classList.add('mobile-menu-open');
         document.body.style.overflow = 'hidden';
+        // Show close button
+        const closeBtn = document.getElementById('mobileMenuClose');
+        if (closeBtn) {
+          closeBtn.style.display = 'flex';
+          closeBtn.style.visibility = 'visible';
+          closeBtn.style.opacity = '1';
+        }
       }
       
       setTimeout(() => {
