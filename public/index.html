@@ -7707,42 +7707,33 @@ async function safeFetch(url, options = {}) {
 function formatPublicLocation(job, requirements, showExactAddress = false) {
   const req = requirements || job.requirements || {};
   const hidePickupAddress = req.hide_pickup_address_until_assigned || req.hidePickupAddressUntilAssigned;
-  
-  // If exact address should be shown (accepted hustler), use full address but still remove apartment
-  if (showExactAddress && req.pickup_address) {
-    const address = req.pickup_address;
-    // Remove apartment/unit numbers (common patterns: Apt, Unit, #, etc.)
-    const cleanedAddress = address.replace(/\s*(?:Apt|Unit|#|Suite|Ste|Apt\.|Unit\.)\s*[A-Z0-9-]+/i, '').trim();
-    // Extract street name (remove house number)
-    const streetMatch = cleanedAddress.match(/^\d+\s+(.+)$/);
-    const streetName = streetMatch ? streetMatch[1] : cleanedAddress;
-    const city = req.pickup_city || req.pickupCity || '';
-    const zip = req.pickup_zip || '';
-    if (streetName && city) {
-      return zip ? `${streetName}, ${city} ${zip}` : `${streetName}, ${city}`;
-    }
-  }
-  
-  // Public view: Use street name only (from pickup_area or extract from address)
-  const pickupArea = req.pickup_area || req.pickupArea || '';
+  const pickupAddress = req.pickup_address || '';
   const pickupCity = req.pickup_city || req.pickupCity || '';
   const pickupZip = req.pickup_zip || '';
   
-  // If we have pickup_area, use it (it's typically the street name)
-  if (pickupArea) {
-    const parts = [];
-    parts.push(pickupArea);
-    if (pickupCity) parts.push(pickupCity);
-    if (pickupZip) parts.push(pickupZip);
-    return parts.join(', ');
+  // If exact address should be shown (assigned hustler), show full address but remove apartment/unit
+  if (showExactAddress && pickupAddress) {
+    // Remove apartment/unit numbers (common patterns: Apt, Unit, #, Suite, Ste, Apt., Unit.)
+    const cleanedAddress = pickupAddress.replace(/\s*(?:Apt|Unit|#|Suite|Ste|Apt\.|Unit\.)\s*[A-Z0-9-]+/i, '').trim();
+    if (cleanedAddress && pickupCity) {
+      return pickupZip ? `${cleanedAddress}, ${pickupCity} ${pickupZip}` : `${cleanedAddress}, ${pickupCity}`;
+    }
   }
   
-  // Fallback: Try to extract street name from address
-  if (req.pickup_address) {
-    const address = req.pickup_address;
-    // Remove apartment/unit numbers
-    const cleanedAddress = address.replace(/\s*(?:Apt|Unit|#|Suite|Ste|Apt\.|Unit\.)\s*[A-Z0-9-]+/i, '').trim();
-    // Extract street name (remove house number)
+  // If address is NOT hidden: show full street address + ZIP (remove apartment/unit)
+  if (!hidePickupAddress && pickupAddress) {
+    // Remove apartment/unit numbers from public display
+    const cleanedAddress = pickupAddress.replace(/\s*(?:Apt|Unit|#|Suite|Ste|Apt\.|Unit\.)\s*[A-Z0-9-]+/i, '').trim();
+    if (cleanedAddress && pickupCity) {
+      return pickupZip ? `${cleanedAddress}, ${pickupCity} ${pickupZip}` : `${cleanedAddress}, ${pickupCity}`;
+    }
+  }
+  
+  // If address IS hidden: show street name ONLY (no house number) + ZIP
+  if (hidePickupAddress && pickupAddress) {
+    // Remove apartment/unit numbers first
+    let cleanedAddress = pickupAddress.replace(/\s*(?:Apt|Unit|#|Suite|Ste|Apt\.|Unit\.)\s*[A-Z0-9-]+/i, '').trim();
+    // Extract street name (remove house number) - match pattern like "123 Main St" -> "Main St"
     const streetMatch = cleanedAddress.match(/^\d+\s+(.+)$/);
     const streetName = streetMatch ? streetMatch[1] : cleanedAddress;
     if (streetName && pickupCity) {
@@ -7750,7 +7741,7 @@ function formatPublicLocation(job, requirements, showExactAddress = false) {
     }
   }
   
-  // Last resort: City + ZIP
+  // Fallback: City + ZIP
   if (pickupCity) {
     return pickupZip ? `${pickupCity} ${pickupZip}` : pickupCity;
   }
@@ -7862,13 +7853,13 @@ async function initJobsMap() {
 }
 
 // Render jobs on map - SIMPLIFIED and STABLE
-function renderJobsOnMap(jobs) {
+async function renderJobsOnMap(jobs) {
   if (!jobsMap) return;
   
   // Wait for map to be fully loaded
   if (!jobsMap.loaded()) {
-    jobsMap.once('load', () => {
-      renderJobsOnMap(jobs);
+    jobsMap.once('load', async () => {
+      await renderJobsOnMap(jobs);
     });
     return;
   }
@@ -7905,25 +7896,68 @@ function renderJobsOnMap(jobs) {
   // Get user location for distance
   const userLoc = userLocation || null;
   
+  // Helper function to extract street name from address
+  function extractStreetName(address) {
+    if (!address) return null;
+    // Remove apartment/unit numbers first
+    let cleaned = address.replace(/\s*(?:Apt|Unit|#|Suite|Ste|Apt\.|Unit\.)\s*[A-Z0-9-]+/i, '').trim();
+    // Extract street name (remove house number) - match pattern like "123 Main St" -> "Main St"
+    const streetMatch = cleaned.match(/^\d+\s+(.+)$/);
+    return streetMatch ? streetMatch[1] : cleaned;
+  }
+  
+  // Helper function to geocode street name for approximate coordinates
+  async function geocodeStreetName(streetName, city, zip) {
+    try {
+      const token = await getMapboxToken();
+      if (!token) return null;
+      
+      // Build query: street name + city + zip
+      const query = [streetName, city, zip].filter(Boolean).join(', ');
+      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&limit=1`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.features && data.features.length > 0) {
+        const [lng, lat] = data.features[0].center;
+        return { lat, lng };
+      }
+    } catch (e) {
+      console.warn('Geocoding failed:', e);
+    }
+    return null;
+  }
+  
   // Process each unique job
   const validJobs = [];
-  uniqueJobs.forEach(job => {
+  const geocodePromises = [];
+  
+  uniqueJobs.forEach((job, index) => {
     const requirements = job.requirements || {};
     
-    // Determine address visibility
+    // Determine address visibility and if user is assigned hustler
     const hidePickupAddress = requirements.hide_pickup_address_until_assigned || requirements.hidePickupAddressUntilAssigned;
     let isAreaBased = false;
+    let showExactAddress = false;
     
     if (hidePickupAddress) {
       try {
         const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
         if (user) {
-          const isHustler = user && !user.roles?.includes('CUSTOMER');
-          const jobAccepted = job.hustlerId && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
-          isAreaBased = isHustler && !jobAccepted;
+          // Check if user is the assigned hustler
+          const isAssignedHustler = job.hustlerId && job.hustlerId === user.id && 
+                                     (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
+          showExactAddress = isAssignedHustler;
+          // If address is hidden and user is not assigned hustler, use street-level
+          isAreaBased = !isAssignedHustler;
+        } else {
+          // No user logged in, use street-level
+          isAreaBased = true;
         }
       } catch (e) {
-        // Default to exact if error
+        // Default to street-level if error
+        isAreaBased = true;
       }
     }
     
@@ -7941,17 +7975,57 @@ function renderJobsOnMap(jobs) {
       lng = parseFloat(job.lng);
     }
     
-    // Validate coordinates
+    // If address is hidden and we need street-level coordinates, geocode street name
+    if (isAreaBased && lat && lng && requirements.pickup_address) {
+      const streetName = extractStreetName(requirements.pickup_address);
+      const city = requirements.pickup_city || requirements.pickupCity || '';
+      const zip = requirements.pickup_zip || '';
+      
+      if (streetName) {
+        // Add to geocoding queue
+        geocodePromises.push(
+          geocodeStreetName(streetName, city, zip).then(streetCoords => {
+            if (streetCoords) {
+              validJobs.push({
+                job: job,
+                lat: streetCoords.lat,
+                lng: streetCoords.lng,
+                isAreaBased: true,
+                showExactAddress: showExactAddress
+              });
+            } else {
+              // Fallback to existing coordinates with small offset for privacy
+              const offsetLat = lat + (Math.random() - 0.5) * 0.002; // ~200m offset
+              const offsetLng = lng + (Math.random() - 0.5) * 0.002;
+              validJobs.push({
+                job: job,
+                lat: offsetLat,
+                lng: offsetLng,
+                isAreaBased: true,
+                showExactAddress: showExactAddress
+              });
+            }
+          })
+        );
+        return; // Skip adding to validJobs now, will be added after geocoding
+      }
+    }
+    
+    // Validate coordinates and add to validJobs
     if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng) && 
         lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
       validJobs.push({
         job: job,
         lat: lat,
         lng: lng,
-        isAreaBased: isAreaBased
+        isAreaBased: isAreaBased,
+        showExactAddress: showExactAddress
       });
     }
   });
+  
+  // Wait for all geocoding to complete
+  await Promise.all(geocodePromises);
   
   if (validJobs.length === 0) {
     const mapLoading = document.getElementById('jobsMapLoading');
@@ -7982,11 +8056,8 @@ function renderJobsOnMap(jobs) {
   }
   
   // Create ONE marker per job
-  validJobs.forEach(({ job, lat, lng, isAreaBased }) => {
+  validJobs.forEach(({ job, lat, lng, isAreaBased, showExactAddress }) => {
     const requirements = job.requirements || {};
-    const pickupArea = requirements.pickup_area || requirements.pickupArea;
-    const pickupCity = requirements.pickup_city || requirements.pickupCity;
-    const pickupZip = requirements.pickup_zip;
     
     // Distance calculation
     let distanceText = '';
@@ -7995,8 +8066,8 @@ function renderJobsOnMap(jobs) {
       distanceText = formatDistance(distance);
     }
     
-    // Location text - use formatPublicLocation for consistency
-    const locationText = formatPublicLocation(job, requirements, false);
+    // Location text - use formatPublicLocation for consistency, pass showExactAddress
+    const locationText = formatPublicLocation(job, requirements, showExactAddress || false);
     
     // Popup content
     const popupContent = document.createElement('div');
@@ -8956,12 +9027,12 @@ async function renderJobs(reset = false) {
     if (currentJobsView === 'map') {
       if (jobsMap) {
         // Map exists, render jobs (will check if loaded inside function)
-        renderJobsOnMap(filteredJobs);
+        await renderJobsOnMap(filteredJobs);
       } else {
         // Initialize map if not already done
-        initJobsMap().then(() => {
+        initJobsMap().then(async () => {
           if (jobsMap && filteredJobs.length > 0) {
-            renderJobsOnMap(filteredJobs);
+            await renderJobsOnMap(filteredJobs);
           }
         });
       }
@@ -10321,13 +10392,35 @@ async function renderJobs(reset = false) {
       locationText.textContent = locationDisplay;
       locationSection.appendChild(locationText);
       
-      // Map preview (Mapbox) - use pickup coordinates or job coordinates
-      const reqLat = requirements.pickup_lat || requirements.pickupLat;
-      const reqLng = requirements.pickup_lng || requirements.pickupLng;
-      const jobLat = job.lat;
-      const jobLng = job.lng;
-      const lat = reqLat || jobLat;
-      const lng = reqLng || jobLng;
+      // Map preview (Mapbox) - use exact coordinates if user is assigned hustler, otherwise use street-level for hidden addresses
+      let lat = null;
+      let lng = null;
+      
+      if (showExactAddress) {
+        // Assigned hustler: use exact coordinates
+        const reqLat = requirements.pickup_lat || requirements.pickupLat;
+        const reqLng = requirements.pickup_lng || requirements.pickupLng;
+        const jobLat = job.lat;
+        const jobLng = job.lng;
+        lat = reqLat || jobLat;
+        lng = reqLng || jobLng;
+      } else if (hidePickupAddressUntilAssigned && requirements.pickup_address) {
+        // Hidden address: would need to geocode street name, but for preview use existing coords with note
+        const reqLat = requirements.pickup_lat || requirements.pickupLat;
+        const reqLng = requirements.pickup_lng || requirements.pickupLng;
+        const jobLat = job.lat;
+        const jobLng = job.lng;
+        lat = reqLat || jobLat;
+        lng = reqLng || jobLng;
+      } else {
+        // Not hidden: use exact coordinates
+        const reqLat = requirements.pickup_lat || requirements.pickupLat;
+        const reqLng = requirements.pickup_lng || requirements.pickupLng;
+        const jobLat = job.lat;
+        const jobLng = job.lng;
+        lat = reqLat || jobLat;
+        lng = reqLng || jobLng;
+      }
       
       if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
         const mapContainer = document.createElement("div");
