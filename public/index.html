@@ -431,7 +431,11 @@
       bottom: 0 !important;
       background: #ffffff !important;
       z-index: 10002 !important; /* Above header (100), below hamburger button (10001) */
-      padding: 70px 1rem 2rem;
+      padding: 0;
+      padding-top: 80px !important; /* Space for header + close button */
+      padding-left: 1rem;
+      padding-right: 1rem;
+      padding-bottom: 2rem;
       flex-direction: column;
       gap: 0.25rem;
       overflow-y: auto;
@@ -454,7 +458,7 @@
     /* Close button for mobile menu */
     .mobile-menu-close {
       position: fixed !important;
-      top: 1rem !important;
+      top: 60px !important; /* Below header (header is ~50-60px tall) */
       right: 1rem !important;
       width: 44px !important;
       height: 44px !important;
@@ -481,6 +485,13 @@
       color: #111827 !important;
       transform: scale(1.1) !important;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+    }
+    
+    /* Ensure close button is visible when menu is open */
+    .mobile-menu.open .mobile-menu-close {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     }
 
     .mobile-menu-item {
@@ -25251,6 +25262,7 @@ try {
         freshMobileMenu.classList.remove('open');
         document.body.classList.remove('mobile-menu-open');
         document.body.style.overflow = '';
+        mobileMenuClose.style.display = 'none';
       });
     }
     
@@ -25262,6 +25274,8 @@ try {
         freshMobileMenu.classList.remove('open');
         document.body.classList.remove('mobile-menu-open');
         document.body.style.overflow = '';
+        const closeBtn = document.getElementById('mobileMenuClose');
+        if (closeBtn) closeBtn.style.display = 'none';
         return;
       }
     });
@@ -25306,6 +25320,8 @@ try {
         freshMobileMenu.classList.remove('open');
         document.body.classList.remove('mobile-menu-open');
         document.body.style.overflow = '';
+        const closeBtn = document.getElementById('mobileMenuClose');
+        if (closeBtn) closeBtn.style.display = 'none';
         
         // Update active state
         freshMobileMenu.querySelectorAll('.mobile-menu-item').forEach(i => i.classList.remove('active'));
