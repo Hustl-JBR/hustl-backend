@@ -3449,7 +3449,7 @@
           </button>
           
           <p class="muted" style="text-align: center; margin-top: 0.75rem; font-size: 0.8rem;">
-            Don't have an account? <span class="linkish" data-auth-mode="create">Sign up free</span>
+            Don't have an account? <span class="linkish" data-auth-mode="create" onclick="if(typeof window.openAuthModal === 'function') window.openAuthModal('create'); else if(typeof setMode === 'function') setMode('create');" style="cursor: pointer; text-decoration: underline;">Sign up free</span>
           </p>
         </div>
       </section>
