@@ -8560,33 +8560,18 @@ async function renderJobs(reset = false) {
       // Check if Hustler is accepted/assigned - if so, don't show expiration countdown
       const hasAcceptedHustler = job.hustlerId || job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS';
       
-      const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
       const now = new Date();
-      const jobCreatedAt = job.createdAt ? new Date(job.createdAt) : now;
       
-      // Calculate "Done by" date based on deadline preference (this is the completion deadline, not expiration)
+      // Use the stored startTime or endTime as the "Done by" date (this is what the user selected)
+      // startTime is the deadline/completion date that was set when the job was posted
       let doneByDate = null;
       
-      if (deadlinePreference === "specific_date" && job.startTime) {
-        // Specific date - use the selected deadline date
+      if (job.startTime) {
+        // Use startTime as the "Done by" date (this is the actual deadline the user selected)
         doneByDate = new Date(job.startTime);
-      } else if (deadlinePreference === "today_asap") {
-        // ASAP - deadline is today
-        doneByDate = new Date(now);
-        doneByDate.setHours(23, 59, 59, 999);
-      } else if (deadlinePreference === "flexible_week") {
-        // This week - deadline is 7 days from post date
-        doneByDate = new Date(jobCreatedAt);
-        doneByDate.setDate(doneByDate.getDate() + 7);
-        doneByDate.setHours(23, 59, 59, 999);
-      } else if (deadlinePreference === "no_deadline") {
-        // Until done - deadline is 1 month from post date
-        doneByDate = new Date(jobCreatedAt);
-        doneByDate.setMonth(doneByDate.getMonth() + 1);
-        doneByDate.setHours(23, 59, 59, 999);
-      } else if (job.startTime) {
-        // Fallback to startTime if available
-        doneByDate = new Date(job.startTime);
+      } else if (job.endTime) {
+        // Fallback to endTime if startTime is not available
+        doneByDate = new Date(job.endTime);
       } else if (job.date) {
         // Fallback to job.date
         doneByDate = new Date(job.date);
@@ -8595,7 +8580,7 @@ async function renderJobs(reset = false) {
         }
       }
       
-      // Display "Done by" date
+      // Display "Done by" date using the stored date/time
       if (doneByDate && !isNaN(doneByDate.getTime())) {
         try {
           const dateStr = doneByDate.toLocaleDateString('en-US', { 
