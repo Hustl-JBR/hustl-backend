@@ -8560,40 +8560,51 @@ async function renderJobs(reset = false) {
       // Check if Hustler is accepted/assigned - if so, don't show expiration countdown
       const hasAcceptedHustler = job.hustlerId || job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS';
       
+      const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
       const now = new Date();
       
-      // Use the stored endTime as the "Done by" date (this is the completion deadline the user selected)
-      // endTime is the deadline/completion date that was set when the job was posted
-      let doneByDate = null;
-      
-      if (job.endTime) {
-        // Use endTime as the "Done by" date (this is the actual completion deadline the user selected)
-        doneByDate = new Date(job.endTime);
-      } else if (job.startTime) {
-        // Fallback to startTime if endTime is not available
-        doneByDate = new Date(job.startTime);
-      } else if (job.date) {
-        // Fallback to job.date
-        doneByDate = new Date(job.date);
-        if (doneByDate.getHours() === 0 && doneByDate.getMinutes() === 0) {
-          doneByDate.setHours(23, 59, 0, 0);
-        }
-      }
-      
-      // Display "Done by" date using the stored date/time
-      if (doneByDate && !isNaN(doneByDate.getTime())) {
+      // Display "Done by" based on deadline preference - show text labels for non-specific dates
+      if (deadlinePreference === "today_asap") {
+        neededByText = `📅 Done by ASAP`;
+      } else if (deadlinePreference === "flexible_week") {
+        neededByText = `📅 Done by This week`;
+      } else if (deadlinePreference === "no_deadline") {
+        neededByText = `📅 Done by Until done`;
+      } else if (deadlinePreference === "specific_date" && job.endTime) {
+        // For specific date, show the actual date/time
         try {
-          const dateStr = doneByDate.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric',
-            year: doneByDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-          });
-          const timeStr = doneByDate.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-          });
-          neededByText = `📅 Done by ${dateStr}, ${timeStr}`;
+          const doneByDate = new Date(job.endTime);
+          if (!isNaN(doneByDate.getTime())) {
+            const dateStr = doneByDate.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric',
+              year: doneByDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+            });
+            const timeStr = doneByDate.toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
+            neededByText = `📅 Done by ${dateStr}, ${timeStr}`;
+          }
+        } catch (e) {}
+      } else if (job.endTime) {
+        // Fallback: if we have endTime but no preference, show the date
+        try {
+          const doneByDate = new Date(job.endTime);
+          if (!isNaN(doneByDate.getTime())) {
+            const dateStr = doneByDate.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric',
+              year: doneByDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+            });
+            const timeStr = doneByDate.toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
+            neededByText = `📅 Done by ${dateStr}, ${timeStr}`;
+          }
         } catch (e) {}
       }
       
