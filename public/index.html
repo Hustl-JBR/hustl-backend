@@ -7696,10 +7696,17 @@ function formatPublicLocation(job, requirements, showExactAddress = false) {
   const pickupCity = req.pickup_city || req.pickupCity || '';
   const pickupZip = req.pickup_zip || '';
   
+  // Helper function to remove apartment/unit numbers more thoroughly
+  function removeApartmentNumber(address) {
+    if (!address) return address;
+    // Remove common apartment/unit patterns (more comprehensive)
+    // Matches: Apt, Unit, #, Suite, Ste, Apt., Unit., Apartment, APT, etc. followed by numbers/letters
+    return address.replace(/\s*(?:Apt|Unit|#|Suite|Ste|Apt\.|Unit\.|Apartment|APT|UNIT|SUITE|#\s*)\s*[A-Z0-9-]+/gi, '').trim();
+  }
+  
   // If exact address should be shown (assigned hustler), show full address but remove apartment/unit
   if (showExactAddress && pickupAddress) {
-    // Remove apartment/unit numbers (common patterns: Apt, Unit, #, Suite, Ste, Apt., Unit.)
-    const cleanedAddress = pickupAddress.replace(/\s*(?:Apt|Unit|#|Suite|Ste|Apt\.|Unit\.)\s*[A-Z0-9-]+/i, '').trim();
+    const cleanedAddress = removeApartmentNumber(pickupAddress);
     if (cleanedAddress && pickupCity) {
       return pickupZip ? `${cleanedAddress}, ${pickupCity} ${pickupZip}` : `${cleanedAddress}, ${pickupCity}`;
     }
@@ -7707,8 +7714,7 @@ function formatPublicLocation(job, requirements, showExactAddress = false) {
   
   // If address is NOT hidden: show full street address + ZIP (remove apartment/unit)
   if (!hidePickupAddress && pickupAddress) {
-    // Remove apartment/unit numbers from public display
-    const cleanedAddress = pickupAddress.replace(/\s*(?:Apt|Unit|#|Suite|Ste|Apt\.|Unit\.)\s*[A-Z0-9-]+/i, '').trim();
+    const cleanedAddress = removeApartmentNumber(pickupAddress);
     if (cleanedAddress && pickupCity) {
       return pickupZip ? `${cleanedAddress}, ${pickupCity} ${pickupZip}` : `${cleanedAddress}, ${pickupCity}`;
     }
@@ -7717,7 +7723,7 @@ function formatPublicLocation(job, requirements, showExactAddress = false) {
   // If address IS hidden: show street name ONLY (no house number) + ZIP
   if (hidePickupAddress && pickupAddress) {
     // Remove apartment/unit numbers first
-    let cleanedAddress = pickupAddress.replace(/\s*(?:Apt|Unit|#|Suite|Ste|Apt\.|Unit\.)\s*[A-Z0-9-]+/i, '').trim();
+    let cleanedAddress = removeApartmentNumber(pickupAddress);
     // Extract street name (remove house number) - match pattern like "123 Main St" -> "Main St"
     const streetMatch = cleanedAddress.match(/^\d+\s+(.+)$/);
     const streetName = streetMatch ? streetMatch[1] : cleanedAddress;
