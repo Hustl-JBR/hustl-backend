@@ -18698,46 +18698,17 @@ meta.textContent =
               </div>
               
               <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-                <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">🔍 View Job</button>
                 ${!hasRated && otherUser ? `<button class="btn btn-primary rateWorkerBtn" data-job-id="${job.id}" data-user-id="${otherUser.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600; background: #f59e0b;">⭐ Rate Worker</button>` : ''}
-                ${otherUser ? `<button class="btn btn-ghost viewReviewsBtn" data-user-id="${otherUser.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">📝 View Reviews</button>` : ''}
-                ${otherUser ? `<button class="btn btn-ghost rehireBtn" data-user-id="${otherUser.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">🔄 Re-hire</button>` : ''}
-                ${otherUser ? `<button class="btn btn-ghost favoriteBtn" data-user-id="${otherUser.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">⭐ Favorite</button>` : ''}
-                <button class="btn btn-ghost deleteCompletedJobBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-size: 0.9rem; color: #dc2626; border-color: #fecaca;">🗑️ Delete</button>
+                <button class="btn btn-ghost deleteCompletedJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-size: 0.9rem; color: #dc2626; border-color: #fecaca;">🗑️ Delete</button>
               </div>
             `;
             
             // Event listeners
-            card.querySelector('.viewJobBtn')?.addEventListener('click', (e) => {
-              e.stopPropagation();
-              showViewJobModal(job.id, isCustomer ? 'customer' : 'hustler');
-            });
-            
             card.querySelector('.rateWorkerBtn')?.addEventListener('click', (e) => {
               e.stopPropagation();
               const userId = e.target.dataset.userId;
               const jobId = e.target.dataset.jobId;
               showRateWorkerModal(userId, jobId);
-            });
-            
-            card.querySelector('.viewReviewsBtn')?.addEventListener('click', (e) => {
-              e.stopPropagation();
-              const userId = e.target.dataset.userId;
-              showApplicantProfileModal(userId);
-            });
-            
-            card.querySelector('.rehireBtn')?.addEventListener('click', (e) => {
-              e.stopPropagation();
-              const userId = e.target.dataset.userId;
-              // Navigate to post job view with pre-filled worker
-              setView('post');
-              showToast("You can post a new job and this worker will be notified!");
-            });
-            
-            card.querySelector('.favoriteBtn')?.addEventListener('click', async (e) => {
-              e.stopPropagation();
-              const userId = e.target.dataset.userId;
-              await favoriteWorker(userId);
             });
             
             card.querySelectorAll('.viewOtherUserProfile').forEach(btn => {
@@ -18774,6 +18745,341 @@ meta.textContent =
     }
     
     window.renderManageJobs = renderManageJobs;
+    
+    // Rehire Job Modal - Opens prefilled job form for rehiring a specific hustler
+    async function showRehireJobModal(completedJobId, hustlerId, hustlerName) {
+      try {
+        const token = localStorage.getItem('hustl_token');
+        if (!token) {
+          showToast("Please log in to rehire a worker.");
+          return;
+        }
+        
+        // Fetch the completed job details to prefill the form
+        const jobResponse = await fetch(`${API_BASE}/jobs/${completedJobId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!jobResponse.ok) {
+          showToast("Failed to load job details.");
+          return;
+        }
+        const completedJob = await jobResponse.json();
+        
+        // Create modal overlay
+        const modalOverlay = document.createElement('div');
+        modalOverlay.id = 'rehireJobModal';
+        modalOverlay.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1rem;
+          overflow-y: auto;
+        `;
+        
+        // Create modal content
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+          background: white;
+          border-radius: 16px;
+          padding: 2rem;
+          max-width: 600px;
+          width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        `;
+        
+        const requirements = completedJob.requirements || {};
+        const prefilledTitle = completedJob.title || '';
+        const prefilledDescription = completedJob.description || '';
+        const prefilledCategory = completedJob.category || '';
+        const prefilledAddress = completedJob.address || '';
+        const prefilledPayType = completedJob.payType || 'flat';
+        const prefilledAmount = completedJob.amount ? parseFloat(completedJob.amount) : 0;
+        const prefilledHourlyRate = completedJob.hourlyRate ? parseFloat(completedJob.hourlyRate) : null;
+        const prefilledEstHours = completedJob.estHours || null;
+        const prefilledTeamSize = completedJob.teamSize || requirements.teamSize || 1;
+        
+        // Calculate default date (tomorrow)
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const defaultDate = tomorrow.toISOString().split('T')[0];
+        const defaultStartTime = new Date(tomorrow);
+        defaultStartTime.setHours(8, 0, 0, 0);
+        const defaultEndTime = new Date(tomorrow);
+        defaultEndTime.setHours(17, 0, 0, 0);
+        
+        modal.innerHTML = `
+          <div style="margin-bottom: 1.5rem;">
+            <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main);">🔄 Rehire ${hustlerName}</h2>
+            <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">This job will be sent privately to ${hustlerName} only. They can accept or decline.</p>
+          </div>
+          
+          <form id="rehireJobForm">
+            <div class="field" style="margin-bottom: 1rem;">
+              <label for="rehireJobTitle">Job Title *</label>
+              <input id="rehireJobTitle" type="text" value="${prefilledTitle}" required />
+            </div>
+            
+            <div class="field" style="margin-bottom: 1rem;">
+              <label for="rehireJobCategory">Category *</label>
+              <select id="rehireJobCategory" required>
+                <option value="">Select...</option>
+                <option value="moving" ${prefilledCategory === 'moving' ? 'selected' : ''}>Moving / Hauling</option>
+                <option value="yard-work" ${prefilledCategory === 'yard-work' ? 'selected' : ''}>Yard Work</option>
+                <option value="cleaning" ${prefilledCategory === 'cleaning' ? 'selected' : ''}>Cleaning</option>
+                <option value="furniture-assembly" ${prefilledCategory === 'furniture-assembly' ? 'selected' : ''}>Furniture Assembly</option>
+                <option value="other" ${prefilledCategory === 'other' ? 'selected' : ''}>Other</option>
+              </select>
+            </div>
+            
+            <div class="field" style="margin-bottom: 1rem;">
+              <label for="rehireJobDescription">Description *</label>
+              <textarea id="rehireJobDescription" rows="4" required>${prefilledDescription}</textarea>
+            </div>
+            
+            <div class="field" style="margin-bottom: 1rem;">
+              <label for="rehireJobAddress">Address *</label>
+              <input id="rehireJobAddress" type="text" value="${prefilledAddress}" required />
+            </div>
+            
+            <div class="field" style="margin-bottom: 1rem;">
+              <label for="rehireJobDate">Date *</label>
+              <input id="rehireJobDate" type="date" value="${defaultDate}" required />
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+              <div class="field">
+                <label for="rehireJobStartTime">Start Time *</label>
+                <input id="rehireJobStartTime" type="time" value="${defaultStartTime.toTimeString().slice(0,5)}" required />
+              </div>
+              <div class="field">
+                <label for="rehireJobEndTime">End Time *</label>
+                <input id="rehireJobEndTime" type="time" value="${defaultEndTime.toTimeString().slice(0,5)}" required />
+              </div>
+            </div>
+            
+            <div class="field" style="margin-bottom: 1rem;">
+              <label for="rehirePayType">Payment Type *</label>
+              <select id="rehirePayType" required>
+                <option value="flat" ${prefilledPayType === 'flat' ? 'selected' : ''}>Flat Rate</option>
+                <option value="hourly" ${prefilledPayType === 'hourly' ? 'selected' : ''}>Hourly</option>
+              </select>
+            </div>
+            
+            <div id="rehireFlatAmount" class="field" style="margin-bottom: 1rem; ${prefilledPayType === 'hourly' ? 'display: none;' : ''}">
+              <label for="rehireAmount">Amount ($) *</label>
+              <input id="rehireAmount" type="number" min="0" step="0.01" value="${prefilledAmount}" required />
+            </div>
+            
+            <div id="rehireHourlyFields" style="margin-bottom: 1rem; ${prefilledPayType === 'flat' ? 'display: none;' : ''}">
+              <div class="field" style="margin-bottom: 0.75rem;">
+                <label for="rehireHourlyRate">Hourly Rate ($) *</label>
+                <input id="rehireHourlyRate" type="number" min="0" step="0.01" value="${prefilledHourlyRate || ''}" required />
+              </div>
+              <div class="field">
+                <label for="rehireEstHours">Estimated Hours *</label>
+                <input id="rehireEstHours" type="number" min="1" value="${prefilledEstHours || ''}" required />
+              </div>
+            </div>
+            
+            <div class="field" style="margin-bottom: 1rem;">
+              <label for="rehireTeamSize">Team Size *</label>
+              <input id="rehireTeamSize" type="number" min="1" value="${prefilledTeamSize}" required />
+            </div>
+            
+            <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+              <button type="button" class="btn btn-ghost" id="cancelRehireBtn" style="flex: 1; padding: 0.75rem;">Cancel</button>
+              <button type="submit" class="btn btn-primary" style="flex: 1; padding: 0.75rem; font-weight: 600;">Send Rehire Request</button>
+            </div>
+          </form>
+        `;
+        
+        modalOverlay.appendChild(modal);
+        document.body.appendChild(modalOverlay);
+        
+        // Handle pay type toggle
+        document.getElementById('rehirePayType').addEventListener('change', (e) => {
+          const isHourly = e.target.value === 'hourly';
+          document.getElementById('rehireFlatAmount').style.display = isHourly ? 'none' : 'block';
+          document.getElementById('rehireHourlyFields').style.display = isHourly ? 'block' : 'none';
+          document.getElementById('rehireAmount').required = !isHourly;
+          document.getElementById('rehireHourlyRate').required = isHourly;
+          document.getElementById('rehireEstHours').required = isHourly;
+        });
+        
+        // Handle cancel
+        document.getElementById('cancelRehireBtn').addEventListener('click', () => {
+          document.body.removeChild(modalOverlay);
+        });
+        
+        // Handle form submission
+        document.getElementById('rehireJobForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          
+          const title = document.getElementById('rehireJobTitle').value.trim();
+          const category = document.getElementById('rehireJobCategory').value;
+          const description = document.getElementById('rehireJobDescription').value.trim();
+          const address = document.getElementById('rehireJobAddress').value.trim();
+          const date = document.getElementById('rehireJobDate').value;
+          const startTimeStr = document.getElementById('rehireJobStartTime').value;
+          const endTimeStr = document.getElementById('rehireJobEndTime').value;
+          const payType = document.getElementById('rehirePayType').value;
+          const teamSize = parseInt(document.getElementById('rehireTeamSize').value) || 1;
+          
+          // Combine date and time
+          const startTime = new Date(`${date}T${startTimeStr}`);
+          const endTime = new Date(`${date}T${endTimeStr}`);
+          
+          let amount = 0;
+          let hourlyRate = null;
+          let estHours = null;
+          
+          if (payType === 'flat') {
+            amount = parseFloat(document.getElementById('rehireAmount').value) || 0;
+          } else {
+            hourlyRate = parseFloat(document.getElementById('rehireHourlyRate').value) || 0;
+            estHours = parseInt(document.getElementById('rehireEstHours').value) || 1;
+            amount = hourlyRate * estHours; // Total estimated
+          }
+          
+          if (!title || !category || !description || !address) {
+            showToast("Please fill in all required fields.");
+            return;
+          }
+          
+          // Create rehire job (private, not in Browse Jobs)
+          try {
+            const response = await fetch(`${API_BASE}/jobs`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                title,
+                category,
+                description,
+                address,
+                date: startTime.toISOString(),
+                startTime: startTime.toISOString(),
+                endTime: endTime.toISOString(),
+                payType,
+                amount,
+                hourlyRate: payType === 'hourly' ? hourlyRate : null,
+                estHours: payType === 'hourly' ? estHours : null,
+                teamSize,
+                requirements: {
+                  ...requirements,
+                  teamSize,
+                  isPrivate: true, // Mark as private rehire job
+                  rehireHustlerId: hustlerId, // Store the hustler ID for the offer
+                }
+              })
+            });
+            
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.error || 'Failed to create rehire job');
+            }
+            
+            const newJob = await response.json();
+            
+            // Create an offer automatically for the selected hustler
+            const offerResponse = await fetch(`${API_BASE}/offers`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                jobId: newJob.id,
+                hustlerId: hustlerId,
+                status: 'PENDING',
+                isRehire: true
+              })
+            });
+            
+            if (!offerResponse.ok) {
+              console.error('Failed to create offer:', await offerResponse.text());
+            }
+            
+            // Send message to hustler
+            try {
+              const user = await window.hustlAPI.auth.getCurrentUser();
+              // Get or create thread (thread is created automatically when offer is created)
+              // Find the thread for this job
+              const threadsResponse = await fetch(`${API_BASE}/threads?jobId=${newJob.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              
+              let threadId = null;
+              if (threadsResponse.ok) {
+                const threads = await threadsResponse.json();
+                if (threads.length > 0) {
+                  threadId = threads[0].id;
+                } else {
+                  // Create thread if it doesn't exist
+                  const createThreadResponse = await fetch(`${API_BASE}/threads`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                      jobId: newJob.id,
+                      participantIds: [user.id, hustlerId]
+                    })
+                  });
+                  if (createThreadResponse.ok) {
+                    const thread = await createThreadResponse.json();
+                    threadId = thread.id;
+                  }
+                }
+              }
+              
+              if (threadId) {
+                // Send rehire message
+                await fetch(`${API_BASE}/threads/${threadId}/messages`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify({
+                    body: `You've been invited to a rehire job by ${user.name || 'a customer'}.`,
+                  })
+                });
+              }
+            } catch (msgError) {
+              console.error('Failed to send message:', msgError);
+              // Continue even if message fails
+            }
+            
+            showToast(`✅ Rehire request sent to ${hustlerName}!`);
+            document.body.removeChild(modalOverlay);
+            
+            // Refresh manage jobs to show the new active job
+            if (typeof loadActiveJobs === 'function') {
+              loadActiveJobs();
+            }
+          } catch (error) {
+            console.error('Rehire error:', error);
+            showToast(`Failed to send rehire request: ${error.message}`);
+          }
+        });
+      } catch (error) {
+        console.error('Error showing rehire modal:', error);
+        showToast("Failed to load rehire form.");
+      }
+    }
     
     // Job Management Modal - Shows full job details + applicants
     async function showJobManagementModal(jobId) {

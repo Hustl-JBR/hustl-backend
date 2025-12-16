@@ -231,6 +231,16 @@ router.post('/:jobId', authenticate, requireRole('HUSTLER'), [
       return res.status(400).json({ error: 'Cannot offer on your own job' });
     }
 
+    // Check if this is a private rehire job
+    const requirements = job.requirements || {};
+    const isPrivate = requirements.isPrivate === true;
+    const rehireHustlerId = requirements.rehireHustlerId;
+    
+    // If it's a private rehire job, only the specified hustler can create an offer
+    if (isPrivate && rehireHustlerId && rehireHustlerId !== req.user.id) {
+      return res.status(403).json({ error: 'This job is a private rehire request for a specific worker' });
+    }
+
     // Check if offer already exists
     const existing = await prisma.offer.findFirst({
       where: {

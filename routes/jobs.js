@@ -675,10 +675,12 @@ router.get('/', optionalAuth, [
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const jobs = await prisma.job.findMany({
+    // Filter out private/rehire jobs from Browse Jobs (they should only appear in user's active jobs)
+    // Private jobs have requirements.isPrivate === true
+    const allJobs = await prisma.job.findMany({
       where,
       skip,
-      take: parseInt(limit),
+      take: parseInt(limit) * 2, // Get more to account for filtering
       include: {
         payment: {
           select: {
@@ -708,6 +710,15 @@ router.get('/', optionalAuth, [
         },
       },
     });
+    
+    // Filter out private/rehire jobs (they should not appear in Browse Jobs)
+    const publicJobs = allJobs.filter(job => {
+      const requirements = job.requirements || {};
+      return requirements.isPrivate !== true;
+    });
+    
+    // Limit to requested amount after filtering
+    const jobs = publicJobs.slice(0, parseInt(limit));
     
     // Calculate distance for each job and add to response
     let filteredJobs = jobs;
@@ -1354,6 +1365,180 @@ router.post('/:id/repost', authenticate, requireRole('CUSTOMER'), async (req, re
     res.json(repostedJob);
   } catch (error) {
     console.error('Repost job error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /jobs/rehire - Create a private rehire job and send request to specific hustler
+router.post('/rehire', authenticate, requireRole('CUSTOMER'), [
+  body('title').trim().notEmpty().isLength({ max: 200 }),
+  body('category').trim().notEmpty(),
+  body('description').trim().notEmpty(),
+  body('address').trim().notEmpty(),
+  body('date').isISO8601(),
+  body('startTime').isISO8601(),
+  body('endTime').isISO8601(),
+  body('payType').isIn(['flat', 'hourly']),
+  body('amount').isFloat({ min: 0 }),
+  body('hourlyRate').optional().isFloat({ min: 0 }),
+  body('estHours').optional().isInt({ min: 1 }),
+  body('hustlerId').trim().notEmpty(),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const {
+      title,
+      category,
+      description,
+      address,
+      date,
+      startTime,
+      endTime,
+      payType,
+      amount,
+      hourlyRate,
+      estHours,
+      teamSize = 1,
+      requirements = {},
+      hustlerId,
+    } = req.body;
+
+    // Geocode address
+    let lat = null, lng = null;
+    try {
+      const coords = await geocodeAddress(address);
+      lat = coords.lat;
+      lng = coords.lng;
+    } catch (geocodeError) {
+      console.error('Geocoding error:', geocodeError);
+    }
+
+    // Verify hustler exists
+    const hustler = await prisma.user.findUnique({
+      where: { id: hustlerId },
+      select: { id: true, name: true, email: true, roles: true },
+    });
+
+    if (!hustler) {
+      return res.status(404).json({ error: 'Hustler not found' });
+    }
+
+    if (!hustler.roles || !hustler.roles.includes('HUSTLER')) {
+      return res.status(400).json({ error: 'User is not a hustler' });
+    }
+
+    // Create private rehire job
+    const jobData = {
+      customerId: req.user.id,
+      title,
+      category,
+      description,
+      address,
+      lat,
+      lng,
+      date: new Date(date),
+      startTime: new Date(startTime),
+      endTime: new Date(endTime),
+      payType,
+      amount: parseFloat(amount),
+      hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
+      estHours: estHours ? parseInt(estHours) : null,
+      requirements: {
+        ...requirements,
+        teamSize: parseInt(teamSize) || 1,
+        isPrivate: true, // Mark as private - won't appear in Browse Jobs
+        rehireHustlerId: hustlerId,
+      },
+      status: 'OPEN',
+    };
+
+    const job = await prisma.job.create({
+      data: jobData,
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // Create offer automatically for the specified hustler
+    const offer = await prisma.offer.create({
+      data: {
+        jobId: job.id,
+        hustlerId: hustlerId,
+        status: 'PENDING',
+        note: 'Private rehire request',
+      },
+      include: {
+        hustler: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // Create thread for messaging
+    let thread = null;
+    try {
+      thread = await prisma.thread.upsert({
+        where: { jobId: job.id },
+        update: {},
+        create: {
+          jobId: job.id,
+          userAId: req.user.id,
+          userBId: hustlerId,
+        },
+      });
+    } catch (threadError) {
+      console.error('Thread creation error (non-fatal):', threadError);
+    }
+
+    // Send rehire message to hustler
+    if (thread) {
+      try {
+        await prisma.message.create({
+          data: {
+            threadId: thread.id,
+            senderId: req.user.id,
+            body: `You've been invited to a rehire job by ${req.user.name || 'a customer'}.`,
+          },
+        });
+      } catch (msgError) {
+        console.error('Message creation error (non-fatal):', msgError);
+      }
+    }
+
+    // Send email notification
+    try {
+      const { sendRehireRequestEmail } = require('../services/email');
+      await sendRehireRequestEmail(
+        hustler.email,
+        hustler.name,
+        job.title,
+        req.user.name
+      );
+    } catch (emailError) {
+      console.error('Email sending error (non-fatal):', emailError);
+    }
+
+    res.status(201).json({
+      ...job,
+      offer,
+      message: 'Rehire request sent successfully',
+    });
+  } catch (error) {
+    console.error('Create rehire job error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
