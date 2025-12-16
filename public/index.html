@@ -2964,6 +2964,26 @@
         border-radius: 6px !important;
       }
       
+      /* Sort and toggle container - keep together on mobile */
+      .sort-and-toggle-container {
+        flex-wrap: nowrap !important;
+      }
+      
+      .sort-dropdown-container {
+        min-width: 100px !important;
+        flex-shrink: 1 !important;
+      }
+      
+      /* Make toggle smaller on mobile */
+      .sort-and-toggle-container .jobs-view-toggle {
+        padding: 0.35rem 0.6rem !important;
+        font-size: 0.7rem !important;
+      }
+      
+      .sort-and-toggle-container > div:last-child {
+        flex-shrink: 0 !important;
+      }
+      
       /* Countdown positioning on mobile */
       .countdown-timer {
         bottom: 0.75rem !important;
