@@ -4040,11 +4040,6 @@
             </div>
 
             <div class="field" style="margin-bottom: 0.75rem;">
-              <label for="pickupArea">Neighborhood / Area</label>
-              <input id="pickupArea" type="text" placeholder="Example: The Governor's Club" />
-            </div>
-
-            <div class="field" style="margin-bottom: 0.75rem;">
               <label for="pickupCity">City</label>
               <input id="pickupCity" type="text" placeholder="Example: Brentwood, Tennessee" />
             </div>
@@ -5953,9 +5948,6 @@ function showChangePasswordModal() {
         
         // Populate address fields from requirements
         const requirements = job.requirements || {};
-        if (document.getElementById("pickupArea")) {
-          document.getElementById("pickupArea").value = requirements.pickup_area || requirements.pickupArea || "";
-        }
         if (document.getElementById("pickupCity")) {
           document.getElementById("pickupCity").value = requirements.pickup_city || requirements.pickupCity || "";
         }
@@ -6129,7 +6121,6 @@ function showChangePasswordModal() {
         }
         const category = document.getElementById("jobCategory").value;
         const desc = document.getElementById("jobDescription").value.trim();
-        const pickupArea = document.getElementById("pickupArea").value.trim();
         const pickupCity = document.getElementById("pickupCity").value.trim();
         const pickupZip = document.getElementById("pickupZip").value.trim();
         const pickupAddress = document.getElementById("pickupAddress").value.trim();
@@ -6325,7 +6316,6 @@ function showChangePasswordModal() {
           keepActiveFor,
           requirements: {
             teamSize: workersNeeded || 1, // Also include in requirements
-            pickup_area: pickupArea,
             pickup_city: pickupCity,
             pickup_zip: pickupZip,
             pickup_address: pickupAddress + (pickupApt ? ', ' + pickupApt : ''),
@@ -6394,7 +6384,6 @@ function showChangePasswordModal() {
       document.getElementById("jobTitle").value = "";
       document.getElementById("jobCategory").value = "";
       document.getElementById("jobDescription").value = "";
-      document.getElementById("pickupArea").value = "";
       document.getElementById("pickupCity").value = "";
       document.getElementById("pickupZip").value = "";
       document.getElementById("pickupAddress").value = "";
@@ -7101,9 +7090,6 @@ function showChangePasswordModal() {
           }
           const category = document.getElementById("jobCategory").value;
           const desc = document.getElementById("jobDescription").value.trim();
-          const pickupArea = document
-            .getElementById("pickupArea")
-            .value.trim();
           const pickupCity = document
             .getElementById("pickupCity")
             .value.trim();
@@ -7204,8 +7190,8 @@ function showChangePasswordModal() {
             );
 
           // Validate address fields
-          if (!pickupCity || !pickupArea) {
-            return showToast("Please fill in pickup location (city and area/neighborhood).");
+          if (!pickupCity) {
+            return showToast("Please fill in pickup location (city).");
           }
           if (!pickupZip) {
             return showToast("Please enter pickup ZIP code.");
@@ -7406,7 +7392,6 @@ function showChangePasswordModal() {
               keepActiveFor: keepActiveFor, // Days to keep job active
               preferredTime: preferredTime, // morning, afternoon, evening, anytime
               requirements: {
-                pickup_area: pickupArea,
                 pickup_city: pickupCity,
                 pickup_zip: pickupZip,
                 pickup_address: pickupAddress + (pickupApt ? ', ' + pickupApt : ''),
