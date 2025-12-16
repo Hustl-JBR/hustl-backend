@@ -5316,6 +5316,26 @@ function initAuthCard() {
   }
 
   setMode("create");
+  
+  // Wire up "Sign up free" link in login view
+  function wireSignUpFreeLink() {
+    // Use event delegation to handle dynamically added links
+    document.addEventListener('click', (e) => {
+      const signUpLink = e.target.closest('span.linkish[data-auth-mode="create"]');
+      if (signUpLink && e.target.textContent.includes('Sign up free')) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Switch to create mode
+        setMode('create');
+        // Also call openAuthModal if available
+        if (window.openAuthModal && typeof window.openAuthModal === 'function') {
+          window.openAuthModal('create');
+        }
+      }
+    });
+  }
+  
+  wireSignUpFreeLink();
 
 document.getElementById("createAccountButton").addEventListener("click", async () => {
   const name = document.getElementById("createName").value.trim();
