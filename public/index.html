@@ -9808,16 +9808,56 @@ async function renderJobs(reset = false) {
         }
       }
 
-      // Deadline / Needed By
+      // Done By - show text labels matching job cards
       const deadlineRow = document.createElement("div");
       deadlineRow.style.cssText = "display: flex; align-items: center; gap: 0.4rem;";
       try {
         const requirements = job.requirements || {};
         const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
         
-        if (deadlinePreference === "until_completed" || deadlinePreference === "whenever" || deadlinePreference === "flexible") {
-          deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Deadline:</span> <span style="color: #f59e0b; font-weight: 600;">⏰ Flexible - Until completed</span>`;
+        // Check deadline preference first to show text labels
+        if (deadlinePreference === "today") {
+          deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Done By:</span> <span style="color: #059669; font-weight: 600;">📅 Today (needs done today)</span>`;
+        } else if (deadlinePreference === "today_asap") {
+          deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Done By:</span> <span style="color: #059669; font-weight: 600;">📅 ASAP (needs done in the next 3 days)</span>`;
+        } else if (deadlinePreference === "flexible_week") {
+          deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Done By:</span> <span style="color: #059669; font-weight: 600;">📅 This week</span>`;
+        } else if (deadlinePreference === "no_deadline" || deadlinePreference === "until_completed" || deadlinePreference === "whenever" || deadlinePreference === "flexible") {
+          deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Done By:</span> <span style="color: #f59e0b; font-weight: 600;">⏰ Until done</span>`;
+        } else if (deadlinePreference === "specific_date" && job.endTime) {
+          // For specific date, show the actual date/time
+          const deadlineDate = new Date(job.endTime);
+          if (!isNaN(deadlineDate.getTime())) {
+            const deadlineStr = deadlineDate.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric',
+              year: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
+            deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Done By:</span> <span style="color: #059669; font-weight: 600;">📅 ${deadlineStr}</span>`;
+          } else {
+            deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Done By:</span> <span style="color: var(--text-muted);">Not specified</span>`;
+          }
+        } else if (job.endTime) {
+          // Fallback: use endTime if available
+          const deadlineDate = new Date(job.endTime);
+          if (!isNaN(deadlineDate.getTime())) {
+            const deadlineStr = deadlineDate.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric',
+              year: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
+            deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Done By:</span> <span style="color: #059669; font-weight: 600;">📅 ${deadlineStr}</span>`;
+          } else {
+            deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Done By:</span> <span style="color: var(--text-muted);">Not specified</span>`;
+          }
         } else if (job.startTime) {
+          // Fallback: use startTime
           const deadlineDate = new Date(job.startTime);
           if (!isNaN(deadlineDate.getTime())) {
             const deadlineStr = deadlineDate.toLocaleDateString('en-US', { 
@@ -9833,6 +9873,7 @@ async function renderJobs(reset = false) {
             deadlineRow.innerHTML = `<span style="font-weight: 600; color: var(--text-main);">Done By:</span> <span style="color: var(--text-muted);">Not specified</span>`;
           }
         } else if (job.date) {
+          // Fallback: use job.date
           const deadlineDate = new Date(job.date);
           if (!isNaN(deadlineDate.getTime())) {
             const deadlineStr = deadlineDate.toLocaleDateString('en-US', { 
