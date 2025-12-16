@@ -346,56 +346,13 @@ router.get('/completed', authenticate, async (req, res) => {
 });
 
 // POST /jobs - Create a job (Customer only)
+// Email verification is enforced in authenticate middleware - no need for additional checks
 router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) => {
-  // Check email verification before allowing job posting (controlled by env var)
   try {
     if (!req.user || !req.user.id) {
       console.error('[POST /jobs] req.user is missing:', req.user);
       return res.status(401).json({ error: 'Unauthorized - user not found' });
     }
-
-    // Check if emailVerified field exists in schema (skip check if it doesn't exist)
-    const emailVerificationRequired = process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
-    
-    if (emailVerificationRequired) {
-      try {
-        // Try to check email verification - if field doesn't exist, this will fail gracefully
-        const user = await prisma.user.findUnique({
-          where: { id: req.user.id },
-          // Don't select specific fields - get all and check if emailVerified exists
-        });
-
-        if (!user) {
-          console.error('[POST /jobs] User not found in database:', req.user.id);
-          return res.status(401).json({ error: 'User not found' });
-        }
-
-        // Check if emailVerified exists and is false
-        if (user.emailVerified !== undefined && !user.emailVerified) {
-          return res.status(403).json({ 
-            error: 'Email verification required',
-            message: 'Please verify your email address before posting jobs. Check your email for a verification code.',
-            requiresEmailVerification: true,
-          });
-        }
-      } catch (schemaError) {
-        // If emailVerified field doesn't exist, log warning and continue
-        if (schemaError.message && schemaError.message.includes('emailVerified')) {
-          console.warn('[POST /jobs] emailVerified field not found in schema, skipping verification check');
-          // Continue without email verification check
-        } else {
-          throw schemaError; // Re-throw other errors
-        }
-      }
-    }
-  } catch (error) {
-    console.error('[POST /jobs] Email verification check error:', error);
-    console.error('[POST /jobs] Error details:', error.message, error.stack);
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      message: error.message || 'Unknown error'
-    });
-  }
   next();
 }, [
   body('title').trim().notEmpty().isLength({ max: 200 }),

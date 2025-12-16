@@ -21,12 +21,31 @@ if (process.env.NODE_ENV === 'production') {
 
 const prisma = new PrismaClient(prismaConfig);
 
-// Log connection pooling status on startup
-if (hasPooling) {
-  console.log('✅ Database connection pooling enabled');
-} else {
-  console.log('✅ Database connected (connection pooling not detected in DATABASE_URL)');
+// Test database connection on startup
+async function testConnection() {
+  try {
+    await prisma.$connect();
+    console.log('✅ Database connection successful');
+    
+    // Log connection pooling status
+    if (hasPooling) {
+      console.log('✅ Database connection pooling enabled');
+    } else {
+      console.log('✅ Database connected (connection pooling not detected in DATABASE_URL)');
+    }
+  } catch (error) {
+    console.error('❌ Database connection failed:', error.message);
+    console.error('   Make sure DATABASE_URL is set correctly in your environment variables');
+    console.error('   Error code:', error.code);
+    // Don't exit - let the app start and try to connect on first query
+    // This allows the app to start even if DB is temporarily unavailable
+  }
 }
+
+// Test connection asynchronously (don't block startup)
+testConnection().catch(err => {
+  console.warn('[DB] Connection test failed (non-blocking):', err.message);
+});
 
 // Handle graceful shutdown
 const gracefulShutdown = async () => {

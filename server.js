@@ -351,6 +351,103 @@ app.post("/create-checkout-session", async (req, res) => {
   }
 });
 
+// Global error handler middleware (MUST be after all routes, before static files)
+app.use((err, req, res, next) => {
+  console.error('[Global Error Handler] Unhandled error:', {
+    message: err.message,
+    stack: err.stack,
+    code: err.code,
+    path: req.path,
+    method: req.method,
+    timestamp: new Date().toISOString(),
+  });
+
+  // Handle Prisma errors
+  if (err.code && err.code.startsWith('P')) {
+    if (err.code === 'P1001' || err.code === 'P1002' || err.code === 'P1003') {
+      // Database connection errors
+      return res.status(503).json({ 
+        error: 'Database connection error',
+        message: 'Unable to connect to database. Please try again in a moment.',
+        code: err.code
+      });
+    }
+    if (err.code === 'P2002') {
+      // Unique constraint violation
+      return res.status(409).json({ 
+        error: 'Duplicate entry',
+        message: 'This record already exists.',
+        code: err.code
+      });
+    }
+    if (err.code === 'P2025') {
+      // Record not found
+      return res.status(404).json({ 
+        error: 'Not found',
+        message: 'The requested record was not found.',
+        code: err.code
+      });
+    }
+  }
+
+  // Handle JWT errors
+  if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+    return res.status(401).json({ 
+      error: 'Authentication error',
+      message: 'Please log in again.',
+      code: err.name
+    });
+  }
+
+  // Handle validation errors
+  if (err.name === 'ValidationError') {
+    return res.status(400).json({ 
+      error: 'Validation error',
+      message: err.message || 'Invalid input provided.',
+    });
+  }
+
+  // Default error response
+  const statusCode = err.statusCode || err.status || 500;
+  res.status(statusCode).json({ 
+    error: err.message || 'Internal server error',
+    message: err.message || 'An unexpected error occurred. Please try again.',
+    ...(process.env.NODE_ENV === 'development' && { 
+      stack: err.stack,
+      details: err 
+    })
+  });
+});
+
+// 404 handler for API routes
+app.use((req, res, next) => {
+  // Only handle 404 for API routes
+  if (req.path.startsWith("/auth/") ||
+      req.path.startsWith("/users/") ||
+      req.path.startsWith("/jobs/") ||
+      req.path.startsWith("/offers/") ||
+      req.path.startsWith("/threads/") ||
+      req.path.startsWith("/payments/") ||
+      req.path.startsWith("/webhooks/") ||
+      req.path.startsWith("/r2/") ||
+      req.path.startsWith("/stripe-connect/") ||
+      req.path.startsWith("/reviews/") ||
+      req.path.startsWith("/verification/") ||
+      req.path.startsWith("/admin/") ||
+      req.path.startsWith("/notifications/") ||
+      req.path.startsWith("/referrals/") ||
+      req.path.startsWith("/tracking/") ||
+      req.path.startsWith("/support/") ||
+      req.path.startsWith("/analytics/") ||
+      req.path.startsWith("/feedback/")) {
+    return res.status(404).json({ 
+      error: 'Not found',
+      message: `API endpoint ${req.method} ${req.path} not found.`
+    });
+  }
+  next();
+});
+
 // Serve index.html for all non-API routes (SPA fallback)
 // Use middleware instead of wildcard route (Express 5.x compatibility)
 app.use((req, res, next) => {

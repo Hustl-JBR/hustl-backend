@@ -31,12 +31,27 @@ const authenticate = async (req, res, next) => {
         username: true,
         roles: true,
         idVerified: true,
+        emailVerified: true, // CRITICAL: Include emailVerified
         stripeAccountId: true,
       },
     });
 
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
+    }
+
+    // CRITICAL: Enforce email verification - unverified users cannot access protected routes
+    // Exception: Allow /auth/verify-email and /auth/resend-verification endpoints
+    const isAuthEndpoint = req.path.startsWith('/auth/verify-email') || 
+                          req.path.startsWith('/auth/resend-verification') ||
+                          req.path.startsWith('/auth/refresh');
+    
+    if (!isAuthEndpoint && (user.emailVerified !== true)) {
+      return res.status(403).json({ 
+        error: 'Email verification required',
+        requiresEmailVerification: true,
+        message: 'Please verify your email address before accessing this feature. Check your inbox for the verification code.'
+      });
     }
 
     // Ensure user has both CUSTOMER and HUSTLER roles (for existing users)
@@ -62,6 +77,7 @@ const authenticate = async (req, res, next) => {
           username: true,
           roles: true,
           idVerified: true,
+          emailVerified: true, // CRITICAL: Include emailVerified
           stripeAccountId: true,
         },
       });
@@ -89,7 +105,7 @@ const optionalAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      // No token provided - continue without user
+      // No token provided - continue without user (allows browsing)
       req.user = null;
       return next();
     }
@@ -119,10 +135,13 @@ const optionalAuth = async (req, res, next) => {
         username: true,
         roles: true,
         idVerified: true,
+        emailVerified: true, // Include emailVerified for optional auth too
         stripeAccountId: true,
       },
     });
 
+    // If user is authenticated but not verified, they can still browse (read-only)
+    // But they cannot perform actions (those require authenticate middleware)
     req.user = user || null;
     next();
   } catch (error) {

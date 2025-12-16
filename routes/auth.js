@@ -235,7 +235,8 @@ router.post('/login', [
       return res.status(403).json({ 
         error: 'Email not verified',
         requiresEmailVerification: true,
-        message: 'Please verify your email address before logging in. Check your inbox for the verification code.'
+        message: 'Please verify your email address before logging in. Check your inbox for the verification code, or request a new one if it expired.',
+        canResend: true
       });
     }
 
@@ -366,11 +367,20 @@ router.post('/verify-email', [
       : true;
 
     if (!storedCode || storedCode !== providedCode) {
-      return res.status(400).json({ error: 'Invalid verification code' });
+      return res.status(400).json({ 
+        error: 'Invalid verification code',
+        message: 'The verification code you entered is incorrect. Please check your email and try again, or request a new code.',
+        canResend: true
+      });
     }
 
     if (codeExpired) {
-      return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
+      return res.status(400).json({ 
+        error: 'Verification code has expired',
+        message: 'Your verification code has expired (codes are valid for 5 minutes). You can request a new code - your account is still active and you don\'t need to sign up again.',
+        canResend: true,
+        expired: true
+      });
     }
 
     // Verify email
@@ -470,7 +480,11 @@ router.post('/resend-verification', [
       }
     }
 
-    res.json({ message: 'If an account exists and is not verified, a verification code has been sent' });
+    res.json({ 
+      message: 'If an account exists and is not verified, a verification code has been sent',
+      sent: true,
+      expiresIn: '5 minutes'
+    });
   } catch (error) {
     console.error('Resend verification error:', error);
     res.status(500).json({ error: 'Internal server error' });

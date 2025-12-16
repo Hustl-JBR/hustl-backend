@@ -51,30 +51,56 @@
       const data = await response.json();
 
       if (!response.ok) {
-        // Try to get detailed error message
-        const errorMsg = data.error || data.message || `HTTP ${response.status}`;
-        const details = data.details ? `: ${JSON.stringify(data.details)}` : '';
-        const error = new Error(errorMsg + details);
+        // Try to get detailed error message - prioritize message over error field
+        const errorMsg = data.message || data.error || `HTTP ${response.status}`;
+        const error = new Error(errorMsg);
+        
         // Preserve additional error flags (like requiresStripe)
         if (data.requiresStripe) {
           error.requiresStripe = true;
         }
+        
         // Store full error data for better error handling
         error.details = data;
         error.status = response.status;
+        error.code = data.code; // Store error code (e.g., Prisma error codes)
+        
         // Log validation errors for debugging
         if (response.status === 400 && data.errors) {
           console.error('[API] Validation errors:', data.errors);
           const validationErrors = data.errors.map(e => `${e.param}: ${e.msg}`).join(', ');
           error.message = `Validation failed: ${validationErrors}`;
         }
+        
+        // Log error for debugging
+        console.error(`[API] Request failed: ${endpoint}`, {
+          status: response.status,
+          error: errorMsg,
+          details: data
+        });
+        
         throw error;
       }
 
       return data;
     } catch (error) {
-      console.error('API request failed:', error);
-      throw error;
+      // If it's already an error we created, just re-throw it
+      if (error.status && error.details) {
+        throw error;
+      }
+      
+      // Handle network/fetch errors
+      console.error(`[API] Request failed: ${endpoint}`, error);
+      
+      // Create a proper error object for network failures
+      const networkError = new Error(
+        error.message || 'Network error. Please check your internet connection and try again.'
+      );
+      networkError.status = 0; // No status means network error
+      networkError.details = { error: 'Network error', message: networkError.message };
+      networkError.originalError = error;
+      
+      throw networkError;
     }
   }
 

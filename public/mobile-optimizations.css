@@ -3,11 +3,105 @@
  * TaskRabbit/Rover-level mobile experience with native app feel
  */
 
+/* ========== Z-INDEX HIERARCHY ========== */
+/* Proper layering to prevent header from blocking modals/close buttons */
+/* Header and navigation: 100-999 */
+/* Content and normal elements: 1-99 */
+/* Sticky elements: 200-299 */
+/* Modals and overlays: 10000+ */
+/* Close buttons and interactive overlays: inherit from parent but ensure clickable */
+
 /* ========== PERFORMANCE HINTS (non-breaking) ========== */
 /* Only apply GPU acceleration to animated elements */
 .modal-overlay,
 .location-tools-modal {
   will-change: opacity;
+}
+
+/* ========== HEADER AND NAVIGATION (Low z-index) ========== */
+/* Ensure header doesn't block modals or close buttons */
+header,
+.header,
+nav,
+.nav,
+.nav-tabs,
+[class*="header"],
+[class*="nav"] {
+  position: relative;
+  z-index: 100 !important; /* Low z-index - below modals */
+}
+
+/* Fixed/sticky headers */
+header[style*="fixed"],
+header[style*="sticky"],
+.header[style*="fixed"],
+.header[style*="sticky"],
+nav[style*="fixed"],
+nav[style*="sticky"] {
+  z-index: 100 !important; /* Still below modals */
+}
+
+/* ========== MODALS AND OVERLAYS (High z-index) ========== */
+/* All modals must be above header */
+.modal-overlay,
+.modal,
+[class*="modal"],
+[class*="overlay"],
+.location-tools-overlay {
+  z-index: 10000 !important; /* Above header */
+  position: fixed !important;
+}
+
+/* Modal content */
+.modal-content,
+.location-tools-modal,
+[class*="modal-content"] {
+  z-index: 10001 !important; /* Above overlay */
+  position: relative;
+}
+
+/* ========== CLOSE BUTTONS (Always clickable) ========== */
+/* Close buttons in modals/overlays */
+.close,
+.close-btn,
+[class*="close"],
+button[class*="close"],
+.location-tools-close {
+  z-index: 10002 !important; /* Above modal content */
+  position: relative;
+  pointer-events: auto !important; /* Ensure clickable */
+}
+
+/* ========== LOADING OVERLAYS ========== */
+.loading-overlay {
+  z-index: 10000 !important; /* Above header */
+}
+
+/* ========== TOAST NOTIFICATIONS ========== */
+.toast-container {
+  z-index: 99999 !important; /* Highest - above everything */
+}
+
+/* ========== CONTENT PADDING (Prevent header overlap) ========== */
+/* Add top padding to main content equal to header height */
+main,
+.main-content,
+[role="main"],
+.content {
+  padding-top: 0; /* Will be set dynamically if header exists */
+}
+
+/* If header is fixed, add padding */
+body:has(header[style*="fixed"]) main,
+body:has(.header[style*="fixed"]) main {
+  padding-top: 60px; /* Adjust based on header height */
+}
+
+/* ========== STICKY ELEMENTS ========== */
+/* Sticky filters and similar elements */
+[style*="sticky"],
+.sticky {
+  z-index: 200 !important; /* Above content, below modals */
 }
 
 /* ========== SKELETON LOADING STATES ========== */
@@ -210,8 +304,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: 10000 !important; /* Above header */
   backdrop-filter: blur(10px);
+  pointer-events: auto !important;
 }
 
 .loading-spinner {
@@ -434,19 +529,20 @@
 
 /* ========== SIMPLIFIED LOCATION TOOLS POPUP ========== */
 .location-tools-overlay {
-  position: fixed;
+  position: fixed !important;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 2000;
+  z-index: 10000 !important; /* Above header */
   display: flex;
   align-items: flex-end;
   justify-content: center;
   padding: 0;
   /* Safe area for iPhone */
   padding-bottom: env(safe-area-inset-bottom, 0);
+  pointer-events: auto !important; /* Ensure clickable */
 }
 
 .location-tools-modal {
@@ -458,6 +554,8 @@
   padding: 1.5rem;
   overflow-y: auto;
   animation: slideUp 0.3s ease-out;
+  z-index: 10001 !important; /* Above overlay */
+  position: relative;
 }
 
 @keyframes slideUp {
@@ -497,6 +595,9 @@
   justify-content: center;
   border-radius: 50%;
   -webkit-tap-highlight-color: transparent;
+  z-index: 10002 !important; /* Above modal content */
+  position: relative;
+  pointer-events: auto !important; /* Ensure always clickable */
 }
 
 .location-tools-close:active {
@@ -1283,7 +1384,7 @@ input[type="range"]::-moz-range-thumb:active {
     position: sticky;
     top: 0;
     background: white;
-    z-index: 100;
+    z-index: 200 !important; /* Above content, below modals */
     padding: 0.75rem 0;
     margin-bottom: 0.75rem !important;
     border-bottom: 1px solid #e5e7eb;
@@ -1291,7 +1392,8 @@ input[type="range"]::-moz-range-thumb:active {
   
   #showMoreFiltersBtn {
     position: relative;
-    z-index: 101;
+    z-index: 201 !important; /* Above filter bar */
+    pointer-events: auto !important;
   }
   
   /* Smooth filter panel animations */

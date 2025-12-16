@@ -274,24 +274,70 @@ class ErrorHandler {
   handle(error, context = '') {
     console.error(`[ErrorHandler] ${context}:`, error);
     
-    // Convert to user-friendly message
+    // Use the error message from API response if available
     let message = 'An error occurred';
-    if (error.message) {
+    
+    // Check if error has details from API response
+    if (error.details && error.details.message) {
+      message = error.details.message;
+    } else if (error.message) {
       const lowerMsg = error.message.toLowerCase();
-      if (lowerMsg.includes('network') || lowerMsg.includes('fetch')) {
+      
+      // Network/connection errors
+      if (lowerMsg.includes('network') || lowerMsg.includes('fetch') || 
+          lowerMsg.includes('failed to fetch') || lowerMsg.includes('networkerror')) {
         message = 'Connection error. Please check your internet and try again.';
-      } else if (lowerMsg.includes('unauthorized') || lowerMsg.includes('401')) {
+      } 
+      // Database connection errors
+      else if (lowerMsg.includes('database connection') || lowerMsg.includes('unable to connect to database')) {
+        message = 'Database connection error. The server is temporarily unavailable. Please try again in a moment.';
+      }
+      // Email verification required errors (must come before other 403 errors)
+      else if (lowerMsg.includes('email verification required') || 
+               lowerMsg.includes('email not verified') ||
+               (error.status === 403 && error.details?.requiresEmailVerification)) {
+        message = error.details?.message || error.message || 'Please verify your email address to continue.';
+        // Mark this as a verification error for frontend handling
+        error.requiresEmailVerification = true;
+      }
+      // Authentication errors
+      else if (lowerMsg.includes('unauthorized') || lowerMsg.includes('401') || 
+               lowerMsg.includes('authentication error') || lowerMsg.includes('please log in')) {
         message = 'Please log in to continue.';
-      } else if (lowerMsg.includes('forbidden') || lowerMsg.includes('403')) {
+      } 
+      // Permission errors
+      else if (lowerMsg.includes('forbidden') || lowerMsg.includes('403') || 
+               lowerMsg.includes('don\'t have permission')) {
         message = 'You don\'t have permission to do that.';
-      } else if (lowerMsg.includes('not found') || lowerMsg.includes('404')) {
+      } 
+      // Not found errors
+      else if (lowerMsg.includes('not found') || lowerMsg.includes('404')) {
         message = 'Item not found.';
-      } else if (lowerMsg.includes('server error') || lowerMsg.includes('500')) {
-        message = 'Server error. Please try again later.';
-      } else if (lowerMsg.includes('too many requests') || lowerMsg.includes('429')) {
+      } 
+      // Validation errors
+      else if (lowerMsg.includes('validation') || lowerMsg.includes('invalid')) {
+        message = error.message; // Use the full validation message
+      }
+      // Rate limiting
+      else if (lowerMsg.includes('too many requests') || lowerMsg.includes('429')) {
         message = 'Too many requests. Please wait a moment and try again.';
-      } else {
+      }
+      // Server errors - check status code
+      else if (error.status === 500 || error.status === 503) {
+        // Use the actual error message from the API if available
+        if (error.details && error.details.error) {
+          message = error.details.error;
+        } else {
+          message = 'Server error. Please try again later.';
+        }
+      }
+      // Use the actual error message if it's user-friendly
+      else if (error.message && !lowerMsg.includes('internal server error')) {
         message = error.message;
+      } 
+      // Generic fallback
+      else {
+        message = 'An unexpected error occurred. Please try again.';
       }
     }
     
