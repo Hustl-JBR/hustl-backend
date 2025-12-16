@@ -8562,16 +8562,16 @@ async function renderJobs(reset = false) {
       
       const now = new Date();
       
-      // Use the stored startTime or endTime as the "Done by" date (this is what the user selected)
-      // startTime is the deadline/completion date that was set when the job was posted
+      // Use the stored endTime as the "Done by" date (this is the completion deadline the user selected)
+      // endTime is the deadline/completion date that was set when the job was posted
       let doneByDate = null;
       
-      if (job.startTime) {
-        // Use startTime as the "Done by" date (this is the actual deadline the user selected)
-        doneByDate = new Date(job.startTime);
-      } else if (job.endTime) {
-        // Fallback to endTime if startTime is not available
+      if (job.endTime) {
+        // Use endTime as the "Done by" date (this is the actual completion deadline the user selected)
         doneByDate = new Date(job.endTime);
+      } else if (job.startTime) {
+        // Fallback to startTime if endTime is not available
+        doneByDate = new Date(job.startTime);
       } else if (job.date) {
         // Fallback to job.date
         doneByDate = new Date(job.date);
