@@ -2819,6 +2819,25 @@
         position: relative;
       }
       
+      /* Job details summary grid - single column with better spacing on mobile */
+      .job-details-summary-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+        padding: 0.5rem 0 !important;
+      }
+      
+      .job-details-summary-grid > div {
+        padding: 0.75rem 0 !important;
+        border-bottom: 1px solid var(--border) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.25rem !important;
+      }
+      
+      .job-details-summary-grid > div:last-child {
+        border-bottom: none !important;
+      }
+      
       /* Header fixes - COMPACT */
       header {
         padding: 0.5rem 0.75rem !important;
