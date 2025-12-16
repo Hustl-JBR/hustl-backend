@@ -393,11 +393,11 @@
   display: block;
 }
 
-/* Show bottom nav on mobile only */
+/* Show bottom nav on mobile only - DISABLED: removed to prevent blocking content */
 @media (max-width: 768px) {
   .mobile-bottom-nav {
-    display: block;
-    z-index: 10000 !important; /* Higher than any dropdown content */
+    display: none !important; /* Removed permanent bottom nav */
+    z-index: -1 !important; /* Hide behind everything */
     position: fixed !important;
   }
   
