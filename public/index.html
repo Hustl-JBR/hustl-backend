@@ -9705,6 +9705,13 @@ async function renderJobs(reset = false) {
       const modalContent = document.createElement("div");
       modalContent.className = "modal-content";
       modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 600px; width: 100%; max-height: 95vh; height: 95vh; overflow: hidden; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); margin: auto; display: flex; flex-direction: column;";
+      // Mobile-specific styling
+      if (window.innerWidth <= 768) {
+        modalContent.style.maxHeight = "95vh";
+        modalContent.style.height = "auto";
+        modalContent.style.borderRadius = "16px 16px 0 0";
+        modalContent.style.maxWidth = "100%";
+      }
       
       // Close button (X) - top right
       const closeBtn = document.createElement("button");
@@ -9727,6 +9734,11 @@ async function renderJobs(reset = false) {
       // Job Summary Section - Top of Modal (not scrollable, more compact)
       const summarySection = document.createElement("div");
       summarySection.style.cssText = "padding: 1.25rem 2rem 1rem 2rem; border-bottom: 1px solid #e5e7eb; flex-shrink: 0; background: #f9fafb;";
+      // Mobile-specific padding
+      if (window.innerWidth <= 768) {
+        summarySection.style.padding = "1rem 1rem 1rem 1rem";
+        summarySection.style.paddingTop = "3rem"; // Space for close button
+      }
       
       // Job Title (more compact)
       const jobTitle = document.createElement("h2");
