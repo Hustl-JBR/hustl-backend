@@ -20236,9 +20236,9 @@ meta.textContent =
                       <span>Setting Active: Job will stay open until you accept a hustler</span>
                     </div>
                     ` : ''}
-                    <label class="checkbox-field" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; min-height: 44px;">
-                      <input type="checkbox" id="keepOpenUntilAccepted" ${isKeepOpenEnabled ? 'checked' : ''} style="width: 22px; height: 22px; min-width: 22px; min-height: 22px; accent-color: var(--primary); cursor: pointer; flex-shrink: 0;">
-                      <span style="font-size: 0.85rem; color: var(--text-main); font-weight: 600; line-height: 1.4;">Keep active until assigned</span>
+                    <label class="checkbox-field" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem 0.5rem 0.5rem 0 !important; margin-left: 0 !important; min-height: 44px;">
+                      <input type="checkbox" id="keepOpenUntilAccepted" ${isKeepOpenEnabled ? 'checked' : ''} style="width: 16px; height: 16px; min-width: 16px; min-height: 16px; accent-color: var(--primary); cursor: pointer; flex-shrink: 0; margin: 0;">
+                      <span style="font-size: 0.85rem; color: var(--text-main); font-weight: 600; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Keep active until assigned</span>
                     </label>
                     <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; margin-left: 0;">
                       ${isKeepOpenEnabled ? '✅ Active - Auto-closes when assigned' : 'Auto-closes when assigned'}
