@@ -6974,6 +6974,30 @@ function showChangePasswordModal() {
         });
       }
 
+      // Job title validation - limit to 5 words
+      const jobTitleInput = document.getElementById("jobTitle");
+      if (jobTitleInput) {
+        jobTitleInput.addEventListener("input", () => {
+          const title = jobTitleInput.value.trim();
+          const titleWords = title.split(/\s+/).filter(word => word.length > 0);
+          const errorDiv = document.getElementById("jobTitleError");
+          
+          if (titleWords.length > 5) {
+            if (errorDiv) {
+              errorDiv.style.display = "block";
+            }
+            // Truncate to 5 words
+            const truncated = titleWords.slice(0, 5).join(' ');
+            jobTitleInput.value = truncated;
+            showToast("Job title limited to 5 words");
+          } else {
+            if (errorDiv) {
+              errorDiv.style.display = "none";
+            }
+          }
+        });
+      }
+      
       // Equipment checkbox hover effects
       document.querySelectorAll('.equipment-checkbox').forEach(label => {
         const checkbox = label.querySelector('input[type="checkbox"]');
