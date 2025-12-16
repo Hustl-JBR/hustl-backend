@@ -8561,63 +8561,62 @@ async function renderJobs(reset = false) {
       const hasAcceptedHustler = job.hustlerId || job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS';
       
       const deadlinePreference = requirements.deadline_preference || job.deadlinePreference;
+      const now = new Date();
+      const jobCreatedAt = job.createdAt ? new Date(job.createdAt) : now;
+      
+      // Calculate "Done by" date based on deadline preference (this is the completion deadline, not expiration)
+      let doneByDate = null;
       
       if (deadlinePreference === "specific_date" && job.startTime) {
+        // Specific date - use the selected deadline date
+        doneByDate = new Date(job.startTime);
+      } else if (deadlinePreference === "today_asap") {
+        // ASAP - deadline is today
+        doneByDate = new Date(now);
+        doneByDate.setHours(23, 59, 59, 999);
+      } else if (deadlinePreference === "flexible_week") {
+        // This week - deadline is 7 days from post date
+        doneByDate = new Date(jobCreatedAt);
+        doneByDate.setDate(doneByDate.getDate() + 7);
+        doneByDate.setHours(23, 59, 59, 999);
+      } else if (deadlinePreference === "no_deadline") {
+        // Until done - deadline is 1 month from post date
+        doneByDate = new Date(jobCreatedAt);
+        doneByDate.setMonth(doneByDate.getMonth() + 1);
+        doneByDate.setHours(23, 59, 59, 999);
+      } else if (job.startTime) {
+        // Fallback to startTime if available
+        doneByDate = new Date(job.startTime);
+      } else if (job.date) {
+        // Fallback to job.date
+        doneByDate = new Date(job.date);
+        if (doneByDate.getHours() === 0 && doneByDate.getMinutes() === 0) {
+          doneByDate.setHours(23, 59, 0, 0);
+        }
+      }
+      
+      // Display "Done by" date
+      if (doneByDate && !isNaN(doneByDate.getTime())) {
         try {
-          const deadlineDate = new Date(job.startTime);
-          if (!isNaN(deadlineDate.getTime())) {
-            // Format date and time in user's local timezone (browser default)
-            const dateStr = deadlineDate.toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric'
-            });
-            const timeStr = deadlineDate.toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              minute: '2-digit',
-              hour12: true
-            });
-            neededByText = `📅 Done by ${dateStr}, ${timeStr}`;
-            
-            // Add countdown if not accepted and expiresAt exists
-            if (!hasAcceptedHustler && job.expiresAt) {
-              const expiresDate = new Date(job.expiresAt);
-              const now = new Date();
-              const timeLeft = expiresDate - now;
-              if (timeLeft > 0) {
-                const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                if (days > 0) {
-                  countdownText = `⏱️ Expires in ${days}d ${hours}h`;
-                } else if (hours > 0) {
-                  countdownText = `⏱️ Expires in ${hours}h`;
-                } else {
-                  countdownText = `⏱️ Expires soon`;
-                }
-              } else {
-                countdownText = `⏱️ Expired`;
-              }
-            }
-          }
+          const dateStr = doneByDate.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric',
+            year: doneByDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+          });
+          const timeStr = doneByDate.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          });
+          neededByText = `📅 Done by ${dateStr}, ${timeStr}`;
         } catch (e) {}
-      } else if (job.expiresAt && !hasAcceptedHustler) {
-        // Use expiresAt if available - this is the primary source for expiration
+      }
+      
+      // Add countdown timer for expiration (separate from "Done by" date)
+      if (!hasAcceptedHustler && job.expiresAt) {
         try {
           const expiresDate = new Date(job.expiresAt);
           if (!isNaN(expiresDate.getTime())) {
-            // Format date and time in user's local timezone (browser default)
-            const dateStr = expiresDate.toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric'
-            });
-            const timeStr = expiresDate.toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              minute: '2-digit',
-              hour12: true
-            });
-            neededByText = `📅 Done by ${dateStr}, ${timeStr}`;
-            
-            // Add countdown
-            const now = new Date();
             const timeLeft = expiresDate - now;
             if (timeLeft > 0) {
               const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
@@ -8632,27 +8631,6 @@ async function renderJobs(reset = false) {
             } else {
               countdownText = `⏱️ Expired`;
             }
-          }
-        } catch (e) {}
-      } else if (job.date) {
-        // Fallback to job.date if expiresAt is not set
-        try {
-          const deadlineDate = new Date(job.date);
-          if (!isNaN(deadlineDate.getTime())) {
-            // If date doesn't have time, assume end of day
-            if (deadlineDate.getHours() === 0 && deadlineDate.getMinutes() === 0) {
-              deadlineDate.setHours(23, 59, 0, 0);
-            }
-            const dateStr = deadlineDate.toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric'
-            });
-            const timeStr = deadlineDate.toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              minute: '2-digit',
-              hour12: true
-            });
-            neededByText = `📅 Done by ${dateStr}, ${timeStr}`;
           }
         } catch (e) {}
       }
