@@ -4152,25 +4152,28 @@
               <span>▾</span>
             </button>
             
-            <!-- Sort Dropdown -->
-            <div style="min-width: 120px;" class="sort-dropdown-container">
-              <select id="jobsSortSelect" style="width: 100%; padding: 0.5rem; height: 2.25rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; background: white; cursor: pointer; box-sizing: border-box;">
-                <option value="newest">Newest</option>
-                <option value="highest_paid">Highest Paid</option>
-                <option value="lowest_paid">Lowest Paid</option>
-                <option value="closest">Closest</option>
-                <option value="soonest">Soonest Deadline</option>
-              </select>
-            </div>
-            
-            <!-- List/Map Toggle -->
-            <div style="display: flex; background: #f3f4f6; border-radius: 6px; padding: 0.2rem; border: 1px solid #e5e7eb;">
-              <button id="jobsViewListBtn" class="jobs-view-toggle active" style="padding: 0.4rem 0.75rem; background: white; border: none; border-radius: 4px; font-size: 0.75rem; font-weight: 600; color: #111827; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1); transition: all 0.2s;">
-                📋 List
-              </button>
-              <button id="jobsViewMapBtn" class="jobs-view-toggle" style="padding: 0.4rem 0.75rem; background: transparent; border: none; border-radius: 4px; font-size: 0.75rem; font-weight: 600; color: #6b7280; cursor: pointer; transition: all 0.2s;">
-                🗺️ Map
-              </button>
+            <!-- Sort Dropdown and List/Map Toggle Container -->
+            <div style="display: flex; gap: 0.5rem; align-items: center;" class="sort-and-toggle-container">
+              <!-- Sort Dropdown -->
+              <div style="min-width: 120px;" class="sort-dropdown-container">
+                <select id="jobsSortSelect" style="width: 100%; padding: 0.5rem; height: 2.25rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; background: white; cursor: pointer; box-sizing: border-box;">
+                  <option value="newest">Newest</option>
+                  <option value="highest_paid">Highest Paid</option>
+                  <option value="lowest_paid">Lowest Paid</option>
+                  <option value="closest">Closest</option>
+                  <option value="soonest">Soonest Deadline</option>
+                </select>
+              </div>
+              
+              <!-- List/Map Toggle -->
+              <div style="display: flex; background: #f3f4f6; border-radius: 6px; padding: 0.2rem; border: 1px solid #e5e7eb;">
+                <button id="jobsViewListBtn" class="jobs-view-toggle active" style="padding: 0.4rem 0.75rem; background: white; border: none; border-radius: 4px; font-size: 0.75rem; font-weight: 600; color: #111827; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1); transition: all 0.2s;">
+                  📋 List
+                </button>
+                <button id="jobsViewMapBtn" class="jobs-view-toggle" style="padding: 0.4rem 0.75rem; background: transparent; border: none; border-radius: 4px; font-size: 0.75rem; font-weight: 600; color: #6b7280; cursor: pointer; transition: all 0.2s;">
+                  🗺️ Map
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -8873,7 +8876,7 @@ async function renderJobs(reset = false) {
       pay.style.cssText = "position: absolute; top: 0.75rem; right: 0.75rem; font-weight: 700; color: var(--success); font-size: 1rem; z-index: 10;";
       
       if (pricingOption === "hustlers_quote") {
-        pay.textContent = "💰 Hustler suggests price";
+        pay.textContent = "💰 Hustler suggests $";
         pay.style.color = "#f59e0b";
       } else if (job.payType === "flat") {
         const total = Number(job.amount) || 0;
