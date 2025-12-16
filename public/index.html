@@ -7474,14 +7474,13 @@ function formatDistance(miles) {
 async function getMapboxToken() {
   if (mapboxToken) return mapboxToken;
   try {
-    const response = await fetch(`${API_BASE}/jobs/mapbox-token`);
-    if (response.ok) {
-      const data = await response.json();
+    const data = await safeFetch(`${API_BASE}/jobs/mapbox-token`);
+    if (data && data.token) {
       mapboxToken = data.token;
       return mapboxToken;
     }
   } catch (e) {
-    console.error('Failed to get Mapbox token:', e);
+    console.warn('Failed to get Mapbox token:', e);
   }
   return null;
 }
