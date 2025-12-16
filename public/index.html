@@ -432,7 +432,7 @@
       background: #ffffff !important;
       z-index: 10002 !important; /* Above header (100), below hamburger button (10001) */
       padding: 0;
-      padding-top: 80px !important; /* Space for header + close button */
+      padding-top: 70px !important; /* Space for header */
       padding-left: 1rem;
       padding-right: 1rem;
       padding-bottom: 2rem;
@@ -455,28 +455,31 @@
       display: flex;
     }
     
-    /* Close button for mobile menu */
+    /* Close button for mobile menu - positioned in top-right of menu */
     .mobile-menu-close {
-      position: fixed !important;
-      top: 60px !important; /* Below header (header is ~50-60px tall) */
+      position: absolute !important;
+      top: 1rem !important;
       right: 1rem !important;
-      width: 44px !important;
-      height: 44px !important;
+      width: 48px !important;
+      height: 48px !important;
       border-radius: 50% !important;
       background: #f3f4f6 !important;
       border: 2px solid #e5e7eb !important;
-      font-size: 1.5rem !important;
+      font-size: 1.75rem !important;
       font-weight: 700 !important;
       cursor: pointer !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       color: #374151 !important;
-      z-index: 10005 !important; /* Above everything - highest priority */
+      z-index: 10006 !important; /* Highest - above everything */
       transition: all 0.2s ease;
       -webkit-tap-highlight-color: transparent;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
       pointer-events: auto !important;
+      line-height: 1;
+      padding: 0;
+      margin: 0;
     }
     
     .mobile-menu-close:hover,
@@ -485,9 +488,10 @@
       color: #111827 !important;
       transform: scale(1.1) !important;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+      border-color: #d1d5db !important;
     }
     
-    /* Ensure close button is visible when menu is open */
+    /* Always show close button when menu is open */
     .mobile-menu.open .mobile-menu-close {
       display: flex !important;
       visibility: visible !important;
@@ -3308,8 +3312,8 @@
     
     <!-- Mobile Menu Overlay -->
     <div class="mobile-menu" id="mobileMenu">
-      <!-- Close button for mobile menu - positioned below header -->
-      <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close menu" style="display: none; position: fixed; top: 60px; right: 1rem; width: 44px; height: 44px; border-radius: 50%; background: #f3f4f6; border: 2px solid #e5e7eb; font-size: 1.5rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #374151; z-index: 10005; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); pointer-events: auto;">
+      <!-- Close button for mobile menu -->
+      <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close menu">
         ✕
       </button>
       <!-- Menu items will be populated dynamically by updateHeaderAuth() -->
@@ -25250,13 +25254,16 @@ try {
         freshMobileMenu.classList.add('open');
         document.body.classList.add('mobile-menu-open');
         document.body.style.overflow = 'hidden';
-        // Show close button
-        const closeBtn = document.getElementById('mobileMenuClose');
-        if (closeBtn) {
-          closeBtn.style.display = 'flex';
-          closeBtn.style.visibility = 'visible';
-          closeBtn.style.opacity = '1';
-        }
+        // Show close button - use setTimeout to ensure menu is rendered first
+        setTimeout(() => {
+          const closeBtn = document.getElementById('mobileMenuClose');
+          if (closeBtn) {
+            closeBtn.style.display = 'flex';
+            closeBtn.style.visibility = 'visible';
+            closeBtn.style.opacity = '1';
+            closeBtn.style.zIndex = '10006';
+          }
+        }, 10);
       }
       
       setTimeout(() => {
