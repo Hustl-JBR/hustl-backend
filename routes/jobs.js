@@ -347,14 +347,7 @@ router.get('/completed', authenticate, async (req, res) => {
 
 // POST /jobs - Create a job (Customer only)
 // Email verification is enforced in authenticate middleware - no need for additional checks
-router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) => {
-  try {
-    if (!req.user || !req.user.id) {
-      console.error('[POST /jobs] req.user is missing:', req.user);
-      return res.status(401).json({ error: 'Unauthorized - user not found' });
-    }
-  next();
-}, [
+router.post('/', authenticate, requireRole('CUSTOMER'), [
   body('title').trim().notEmpty().isLength({ max: 200 }),
   body('category').trim().notEmpty(),
   body('description').trim().notEmpty(),
@@ -368,6 +361,10 @@ router.post('/', authenticate, requireRole('CUSTOMER'), async (req, res, next) =
   body('estHours').optional().isInt({ min: 1 }),
 ], async (req, res) => {
   try {
+    if (!req.user || !req.user.id) {
+      console.error('[POST /jobs] req.user is missing:', req.user);
+      return res.status(401).json({ error: 'Unauthorized - user not found' });
+    }
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       console.error('Validation errors:', errors.array());
