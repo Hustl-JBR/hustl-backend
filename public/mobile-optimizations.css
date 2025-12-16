@@ -28,7 +28,17 @@ nav,
 [class*="header"],
 [class*="nav"] {
   position: relative;
-  z-index: 100 !important; /* Low z-index - below modals */
+  z-index: 100 !important; /* Low z-index - below modals and mobile menu */
+}
+
+/* Mobile menu must be above header */
+.mobile-menu {
+  z-index: 10002 !important; /* Above header (100) */
+}
+
+/* Mobile menu close button must be highest */
+.mobile-menu-close {
+  z-index: 10005 !important; /* Highest - always clickable */
 }
 
 /* Fixed/sticky headers */

@@ -424,13 +424,13 @@
     /* Mobile menu overlay */
     .mobile-menu {
       display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: #ffffff;
-      z-index: 10000; /* Below hamburger button */
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      background: #ffffff !important;
+      z-index: 10002 !important; /* Above header (100), below hamburger button (10001) */
       padding: 70px 1rem 2rem;
       flex-direction: column;
       gap: 0.25rem;
@@ -453,31 +453,34 @@
     
     /* Close button for mobile menu */
     .mobile-menu-close {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #f3f4f6;
-      border: none;
-      font-size: 1.5rem;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #6b7280;
-      z-index: 10003 !important; /* Above menu content */
+      position: fixed !important;
+      top: 1rem !important;
+      right: 1rem !important;
+      width: 44px !important;
+      height: 44px !important;
+      border-radius: 50% !important;
+      background: #f3f4f6 !important;
+      border: 2px solid #e5e7eb !important;
+      font-size: 1.5rem !important;
+      font-weight: 700 !important;
+      cursor: pointer !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      color: #374151 !important;
+      z-index: 10005 !important; /* Above everything - highest priority */
       transition: all 0.2s ease;
       -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+      pointer-events: auto !important;
     }
     
     .mobile-menu-close:hover,
     .mobile-menu-close:active {
-      background: #e5e7eb;
-      color: #374151;
-      transform: scale(1.05);
+      background: #e5e7eb !important;
+      color: #111827 !important;
+      transform: scale(1.1) !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
     }
 
     .mobile-menu-item {
