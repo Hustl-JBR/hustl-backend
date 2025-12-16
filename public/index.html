@@ -2964,19 +2964,49 @@
         border-radius: 6px !important;
       }
       
-      /* Sort and toggle container - keep together on mobile */
-      .sort-and-toggle-container {
+      /* Filters, Sort, and Toggle Row - all on same line on mobile */
+      .filters-sort-row {
+        gap: 0.5rem !important;
         flex-wrap: nowrap !important;
       }
       
+      /* Make filters button smaller on mobile */
+      .filters-btn-mobile {
+        padding: 0.4rem 0.7rem !important;
+        height: 2rem !important;
+        font-size: 0.75rem !important;
+        gap: 0.35rem !important;
+      }
+      
+      .filters-btn-mobile span:first-of-type {
+        font-size: 0.75rem !important;
+      }
+      
+      /* Sort and toggle container - keep together on mobile */
+      .sort-and-toggle-container {
+        flex-wrap: nowrap !important;
+        gap: 0.4rem !important;
+      }
+      
       .sort-dropdown-container {
-        min-width: 100px !important;
-        flex-shrink: 1 !important;
+        min-width: 90px !important;
+        flex: 1 !important;
+      }
+      
+      /* Make sort select smaller on mobile */
+      .sort-select-mobile {
+        padding: 0.4rem 0.5rem !important;
+        height: 2rem !important;
+        font-size: 0.75rem !important;
       }
       
       /* Make toggle smaller on mobile */
+      .toggle-container-mobile {
+        padding: 0.15rem !important;
+      }
+      
       .sort-and-toggle-container .jobs-view-toggle {
-        padding: 0.35rem 0.6rem !important;
+        padding: 0.3rem 0.5rem !important;
         font-size: 0.7rem !important;
       }
       
