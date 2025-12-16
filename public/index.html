@@ -450,6 +450,35 @@
     .mobile-menu.open {
       display: flex;
     }
+    
+    /* Close button for mobile menu */
+    .mobile-menu-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #f3f4f6;
+      border: none;
+      font-size: 1.5rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+      z-index: 10003 !important; /* Above menu content */
+      transition: all 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    .mobile-menu-close:hover,
+    .mobile-menu-close:active {
+      background: #e5e7eb;
+      color: #374151;
+      transform: scale(1.05);
+    }
 
     .mobile-menu-item {
       width: 100%;
@@ -3265,6 +3294,10 @@
     
     <!-- Mobile Menu Overlay -->
     <div class="mobile-menu" id="mobileMenu">
+      <!-- Close button for mobile menu -->
+      <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close menu">
+        ✕
+      </button>
       <!-- Menu items will be populated dynamically by updateHeaderAuth() -->
       <div class="header-auth" id="mobileMenuAuth">
         <!-- Auth buttons will be populated dynamically -->
@@ -25204,8 +25237,37 @@ try {
       }, 300);
     });
     
+    // Handle close button click
+    const mobileMenuClose = document.getElementById('mobileMenuClose');
+    if (mobileMenuClose) {
+      mobileMenuClose.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        freshHamburgerBtn.classList.remove('open');
+        freshMobileMenu.classList.remove('open');
+        document.body.classList.remove('mobile-menu-open');
+        document.body.style.overflow = '';
+      });
+    }
+    
+    // Close menu when clicking overlay (but not menu content)
+    freshMobileMenu.addEventListener('click', (e) => {
+      // If clicking directly on the menu container (overlay), close it
+      if (e.target === freshMobileMenu) {
+        freshHamburgerBtn.classList.remove('open');
+        freshMobileMenu.classList.remove('open');
+        document.body.classList.remove('mobile-menu-open');
+        document.body.style.overflow = '';
+        return;
+      }
+    });
+    
     // Handle mobile menu item clicks using event delegation (works with dynamically added items)
     freshMobileMenu.addEventListener('click', (e) => {
+        // Don't close if clicking the close button (handled above)
+        if (e.target.closest('.mobile-menu-close')) return;
+        
         const item = e.target.closest('.mobile-menu-item');
         if (!item) return;
         
