@@ -4027,6 +4027,21 @@
           <div style="margin-bottom: 1.5rem;">
             <div class="field" style="margin-bottom: 0.75rem;">
               <label for="approximateLocationMap">Tap the map to set approximate location <span style="color: #dc2626;">*</span></label>
+              
+              <!-- Address search helper (not stored, just for navigation) -->
+              <div style="margin-bottom: 0.75rem;">
+                <input 
+                  type="text" 
+                  id="approximateLocationSearch" 
+                  placeholder="🔍 Search address to navigate map (optional - not stored)"
+                  style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem;"
+                  autocomplete="off"
+                />
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+                  This helps you find the area on the map. Your exact address is never stored.
+                </div>
+              </div>
+              
               <div id="approximateLocationMap" style="width: 100%; height: 300px; border: 2px solid var(--border); border-radius: 8px; position: relative; background: #f3f4f6; cursor: crosshair;"></div>
               <input type="hidden" id="approximateLat" />
               <input type="hidden" id="approximateLng" />
@@ -6668,6 +6683,9 @@ function showChangePasswordModal() {
         approximateLocationMap.on('load', () => {
           console.log('Map loaded successfully');
           
+          // Initialize address search (for navigation only, not stored)
+          initApproximateLocationSearch();
+          
           // Add click handler
           approximateLocationMap.on('click', (e) => {
             const { lng, lat } = e.lngLat;
@@ -6783,6 +6801,91 @@ function showChangePasswordModal() {
       });
       
       approximateLocationCircle = true;
+    }
+    
+    // Initialize address search for map navigation (address not stored)
+    function initApproximateLocationSearch() {
+      const searchInput = document.getElementById('approximateLocationSearch');
+      if (!searchInput || !approximateLocationMap) return;
+      
+      const MAPBOX_TOKEN = window.MAPBOX_TOKEN;
+      if (!MAPBOX_TOKEN || typeof MapboxGeocoder === 'undefined') {
+        // If geocoder not available, use simple search with Enter key
+        searchInput.addEventListener('keypress', async (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const query = searchInput.value.trim();
+            if (!query) return;
+            
+            // Use Mapbox Geocoding API directly
+            try {
+              const response = await fetch(
+                `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&country=us&limit=1`
+              );
+              const data = await response.json();
+              
+              if (data.features && data.features.length > 0) {
+                const [lng, lat] = data.features[0].center;
+                approximateLocationMap.flyTo({
+                  center: [lng, lat],
+                  zoom: 14,
+                  duration: 1000
+                });
+                searchInput.value = ''; // Clear after search
+              } else {
+                showToast('Address not found. Try a different search.');
+              }
+            } catch (error) {
+              console.error('Geocoding error:', error);
+              showToast('Error searching address. Please try again.');
+            }
+          }
+        });
+        return;
+      }
+      
+      // Use Mapbox Geocoder if available
+      const geocoder = new MapboxGeocoder({
+        accessToken: MAPBOX_TOKEN,
+        types: 'address,poi',
+        countries: 'us',
+        placeholder: '🔍 Search address to navigate map (optional)',
+        bbox: [-90.3, 34.98, -81.65, 36.68], // Tennessee bounding box
+        proximity: { longitude: -86.7816, latitude: 36.1627 }, // Nashville center
+      });
+      
+      // Add geocoder to search input container
+      const searchContainer = document.createElement('div');
+      searchContainer.id = 'approximateLocationSearchContainer';
+      searchContainer.style.cssText = 'position: relative; width: 100%;';
+      searchInput.parentNode.insertBefore(searchContainer, searchInput);
+      searchInput.style.display = 'none';
+      
+      geocoder.addTo('#approximateLocationSearchContainer');
+      
+      // When address is selected, center map but don't set location
+      geocoder.on('result', (e) => {
+        const [lng, lat] = e.result.center;
+        // Center map on the address
+        approximateLocationMap.flyTo({
+          center: [lng, lat],
+          zoom: 14,
+          duration: 1000
+        });
+        // Clear the search input
+        searchInput.value = '';
+        // Show message that they still need to click
+        const statusDiv = document.getElementById('locationStatus');
+        if (statusDiv) {
+          statusDiv.textContent = 'Map centered. Now tap the map to set your approximate location.';
+          statusDiv.style.color = 'var(--text-muted)';
+        }
+      });
+      
+      // Clear search when cleared
+      geocoder.on('clear', () => {
+        searchInput.value = '';
+      });
     }
     
     // Simple circle creation (approximation)
