@@ -1510,8 +1510,6 @@
       align-items: center;
       gap: 0.5rem;
       margin-top: 0.5rem;
-      padding-top: 0.5rem;
-      border-top: 1px solid var(--border);
     }
 
     .small-btn {
@@ -9483,6 +9481,30 @@ async function renderJobs(reset = false) {
       
       // Add textContent to card
       card.appendChild(textContent);
+
+      // Customer info (profile pic + name) - simple and clean
+      if (job.customer) {
+        const customerInfo = document.createElement("div");
+        customerInfo.style.cssText = "display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border);";
+        
+        // Profile picture
+        const profilePic = document.createElement("img");
+        profilePic.style.cssText = "width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border);";
+        profilePic.src = job.customer.photoUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(job.customer.name || "User") + "&background=6366f1&color=fff&size=128";
+        profilePic.alt = job.customer.name || "Customer";
+        profilePic.onerror = function() {
+          this.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(job.customer.name || "User") + "&background=6366f1&color=fff&size=128";
+        };
+        
+        // Customer name
+        const customerName = document.createElement("span");
+        customerName.style.cssText = "font-size: 0.85rem; color: var(--text-muted); font-weight: 500;";
+        customerName.textContent = job.customer.name || "Posted by customer";
+        
+        customerInfo.appendChild(profilePic);
+        customerInfo.appendChild(customerName);
+        textContent.appendChild(customerInfo);
+      }
 
       // Actions row
       const actions = document.createElement("div");
