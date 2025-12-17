@@ -9724,15 +9724,19 @@ async function renderJobs(reset = false) {
           modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 600px; width: 90%; max-height: 95vh; overflow-y: auto; position: relative; margin: 2rem auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
         }
         
-        // Close button
+        // Close button - positioned to avoid iPhone banner
         const closeBtn = document.createElement("button");
         closeBtn.innerHTML = "×";
-        closeBtn.style.cssText = "position: sticky; top: 0.75rem; right: 0.75rem; width: 40px; height: 40px; border-radius: 50%; background: rgba(0, 0, 0, 0.6); border: none; font-size: 1.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; z-index: 10; float: right; margin: 0.75rem; line-height: 1;";
+        closeBtn.style.cssText = "position: fixed; top: 1rem; right: 1rem; width: 44px; height: 44px; border-radius: 50%; background: rgba(0, 0, 0, 0.7); border: 2px solid white; font-size: 1.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; z-index: 10001; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.3);";
+        // On mobile, position lower to avoid status bar
+        if (window.innerWidth <= 768) {
+          closeBtn.style.top = "3.5rem"; // Below iPhone status bar area
+        }
         closeBtn.addEventListener("click", () => {
           document.body.removeChild(modalOverlay);
           document.body.style.overflow = "";
         });
-        modalContent.appendChild(closeBtn);
+        modalOverlay.appendChild(closeBtn); // Add to overlay, not content, so it's always visible
         
         // 1. JOB TITLE
         const header = document.createElement("div");
@@ -10182,11 +10186,11 @@ async function renderJobs(reset = false) {
         
         // Add user's location marker (red person icon) if available
         if (userLoc && userLoc.lat && userLoc.lng) {
-          // Create a custom person icon marker (pin shape with person emoji)
+          // Create a custom person icon marker (smaller size)
           const personIcon = document.createElement('div');
-          personIcon.style.cssText = 'width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 50%; border: 3px solid #dc2626; box-shadow: 0 2px 6px rgba(0,0,0,0.3);';
+          personIcon.style.cssText = 'width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 50%; border: 2px solid #dc2626; box-shadow: 0 2px 4px rgba(0,0,0,0.3);';
           personIcon.innerHTML = '👤';
-          personIcon.style.fontSize = '24px';
+          personIcon.style.fontSize = '16px';
           
           new mapboxgl.Marker({ element: personIcon, anchor: 'center' })
             .setLngLat([userLoc.lng, userLoc.lat])
