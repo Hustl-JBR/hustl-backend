@@ -108,6 +108,11 @@ model Job {
   address               String
   lat                   Float?
   lng                   Float?
+  // Approximate location (for privacy - shown before acceptance)
+  approximateLat        Float?                 @map("approximate_lat")
+  approximateLng        Float?                 @map("approximate_lng")
+  // Exact address (only shared after acceptance)
+  exactAddress          String?                @map("exact_address") @db.Text
   date                  DateTime
   startTime             DateTime              @map("start_time")
   endTime               DateTime              @map("end_time")
@@ -154,6 +159,7 @@ model Job {
   @@index([category])
   @@index([date])
   @@index([lat, lng])
+  @@index([approximateLat, approximateLng])
   @@index([parentJobId])
   @@index([recurrenceType])
   @@index([nextRecurrenceDate])
