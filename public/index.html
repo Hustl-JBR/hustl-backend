@@ -19603,49 +19603,40 @@ meta.textContent =
             const isMobile = window.innerWidth <= 768;
             
             jobCard.innerHTML = isMobile ? `
-              <!-- Mobile: Compact Card -->
-              <div style="padding: 1rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border-bottom: 2px solid var(--border);">
-                <div style="display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.75rem;">
-                  <span style="font-size: 1.5rem; flex-shrink: 0;">${categoryIcon}</span>
+              <!-- Mobile: Simple Card -->
+              <div style="padding: 1rem; background: white;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                  <span style="font-size: 1.75rem; flex-shrink: 0;">${categoryIcon}</span>
                   <div style="flex: 1; min-width: 0;">
-                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main); line-height: 1.2; margin-bottom: 0.25rem;">${job.title || 'Untitled Job'}</h3>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">${categoryDisplay}</div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
-                      <span style="font-weight: 700; color: var(--text-main); font-size: 0.95rem;">💰 ${payDisplay.length > 30 ? payDisplay.substring(0, 30) + '...' : payDisplay}</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--text-muted);">
-                      <span>⏰ ${timingDisplay}</span>
-                      <span>👥 ${workersDisplay}</span>
-                      ${expirationDisplay ? `<span style="color: ${isKeepOpenEnabled ? '#1e40af' : (expiresAt && expiresAt <= new Date() ? '#dc2626' : '#d97706')}; font-weight: 600;">⏳ ${expirationDisplay}</span>` : ''}
-                    </div>
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main); line-height: 1.3;">${job.title || 'Untitled Job'}</h3>
+                    <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-top: 0.25rem;">💰 ${payDisplay.length > 35 ? payDisplay.substring(0, 35) + '...' : payDisplay}</div>
                   </div>
-                  <div style="flex-shrink: 0; text-align: right;">
-                    <div style="padding: 0.4rem 0.75rem; background: ${statusColor}20; color: ${statusColor}; border-radius: 6px; font-weight: 600; font-size: 0.75rem; border: 1px solid ${statusColor}40;">
+                  <div style="flex-shrink: 0;">
+                    <div style="padding: 0.35rem 0.6rem; background: ${statusColor}20; color: ${statusColor}; border-radius: 6px; font-weight: 600; font-size: 0.7rem; white-space: nowrap;">
                       ${statusBadge}
                     </div>
                   </div>
                 </div>
                 ${offerCount > 0 ? `
-                <div style="padding: 0.75rem; background: #f0fdf4; border-radius: 8px; border: 1px solid #10b98140; margin-top: 0.75rem;">
-                  <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div>
-                      <div style="font-size: 1.5rem; font-weight: 700; color: #059669; line-height: 1;">${offerCount}</div>
-                      <div style="font-size: 0.75rem; color: #047857; font-weight: 600;">${offerCount === 1 ? 'Applicant' : 'Applicants'}</div>
-                    </div>
-                    <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 600; border-radius: 8px;">
-                      View
-                    </button>
-                  </div>
+                <div style="padding: 1rem; background: #f0fdf4; border-radius: 8px; border: 1px solid #10b98140; text-align: center; margin-bottom: 0.75rem;">
+                  <div style="font-size: 2rem; font-weight: 700; color: #059669; line-height: 1; margin-bottom: 0.25rem;">${offerCount}</div>
+                  <div style="font-size: 0.85rem; color: #047857; font-weight: 600;">${offerCount === 1 ? 'Applicant' : 'Applicants'}</div>
                 </div>
+                <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.75rem; font-size: 0.9rem; font-weight: 600; border-radius: 8px;">
+                  View Applicants
+                </button>
                 ` : `
-                <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
-                  <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.6rem; font-size: 0.85rem; font-weight: 600; border-radius: 8px;">
-                    View Details
-                  </button>
-                  ${(job.status === 'OPEN' || ((job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified)) ? `
-                  <button class="btn btn-ghost cancelJobBtn" data-job-id="${job.id}" style="padding: 0.6rem 1rem; font-weight: 600; border-radius: 8px; color: #dc2626; border-color: #fecaca; font-size: 0.85rem;">Delete</button>
-                  ` : ''}
+                <div style="padding: 1rem; background: #fef3c7; border-radius: 8px; border: 1px solid #fbbf2440; text-align: center; margin-bottom: 0.75rem;">
+                  <div style="font-size: 1.75rem; margin-bottom: 0.25rem;">👤</div>
+                  <div style="font-weight: 600; color: #92400e; margin-bottom: 0.15rem; font-size: 0.9rem;">No applicants yet</div>
+                  <div style="font-size: 0.75rem; color: #78350f;">Share your job to get more applicants!</div>
                 </div>
+                <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.75rem; font-size: 0.9rem; font-weight: 600; border-radius: 8px; margin-bottom: 0.5rem;">
+                  View Details
+                </button>
+                ${(job.status === 'OPEN' || ((job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified)) ? `
+                <button class="btn btn-ghost cancelJobBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.75rem; font-weight: 600; border-radius: 8px; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">Delete</button>
+                ` : ''}
                 `}
               </div>
             ` : `
