@@ -20100,30 +20100,32 @@ meta.textContent =
                         <div style="font-weight: 600; color: var(--text-main); cursor: pointer;" class="viewHustlerProfileBtn" data-user-id="${hustler.id}">${hustler.name || 'Unknown'}</div>
                       </div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
-                      <span style="font-weight: 600; color: var(--text-main);">💰 ${payDisplay}</span>
-                      <span>📅 ${dateStr} at ${timeStr}</span>
-                      <span style="padding: 0.25rem 0.75rem; background: ${job.status === 'IN_PROGRESS' ? '#f59e0b20' : '#3b82f620'}; color: ${job.status === 'IN_PROGRESS' ? '#f59e0b' : '#3b82f6'}; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">${job.status === 'IN_PROGRESS' ? 'In Progress' : (job.status || 'Active')}</span>
-                    </div>
-                    <div style="font-size: 0.85rem; color: var(--text-muted);">
-                      <span>📍 ${job.address || 'Location not specified'}</span>
-                    </div>
+                    <div style="padding: 0.25rem 0.75rem; background: ${job.status === 'IN_PROGRESS' ? '#f59e0b20' : '#3b82f620'}; color: ${job.status === 'IN_PROGRESS' ? '#f59e0b' : '#3b82f6'}; border-radius: 6px; font-weight: 600; font-size: 0.85rem; display: inline-block; margin-bottom: 0.5rem;">${job.status === 'IN_PROGRESS' ? 'In Progress' : 'Scheduled'}</div>
                   </div>
                 </div>
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
                   <button class="btn btn-primary messageBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">💬 Message</button>
                   <button class="btn btn-ghost viewJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem;">🔍 View Job</button>
-                  <button class="btn btn-ghost mapBtn" data-address="${job.address || ''}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">🗺️ Map</button>
                   ${(job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified ? `
-                    <button class="btn btn-ghost unassignHustlerBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; color: #f59e0b; border-color: #fde68a; font-size: 0.9rem;">🔓 Unassign</button>
-                    <button class="btn btn-ghost deleteJobBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">🗑️ Delete</button>
+                    <button class="btn btn-ghost unassignHustlerBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; color: #f59e0b; border-color: #fde68a; font-size: 0.9rem;">🔓 Unassign</button>
+                    <button class="btn btn-ghost deleteJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">🗑️ Delete</button>
                   ` : ''}
-                  ${job.status === 'ASSIGNED' && !job.startCodeVerified ? `<button class="btn btn-ghost unacceptBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">Unaccept</button>` : ''}
                 </div>
               `;
             } else if (isHustler) {
               // Hustler View: Shows customer who hired them
               const customer = job.customer || {};
+              
+              // Get tools needed
+              const equipmentNeeded = requirements.equipmentNeeded || [];
+              const customEquipment = requirements.customEquipment || '';
+              let toolsDisplay = 'None';
+              if (equipmentNeeded.length > 0) {
+                toolsDisplay = equipmentNeeded.join(', ');
+              } else if (customEquipment) {
+                toolsDisplay = customEquipment;
+              }
+              
               card.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
                   <div style="flex: 1;">
@@ -20134,43 +20136,27 @@ meta.textContent =
                     <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
                       ${customer ? renderUserAvatar(customer, 40, { className: 'viewCustomerProfileBtn', onClick: `document.querySelectorAll('.viewCustomerProfileBtn[data-user-id="${customer.id}"]').forEach(btn => btn.click())` }) : '<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); cursor: pointer;" class="viewCustomerProfileBtn" data-user-id="' + customerId + '">C</div>'}
                       <div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted);">${job.status === 'IN_PROGRESS' ? '🔄 In Progress' : '✅ Assigned'}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">Customer</div>
                         <div style="font-weight: 600; color: var(--text-main); cursor: pointer;" class="viewCustomerProfileBtn" data-user-id="${customer.id || customerId}">${customer.name || 'Unknown'}</div>
                       </div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
-                      <span style="font-weight: 600; color: var(--text-main);">💰 ${payDisplay}</span>
-                      <span>⏰ ${timingDisplay}</span>
-                      <span>👥 ${workersDisplay}</span>
-                      <span>📅 ${dateStr} at ${timeStr}</span>
-                      <span style="padding: 0.25rem 0.75rem; background: ${job.status === 'IN_PROGRESS' ? '#f59e0b20' : '#3b82f620'}; color: ${job.status === 'IN_PROGRESS' ? '#f59e0b' : '#3b82f6'}; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">${job.status === 'IN_PROGRESS' ? 'In Progress' : (job.status || 'Active')}</span>
-                    </div>
-                    <div style="font-size: 0.85rem; color: var(--text-muted);">
-                      <span>📍 ${locationDisplay}</span>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                      <div>👥 ${workersDisplay}</div>
+                      <div>🔧 Tools: ${toolsDisplay}</div>
+                      <div style="padding: 0.25rem 0.75rem; background: ${job.status === 'IN_PROGRESS' ? '#f59e0b20' : '#3b82f620'}; color: ${job.status === 'IN_PROGRESS' ? '#f59e0b' : '#3b82f6'}; border-radius: 6px; font-weight: 600; font-size: 0.85rem; display: inline-block; width: fit-content;">${job.status === 'IN_PROGRESS' ? 'In Progress' : 'Scheduled'}</div>
                     </div>
                   </div>
                 </div>
                 ${(job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && job.startCode && !job.startCodeVerified ? `
-                <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
-                  <div style="font-weight: 700; font-size: 0.95rem; color: #1e40af; margin-bottom: 0.5rem;">🔐 Enter Start Code</div>
-                  <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.75rem;">Ask the customer for the 6-digit start code to begin the job.</div>
-                  <input type="text" id="startCodeInput_${job.id}" placeholder="Enter 6-digit code" maxlength="6" style="width: 100%; padding: 0.75rem; font-size: 1.25rem; text-align: center; letter-spacing: 0.3em; border: 2px solid #3b82f6; border-radius: 8px; font-family: 'Courier New', monospace; font-weight: 600; margin-bottom: 0.75rem;" />
-                  <button class="btn btn-primary verifyStartCodeBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.75rem; font-weight: 600;">Verify & Start Job</button>
+                <div style="padding: 0.875rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
+                  <div style="font-weight: 700; font-size: 0.9rem; color: #1e40af; margin-bottom: 0.375rem;">🔐 Enter Start Code</div>
+                  <div style="font-size: 0.8rem; color: #1e40af; margin-bottom: 0.625rem; line-height: 1.3;">Ask the customer for the 6-digit start code to begin the job.</div>
+                  <input type="text" id="startCodeInput_${job.id}" placeholder="Enter 6-digit code" maxlength="6" style="width: 100%; padding: 0.625rem; font-size: 1.1rem; text-align: center; letter-spacing: 0.2em; border: 2px solid #3b82f6; border-radius: 6px; font-family: 'Courier New', monospace; font-weight: 600; margin-bottom: 0.625rem; box-sizing: border-box;" />
+                  <button class="btn btn-primary verifyStartCodeBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.625rem; font-weight: 600; font-size: 0.95rem;">Verify & Start Job</button>
                 </div>
                 ` : ''}
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                  <button class="btn btn-primary messageBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">💬 Message</button>
-                  <button class="btn btn-ghost viewJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem;">🔍 View Job</button>
-                  <button class="btn btn-ghost mapBtn" data-address="${locationDisplay || job.address || ''}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">🗺️ Map</button>
-                  ${job.status === 'IN_PROGRESS' && job.startCodeVerified && !job.completionCodeVerified ? `
-                  <div style="padding: 1rem; background: #dcfce7; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #16a34a;">
-                    <div style="font-weight: 700; font-size: 0.95rem; color: #166534; margin-bottom: 0.5rem;">🔐 Enter Completion Code</div>
-                    <div style="font-size: 0.85rem; color: #166534; margin-bottom: 0.75rem;">Ask the customer for the 6-digit completion code to finish the job.</div>
-                    <input type="text" id="completionCodeInput_${job.id}" placeholder="Enter 6-digit code" maxlength="6" style="width: 100%; padding: 0.75rem; font-size: 1.25rem; text-align: center; letter-spacing: 0.3em; border: 2px solid #16a34a; border-radius: 8px; font-family: 'Courier New', monospace; font-weight: 600; margin-bottom: 0.75rem;" />
-                    <button class="btn btn-primary verifyCompletionCodeBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.75rem; font-weight: 600; background: #10b981;">✅ Verify & Complete Job</button>
-                  </div>
-                  ` : ''}
-                  ${(job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && !job.startCodeVerified ? `<button class="btn btn-ghost leaveJobBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">🚪 Leave Job</button>` : ''}
+                  ${(job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && !job.startCodeVerified ? `<button class="btn btn-ghost leaveJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">🚪 Leave Job</button>` : ''}
                 </div>
               `;
             }
@@ -20190,15 +20176,7 @@ meta.textContent =
               showViewJobModal(job.id, isCustomer ? 'customer' : 'hustler');
             });
             
-            card.querySelector('.mapBtn')?.addEventListener('click', (e) => {
-              e.stopPropagation();
-              const address = e.target.dataset.address || job.address;
-              if (address) {
-                window.open(`https://maps.google.com/?q=${encodeURIComponent(address)}`, '_blank');
-              } else {
-                showToast("Address not available");
-              }
-            });
+            // Map button removed - not needed on active job cards
             
             card.querySelector('.unacceptBtn')?.addEventListener('click', async (e) => {
               e.stopPropagation();
@@ -21591,10 +21569,8 @@ meta.textContent =
         const timeStr = jobDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
         
         if (role === 'customer') {
-          // Customer View Modal
+          // Customer View Modal - Simplified
           const hustler = job.hustler || {};
-          const rating = hustler.ratingAvg || 0;
-          const ratingCount = hustler.ratingCount || 0;
           
           modalOverlay.innerHTML = `
             <div style="
@@ -21636,26 +21612,8 @@ meta.textContent =
                     })}
                     <div style="flex: 1;">
                       <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.25rem;">${hustler.name || 'Unknown'}</div>
-                      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                        <span>${'⭐'.repeat(Math.floor(rating))}</span>
-                        <span style="color: var(--text-muted); font-size: 0.9rem;">${rating.toFixed(1)} (${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})</span>
-                      </div>
-                      ${hustler.bio ? `<div style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5;">${hustler.bio}</div>` : ''}
                     </div>
                     <button class="btn btn-primary messageHustlerBtn" data-job-id="${job.id}" style="padding: 0.75rem 1.5rem; font-weight: 600;">💬 Message</button>
-                  </div>
-                </div>
-                
-                <!-- Job Details -->
-                <div style="margin-bottom: 2rem;">
-                  <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">Job Details</h3>
-                  <div style="display: grid; gap: 1rem;">
-                    <div><strong>Category:</strong> ${job.category || 'General'}</div>
-                    <div><strong>Pay:</strong> ${payDisplay}</div>
-                    <div><strong>Scheduled:</strong> ${dateStr} at ${timeStr}</div>
-                    <div><strong>Status:</strong> <span style="color: #3b82f6; font-weight: 600;">In Progress</span></div>
-                    <div><strong>Description:</strong><br><div style="margin-top: 0.5rem; line-height: 1.6; white-space: pre-wrap;">${job.description || 'No description provided.'}</div></div>
-                    <div><strong>📍 Address:</strong><br><a href="https://maps.google.com/?q=${encodeURIComponent(job.address)}" target="_blank" style="color: var(--primary); text-decoration: none; margin-top: 0.5rem; display: inline-block;">${job.address || 'Address not specified'} 🔗</a></div>
                   </div>
                 </div>
                 
@@ -21687,25 +21645,43 @@ meta.textContent =
                   </div>
                 ` : ''}
                 
-                <!-- Payment Status -->
-                ${job.payment ? `
-                  <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1.5rem;">
-                    <div style="font-weight: 600; margin-bottom: 0.5rem;">Payment Status</div>
-                    <div style="color: var(--text-muted);">${job.payment.status || 'Pending'}</div>
-                  </div>
-                ` : ''}
-                
                 <!-- Actions -->
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                  <button class="btn btn-primary messageHustlerBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem; font-weight: 600;">💬 Message Hustler</button>
-                  ${job.status === 'ASSIGNED' && !job.startCodeVerified ? `<button class="btn btn-ghost cancelJobBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; color: #dc2626; border-color: #fecaca;">Cancel Job</button>` : ''}
+                  <button class="btn btn-primary messageHustlerBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem; font-weight: 600;">💬 Message</button>
+                  <button class="btn btn-ghost viewJobBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem;">🔍 View Job</button>
+                  ${(job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified ? `
+                    <button class="btn btn-ghost unassignHustlerBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem; color: #f59e0b; border-color: #fde68a;">🔓 Unassign</button>
+                    <button class="btn btn-ghost deleteJobBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem; color: #dc2626; border-color: #fecaca;">🗑️ Delete</button>
+                  ` : ''}
                 </div>
               </div>
             </div>
           `;
         } else {
-          // Hustler View Modal
+          // Hustler View Modal - Simplified
           const customer = job.customer || {};
+          const requirements = job.requirements || {};
+          const teamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
+          
+          // Get tools needed
+          const equipmentNeeded = requirements.equipmentNeeded || [];
+          const customEquipment = requirements.customEquipment || '';
+          let toolsDisplay = 'None';
+          if (equipmentNeeded.length > 0) {
+            toolsDisplay = equipmentNeeded.join(', ');
+          } else if (customEquipment) {
+            toolsDisplay = customEquipment;
+          }
+          
+          // Format workers
+          let workersDisplay = '';
+          if (teamSize === 0) {
+            workersDisplay = 'Company/crew';
+          } else if (teamSize === 1) {
+            workersDisplay = '1 worker';
+          } else {
+            workersDisplay = `${teamSize} workers`;
+          }
           
           modalOverlay.innerHTML = `
             <div style="
@@ -21739,37 +21715,33 @@ meta.textContent =
                 <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 1.5rem 0; color: var(--text-main);">${job.title || 'Untitled Job'}</h2>
                 
                 <!-- Customer Info -->
-                <div style="padding: 1.5rem; background: #f9fafb; border-radius: 12px; margin-bottom: 2rem;">
+                <div style="padding: 1.5rem; background: #f9fafb; border-radius: 12px; margin-bottom: 1.5rem;">
                   <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; font-weight: 600;">CUSTOMER</div>
                   <div style="display: flex; gap: 1rem; align-items: center;">
                     ${customer ? renderUserAvatar(customer, 60) : `<div style="width: 60px; height: 60px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); font-size: 1.5rem;">C</div>`}
                     <div style="flex: 1;">
                       <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.25rem;">${customer.name || 'Unknown'}</div>
                     </div>
-                    <button class="btn btn-primary messageCustomerBtn" data-job-id="${job.id}" style="padding: 0.75rem 1.5rem; font-weight: 600;">💬 Message</button>
                   </div>
                 </div>
                 
-                <!-- Job Details -->
-                <div style="margin-bottom: 2rem;">
-                  <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">Job Details</h3>
-                  <div style="display: grid; gap: 1rem;">
-                    <div><strong>Category:</strong> ${job.category || 'General'}</div>
-                    <div><strong>Pay:</strong> ${payDisplay}</div>
-                    <div><strong>Scheduled:</strong> ${dateStr} at ${timeStr}</div>
-                    <div><strong>Status:</strong> <span style="color: #3b82f6; font-weight: 600;">In Progress</span></div>
-                    <div><strong>Description:</strong><br><div style="margin-top: 0.5rem; line-height: 1.6; white-space: pre-wrap;">${job.description || 'No description provided.'}</div></div>
-                    <div><strong>📍 Address:</strong><br><a href="https://maps.google.com/?q=${encodeURIComponent(job.address)}" target="_blank" style="color: var(--primary); text-decoration: none; margin-top: 0.5rem; display: inline-block;">${job.address || 'Address not specified'} 🔗</a></div>
+                <!-- Essential Job Info -->
+                <div style="padding: 1.5rem; background: #f8f9fa; border-radius: 12px; margin-bottom: 1.5rem;">
+                  <div style="display: grid; gap: 0.75rem;">
+                    <div><strong>👥 Workers:</strong> ${workersDisplay}</div>
+                    <div><strong>🔧 Tools Needed:</strong> ${toolsDisplay}</div>
+                    <div><strong>📅 Scheduled:</strong> ${dateStr} at ${timeStr}</div>
+                    <div style="padding: 0.5rem 1rem; background: ${job.status === 'IN_PROGRESS' ? '#f59e0b20' : '#3b82f620'}; color: ${job.status === 'IN_PROGRESS' ? '#f59e0b' : '#3b82f6'}; border-radius: 6px; font-weight: 600; display: inline-block; width: fit-content;">${job.status === 'IN_PROGRESS' ? 'In Progress' : 'Scheduled'}</div>
                   </div>
                 </div>
                 
-                <!-- Start Code Entry -->
+                <!-- Start Code Entry - Mobile Friendly -->
                 ${job.startCode && !job.startCodeVerified ? `
-                  <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
-                    <div style="font-weight: 700; color: #92400e; margin-bottom: 0.75rem;">🔐 Enter Start Code</div>
-                    <div style="font-size: 0.9rem; color: #92400e; margin-bottom: 1rem;">Ask the customer for the start code to begin the job.</div>
-                    <input type="text" id="startCodeInput" placeholder="Enter 6-digit code" maxlength="6" style="width: 100%; padding: 0.75rem; border: 2px solid #fbbf24; border-radius: 8px; font-size: 1.25rem; text-align: center; letter-spacing: 0.3em; font-family: 'Courier New', monospace;">
-                    <button class="btn btn-primary verifyStartCodeBtn" data-job-id="${job.id}" style="width: 100%; margin-top: 0.75rem; padding: 0.75rem; font-weight: 600; background: #f59e0b;">Verify Start Code</button>
+                  <div style="padding: 1.25rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
+                    <div style="font-weight: 700; color: #92400e; margin-bottom: 0.5rem; font-size: 1rem;">🔐 Enter Start Code</div>
+                    <div style="font-size: 0.85rem; color: #92400e; margin-bottom: 1rem; line-height: 1.4;">Ask the customer for the 6-digit start code to begin the job.</div>
+                    <input type="text" id="startCodeInput" placeholder="Enter 6-digit code" maxlength="6" style="width: 100%; padding: 1rem; border: 2px solid #fbbf24; border-radius: 8px; font-size: 1.5rem; text-align: center; letter-spacing: 0.3em; font-family: 'Courier New', monospace; font-weight: 600; box-sizing: border-box; min-height: 60px;" />
+                    <button class="btn btn-primary verifyStartCodeBtn" data-job-id="${job.id}" style="width: 100%; margin-top: 0.75rem; padding: 1rem; font-weight: 600; background: #f59e0b; font-size: 1rem; min-height: 50px;">Verify & Start Job</button>
                   </div>
                 ` : job.startCodeVerified ? `
                   <div style="padding: 1rem; background: #dcfce7; border-radius: 8px; margin-bottom: 1.5rem;">
@@ -21790,15 +21762,9 @@ meta.textContent =
                   </div>
                 ` : ''}
                 
-                <!-- Payment Overview -->
-                <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1.5rem;">
-                  <div style="font-weight: 600; margin-bottom: 0.5rem;">Payment Overview</div>
-                  <div style="color: var(--text-muted);">You'll receive ${payDisplay} upon completion.</div>
-                </div>
-                
                 <!-- Actions -->
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                  <button class="btn btn-primary messageCustomerBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem; font-weight: 600;">💬 Message Customer</button>
+                  ${(job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && !job.startCodeVerified ? `<button class="btn btn-ghost leaveJobBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem; color: #dc2626; border-color: #fecaca; font-weight: 600;">🚪 Leave Job</button>` : ''}
                 </div>
               </div>
             </div>
@@ -21860,6 +21826,46 @@ meta.textContent =
                 });
               }, 300);
             });
+          });
+          
+          modalOverlay.querySelector('.viewJobBtn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.body.removeChild(modalOverlay);
+            showViewJobModal(job.id, 'customer');
+          });
+          
+          modalOverlay.querySelector('.unassignHustlerBtn')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (confirm('Are you sure you want to unassign this hustler? The job will be open for applicants again.')) {
+              await unacceptHustler(job.id);
+              document.body.removeChild(modalOverlay);
+              loadActiveJobs();
+              loadPostedJobs();
+            }
+          });
+          
+          modalOverlay.querySelector('.deleteJobBtn')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (confirm('Are you sure you want to delete this job? This action cannot be undone.')) {
+              try {
+                const token = localStorage.getItem('hustl_token');
+                const response = await fetch(`${API_BASE}/jobs/${job.id}`, {
+                  method: 'DELETE',
+                  headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                  showToast('Job deleted successfully');
+                  document.body.removeChild(modalOverlay);
+                  loadActiveJobs();
+                  loadPostedJobs();
+                } else {
+                  throw new Error('Failed to delete job');
+                }
+              } catch (error) {
+                console.error('Error deleting job:', error);
+                showToast('Error deleting job. Please try again.');
+              }
+            }
           });
           
           modalOverlay.querySelector('.verifyCompletionBtn')?.addEventListener('click', async () => {
@@ -21935,13 +21941,42 @@ meta.textContent =
           });
           
           modalOverlay.querySelector('.verifyStartCodeBtn')?.addEventListener('click', async () => {
-            const verified = await verifyStartCode(job.id);
+            const codeInput = document.getElementById('startCodeInput');
+            const code = codeInput?.value.trim();
+            if (!code || code.length !== 6) {
+              showToast("Please enter a valid 6-digit start code.");
+              return;
+            }
+            const verified = await verifyStartCode(job.id, code);
             if (verified) {
               document.body.removeChild(modalOverlay);
               // Refresh the modal to show updated state
               setTimeout(() => {
                 showActiveJobModal(job.id, 'hustler');
               }, 500);
+            }
+          });
+          
+          modalOverlay.querySelector('.leaveJobBtn')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (confirm('Are you sure you want to leave this job?')) {
+              try {
+                const token = localStorage.getItem('hustl_token');
+                const response = await fetch(`${API_BASE}/offers/job/${job.id}/hustler-cancel`, {
+                  method: 'POST',
+                  headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                  showToast('You have left the job');
+                  document.body.removeChild(modalOverlay);
+                  loadActiveJobs();
+                } else {
+                  throw new Error('Failed to leave job');
+                }
+              } catch (error) {
+                console.error('Error leaving job:', error);
+                showToast('Error leaving job. Please try again.');
+              }
             }
           });
           
