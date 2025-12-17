@@ -3864,15 +3864,96 @@
             </div>
           </div>
 
-          <div class="field">
-            <label for="jobDescription">Job Description</label>
-            <textarea id="jobDescription" rows="5" style="min-height: 120px;" placeholder="What needs to be done? Be specific about:
-• What items need moving/work
-• Any stairs, heavy items, or tight spaces
-• When you need this done
-• Any access instructions"></textarea>
-            <div class="field-tip" style="margin-top: 0.5rem; padding: 0.75rem; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 8px; border-left: 3px solid var(--primary);">
-              <span style="font-size: 0.85rem; color: #1e40af;">💡 <strong>Pro tip:</strong> Clearer details help hustlers understand your job better.</span>
+          <div class="field" style="margin-bottom: 1.5rem;">
+            <label for="jobDescription" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-weight: 600; font-size: 1rem;">
+              <span>📝 Job Description</span>
+              <span style="color: #dc2626; font-size: 0.9rem;">*</span>
+            </label>
+            <textarea 
+              id="jobDescription" 
+              rows="8" 
+              style="min-height: 180px; width: 100%; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; line-height: 1.6; resize: vertical; font-family: inherit; -webkit-appearance: none; touch-action: manipulation;" 
+              placeholder="Describe your job in detail. The more specific, the better!"
+            ></textarea>
+            
+            <!-- Detailed guidance (collapsible) -->
+            <div style="margin-top: 0.75rem;">
+              <button 
+                type="button" 
+                id="descriptionGuidanceToggle" 
+                style="width: 100%; padding: 0.875rem; background: #f0f9ff; border: 2px solid #0ea5e9; border-radius: 8px; color: #0369a1; font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; min-height: 48px; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+              >
+                <span style="display: flex; align-items: center; gap: 0.5rem;">
+                  <span>📋</span>
+                  <span>What to include in your description</span>
+                </span>
+                <span id="descriptionGuidanceIcon" style="font-size: 1.2rem; transition: transform 0.3s;">▼</span>
+              </button>
+              
+              <div id="descriptionGuidanceContent" style="display: none; margin-top: 0.75rem; padding: 1.25rem; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 12px; border: 2px solid #3b82f6;">
+                <div style="font-weight: 700; font-size: 1rem; color: #1e40af; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                  <span>✨</span>
+                  <span>Make your description crystal clear!</span>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 0.875rem;">
+                  <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.875rem; background: white; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                    <span style="font-size: 1.25rem; flex-shrink: 0;">⭐</span>
+                    <div>
+                      <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.25rem;">Stars / Rating Requirements</div>
+                      <div style="font-size: 0.9rem; color: #1e3a8a; line-height: 1.5;">Do you need hustlers with a certain rating? (e.g., "Need 4+ stars", "Experienced hustlers only")</div>
+                    </div>
+                  </div>
+                  
+                  <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.875rem; background: white; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                    <span style="font-size: 1.25rem; flex-shrink: 0;">🚛</span>
+                    <div>
+                      <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.25rem;">Truck / Vehicle Needed</div>
+                      <div style="font-size: 0.9rem; color: #1e3a8a; line-height: 1.5;">Do they need to rent a U-Haul or bring a big truck? What size? (e.g., "Need U-Haul 15ft truck", "Pickup truck required")</div>
+                    </div>
+                  </div>
+                  
+                  <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.875rem; background: white; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                    <span style="font-size: 1.25rem; flex-shrink: 0;">👥</span>
+                    <div>
+                      <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.25rem;">How Many People</div>
+                      <div style="font-size: 0.9rem; color: #1e3a8a; line-height: 1.5;">How many workers do you need? (You'll also set this below, but mention it here too for clarity)</div>
+                    </div>
+                  </div>
+                  
+                  <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.875rem; background: white; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                    <span style="font-size: 1.25rem; flex-shrink: 0;">📍</span>
+                    <div>
+                      <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.25rem;">Another Location?</div>
+                      <div style="font-size: 0.9rem; color: #1e3a8a; line-height: 1.5;">Is there a pickup AND dropoff location? Moving from one place to another? Mention both addresses.</div>
+                    </div>
+                  </div>
+                  
+                  <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.875rem; background: white; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                    <span style="font-size: 1.25rem; flex-shrink: 0;">⏰</span>
+                    <div>
+                      <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.25rem;">How Many Hours</div>
+                      <div style="font-size: 0.9rem; color: #1e3a8a; line-height: 1.5;">How long do you think this will take? (e.g., "About 3-4 hours", "Half day job")</div>
+                    </div>
+                  </div>
+                  
+                  <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.875rem; background: white; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                    <span style="font-size: 1.25rem; flex-shrink: 0;">🧹</span>
+                    <div>
+                      <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.25rem;">What Needs to be Cleaned?</div>
+                      <div style="font-size: 0.9rem; color: #1e3a8a; line-height: 1.5;">Be specific! (e.g., "Everything - all rooms, bathrooms, kitchen, windows", "Just the garage", "Deep clean bathrooms only")</div>
+                    </div>
+                  </div>
+                  
+                  <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.875rem; background: white; border-radius: 8px; border-left: 4px solid #10b981;">
+                    <span style="font-size: 1.25rem; flex-shrink: 0;">💡</span>
+                    <div>
+                      <div style="font-weight: 600; color: #059669; margin-bottom: 0.25rem;">Other Important Details</div>
+                      <div style="font-size: 0.9rem; color: #047857; line-height: 1.5;">Stairs? Heavy items? Tight spaces? Access codes? Parking? Pets? Anything else hustlers should know!</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -3930,24 +4011,36 @@
           </div>
 
           <!-- Workers Needed -->
-          <div class="field">
-            <label for="workersNeeded">👥 Workers needed</label>
-            <select id="workersNeeded">
+          <div class="field" style="margin-bottom: 1.5rem;">
+            <label for="workersNeeded" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-weight: 600; font-size: 1rem;">
+              <span>👥 Workers needed</span>
+            </label>
+            <select 
+              id="workersNeeded" 
+              style="width: 100%; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; background: white; min-height: 52px; -webkit-appearance: none; appearance: none; background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23334155%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22></polyline></svg>'); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1.5rem; padding-right: 3.5rem; touch-action: manipulation; cursor: pointer;"
+            >
               <option value="1">1 person</option>
               <option value="2">2 people</option>
               <option value="3">3 people</option>
               <option value="4">4 people</option>
               <option value="5">5 people</option>
               <option value="6">6 people</option>
-              <option value="custom">Custom</option>
-              <option value="company">Company (Insured company/crew)</option>
+              <option value="custom">Custom number</option>
+              <option value="company">Company / Insured crew</option>
             </select>
-          </div>
-          
-          <!-- Custom workers input (shown when "Custom" is selected) -->
-          <div class="field" id="customWorkersField" style="display: none;">
-            <label for="customWorkersCount">Enter number of workers</label>
-            <input id="customWorkersCount" type="number" min="1" max="20" placeholder="How many workers?" />
+            
+            <!-- Custom workers input (shown when "Custom" is selected) -->
+            <div class="field" id="customWorkersField" style="display: none; margin-top: 0.75rem;">
+              <label for="customWorkersCount" style="font-weight: 500; margin-bottom: 0.5rem; display: block;">Enter number of workers</label>
+              <input 
+                id="customWorkersCount" 
+                type="number" 
+                min="1" 
+                max="20" 
+                placeholder="How many workers?" 
+                style="width: 100%; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; min-height: 52px; -webkit-appearance: none; touch-action: manipulation;"
+              />
+            </div>
           </div>
 
           <div class="section-title" style="margin-top: 1rem; margin-bottom: 0.75rem; font-weight: 600; color: var(--text-main); font-size: 1.1rem;">📍 Approximate Location</div>
@@ -3996,32 +4089,57 @@
             </div>
           </div>
 
-          <div class="section-title" style="margin-top: 1rem; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">💰 Pricing</div>
-          
-          <!-- Pricing Option -->
-          <div class="field">
-            <label for="pricingOption">Set price</label>
-            <select id="pricingOption">
-              <option value="set_price">I want to set a price</option>
-              <option value="hustlers_quote">Let hustlers give their own price</option>
-            </select>
-          </div>
-          
-          <!-- Price Setting Fields (shown when "set_price" is selected) -->
-          <div id="priceSettingFields">
-            <div class="field-inline">
-              <div class="field">
-                <label for="paymentType">Payment type</label>
-                <select id="paymentType">
+          <!-- Pricing Section (Collapsible) -->
+          <div style="margin-bottom: 1.5rem;">
+            <button 
+              type="button" 
+              id="pricingSectionToggle" 
+              style="width: 100%; padding: 1rem; background: #f0f9ff; border: 2px solid #0ea5e9; border-radius: 12px; color: #0369a1; font-size: 1.05rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; min-height: 56px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; margin-bottom: 0.75rem;"
+            >
+              <span style="display: flex; align-items: center; gap: 0.5rem;">
+                <span>💰</span>
+                <span>Pricing</span>
+              </span>
+              <span id="pricingSectionIcon" style="font-size: 1.2rem; transition: transform 0.3s;">▼</span>
+            </button>
+            
+            <div id="pricingSectionContent" style="display: none;">
+              <!-- Pricing Option -->
+              <div class="field" style="margin-bottom: 1rem;">
+                <label for="pricingOption" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">How do you want to set the price?</label>
+                <select 
+                  id="pricingOption" 
+                  style="width: 100%; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; background: white; min-height: 52px; -webkit-appearance: none; appearance: none; background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23334155%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22></polyline></svg>'); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1.5rem; padding-right: 3.5rem; touch-action: manipulation; cursor: pointer;"
+                >
+                  <option value="set_price">I want to set a price</option>
+                  <option value="hustlers_quote">Let hustlers give their own price</option>
+                </select>
+              </div>
+              
+              <!-- Price Setting Fields (shown when "set_price" is selected) -->
+              <div id="priceSettingFields">
+              <div class="field" style="margin-bottom: 1rem;">
+                <label for="paymentType" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Payment type</label>
+                <select 
+                  id="paymentType" 
+                  style="width: 100%; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; background: white; min-height: 52px; -webkit-appearance: none; appearance: none; background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23334155%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22></polyline></svg>'); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1.5rem; padding-right: 3.5rem; touch-action: manipulation; cursor: pointer;"
+                >
                   <option value="flat">Flat amount (one-time)</option>
                   <option value="hourly">Hourly + max hours</option>
                 </select>
               </div>
-              <div class="field" id="flatAmountField">
-                <label for="flatAmount">Pay ($ flat)</label>
-                <input id="flatAmount" type="number" min="0" step="1" value="80" />
+              
+              <div class="field" id="flatAmountField" style="margin-bottom: 1rem;">
+                <label for="flatAmount" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Pay amount ($)</label>
+                <input 
+                  id="flatAmount" 
+                  type="number" 
+                  min="0" 
+                  step="1" 
+                  value="80" 
+                  style="width: 100%; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; font-size: 1.25rem; font-weight: 600; min-height: 52px; -webkit-appearance: none; touch-action: manipulation; text-align: center;"
+                />
               </div>
-            </div>
 
             <div id="hourlyFields" style="display:none;">
               <div style="margin-bottom: 1rem; padding: 1rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
@@ -4046,18 +4164,38 @@
                 </div>
               </div>
             </div>
-          </div>
-          
-          <!-- Note when hustlers quote -->
-          <div id="hustlersQuoteNote" style="display: none; padding: 0.75rem; background: #fef3c7; border-radius: 8px; border-left: 3px solid #f59e0b; margin-top: 0.5rem;">
-            <p style="margin: 0; font-size: 0.85rem; color: #92400e;">
-              💡 Hustlers propose prices. You can accept, decline, or negotiate.
-            </p>
+              </div>
+              
+              <!-- Note when hustlers quote -->
+              <div id="hustlersQuoteNote" style="display: none; padding: 1rem; background: #fef3c7; border-radius: 12px; border-left: 4px solid #f59e0b; margin-top: 1rem;">
+                <p style="margin: 0; font-size: 0.95rem; color: #92400e; line-height: 1.5;">
+                  <strong>💡</strong> Hustlers will propose their own prices. You can accept, decline, or negotiate.
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div class="field">
-            <label for="jobNotes">Extra notes (optional)</label>
-            <textarea id="jobNotes" placeholder="Parking, gate codes, equipment, pets, any special requests."></textarea>
+          <!-- Extra Notes (Collapsible) -->
+          <div style="margin-bottom: 1.5rem;">
+            <button 
+              type="button" 
+              id="extraNotesToggle" 
+              style="width: 100%; padding: 0.875rem; background: #f9fafb; border: 2px solid var(--border); border-radius: 12px; color: var(--text-main); font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; min-height: 48px; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+            >
+              <span style="display: flex; align-items: center; gap: 0.5rem;">
+                <span>📝</span>
+                <span>Extra notes (optional)</span>
+              </span>
+              <span id="extraNotesIcon" style="font-size: 1.2rem; transition: transform 0.3s;">▼</span>
+            </button>
+            
+            <div id="extraNotesContent" style="display: none; margin-top: 0.75rem;">
+              <textarea 
+                id="jobNotes" 
+                placeholder="Parking instructions, gate codes, equipment details, pets, any special requests..." 
+                style="width: 100%; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; line-height: 1.6; resize: vertical; min-height: 120px; font-family: inherit; -webkit-appearance: none; touch-action: manipulation;"
+              ></textarea>
+            </div>
           </div>
 
           <div class="field">
@@ -7000,6 +7138,52 @@ function showChangePasswordModal() {
           } else {
             priceSettingFields.style.display = "none";
             hustlersQuoteNote.style.display = "block";
+          }
+        });
+      }
+      
+      // Toggle handlers for collapsible sections
+      const descriptionGuidanceToggle = document.getElementById("descriptionGuidanceToggle");
+      const descriptionGuidanceContent = document.getElementById("descriptionGuidanceContent");
+      const descriptionGuidanceIcon = document.getElementById("descriptionGuidanceIcon");
+      if (descriptionGuidanceToggle && descriptionGuidanceContent) {
+        descriptionGuidanceToggle.addEventListener("click", () => {
+          const isOpen = descriptionGuidanceContent.style.display !== "none";
+          descriptionGuidanceContent.style.display = isOpen ? "none" : "block";
+          if (descriptionGuidanceIcon) {
+            descriptionGuidanceIcon.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
+          }
+        });
+      }
+      
+      const pricingSectionToggle = document.getElementById("pricingSectionToggle");
+      const pricingSectionContent = document.getElementById("pricingSectionContent");
+      const pricingSectionIcon = document.getElementById("pricingSectionIcon");
+      if (pricingSectionToggle && pricingSectionContent) {
+        // Default to open
+        pricingSectionContent.style.display = "block";
+        if (pricingSectionIcon) {
+          pricingSectionIcon.style.transform = "rotate(180deg)";
+        }
+        
+        pricingSectionToggle.addEventListener("click", () => {
+          const isOpen = pricingSectionContent.style.display !== "none";
+          pricingSectionContent.style.display = isOpen ? "none" : "block";
+          if (pricingSectionIcon) {
+            pricingSectionIcon.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
+          }
+        });
+      }
+      
+      const extraNotesToggle = document.getElementById("extraNotesToggle");
+      const extraNotesContent = document.getElementById("extraNotesContent");
+      const extraNotesIcon = document.getElementById("extraNotesIcon");
+      if (extraNotesToggle && extraNotesContent) {
+        extraNotesToggle.addEventListener("click", () => {
+          const isOpen = extraNotesContent.style.display !== "none";
+          extraNotesContent.style.display = isOpen ? "none" : "block";
+          if (extraNotesIcon) {
+            extraNotesIcon.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
           }
         });
       }
