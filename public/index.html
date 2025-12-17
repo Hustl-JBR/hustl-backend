@@ -10268,8 +10268,7 @@ async function renderJobs(reset = false) {
               proposedAmount = proposedPrice;
             }
             
-            // Check authentication
-            const token = localStorage.getItem('hustl_token');
+            // Check authentication (token already declared in outer scope)
             if (!token) {
               showToast("Please log in to apply for jobs.");
               document.body.removeChild(modalOverlay);
