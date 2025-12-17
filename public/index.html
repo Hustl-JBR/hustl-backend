@@ -9538,7 +9538,15 @@ async function renderJobs(reset = false) {
       viewBtn.textContent = "View";
       viewBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        openJobDetails(job.id);
+        console.log("View button clicked, opening details for job:", job.id);
+        if (typeof window.openJobDetails === 'function') {
+          window.openJobDetails(job.id);
+        } else if (typeof openJobDetails === 'function') {
+          openJobDetails(job.id);
+        } else {
+          console.error("openJobDetails function not found!");
+          showToast("Unable to open job details. Please refresh the page.");
+        }
       });
       right.appendChild(viewBtn);
       actions.appendChild(right);
@@ -9546,7 +9554,17 @@ async function renderJobs(reset = false) {
       card.appendChild(actions);
 
       // Clicking the whole card opens details
-      card.addEventListener("click", () => openJobDetails(job.id));
+      card.addEventListener("click", () => {
+        console.log("Job card clicked, opening details for job:", job.id);
+        if (typeof window.openJobDetails === 'function') {
+          window.openJobDetails(job.id);
+        } else if (typeof openJobDetails === 'function') {
+          openJobDetails(job.id);
+        } else {
+          console.error("openJobDetails function not found!");
+          showToast("Unable to open job details. Please refresh the page.");
+        }
+      });
 
       if (jobsList) {
         jobsList.appendChild(card);
@@ -9643,19 +9661,23 @@ async function renderJobs(reset = false) {
 
     // Open job details modal - complete mobile-friendly view
     async function openJobDetails(jobId) {
+      console.log("openJobDetails called with jobId:", jobId);
       try {
         // Fetch job details
         const token = localStorage.getItem("hustl_token");
+        console.log("Fetching job details from:", `${API_BASE}/jobs/${jobId}`);
         const response = await fetch(`${API_BASE}/jobs/${jobId}`, {
           headers: token ? { "Authorization": `Bearer ${token}` } : {}
         });
         
         if (!response.ok) {
+          console.error("Failed to fetch job details:", response.status);
           showToast("Unable to load job details. Please try again.");
           return;
         }
         
         const job = await response.json();
+        console.log("Job details loaded:", job);
         const requirements = job.requirements || {};
         
         // Create modal overlay - full screen on mobile
