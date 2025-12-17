@@ -22299,7 +22299,27 @@ meta.textContent =
                       <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                         <div style="font-size: 1.1rem; font-weight: 600; color: #2a2a2a;">${payDisplay}</div>
                         <div style="font-size: 0.95rem; color: #4a4a4a; font-weight: 500;">👥 ${workersDisplay}</div>
-                        <div style="font-size: 0.95rem; color: #4a4a4a; font-weight: 500;">📍 ${locationDisplay}</div>
+                        ${(() => {
+                          // Get coordinates for mini map
+                          const reqLat = requirements.pickup_lat || requirements.pickupLat || job.approximateLat;
+                          const reqLng = requirements.pickup_lng || requirements.pickupLng || job.approximateLng;
+                          const jobLat = job.lat;
+                          const jobLng = job.lng;
+                          const lat = reqLat || jobLat;
+                          const lng = reqLng || jobLng;
+                          
+                          if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
+                            return `
+                            <div style="margin-top: 0.25rem;">
+                              <div style="font-size: 0.85rem; color: #4a4a4a; font-weight: 500; margin-bottom: 0.5rem;">📍 Location</div>
+                              <div id="miniMap_${job.id}" style="width: 100%; height: 120px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: #e5e7eb; position: relative;" data-lat="${lat}" data-lng="${lng}">
+                                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; color: #6a6a6a; font-size: 0.85rem;">Loading map...</div>
+                              </div>
+                            </div>
+                            `;
+                          }
+                          return `<div style="font-size: 0.95rem; color: #4a4a4a; font-weight: 500;">📍 ${locationDisplay}</div>`;
+                        })()}
                       </div>
                     </div>
                     <div style="text-align: right; color: #6a6a6a; font-size: 0.9rem; font-weight: 500;">
@@ -22709,6 +22729,51 @@ meta.textContent =
         }
         
         document.body.appendChild(modalOverlay);
+        
+        // Initialize mini map if coordinates are available
+        setTimeout(() => {
+          const miniMapContainer = document.getElementById(`miniMap_${job.id}`);
+          if (miniMapContainer) {
+            const lat = parseFloat(miniMapContainer.dataset.lat);
+            const lng = parseFloat(miniMapContainer.dataset.lng);
+            
+            if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+              // Get Mapbox token
+              fetch(`${API_BASE}/jobs/mapbox-token`)
+                .then(res => res.json())
+                .then(data => {
+                  if (data.token && typeof mapboxgl !== 'undefined') {
+                    const miniMap = new mapboxgl.Map({
+                      container: miniMapContainer.id,
+                      style: 'mapbox://styles/mapbox/streets-v12',
+                      center: [lng, lat],
+                      zoom: 13,
+                      interactive: false,
+                      attributionControl: false
+                    });
+                    
+                    miniMap.on('load', () => {
+                      // Remove loading text
+                      const loadingDiv = miniMapContainer.querySelector('div');
+                      if (loadingDiv) loadingDiv.remove();
+                      
+                      // Add marker
+                      new mapboxgl.Marker({ color: '#3b82f6' })
+                        .setLngLat([lng, lat])
+                        .addTo(miniMap);
+                    });
+                  } else {
+                    // Fallback: show static map or address
+                    miniMapContainer.innerHTML = `<div style="padding: 1rem; text-align: center; color: #6a6a6a; font-size: 0.85rem;">📍 ${locationDisplay}</div>`;
+                  }
+                })
+                .catch(() => {
+                  // Fallback: show address
+                  miniMapContainer.innerHTML = `<div style="padding: 1rem; text-align: center; color: #6a6a6a; font-size: 0.85rem;">📍 ${locationDisplay}</div>`;
+                });
+            }
+          }
+        }, 100);
         
         // Background refresh for offers (silent, no UI indicators)
         let offerRefreshInterval = null;
