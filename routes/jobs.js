@@ -404,8 +404,29 @@ router.post('/', authenticate, requireRole('CUSTOMER'), [
       }
     }
 
+    const {
+      title,
+      category,
+      description,
+      photos = [],
+      address,
+      approximateLat,
+      approximateLng,
+      date,
+      startTime,
+      endTime,
+      payType,
+      amount,
+      hourlyRate,
+      estHours,
+      teamSize = 1,
+      requirements = {},
+      recurrenceType,
+      recurrenceEndDate,
+      keepActiveFor, // Days to keep job active (1, 3, 7, 14, 30)
+    } = req.body;
+
     // Content moderation - check for prohibited content
-    const { title, description, requirements = {} } = req.body;
     const notes = requirements.notes || '';
     const allContent = `${title} ${description} ${notes}`.toLowerCase();
     
@@ -429,28 +450,6 @@ router.post('/', authenticate, requireRole('CUSTOMER'), [
         error: `Your post contains prohibited content: ${violationText}. Please remove this content and try again. All payments must go through Hustl for your protection.` 
       });
     }
-
-    const {
-      title: titleValue,
-      category,
-      description: descriptionValue,
-      photos = [],
-      address,
-      approximateLat,
-      approximateLng,
-      date,
-      startTime,
-      endTime,
-      payType,
-      amount,
-      hourlyRate,
-      estHours,
-      teamSize = 1,
-      requirements = {},
-      recurrenceType,
-      recurrenceEndDate,
-      keepActiveFor, // Days to keep job active (1, 3, 7, 14, 30)
-    } = req.body;
 
     // Use approximate location (no geocoding needed)
     const lat = approximateLat ? parseFloat(approximateLat) : null;
