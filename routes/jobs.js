@@ -686,6 +686,11 @@ router.get('/', optionalAuth, [
             photoUrl: true,
           },
         },
+        _count: {
+          select: {
+            offers: true,
+          },
+        },
       },
     });
     
