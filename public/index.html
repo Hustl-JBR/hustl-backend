@@ -9641,6 +9641,323 @@ async function renderJobs(reset = false) {
   }
 }
 
+    // Open job details modal - simplified view aligned with new Post Job flow
+    async function openJobDetails(jobId) {
+      try {
+        // Fetch job details
+        const token = localStorage.getItem("hustl_token");
+        const response = await fetch(`${API_BASE}/jobs/${jobId}`, {
+          headers: token ? { "Authorization": `Bearer ${token}` } : {}
+        });
+        
+        if (!response.ok) {
+          showToast("Unable to load job details. Please try again.");
+          return;
+        }
+        
+        const job = await response.json();
+        
+        // Create modal overlay
+        const modalOverlay = document.createElement("div");
+        modalOverlay.id = "jobDetailModal";
+        modalOverlay.className = "modal-overlay";
+        modalOverlay.style.cssText = "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 0; overflow-y: auto;";
+        
+        const modalContent = document.createElement("div");
+        modalContent.className = "modal-content";
+        modalContent.style.cssText = "background: white; border-radius: 0; max-width: 100%; width: 100%; max-height: 100vh; overflow-y: auto; position: relative; margin: 0; box-shadow: none;";
+        
+        // Mobile-friendly: full screen on mobile, centered modal on desktop
+        if (window.innerWidth <= 768) {
+          modalContent.style.cssText = "background: white; border-radius: 0; max-width: 100%; width: 100%; min-height: 100vh; overflow-y: auto; position: relative; margin: 0; box-shadow: none;";
+        } else {
+          modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; position: relative; margin: 2rem auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
+        }
+        
+        // Close button
+        const closeBtn = document.createElement("button");
+        closeBtn.innerHTML = "×";
+        closeBtn.style.cssText = "position: sticky; top: 0.75rem; right: 0.75rem; width: 36px; height: 36px; border-radius: 50%; background: rgba(0, 0, 0, 0.5); border: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; z-index: 10; float: right; margin: 0.75rem;";
+        closeBtn.addEventListener("click", () => {
+          document.body.removeChild(modalOverlay);
+          document.body.style.overflow = "";
+        });
+        modalContent.appendChild(closeBtn);
+        
+        // Header section
+        const header = document.createElement("div");
+        header.style.cssText = "padding: 1.5rem; padding-top: 0.5rem; border-bottom: 1px solid #e5e7eb;";
+        
+        // Title
+        const title = document.createElement("h1");
+        title.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main); line-height: 1.3;";
+        title.textContent = job.title || "Job Details";
+        header.appendChild(title);
+        
+        // Category
+        const categoryIcons = {
+          'moving': '🚚', 'yard-work': '🌿', 'dump-run': '🗑️', 'cleaning': '🧹',
+          'power-washing': '💦', 'furniture-assembly': '🔧', 'painting': '🎨',
+          'handyman': '🔨', 'landscaping': '🌳', 'pet-care': '🐕', 'delivery': '📦',
+          'car-cleaning': '🚿', 'event-setup': '🎪', 'snow-removal': '❄️', 'other': '✨'
+        };
+        const categoryNames = {
+          'moving': 'Moving', 'yard-work': 'Yard Work', 'dump-run': 'Dump Run',
+          'cleaning': 'Cleaning', 'power-washing': 'Power Wash', 'furniture-assembly': 'Assembly',
+          'painting': 'Painting', 'handyman': 'Handyman', 'landscaping': 'Landscaping',
+          'pet-care': 'Pet Care', 'delivery': 'Delivery', 'car-cleaning': 'Car Clean',
+          'event-setup': 'Event Setup', 'snow-removal': 'Snow Removal', 'other': 'Other'
+        };
+        const jobCategory = (job.category || 'other').toLowerCase();
+        const catIcon = categoryIcons[jobCategory] || '⭐';
+        const catName = categoryNames[jobCategory] || job.category || 'Job';
+        
+        const category = document.createElement("div");
+        category.style.cssText = "font-size: 1rem; color: var(--text-muted); font-weight: 500; margin-bottom: 1rem;";
+        category.textContent = `${catIcon} ${catName}`;
+        header.appendChild(category);
+        
+        // Price and Workers - side by side
+        const priceWorkersRow = document.createElement("div");
+        priceWorkersRow.style.cssText = "display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.5rem;";
+        
+        // Price
+        const requirements = job.requirements || {};
+        const pricingOption = requirements.pricing_option;
+        const priceEl = document.createElement("div");
+        priceEl.style.cssText = "font-size: 1.25rem; font-weight: 700; color: var(--success);";
+        if (pricingOption === "hustlers_quote") {
+          priceEl.textContent = "💰 Hustler suggests price";
+          priceEl.style.color = "#f59e0b";
+        } else if (job.payType === "flat") {
+          const total = Number(job.amount) || 0;
+          priceEl.textContent = `💰 $${total.toFixed(0)} flat`;
+        } else if (job.payType === "hourly") {
+          const hr = Number(job.hourlyRate) || 0;
+          priceEl.textContent = `💰 $${hr.toFixed(0)}/hr`;
+        } else {
+          const total = Number(job.amount) || 0;
+          priceEl.textContent = `💰 $${total.toFixed(0)}`;
+        }
+        priceWorkersRow.appendChild(priceEl);
+        
+        // Workers needed
+        const teamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
+        const workersEl = document.createElement("div");
+        workersEl.style.cssText = "font-size: 1rem; color: var(--text-main); font-weight: 600;";
+        if (teamSize === 0 || teamSize === 'company') {
+          workersEl.textContent = "👥 Company/crew";
+        } else if (teamSize > 1) {
+          workersEl.textContent = `👥 ${teamSize} workers needed`;
+        } else {
+          workersEl.textContent = "👥 1 worker";
+        }
+        priceWorkersRow.appendChild(workersEl);
+        header.appendChild(priceWorkersRow);
+        
+        modalContent.appendChild(header);
+        
+        // Description section (main detail source)
+        const descriptionSection = document.createElement("div");
+        descriptionSection.style.cssText = "padding: 1.5rem; border-bottom: 1px solid #e5e7eb;";
+        
+        const descTitle = document.createElement("h2");
+        descTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);";
+        descTitle.textContent = "Job Description";
+        descriptionSection.appendChild(descTitle);
+        
+        const description = document.createElement("div");
+        description.style.cssText = "font-size: 1rem; color: var(--text-main); line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;";
+        description.textContent = job.description || "No description provided.";
+        descriptionSection.appendChild(description);
+        
+        modalContent.appendChild(descriptionSection);
+        
+        // Approximate location section with map
+        const locationSection = document.createElement("div");
+        locationSection.style.cssText = "padding: 1.5rem; border-bottom: 1px solid #e5e7eb;";
+        
+        const locTitle = document.createElement("h2");
+        locTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);";
+        locTitle.textContent = "📍 Approximate Location";
+        locationSection.appendChild(locTitle);
+        
+        const locNote = document.createElement("div");
+        locNote.style.cssText = "font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem; padding: 0.75rem; background: #f3f4f6; border-radius: 8px;";
+        locNote.textContent = "This is an approximate location to give you a general idea of where the job is. The exact address will be shared after you're accepted.";
+        locationSection.appendChild(locNote);
+        
+        // Map container for approximate location
+        const mapContainer = document.createElement("div");
+        mapContainer.id = `jobDetailMap-${job.id}`;
+        mapContainer.style.cssText = "width: 100%; height: 250px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; margin-top: 0.5rem;";
+        locationSection.appendChild(mapContainer);
+        
+        modalContent.appendChild(locationSection);
+        
+        // Customer info
+        if (job.customer) {
+          const customerSection = document.createElement("div");
+          customerSection.style.cssText = "padding: 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 0.75rem;";
+          
+          const profilePic = document.createElement("img");
+          profilePic.style.cssText = "width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); flex-shrink: 0;";
+          profilePic.src = job.customer.photoUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(job.customer.name || "User") + "&background=6366f1&color=fff&size=128";
+          profilePic.alt = job.customer.name || "Customer";
+          profilePic.onerror = function() {
+            this.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(job.customer.name || "User") + "&background=6366f1&color=fff&size=128";
+          };
+          
+          const customerInfo = document.createElement("div");
+          customerInfo.style.cssText = "flex: 1;";
+          
+          const customerLabel = document.createElement("div");
+          customerLabel.style.cssText = "font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;";
+          customerLabel.textContent = "Posted by";
+          
+          const customerName = document.createElement("div");
+          customerName.style.cssText = "font-size: 1rem; color: var(--text-main); font-weight: 600;";
+          customerName.textContent = job.customer.name || "Customer";
+          
+          customerInfo.appendChild(customerLabel);
+          customerInfo.appendChild(customerName);
+          
+          customerSection.appendChild(profilePic);
+          customerSection.appendChild(customerInfo);
+          modalContent.appendChild(customerSection);
+        }
+        
+        // Action buttons
+        const actionsSection = document.createElement("div");
+        actionsSection.style.cssText = "padding: 1.5rem; display: flex; gap: 0.75rem;";
+        
+        const user = getCurrentUser();
+        const isHustler = user && user.roles && user.roles.includes('HUSTLER');
+        const isCustomer = user && user.roles && user.roles.includes('CUSTOMER');
+        const isOwner = user && job.customerId === user.id;
+        
+        if (isHustler && !isOwner) {
+          const applyBtn = document.createElement("button");
+          applyBtn.className = "btn btn-primary";
+          applyBtn.textContent = "Apply for Job";
+          applyBtn.style.cssText = "flex: 1; padding: 1rem; font-size: 1rem; font-weight: 600;";
+          applyBtn.addEventListener("click", () => {
+            document.body.removeChild(modalOverlay);
+            document.body.style.overflow = "";
+            showApplyJobModal(job);
+          });
+          actionsSection.appendChild(applyBtn);
+        }
+        
+        const closeBtn2 = document.createElement("button");
+        closeBtn2.className = "btn btn-ghost";
+        closeBtn2.textContent = "Close";
+        closeBtn2.style.cssText = isHustler && !isOwner ? "padding: 1rem; font-size: 1rem;" : "flex: 1; padding: 1rem; font-size: 1rem;";
+        closeBtn2.addEventListener("click", () => {
+          document.body.removeChild(modalOverlay);
+          document.body.style.overflow = "";
+        });
+        actionsSection.appendChild(closeBtn2);
+        
+        modalContent.appendChild(actionsSection);
+        
+        modalOverlay.appendChild(modalContent);
+        document.body.appendChild(modalOverlay);
+        document.body.style.overflow = "hidden";
+        
+        // Initialize map after modal is added to DOM
+        setTimeout(() => {
+          initJobDetailMap(job, mapContainer.id);
+        }, 100);
+        
+      } catch (error) {
+        console.error("Error opening job details:", error);
+        showToast("Unable to load job details. Please try again.");
+      }
+    }
+    
+    // Initialize map for job detail modal
+    function initJobDetailMap(job, containerId) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      
+      // Use approximate location
+      const lat = job.approximateLat !== null && job.approximateLat !== undefined 
+        ? parseFloat(job.approximateLat) 
+        : (job.lat ? parseFloat(job.lat) : null);
+      const lng = job.approximateLng !== null && job.approximateLng !== undefined 
+        ? parseFloat(job.approximateLng) 
+        : (job.lng ? parseFloat(job.lng) : null);
+      
+      if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+        container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);">📍 Location not available</div>';
+        return;
+      }
+      
+      const mapboxToken = window.HUSTL_CONFIG?.MAPBOX_TOKEN || window.MAPBOX_TOKEN;
+      if (!mapboxToken) {
+        container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);">Map not available</div>';
+        return;
+      }
+      
+      try {
+        mapboxgl.accessToken = mapboxToken;
+        
+        const map = new mapboxgl.Map({
+          container: containerId,
+          style: 'mapbox://styles/mapbox/streets-v12',
+          center: [lng, lat],
+          zoom: 14,
+          interactive: true
+        });
+        
+        // Add marker
+        new mapboxgl.Marker({ color: '#3b82f6' })
+          .setLngLat([lng, lat])
+          .addTo(map);
+        
+        // Add 0.25 mile radius circle
+        const radiusMeters = 402.336; // 0.25 miles
+        const circle = createCircle([lng, lat], radiusMeters);
+        
+        map.on('load', () => {
+          const circleId = `detail-circle-${job.id}`;
+          map.addSource(circleId, {
+            type: 'geojson',
+            data: circle
+          });
+          
+          map.addLayer({
+            id: circleId,
+            type: 'fill',
+            source: circleId,
+            paint: {
+              'fill-color': '#3b82f6',
+              'fill-opacity': 0.1
+            }
+          });
+          
+          map.addLayer({
+            id: `${circleId}-outline`,
+            type: 'line',
+            source: circleId,
+            paint: {
+              'line-color': '#3b82f6',
+              'line-width': 2,
+              'line-opacity': 0.4
+            }
+          });
+        });
+        
+      } catch (error) {
+        console.error("Error initializing job detail map:", error);
+        container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);">Map unavailable</div>';
+      }
+    }
+    
+    // Make openJobDetails available globally
+    window.openJobDetails = openJobDetails;
+
     // Show "Apply for Job" popup modal
     async function showApplyJobModal(job) {
       const user = getCurrentUser();
