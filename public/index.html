@@ -9641,7 +9641,7 @@ async function renderJobs(reset = false) {
   }
 }
 
-    // Open job details modal - simplified view aligned with new Post Job flow
+    // Open job details modal - complete mobile-friendly view
     async function openJobDetails(jobId) {
       try {
         // Fetch job details
@@ -9656,45 +9656,76 @@ async function renderJobs(reset = false) {
         }
         
         const job = await response.json();
+        const requirements = job.requirements || {};
         
-        // Create modal overlay
+        // Create modal overlay - full screen on mobile
         const modalOverlay = document.createElement("div");
         modalOverlay.id = "jobDetailModal";
         modalOverlay.className = "modal-overlay";
-        modalOverlay.style.cssText = "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 0; overflow-y: auto;";
+        modalOverlay.style.cssText = "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; display: flex; align-items: flex-start; justify-content: center; padding: 0; overflow-y: auto;";
         
         const modalContent = document.createElement("div");
         modalContent.className = "modal-content";
-        modalContent.style.cssText = "background: white; border-radius: 0; max-width: 100%; width: 100%; max-height: 100vh; overflow-y: auto; position: relative; margin: 0; box-shadow: none;";
-        
-        // Mobile-friendly: full screen on mobile, centered modal on desktop
+        // Mobile: full screen, Desktop: centered modal
         if (window.innerWidth <= 768) {
           modalContent.style.cssText = "background: white; border-radius: 0; max-width: 100%; width: 100%; min-height: 100vh; overflow-y: auto; position: relative; margin: 0; box-shadow: none;";
         } else {
-          modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; position: relative; margin: 2rem auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
+          modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 600px; width: 90%; max-height: 95vh; overflow-y: auto; position: relative; margin: 2rem auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
         }
         
         // Close button
         const closeBtn = document.createElement("button");
         closeBtn.innerHTML = "×";
-        closeBtn.style.cssText = "position: sticky; top: 0.75rem; right: 0.75rem; width: 36px; height: 36px; border-radius: 50%; background: rgba(0, 0, 0, 0.5); border: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; z-index: 10; float: right; margin: 0.75rem;";
+        closeBtn.style.cssText = "position: sticky; top: 0.75rem; right: 0.75rem; width: 40px; height: 40px; border-radius: 50%; background: rgba(0, 0, 0, 0.6); border: none; font-size: 1.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; z-index: 10; float: right; margin: 0.75rem; line-height: 1;";
         closeBtn.addEventListener("click", () => {
           document.body.removeChild(modalOverlay);
           document.body.style.overflow = "";
         });
         modalContent.appendChild(closeBtn);
         
-        // Header section
+        // 1. JOB TITLE
         const header = document.createElement("div");
-        header.style.cssText = "padding: 1.5rem; padding-top: 0.5rem; border-bottom: 1px solid #e5e7eb;";
+        header.style.cssText = "padding: 1.25rem; padding-top: 0.5rem; border-bottom: 1px solid #e5e7eb;";
         
-        // Title
         const title = document.createElement("h1");
-        title.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main); line-height: 1.3;";
+        title.style.cssText = "margin: 0 0 1rem 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main); line-height: 1.3;";
         title.textContent = job.title || "Job Details";
         header.appendChild(title);
+        modalContent.appendChild(header);
         
-        // Category
+        // 2. CUSTOMER PROFILE (who posted) - at top
+        if (job.customer) {
+          const customerSection = document.createElement("div");
+          customerSection.style.cssText = "padding: 1.25rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 1rem;";
+          
+          const profilePic = document.createElement("img");
+          profilePic.style.cssText = "width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); flex-shrink: 0;";
+          profilePic.src = job.customer.photoUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(job.customer.name || "User") + "&background=6366f1&color=fff&size=128";
+          profilePic.alt = job.customer.name || "Customer";
+          profilePic.onerror = function() {
+            this.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(job.customer.name || "User") + "&background=6366f1&color=fff&size=128";
+          };
+          
+          const customerInfo = document.createElement("div");
+          customerInfo.style.cssText = "flex: 1;";
+          
+          const customerLabel = document.createElement("div");
+          customerLabel.style.cssText = "font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;";
+          customerLabel.textContent = "Posted by";
+          
+          const customerName = document.createElement("div");
+          customerName.style.cssText = "font-size: 1.1rem; color: var(--text-main); font-weight: 600;";
+          customerName.textContent = job.customer.name || "Customer";
+          
+          customerInfo.appendChild(customerLabel);
+          customerInfo.appendChild(customerName);
+          
+          customerSection.appendChild(profilePic);
+          customerSection.appendChild(customerInfo);
+          modalContent.appendChild(customerSection);
+        }
+        
+        // 3. JOB CATEGORY
         const categoryIcons = {
           'moving': '🚚', 'yard-work': '🌿', 'dump-run': '🗑️', 'cleaning': '🧹',
           'power-washing': '💦', 'furniture-assembly': '🔧', 'painting': '🎨',
@@ -9712,152 +9743,244 @@ async function renderJobs(reset = false) {
         const catIcon = categoryIcons[jobCategory] || '⭐';
         const catName = categoryNames[jobCategory] || job.category || 'Job';
         
+        const categorySection = document.createElement("div");
+        categorySection.style.cssText = "padding: 1.25rem; border-bottom: 1px solid #e5e7eb;";
+        
+        const categoryLabel = document.createElement("div");
+        categoryLabel.style.cssText = "font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;";
+        categoryLabel.textContent = "Job Category";
+        
         const category = document.createElement("div");
-        category.style.cssText = "font-size: 1rem; color: var(--text-muted); font-weight: 500; margin-bottom: 1rem;";
+        category.style.cssText = "font-size: 1.1rem; color: var(--text-main); font-weight: 600;";
         category.textContent = `${catIcon} ${catName}`;
-        header.appendChild(category);
         
-        // Price and Workers - side by side
-        const priceWorkersRow = document.createElement("div");
-        priceWorkersRow.style.cssText = "display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.5rem;";
+        categorySection.appendChild(categoryLabel);
+        categorySection.appendChild(category);
+        modalContent.appendChild(categorySection);
         
-        // Price
-        const requirements = job.requirements || {};
-        const pricingOption = requirements.pricing_option;
-        const priceEl = document.createElement("div");
-        priceEl.style.cssText = "font-size: 1.25rem; font-weight: 700; color: var(--success);";
-        if (pricingOption === "hustlers_quote") {
-          priceEl.textContent = "💰 Hustler suggests price";
-          priceEl.style.color = "#f59e0b";
-        } else if (job.payType === "flat") {
-          const total = Number(job.amount) || 0;
-          priceEl.textContent = `💰 $${total.toFixed(0)} flat`;
-        } else if (job.payType === "hourly") {
-          const hr = Number(job.hourlyRate) || 0;
-          priceEl.textContent = `💰 $${hr.toFixed(0)}/hr`;
-        } else {
-          const total = Number(job.amount) || 0;
-          priceEl.textContent = `💰 $${total.toFixed(0)}`;
-        }
-        priceWorkersRow.appendChild(priceEl);
-        
-        // Workers needed
-        const teamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
-        const workersEl = document.createElement("div");
-        workersEl.style.cssText = "font-size: 1rem; color: var(--text-main); font-weight: 600;";
-        if (teamSize === 0 || teamSize === 'company') {
-          workersEl.textContent = "👥 Company/crew";
-        } else if (teamSize > 1) {
-          workersEl.textContent = `👥 ${teamSize} workers needed`;
-        } else {
-          workersEl.textContent = "👥 1 worker";
-        }
-        priceWorkersRow.appendChild(workersEl);
-        header.appendChild(priceWorkersRow);
-        
-        modalContent.appendChild(header);
-        
-        // Description section (main detail source)
+        // 4. DESCRIPTION
         const descriptionSection = document.createElement("div");
-        descriptionSection.style.cssText = "padding: 1.5rem; border-bottom: 1px solid #e5e7eb;";
+        descriptionSection.style.cssText = "padding: 1.25rem; border-bottom: 1px solid #e5e7eb;";
         
         const descTitle = document.createElement("h2");
         descTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);";
-        descTitle.textContent = "Job Description";
+        descTitle.textContent = "Description";
         descriptionSection.appendChild(descTitle);
         
         const description = document.createElement("div");
-        description.style.cssText = "font-size: 1rem; color: var(--text-main); line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;";
+        description.style.cssText = "font-size: 1rem; color: var(--text-main); line-height: 1.7; white-space: pre-wrap; word-wrap: break-word;";
         description.textContent = job.description || "No description provided.";
         descriptionSection.appendChild(description);
-        
         modalContent.appendChild(descriptionSection);
         
-        // Approximate location section with map
+        // 5. PRICING - Hourly Pay Breakdown
+        const pricingSection = document.createElement("div");
+        pricingSection.style.cssText = "padding: 1.25rem; border-bottom: 1px solid #e5e7eb; background: #f8f9fa;";
+        
+        const pricingTitle = document.createElement("h2");
+        pricingTitle.style.cssText = "margin: 0 0 1rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);";
+        pricingTitle.textContent = "💰 Pricing";
+        pricingSection.appendChild(pricingTitle);
+        
+        const pricingOption = requirements.pricing_option;
+        const teamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
+        
+        if (pricingOption === "hustlers_quote") {
+          const quoteText = document.createElement("div");
+          quoteText.style.cssText = "font-size: 1rem; color: #f59e0b; font-weight: 600;";
+          quoteText.textContent = "Hustler suggests price";
+          pricingSection.appendChild(quoteText);
+        } else if (job.payType === "hourly") {
+          const hourlyRate = Number(job.hourlyRate) || 0;
+          const maxHours = Number(job.estHours) || Number(requirements.maxHours) || 0;
+          
+          const breakdown = document.createElement("div");
+          breakdown.style.cssText = "display: flex; flex-direction: column; gap: 0.75rem;";
+          
+          const rateRow = document.createElement("div");
+          rateRow.style.cssText = "display: flex; justify-content: space-between; align-items: center;";
+          const rateLabel = document.createElement("span");
+          rateLabel.style.cssText = "font-size: 1rem; color: var(--text-main);";
+          rateLabel.textContent = "Total hourly rate:";
+          const rateValue = document.createElement("span");
+          rateValue.style.cssText = "font-size: 1.1rem; font-weight: 700; color: var(--success);";
+          rateValue.textContent = `$${hourlyRate.toFixed(0)}/hr`;
+          rateRow.appendChild(rateLabel);
+          rateRow.appendChild(rateValue);
+          breakdown.appendChild(rateRow);
+          
+          if (maxHours > 0) {
+            const hoursRow = document.createElement("div");
+            hoursRow.style.cssText = "display: flex; justify-content: space-between; align-items: center;";
+            const hoursLabel = document.createElement("span");
+            hoursLabel.style.cssText = "font-size: 1rem; color: var(--text-main);";
+            hoursLabel.textContent = "Max hours:";
+            const hoursValue = document.createElement("span");
+            hoursValue.style.cssText = "font-size: 1rem; font-weight: 600; color: var(--text-main);";
+            hoursValue.textContent = `${maxHours} hours`;
+            hoursRow.appendChild(hoursLabel);
+            hoursRow.appendChild(hoursValue);
+            breakdown.appendChild(hoursRow);
+          }
+          
+          const workersRow = document.createElement("div");
+          workersRow.style.cssText = "display: flex; justify-content: space-between; align-items: center;";
+          const workersLabel = document.createElement("span");
+          workersLabel.style.cssText = "font-size: 1rem; color: var(--text-main);";
+          workersLabel.textContent = "Workers needed:";
+          const workersValue = document.createElement("span");
+          workersValue.style.cssText = "font-size: 1rem; font-weight: 600; color: var(--text-main);";
+          if (teamSize === 0 || teamSize === 'company') {
+            workersValue.textContent = "Company/crew";
+          } else {
+            workersValue.textContent = `${teamSize}`;
+          }
+          workersRow.appendChild(workersLabel);
+          workersRow.appendChild(workersValue);
+          breakdown.appendChild(workersRow);
+          
+          pricingSection.appendChild(breakdown);
+        } else {
+          // Flat rate
+          const total = Number(job.amount) || 0;
+          const flatRate = document.createElement("div");
+          flatRate.style.cssText = "display: flex; flex-direction: column; gap: 0.75rem;";
+          
+          const amountRow = document.createElement("div");
+          amountRow.style.cssText = "display: flex; justify-content: space-between; align-items: center;";
+          const amountLabel = document.createElement("span");
+          amountLabel.style.cssText = "font-size: 1rem; color: var(--text-main);";
+          amountLabel.textContent = "Flat rate:";
+          const amountValue = document.createElement("span");
+          amountValue.style.cssText = "font-size: 1.1rem; font-weight: 700; color: var(--success);";
+          amountValue.textContent = `$${total.toFixed(0)}`;
+          amountRow.appendChild(amountLabel);
+          amountRow.appendChild(amountValue);
+          flatRate.appendChild(amountRow);
+          
+          const workersRow = document.createElement("div");
+          workersRow.style.cssText = "display: flex; justify-content: space-between; align-items: center;";
+          const workersLabel = document.createElement("span");
+          workersLabel.style.cssText = "font-size: 1rem; color: var(--text-main);";
+          workersLabel.textContent = "Workers needed:";
+          const workersValue = document.createElement("span");
+          workersValue.style.cssText = "font-size: 1rem; font-weight: 600; color: var(--text-main);";
+          if (teamSize === 0 || teamSize === 'company') {
+            workersValue.textContent = "Company/crew";
+          } else {
+            workersValue.textContent = `${teamSize}`;
+          }
+          workersRow.appendChild(workersLabel);
+          workersRow.appendChild(workersValue);
+          flatRate.appendChild(workersRow);
+          
+          pricingSection.appendChild(flatRate);
+        }
+        
+        modalContent.appendChild(pricingSection);
+        
+        // 6. TOOLS/EQUIPMENT NEEDED
+        const equipmentNeeded = requirements.equipmentNeeded || [];
+        const customEquipment = requirements.customEquipment || '';
+        if (equipmentNeeded.length > 0 || customEquipment) {
+          const toolsSection = document.createElement("div");
+          toolsSection.style.cssText = "padding: 1.25rem; border-bottom: 1px solid #e5e7eb;";
+          
+          const toolsTitle = document.createElement("h2");
+          toolsTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);";
+          toolsTitle.textContent = "🔧 Tools / Equipment Needed";
+          toolsSection.appendChild(toolsTitle);
+          
+          if (equipmentNeeded.length > 0) {
+            const toolsList = document.createElement("div");
+            toolsList.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;";
+            equipmentNeeded.forEach(tool => {
+              const toolChip = document.createElement("span");
+              toolChip.style.cssText = "padding: 0.5rem 0.75rem; background: #f3f4f6; border-radius: 8px; font-size: 0.9rem; color: var(--text-main); font-weight: 500;";
+              toolChip.textContent = tool;
+              toolsList.appendChild(toolChip);
+            });
+            toolsSection.appendChild(toolsList);
+          }
+          
+          if (customEquipment) {
+            const customTool = document.createElement("div");
+            customTool.style.cssText = "font-size: 0.95rem; color: var(--text-main); line-height: 1.5;";
+            customTool.textContent = customEquipment;
+            toolsSection.appendChild(customTool);
+          }
+          
+          modalContent.appendChild(toolsSection);
+        }
+        
+        // 7. LOCATION MAP
         const locationSection = document.createElement("div");
-        locationSection.style.cssText = "padding: 1.5rem; border-bottom: 1px solid #e5e7eb;";
+        locationSection.style.cssText = "padding: 1.25rem; border-bottom: 1px solid #e5e7eb;";
         
         const locTitle = document.createElement("h2");
         locTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);";
-        locTitle.textContent = "📍 Approximate Location";
+        locTitle.textContent = "📍 Location";
         locationSection.appendChild(locTitle);
         
         const locNote = document.createElement("div");
-        locNote.style.cssText = "font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem; padding: 0.75rem; background: #f3f4f6; border-radius: 8px;";
-        locNote.textContent = "This is an approximate location to give you a general idea of where the job is. The exact address will be shared after you're accepted.";
+        locNote.style.cssText = "font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem; padding: 0.75rem; background: #f3f4f6; border-radius: 8px; line-height: 1.5;";
+        locNote.textContent = "This is an approximate location. Exact address will be shared after you're accepted.";
         locationSection.appendChild(locNote);
         
-        // Map container for approximate location
+        // Map container
         const mapContainer = document.createElement("div");
         mapContainer.id = `jobDetailMap-${job.id}`;
-        mapContainer.style.cssText = "width: 100%; height: 250px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; margin-top: 0.5rem;";
+        mapContainer.style.cssText = "width: 100%; height: 200px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb;";
         locationSection.appendChild(mapContainer);
-        
         modalContent.appendChild(locationSection);
         
-        // Customer info
-        if (job.customer) {
-          const customerSection = document.createElement("div");
-          customerSection.style.cssText = "padding: 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 0.75rem;";
+        // 8. EXTRA NOTES
+        if (requirements.notes) {
+          const notesSection = document.createElement("div");
+          notesSection.style.cssText = "padding: 1.25rem; border-bottom: 1px solid #e5e7eb;";
           
-          const profilePic = document.createElement("img");
-          profilePic.style.cssText = "width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); flex-shrink: 0;";
-          profilePic.src = job.customer.photoUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(job.customer.name || "User") + "&background=6366f1&color=fff&size=128";
-          profilePic.alt = job.customer.name || "Customer";
-          profilePic.onerror = function() {
-            this.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(job.customer.name || "User") + "&background=6366f1&color=fff&size=128";
-          };
+          const notesTitle = document.createElement("h2");
+          notesTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);";
+          notesTitle.textContent = "📝 Extra Notes";
+          notesSection.appendChild(notesTitle);
           
-          const customerInfo = document.createElement("div");
-          customerInfo.style.cssText = "flex: 1;";
-          
-          const customerLabel = document.createElement("div");
-          customerLabel.style.cssText = "font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;";
-          customerLabel.textContent = "Posted by";
-          
-          const customerName = document.createElement("div");
-          customerName.style.cssText = "font-size: 1rem; color: var(--text-main); font-weight: 600;";
-          customerName.textContent = job.customer.name || "Customer";
-          
-          customerInfo.appendChild(customerLabel);
-          customerInfo.appendChild(customerName);
-          
-          customerSection.appendChild(profilePic);
-          customerSection.appendChild(customerInfo);
-          modalContent.appendChild(customerSection);
+          const notes = document.createElement("div");
+          notes.style.cssText = "font-size: 1rem; color: var(--text-main); line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;";
+          notes.textContent = requirements.notes;
+          notesSection.appendChild(notes);
+          modalContent.appendChild(notesSection);
         }
         
-        // Action buttons
+        // 9. APPLY AREA (Action buttons)
         const actionsSection = document.createElement("div");
-        actionsSection.style.cssText = "padding: 1.5rem; display: flex; gap: 0.75rem;";
+        actionsSection.style.cssText = "padding: 1.25rem; background: #f8f9fa; position: sticky; bottom: 0; border-top: 2px solid #e5e7eb;";
         
         const user = getCurrentUser();
         const isHustler = user && user.roles && user.roles.includes('HUSTLER');
-        const isCustomer = user && user.roles && user.roles.includes('CUSTOMER');
         const isOwner = user && job.customerId === user.id;
         
         if (isHustler && !isOwner) {
           const applyBtn = document.createElement("button");
           applyBtn.className = "btn btn-primary";
           applyBtn.textContent = "Apply for Job";
-          applyBtn.style.cssText = "flex: 1; padding: 1rem; font-size: 1rem; font-weight: 600;";
+          applyBtn.style.cssText = "width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 700; border-radius: 12px;";
           applyBtn.addEventListener("click", () => {
             document.body.removeChild(modalOverlay);
             document.body.style.overflow = "";
             showApplyJobModal(job);
           });
           actionsSection.appendChild(applyBtn);
+        } else {
+          const closeBtn2 = document.createElement("button");
+          closeBtn2.className = "btn btn-ghost";
+          closeBtn2.textContent = "Close";
+          closeBtn2.style.cssText = "width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 600; border-radius: 12px;";
+          closeBtn2.addEventListener("click", () => {
+            document.body.removeChild(modalOverlay);
+            document.body.style.overflow = "";
+          });
+          actionsSection.appendChild(closeBtn2);
         }
-        
-        const closeBtn2 = document.createElement("button");
-        closeBtn2.className = "btn btn-ghost";
-        closeBtn2.textContent = "Close";
-        closeBtn2.style.cssText = isHustler && !isOwner ? "padding: 1rem; font-size: 1rem;" : "flex: 1; padding: 1rem; font-size: 1rem;";
-        closeBtn2.addEventListener("click", () => {
-          document.body.removeChild(modalOverlay);
-          document.body.style.overflow = "";
-        });
-        actionsSection.appendChild(closeBtn2);
         
         modalContent.appendChild(actionsSection);
         
