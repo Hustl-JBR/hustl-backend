@@ -4348,7 +4348,7 @@
         </div>
         
         <!-- Slide-up Filter Panel -->
-        <div id="filtersPanel" style="position: fixed; bottom: -100%; left: 0; right: 0; background: white; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -4px 20px rgba(0,0,0,0.15); z-index: 1000; max-height: 85vh; overflow-y: auto; transition: bottom 0.3s ease-out; -webkit-overflow-scrolling: touch;">
+        <div id="filtersPanel" style="position: fixed; bottom: -100%; left: 0; right: 0; background: white; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -4px 20px rgba(0,0,0,0.15); z-index: 1000; max-height: 85vh; overflow-y: auto; transition: bottom 0.3s ease-out; -webkit-overflow-scrolling: touch; visibility: hidden; pointer-events: none;">
           <!-- Panel Header -->
           <div style="position: sticky; top: 0; background: white; border-bottom: 1px solid var(--border); padding: 1rem; display: flex; justify-content: space-between; align-items: center; z-index: 10;">
             <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600; color: var(--text-main);">Filters</h3>
@@ -4438,7 +4438,7 @@
         </div>
         
         <!-- Panel Overlay (for closing on backdrop click) -->
-        <div id="filtersOverlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; display: none; opacity: 0; transition: opacity 0.3s ease-out;"></div>
+        <div id="filtersOverlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; display: none !important; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.3s ease-out;"></div>
         
         <!-- Jobs Header -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; padding: 0 0.25rem;">
@@ -26711,9 +26711,13 @@ meta.textContent =
         updateChipVisuals();
         if (filtersPanel) {
           filtersPanel.style.bottom = '0';
+          filtersPanel.style.visibility = 'visible';
+          filtersPanel.style.pointerEvents = 'auto';
         }
         if (filtersOverlay) {
           filtersOverlay.style.display = 'block';
+          filtersOverlay.style.visibility = 'visible';
+          filtersOverlay.style.pointerEvents = 'auto';
           setTimeout(() => {
             filtersOverlay.style.opacity = '1';
           }, 10);
@@ -26725,11 +26729,22 @@ meta.textContent =
       function closeFiltersPanel() {
         if (filtersPanel) {
           filtersPanel.style.bottom = '-100%';
+          // Delay hiding visibility to allow transition
+          setTimeout(() => {
+            if (filtersPanel) {
+              filtersPanel.style.visibility = 'hidden';
+              filtersPanel.style.pointerEvents = 'none';
+            }
+          }, 300);
         }
         if (filtersOverlay) {
           filtersOverlay.style.opacity = '0';
           setTimeout(() => {
-            filtersOverlay.style.display = 'none';
+            if (filtersOverlay) {
+              filtersOverlay.style.display = 'none';
+              filtersOverlay.style.visibility = 'hidden';
+              filtersOverlay.style.pointerEvents = 'none';
+            }
           }, 300);
         }
         document.body.style.overflow = '';
