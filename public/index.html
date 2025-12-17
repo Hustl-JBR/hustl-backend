@@ -9832,6 +9832,22 @@ async function renderJobs(reset = false) {
           rateRow.appendChild(rateValue);
           breakdown.appendChild(rateRow);
           
+          // Total per person per hour
+          if (teamSize > 0 && teamSize !== 'company') {
+            const perPersonRate = hourlyRate / teamSize;
+            const perPersonRow = document.createElement("div");
+            perPersonRow.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding-top: 0.5rem; border-top: 1px solid #e5e7eb;";
+            const perPersonLabel = document.createElement("span");
+            perPersonLabel.style.cssText = "font-size: 0.95rem; color: var(--text-muted);";
+            perPersonLabel.textContent = "Per person per hour:";
+            const perPersonValue = document.createElement("span");
+            perPersonValue.style.cssText = "font-size: 1rem; font-weight: 600; color: var(--text-main);";
+            perPersonValue.textContent = `$${perPersonRate.toFixed(0)}/hr`;
+            perPersonRow.appendChild(perPersonLabel);
+            perPersonRow.appendChild(perPersonValue);
+            breakdown.appendChild(perPersonRow);
+          }
+          
           if (maxHours > 0) {
             const hoursRow = document.createElement("div");
             hoursRow.style.cssText = "display: flex; justify-content: space-between; align-items: center;";
@@ -9902,39 +9918,45 @@ async function renderJobs(reset = false) {
         
         modalContent.appendChild(pricingSection);
         
-        // 6. TOOLS/EQUIPMENT NEEDED
+        // 6. TOOLS/EQUIPMENT NEEDED (always show, even if empty)
+        const toolsSection = document.createElement("div");
+        toolsSection.style.cssText = "padding: 1.25rem; border-bottom: 1px solid #e5e7eb;";
+        
+        const toolsTitle = document.createElement("h2");
+        toolsTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);";
+        toolsTitle.textContent = "🔧 Tools / Equipment Needed";
+        toolsSection.appendChild(toolsTitle);
+        
         const equipmentNeeded = requirements.equipmentNeeded || [];
         const customEquipment = requirements.customEquipment || '';
-        if (equipmentNeeded.length > 0 || customEquipment) {
-          const toolsSection = document.createElement("div");
-          toolsSection.style.cssText = "padding: 1.25rem; border-bottom: 1px solid #e5e7eb;";
-          
-          const toolsTitle = document.createElement("h2");
-          toolsTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);";
-          toolsTitle.textContent = "🔧 Tools / Equipment Needed";
-          toolsSection.appendChild(toolsTitle);
-          
-          if (equipmentNeeded.length > 0) {
-            const toolsList = document.createElement("div");
-            toolsList.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;";
-            equipmentNeeded.forEach(tool => {
-              const toolChip = document.createElement("span");
-              toolChip.style.cssText = "padding: 0.5rem 0.75rem; background: #f3f4f6; border-radius: 8px; font-size: 0.9rem; color: var(--text-main); font-weight: 500;";
-              toolChip.textContent = tool;
-              toolsList.appendChild(toolChip);
-            });
-            toolsSection.appendChild(toolsList);
-          }
-          
-          if (customEquipment) {
-            const customTool = document.createElement("div");
-            customTool.style.cssText = "font-size: 0.95rem; color: var(--text-main); line-height: 1.5;";
-            customTool.textContent = customEquipment;
-            toolsSection.appendChild(customTool);
-          }
-          
-          modalContent.appendChild(toolsSection);
+        
+        if (equipmentNeeded.length > 0) {
+          const toolsList = document.createElement("div");
+          toolsList.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;";
+          equipmentNeeded.forEach(tool => {
+            const toolChip = document.createElement("span");
+            toolChip.style.cssText = "padding: 0.5rem 0.75rem; background: #f3f4f6; border-radius: 8px; font-size: 0.9rem; color: var(--text-main); font-weight: 500;";
+            toolChip.textContent = tool;
+            toolsList.appendChild(toolChip);
+          });
+          toolsSection.appendChild(toolsList);
         }
+        
+        if (customEquipment) {
+          const customTool = document.createElement("div");
+          customTool.style.cssText = "font-size: 0.95rem; color: var(--text-main); line-height: 1.5; margin-bottom: 0.75rem;";
+          customTool.textContent = customEquipment;
+          toolsSection.appendChild(customTool);
+        }
+        
+        if (equipmentNeeded.length === 0 && !customEquipment) {
+          const noTools = document.createElement("div");
+          noTools.style.cssText = "font-size: 0.95rem; color: var(--text-muted); font-style: italic;";
+          noTools.textContent = "No specific tools or equipment required.";
+          toolsSection.appendChild(noTools);
+        }
+        
+        modalContent.appendChild(toolsSection);
         
         // 7. LOCATION MAP
         const locationSection = document.createElement("div");
@@ -9974,7 +9996,7 @@ async function renderJobs(reset = false) {
           modalContent.appendChild(notesSection);
         }
         
-        // 9. APPLY AREA (Action buttons)
+        // 9. APPLY AREA (with why you're a good fit)
         const actionsSection = document.createElement("div");
         actionsSection.style.cssText = "padding: 1.25rem; background: #f8f9fa; position: sticky; bottom: 0; border-top: 2px solid #e5e7eb;";
         
@@ -9983,13 +10005,48 @@ async function renderJobs(reset = false) {
         const isOwner = user && job.customerId === user.id;
         
         if (isHustler && !isOwner) {
+          // Why you're a good fit textarea
+          const whyFitLabel = document.createElement("label");
+          whyFitLabel.style.cssText = "display: block; font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;";
+          whyFitLabel.textContent = "Why are you a good fit for this job?";
+          actionsSection.appendChild(whyFitLabel);
+          
+          const whyFitTextarea = document.createElement("textarea");
+          whyFitTextarea.id = `applyWhyFit-${job.id}`;
+          whyFitTextarea.placeholder = "Describe your experience and why you're the right person for this job...";
+          whyFitTextarea.maxLength = 500;
+          whyFitTextarea.rows = 4;
+          whyFitTextarea.style.cssText = "width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-family: inherit; font-size: 0.95rem; resize: vertical; margin-bottom: 1rem; box-sizing: border-box;";
+          actionsSection.appendChild(whyFitTextarea);
+          
+          const charCount = document.createElement("div");
+          charCount.id = `charCount-${job.id}`;
+          charCount.style.cssText = "font-size: 0.8rem; color: var(--text-muted); text-align: right; margin-bottom: 1rem;";
+          charCount.textContent = "0 / 500 characters";
+          actionsSection.appendChild(charCount);
+          
+          whyFitTextarea.addEventListener("input", () => {
+            charCount.textContent = `${whyFitTextarea.value.length} / 500 characters`;
+          });
+          
           const applyBtn = document.createElement("button");
           applyBtn.className = "btn btn-primary";
           applyBtn.textContent = "Apply for Job";
           applyBtn.style.cssText = "width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 700; border-radius: 12px;";
-          applyBtn.addEventListener("click", () => {
+          applyBtn.addEventListener("click", async () => {
+            const whyFit = whyFitTextarea.value.trim();
+            if (!whyFit) {
+              showToast("Please explain why you're a good fit for this job.");
+              whyFitTextarea.focus();
+              return;
+            }
+            
+            // Close detail modal
             document.body.removeChild(modalOverlay);
             document.body.style.overflow = "";
+            
+            // Show apply modal with the whyFit pre-filled
+            job._prefilledWhyFit = whyFit;
             showApplyJobModal(job);
           });
           actionsSection.appendChild(applyBtn);
@@ -10057,10 +10114,17 @@ async function renderJobs(reset = false) {
           interactive: true
         });
         
-        // Add marker
+        // Add job location marker (blue)
         new mapboxgl.Marker({ color: '#3b82f6' })
           .setLngLat([lng, lat])
           .addTo(map);
+        
+        // Add user's location marker (red) if available
+        if (typeof userLocation !== 'undefined' && userLocation && userLocation.lat && userLocation.lng) {
+          new mapboxgl.Marker({ color: '#dc2626' })
+            .setLngLat([userLocation.lng, userLocation.lat])
+            .addTo(map);
+        }
         
         // Add 0.25 mile radius circle
         const radiusMeters = 402.336; // 0.25 miles
