@@ -10070,12 +10070,16 @@ async function renderJobs(reset = false) {
         let user = null;
         let isHustler = false;
         let isOwner = false;
+        const token = localStorage.getItem('hustl_token');
         
         try {
           if (window.hustlAPI && window.hustlAPI.auth) {
             user = await window.hustlAPI.auth.getCurrentUser();
             if (user) {
-              isHustler = user.roles && user.roles.includes('HUSTLER');
+              // Check for hustler role in multiple ways
+              isHustler = (user.roles && Array.isArray(user.roles) && user.roles.some(r => r.toUpperCase() === 'HUSTLER')) || 
+                         (user.role && user.role.toUpperCase() === 'HUSTLER') ||
+                         (user.isHustler === true);
               isOwner = job.customerId === user.id;
             }
           }
@@ -10083,11 +10087,12 @@ async function renderJobs(reset = false) {
           console.warn("Error getting current user:", e);
         }
         
-        console.log("Apply area check - user:", user, "isHustler:", isHustler, "isOwner:", isOwner);
+        console.log("Apply area check - user:", user, "isHustler:", isHustler, "isOwner:", isOwner, "token:", token ? "present" : "missing");
         
         // Show apply area for hustlers OR if not logged in (show login prompt)
         // Always show apply area unless user is the owner
-        if (!isOwner) {
+        // Check both user object and token to ensure user is logged in
+        if (!isOwner && (user || token)) {
           // Why you're a good fit textarea
           const whyFitLabel = document.createElement("label");
           whyFitLabel.style.cssText = "display: block; font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;";
@@ -10263,19 +10268,61 @@ async function renderJobs(reset = false) {
               proposedAmount = proposedPrice;
             }
             
-            // Close detail modal
-            document.body.removeChild(modalOverlay);
-            document.body.style.overflow = "";
-            
-            // Show apply modal with the whyFit and proposedAmount pre-filled
-            job._prefilledWhyFit = whyFit;
-            if (proposedAmount) {
-              job._prefilledProposedAmount = proposedAmount;
+            // Check authentication
+            const token = localStorage.getItem('hustl_token');
+            if (!token) {
+              showToast("Please log in to apply for jobs.");
+              document.body.removeChild(modalOverlay);
+              document.body.style.overflow = "";
+              setView("login");
+              return;
             }
-            showApplyJobModal(job);
+            
+            // Disable button during submission
+            applyBtn.disabled = true;
+            applyBtn.textContent = "Applying...";
+            
+            try {
+              // Submit application directly via API
+              const response = await fetch(`${API_BASE}/jobs/${job.id}/offers`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  note: whyFit,
+                  proposedAmount: proposedAmount
+                })
+              });
+              
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || errorData.message || 'Failed to submit application');
+              }
+              
+              const result = await response.json();
+              
+              // Close detail modal
+              document.body.removeChild(modalOverlay);
+              document.body.style.overflow = "";
+              
+              showToast("✅ Application submitted successfully!");
+              
+              // Refresh jobs list to remove the applied job
+              if (typeof renderJobs === 'function') {
+                allLoadedJobs = [];
+                await renderJobs(true);
+              }
+            } catch (error) {
+              console.error("Error submitting application:", error);
+              showToast(error.message || "Error submitting application. Please try again.");
+              applyBtn.disabled = false;
+              applyBtn.textContent = "Apply for Job";
+            }
           });
           actionsSection.appendChild(applyBtn);
-        } else if (!user) {
+        } else if (!user && !token) {
           // Not logged in - show login prompt
           const loginPrompt = document.createElement("div");
           loginPrompt.style.cssText = "text-align: center; margin-bottom: 1rem;";
