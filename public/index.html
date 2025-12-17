@@ -9756,26 +9756,53 @@ async function renderJobs(reset = false) {
           customerSection.style.cssText = "padding: 1.25rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 1rem;";
           
           const profilePic = document.createElement("img");
-          profilePic.style.cssText = "width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); flex-shrink: 0;";
+          profilePic.style.cssText = "width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); flex-shrink: 0; cursor: pointer;";
           profilePic.src = job.customer.photoUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(job.customer.name || "User") + "&background=6366f1&color=fff&size=128";
           profilePic.alt = job.customer.name || "Customer";
           profilePic.onerror = function() {
             this.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(job.customer.name || "User") + "&background=6366f1&color=fff&size=128";
           };
+          profilePic.addEventListener("click", () => {
+            if (job.customer && job.customer.id) {
+              window.showHustlerProfilePopup(job.customer.id);
+            }
+          });
           
           const customerInfo = document.createElement("div");
-          customerInfo.style.cssText = "flex: 1;";
+          customerInfo.style.cssText = "flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 1rem;";
+          
+          const customerInfoLeft = document.createElement("div");
+          customerInfoLeft.style.cssText = "flex: 1;";
           
           const customerLabel = document.createElement("div");
           customerLabel.style.cssText = "font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;";
           customerLabel.textContent = "Posted by";
           
           const customerName = document.createElement("div");
-          customerName.style.cssText = "font-size: 1.1rem; color: var(--text-main); font-weight: 600;";
+          customerName.style.cssText = "font-size: 1.1rem; color: var(--text-main); font-weight: 600; cursor: pointer;";
           customerName.textContent = job.customer.name || "Customer";
+          customerName.addEventListener("click", () => {
+            if (job.customer && job.customer.id) {
+              window.showHustlerProfilePopup(job.customer.id);
+            }
+          });
           
-          customerInfo.appendChild(customerLabel);
-          customerInfo.appendChild(customerName);
+          customerInfoLeft.appendChild(customerLabel);
+          customerInfoLeft.appendChild(customerName);
+          
+          // View Profile button
+          const viewProfileBtn = document.createElement("button");
+          viewProfileBtn.className = "btn btn-secondary";
+          viewProfileBtn.textContent = "View Profile";
+          viewProfileBtn.style.cssText = "padding: 0.5rem 1rem; font-size: 0.9rem; white-space: nowrap; flex-shrink: 0;";
+          viewProfileBtn.addEventListener("click", () => {
+            if (job.customer && job.customer.id) {
+              window.showHustlerProfilePopup(job.customer.id);
+            }
+          });
+          
+          customerInfo.appendChild(customerInfoLeft);
+          customerInfo.appendChild(viewProfileBtn);
           
           customerSection.appendChild(profilePic);
           customerSection.appendChild(customerInfo);
