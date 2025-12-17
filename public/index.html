@@ -9998,7 +9998,7 @@ async function renderJobs(reset = false) {
         
         // 9. APPLY AREA (with why you're a good fit) - Always show for hustlers
         const actionsSection = document.createElement("div");
-        actionsSection.style.cssText = "padding: 1.25rem; background: #f8f9fa; position: sticky; bottom: 0; border-top: 2px solid #e5e7eb;";
+        actionsSection.style.cssText = "padding: 1.25rem; background: #f8f9fa; border-top: 2px solid #e5e7eb;";
         
         const user = getCurrentUser();
         const isHustler = user && user.roles && user.roles.includes('HUSTLER');
