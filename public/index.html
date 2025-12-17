@@ -9724,11 +9724,11 @@ async function renderJobs(reset = false) {
           modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 600px; width: 90%; max-height: 95vh; overflow-y: auto; position: relative; margin: 2rem auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
         }
         
-        // Close button - positioned below blue header on mobile
+        // Close button - positioned to align with header content
         const closeBtn = document.createElement("button");
         closeBtn.innerHTML = "×";
         if (window.innerWidth <= 768) {
-          closeBtn.style.cssText = "position: fixed; top: 100px; right: 1rem; width: 38px; height: 38px; border-radius: 50%; background: #ef4444; border: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; z-index: 10002; line-height: 1; box-shadow: 0 2px 6px rgba(0,0,0,0.3); font-weight: 300;";
+          closeBtn.style.cssText = "position: absolute; top: 1.25rem; right: 1.25rem; width: 36px; height: 36px; border-radius: 50%; background: rgba(0, 0, 0, 0.6); border: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; z-index: 10002; line-height: 1; box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-weight: 300;";
         } else {
           closeBtn.style.cssText = "position: absolute; top: 0.75rem; right: 0.75rem; width: 36px; height: 36px; border-radius: 50%; background: rgba(0, 0, 0, 0.7); border: 2px solid white; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; z-index: 10001; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.3);";
         }
@@ -9736,7 +9736,7 @@ async function renderJobs(reset = false) {
           document.body.removeChild(modalOverlay);
           document.body.style.overflow = "";
         });
-        modalOverlay.appendChild(closeBtn); // Add to overlay on mobile so it's above everything
+        modalContent.appendChild(closeBtn); // Add to content so it's positioned relative to the modal
         
         // 1. JOB TITLE
         const header = document.createElement("div");
