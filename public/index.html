@@ -9660,7 +9660,8 @@ async function renderJobs(reset = false) {
 }
 
     // Open job details modal - complete mobile-friendly view
-    async function openJobDetails(jobId) {
+    // Define at global scope
+    window.openJobDetails = async function openJobDetails(jobId) {
       console.log("openJobDetails called with jobId:", jobId);
       try {
         // Fetch job details
@@ -10100,8 +10101,7 @@ async function renderJobs(reset = false) {
       }
     }
     
-    // Make openJobDetails available globally
-    window.openJobDetails = openJobDetails;
+    // Function is already assigned to window.openJobDetails above
 
     // Show "Apply for Job" popup modal
     async function showApplyJobModal(job) {
