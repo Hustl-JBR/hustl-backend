@@ -10106,50 +10106,67 @@ async function renderJobs(reset = false) {
           const priceOptions = document.createElement("div");
           priceOptions.style.cssText = "display: flex; flex-direction: column; gap: 0.75rem;";
           
-          // Accept listed price option
+          // Check pricing option
           const pricingOption = requirements.pricing_option;
-          let listedPriceText = "";
-          if (pricingOption === "hustlers_quote") {
-            listedPriceText = "Hustler suggests price";
-          } else if (job.payType === "flat") {
-            const total = Number(job.amount) || 0;
-            listedPriceText = `$${total.toFixed(0)} flat`;
-          } else if (job.payType === "hourly") {
-            const hr = Number(job.hourlyRate) || 0;
-            listedPriceText = `$${hr.toFixed(0)}/hr`;
-          } else {
-            const total = Number(job.amount) || 0;
-            listedPriceText = `$${total.toFixed(0)}`;
+          const isHustlerQuote = pricingOption === "hustlers_quote" || pricingOption === "hustler_sets";
+          
+          // Track selected option
+          let selectedPriceOption = isHustlerQuote ? "suggest" : "accept";
+          
+          // Only show "Accept listed price" if NOT hustler quote
+          if (!isHustlerQuote) {
+            let listedPriceText = "";
+            if (job.payType === "flat") {
+              const total = Number(job.amount) || 0;
+              listedPriceText = `$${total.toFixed(0)} flat`;
+            } else if (job.payType === "hourly") {
+              const hr = Number(job.hourlyRate) || 0;
+              listedPriceText = `$${hr.toFixed(0)}/hr`;
+            } else {
+              const total = Number(job.amount) || 0;
+              listedPriceText = `$${total.toFixed(0)}`;
+            }
+            
+            // Accept listed price option - checkbox style
+            const acceptPriceLabel = document.createElement("label");
+            acceptPriceLabel.style.cssText = "display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem; background: #f9fafb; border: 2px solid #d1d5db; border-radius: 8px; cursor: pointer; transition: all 0.2s; width: 100%; box-sizing: border-box;";
+            
+            const acceptCheckbox = document.createElement("div");
+            acceptCheckbox.id = `acceptCheckbox-${job.id}`;
+            acceptCheckbox.style.cssText = "width: 24px; height: 24px; border-radius: 50%; border: 2px solid #10b981; background: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s;";
+            const acceptCheckmark = document.createElement("div");
+            acceptCheckmark.style.cssText = "width: 12px; height: 12px; border-radius: 50%; background: #10b981; display: block;";
+            acceptCheckbox.appendChild(acceptCheckmark);
+            
+            const acceptPriceText = document.createElement("span");
+            acceptPriceText.style.cssText = "font-size: 0.95rem; color: var(--text-main); flex: 1;";
+            acceptPriceText.textContent = `Accept listed price: ${listedPriceText}`;
+            
+            acceptPriceLabel.appendChild(acceptCheckbox);
+            acceptPriceLabel.appendChild(acceptPriceText);
+            priceOptions.appendChild(acceptPriceLabel);
+            
+            acceptPriceLabel.addEventListener("click", () => {
+              selectedPriceOption = "accept";
+              acceptCheckmark.style.display = "block";
+              acceptCheckbox.style.borderColor = "#10b981";
+              suggestCheckmark.style.display = "none";
+              suggestCheckbox.style.borderColor = "#6b7280";
+              acceptPriceLabel.style.borderColor = "#10b981";
+              suggestPriceLabel.style.borderColor = "#d1d5db";
+              proposedPriceContainer.style.display = "none";
+            });
           }
           
-          // Accept listed price option - checkbox style
-          const acceptPriceLabel = document.createElement("label");
-          acceptPriceLabel.style.cssText = "display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem; background: #f9fafb; border: 2px solid #d1d5db; border-radius: 8px; cursor: pointer; transition: all 0.2s; width: 100%; box-sizing: border-box;";
-          
-          const acceptCheckbox = document.createElement("div");
-          acceptCheckbox.id = `acceptCheckbox-${job.id}`;
-          acceptCheckbox.style.cssText = "width: 24px; height: 24px; border-radius: 50%; border: 2px solid #10b981; background: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s;";
-          const acceptCheckmark = document.createElement("div");
-          acceptCheckmark.style.cssText = "width: 12px; height: 12px; border-radius: 50%; background: #10b981; display: block;";
-          acceptCheckbox.appendChild(acceptCheckmark);
-          
-          const acceptPriceText = document.createElement("span");
-          acceptPriceText.style.cssText = "font-size: 0.95rem; color: var(--text-main); flex: 1;";
-          acceptPriceText.textContent = `Accept listed price: ${listedPriceText}`;
-          
-          acceptPriceLabel.appendChild(acceptCheckbox);
-          acceptPriceLabel.appendChild(acceptPriceText);
-          priceOptions.appendChild(acceptPriceLabel);
-          
-          // Suggest own price option - checkbox style
+          // Suggest own price option - checkbox style (always show)
           const suggestPriceLabel = document.createElement("label");
           suggestPriceLabel.style.cssText = "display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem; background: #f9fafb; border: 2px solid #d1d5db; border-radius: 8px; cursor: pointer; transition: all 0.2s; width: 100%; box-sizing: border-box;";
           
           const suggestCheckbox = document.createElement("div");
           suggestCheckbox.id = `suggestCheckbox-${job.id}`;
-          suggestCheckbox.style.cssText = "width: 24px; height: 24px; border-radius: 50%; border: 2px solid #6b7280; background: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s;";
+          suggestCheckbox.style.cssText = `width: 24px; height: 24px; border-radius: 50%; border: 2px solid ${isHustlerQuote ? "#10b981" : "#6b7280"}; background: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s;`;
           const suggestCheckmark = document.createElement("div");
-          suggestCheckmark.style.cssText = "width: 12px; height: 12px; border-radius: 50%; background: #6b7280; display: none;";
+          suggestCheckmark.style.cssText = `width: 12px; height: 12px; border-radius: 50%; background: ${isHustlerQuote ? "#10b981" : "#6b7280"}; display: ${isHustlerQuote ? "block" : "none"};`;
           suggestCheckbox.appendChild(suggestCheckmark);
           
           const suggestPriceText = document.createElement("span");
@@ -10160,28 +10177,25 @@ async function renderJobs(reset = false) {
           suggestPriceLabel.appendChild(suggestPriceText);
           priceOptions.appendChild(suggestPriceLabel);
           
-          // Track selected option
-          let selectedPriceOption = "accept";
-          
-          acceptPriceLabel.addEventListener("click", () => {
-            selectedPriceOption = "accept";
-            acceptCheckmark.style.display = "block";
-            acceptCheckbox.style.borderColor = "#10b981";
-            suggestCheckmark.style.display = "none";
-            suggestCheckbox.style.borderColor = "#6b7280";
-            acceptPriceLabel.style.borderColor = "#10b981";
-            suggestPriceLabel.style.borderColor = "#d1d5db";
-            proposedPriceContainer.style.display = "none";
-          });
+          // If hustler quote, auto-select suggest and show input
+          if (isHustlerQuote) {
+            suggestPriceLabel.style.borderColor = "#10b981";
+            proposedPriceContainer.style.display = "block";
+          }
           
           suggestPriceLabel.addEventListener("click", () => {
             selectedPriceOption = "suggest";
             suggestCheckmark.style.display = "block";
             suggestCheckbox.style.borderColor = "#10b981";
-            acceptCheckmark.style.display = "none";
-            acceptCheckbox.style.borderColor = "#6b7280";
+            if (!isHustlerQuote) {
+              const acceptCheckmark = acceptCheckbox.querySelector("div");
+              const acceptCheckboxEl = document.getElementById(`acceptCheckbox-${job.id}`);
+              if (acceptCheckmark) acceptCheckmark.style.display = "none";
+              if (acceptCheckboxEl) acceptCheckboxEl.style.borderColor = "#6b7280";
+              const acceptPriceLabelEl = priceOptions.querySelector("label:first-child");
+              if (acceptPriceLabelEl) acceptPriceLabelEl.style.borderColor = "#d1d5db";
+            }
             suggestPriceLabel.style.borderColor = "#10b981";
-            acceptPriceLabel.style.borderColor = "#d1d5db";
             proposedPriceContainer.style.display = "block";
             proposedPriceInput.focus();
           });
