@@ -9717,9 +9717,9 @@ async function renderJobs(reset = false) {
         
         const modalContent = document.createElement("div");
         modalContent.className = "modal-content";
-        // Mobile: full screen, Desktop: centered modal
+        // Mobile: full screen with top padding for blue header, Desktop: centered modal
         if (window.innerWidth <= 768) {
-          modalContent.style.cssText = "background: white; border-radius: 0; max-width: 100%; width: 100%; min-height: 100vh; overflow-y: auto; position: relative; margin: 0; box-shadow: none;";
+          modalContent.style.cssText = "background: white; border-radius: 0; max-width: 100%; width: 100%; min-height: 100vh; overflow-y: auto; position: relative; margin: 0; box-shadow: none; padding-top: 60px;";
         } else {
           modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 600px; width: 90%; max-height: 95vh; overflow-y: auto; position: relative; margin: 2rem auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
         }
@@ -10061,38 +10061,14 @@ async function renderJobs(reset = false) {
             charCount.textContent = `${whyFitTextarea.value.length} / 500 characters`;
           });
           
-          // Price option toggle
+          // Price option toggle - simple buttons
           const priceOptionContainer = document.createElement("div");
           priceOptionContainer.style.cssText = "margin-bottom: 1rem;";
-          
-          const priceOptionLabel = document.createElement("label");
-          priceOptionLabel.style.cssText = "display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;";
-          priceOptionLabel.textContent = "Price Option";
-          priceOptionContainer.appendChild(priceOptionLabel);
           
           const priceOptions = document.createElement("div");
           priceOptions.style.cssText = "display: flex; flex-direction: column; gap: 0.75rem;";
           
           // Accept listed price option
-          const acceptPriceLabel = document.createElement("label");
-          acceptPriceLabel.style.cssText = "display: flex; align-items: flex-start; gap: 0.875rem; padding: 1rem; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; transition: all 0.2s; box-sizing: border-box; width: 100%;";
-          
-          const acceptPriceRadio = document.createElement("input");
-          acceptPriceRadio.type = "radio";
-          acceptPriceRadio.name = `priceOption-${job.id}`;
-          acceptPriceRadio.value = "accept";
-          acceptPriceRadio.checked = true;
-          acceptPriceRadio.style.accentColor = "var(--primary)";
-          acceptPriceRadio.style.flexShrink = "0";
-          acceptPriceRadio.style.width = "22px";
-          acceptPriceRadio.style.height = "22px";
-          acceptPriceRadio.style.marginTop = "2px";
-          
-          const acceptPriceTextContainer = document.createElement("div");
-          acceptPriceTextContainer.style.cssText = "flex: 1; display: flex; flex-direction: column; gap: 0.25rem; min-width: 0;";
-          
-          const acceptPriceText = document.createElement("span");
-          acceptPriceText.style.cssText = "font-size: 0.95rem; font-weight: 500; color: var(--text-main); line-height: 1.4; word-break: break-word;";
           const pricingOption = requirements.pricing_option;
           let listedPriceText = "";
           if (pricingOption === "hustlers_quote") {
@@ -10107,40 +10083,49 @@ async function renderJobs(reset = false) {
             const total = Number(job.amount) || 0;
             listedPriceText = `$${total.toFixed(0)}`;
           }
-          acceptPriceText.textContent = "Accept listed price";
           
-          const acceptPriceValue = document.createElement("span");
-          acceptPriceValue.style.cssText = "font-size: 0.9rem; font-weight: 600; color: var(--primary);";
-          acceptPriceValue.textContent = listedPriceText;
-          
-          acceptPriceTextContainer.appendChild(acceptPriceText);
-          acceptPriceTextContainer.appendChild(acceptPriceValue);
-          
-          acceptPriceLabel.appendChild(acceptPriceRadio);
-          acceptPriceLabel.appendChild(acceptPriceTextContainer);
-          priceOptions.appendChild(acceptPriceLabel);
+          const acceptPriceBtn = document.createElement("button");
+          acceptPriceBtn.type = "button";
+          acceptPriceBtn.id = `acceptPrice-${job.id}`;
+          acceptPriceBtn.className = "btn btn-primary";
+          acceptPriceBtn.style.cssText = "width: 100%; padding: 0.875rem; font-size: 1rem; font-weight: 600; border-radius: 8px; text-align: center;";
+          acceptPriceBtn.textContent = `Accept listed price: ${listedPriceText}`;
+          acceptPriceBtn.dataset.priceOption = "accept";
+          priceOptions.appendChild(acceptPriceBtn);
           
           // Suggest own price option
-          const suggestPriceLabel = document.createElement("label");
-          suggestPriceLabel.style.cssText = "display: flex; align-items: flex-start; gap: 0.875rem; padding: 1rem; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; transition: all 0.2s; box-sizing: border-box; width: 100%;";
+          const suggestPriceBtn = document.createElement("button");
+          suggestPriceBtn.type = "button";
+          suggestPriceBtn.id = `suggestPrice-${job.id}`;
+          suggestPriceBtn.className = "btn btn-secondary";
+          suggestPriceBtn.style.cssText = "width: 100%; padding: 0.875rem; font-size: 1rem; font-weight: 600; border-radius: 8px; text-align: center;";
+          suggestPriceBtn.textContent = "Suggest my own price";
+          suggestPriceBtn.dataset.priceOption = "suggest";
+          priceOptions.appendChild(suggestPriceBtn);
           
-          const suggestPriceRadio = document.createElement("input");
-          suggestPriceRadio.type = "radio";
-          suggestPriceRadio.name = `priceOption-${job.id}`;
-          suggestPriceRadio.value = "suggest";
-          suggestPriceRadio.style.accentColor = "var(--primary)";
-          suggestPriceRadio.style.flexShrink = "0";
-          suggestPriceRadio.style.width = "22px";
-          suggestPriceRadio.style.height = "22px";
-          suggestPriceRadio.style.marginTop = "2px";
+          // Track selected option
+          let selectedPriceOption = "accept";
+          acceptPriceBtn.style.opacity = "1";
+          suggestPriceBtn.style.opacity = "0.6";
           
-          const suggestPriceText = document.createElement("span");
-          suggestPriceText.style.cssText = "flex: 1; font-size: 0.95rem; font-weight: 500; color: var(--text-main); line-height: 1.4; word-break: break-word; min-width: 0;";
-          suggestPriceText.textContent = "Suggest my own price";
+          acceptPriceBtn.addEventListener("click", () => {
+            selectedPriceOption = "accept";
+            acceptPriceBtn.className = "btn btn-primary";
+            acceptPriceBtn.style.opacity = "1";
+            suggestPriceBtn.className = "btn btn-secondary";
+            suggestPriceBtn.style.opacity = "0.6";
+            proposedPriceContainer.style.display = "none";
+          });
           
-          suggestPriceLabel.appendChild(suggestPriceRadio);
-          suggestPriceLabel.appendChild(suggestPriceText);
-          priceOptions.appendChild(suggestPriceLabel);
+          suggestPriceBtn.addEventListener("click", () => {
+            selectedPriceOption = "suggest";
+            suggestPriceBtn.className = "btn btn-primary";
+            suggestPriceBtn.style.opacity = "1";
+            acceptPriceBtn.className = "btn btn-secondary";
+            acceptPriceBtn.style.opacity = "0.6";
+            proposedPriceContainer.style.display = "block";
+            proposedPriceInput.focus();
+          });
           
           // Proposed price input (shown when suggest is selected)
           const proposedPriceContainer = document.createElement("div");
@@ -10187,7 +10172,6 @@ async function renderJobs(reset = false) {
             }
             
             // Get selected price option
-            const selectedPriceOption = document.querySelector(`input[name="priceOption-${job.id}"]:checked`)?.value || "accept";
             let proposedAmount = null;
             
             if (selectedPriceOption === "suggest") {
