@@ -3962,50 +3962,115 @@
           <input type="hidden" id="preferredTime" value="anytime" />
           <input type="hidden" id="jobDuration" value="30" />
 
-          <!-- Equipment Needed Section - Removed (simplified form) -->
-                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                  <input type="checkbox" name="equipment" value="truck" style="width: 20px; height: 20px; min-width: 20px; min-height: 20px; margin: 0; padding: 0; accent-color: var(--primary); cursor: pointer; flex-shrink: 0;" />
-                  <span>🚛 Truck</span>
-                </label>
-                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                  <input type="checkbox" name="equipment" value="pickup-truck" style="width: 20px; height: 20px; min-width: 20px; min-height: 20px; margin: 0; padding: 0; accent-color: var(--primary); cursor: pointer; flex-shrink: 0;" />
-                  <span>🚚 Pick up truck</span>
-                </label>
-                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                  <input type="checkbox" name="equipment" value="trailer" style="width: 20px; height: 20px; min-width: 20px; min-height: 20px; margin: 0; padding: 0; accent-color: var(--primary); cursor: pointer; flex-shrink: 0;" />
-                  <span>🚗 Trailer</span>
-                </label>
-                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                  <input type="checkbox" name="equipment" value="straps" style="width: 20px; height: 20px; min-width: 20px; min-height: 20px; margin: 0; padding: 0; accent-color: var(--primary); cursor: pointer; flex-shrink: 0;" />
-                  <span>🪢 Moving Straps</span>
-                </label>
-                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                  <input type="checkbox" name="equipment" value="dolly" style="width: 20px; height: 20px; min-width: 20px; min-height: 20px; margin: 0; padding: 0; accent-color: var(--primary); cursor: pointer; flex-shrink: 0;" />
-                  <span>🛒 Dolly</span>
-                </label>
-                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                  <input type="checkbox" name="equipment" value="tools" style="width: 20px; height: 20px; min-width: 20px; min-height: 20px; margin: 0; padding: 0; accent-color: var(--primary); cursor: pointer; flex-shrink: 0;" />
-                  <span>🧰 Tools</span>
-                </label>
-                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                  <input type="checkbox" name="equipment" value="lawnmower" style="width: 20px; height: 20px; min-width: 20px; min-height: 20px; margin: 0; padding: 0; accent-color: var(--primary); cursor: pointer; flex-shrink: 0;" />
-                  <span>🌿 Lawn Mower</span>
-                </label>
-                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                  <input type="checkbox" name="equipment" value="pressure-washer" style="width: 18px; height: 18px; accent-color: var(--primary);" />
-                  <span>💦 Pressure Washer</span>
-                </label>
-                <label class="equipment-checkbox" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                  <input type="checkbox" name="equipment" value="ladder" style="width: 18px; height: 18px; accent-color: var(--primary);" />
-                  <span>🪜 Ladder</span>
-                </label>
+          <!-- Equipment Needed Section (Collapsible) -->
+          <div style="margin-bottom: 1.5rem;">
+            <button 
+              type="button" 
+              id="equipmentSectionToggle" 
+              style="width: 100%; padding: 0.875rem; background: #f9fafb; border: 2px solid var(--border); border-radius: 12px; color: var(--text-main); font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; min-height: 48px; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+            >
+              <span style="display: flex; align-items: center; gap: 0.5rem;">
+                <span>🔧</span>
+                <span>Equipment Needed</span>
+                <span class="muted" style="font-weight: 400; font-size: 0.85rem;">(optional)</span>
+              </span>
+              <span id="equipmentSectionIcon" style="font-size: 1.2rem; transition: transform 0.3s;">▼</span>
+            </button>
+            
+            <div id="equipmentSectionContent" style="display: none; margin-top: 0.75rem; padding: 1rem; background: #f9fafb; border-radius: 12px; border: 2px solid var(--border);">
+              <p style="margin: 0 0 1rem 0; font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;">Does the hustler need to bring any equipment? Tap to select.</p>
+              
+              <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                <button 
+                  type="button" 
+                  class="equipment-chip" 
+                  data-equipment="truck"
+                  style="padding: 0.6rem 1rem; border: 2px solid var(--border); background: #fff; border-radius: 999px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+                >
+                  🚛 Truck
+                </button>
+                <button 
+                  type="button" 
+                  class="equipment-chip" 
+                  data-equipment="pickup-truck"
+                  style="padding: 0.6rem 1rem; border: 2px solid var(--border); background: #fff; border-radius: 999px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+                >
+                  🚚 Pick up truck
+                </button>
+                <button 
+                  type="button" 
+                  class="equipment-chip" 
+                  data-equipment="trailer"
+                  style="padding: 0.6rem 1rem; border: 2px solid var(--border); background: #fff; border-radius: 999px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+                >
+                  🚗 Trailer
+                </button>
+                <button 
+                  type="button" 
+                  class="equipment-chip" 
+                  data-equipment="straps"
+                  style="padding: 0.6rem 1rem; border: 2px solid var(--border); background: #fff; border-radius: 999px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+                >
+                  🪢 Moving Straps
+                </button>
+                <button 
+                  type="button" 
+                  class="equipment-chip" 
+                  data-equipment="dolly"
+                  style="padding: 0.6rem 1rem; border: 2px solid var(--border); background: #fff; border-radius: 999px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+                >
+                  🛒 Dolly
+                </button>
+                <button 
+                  type="button" 
+                  class="equipment-chip" 
+                  data-equipment="tools"
+                  style="padding: 0.6rem 1rem; border: 2px solid var(--border); background: #fff; border-radius: 999px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+                >
+                  🧰 Tools
+                </button>
+                <button 
+                  type="button" 
+                  class="equipment-chip" 
+                  data-equipment="lawnmower"
+                  style="padding: 0.6rem 1rem; border: 2px solid var(--border); background: #fff; border-radius: 999px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+                >
+                  🌿 Lawn Mower
+                </button>
+                <button 
+                  type="button" 
+                  class="equipment-chip" 
+                  data-equipment="pressure-washer"
+                  style="padding: 0.6rem 1rem; border: 2px solid var(--border); background: #fff; border-radius: 999px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+                >
+                  💦 Pressure Washer
+                </button>
+                <button 
+                  type="button" 
+                  class="equipment-chip" 
+                  data-equipment="ladder"
+                  style="padding: 0.6rem 1rem; border: 2px solid var(--border); background: #fff; border-radius: 999px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+                >
+                  🪜 Ladder
+                </button>
               </div>
-              <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem;">
-                <input type="checkbox" id="customEquipmentToggle" style="width: 18px; height: 18px; accent-color: var(--primary);" />
-                <label for="customEquipmentToggle" style="cursor: pointer; color: var(--primary); font-weight: 500; font-size: 0.9rem;">+ Other equipment</label>
-              </div>
-              <div id="customEquipmentField" style="display: none; margin-top: 0.5rem;">
-                <input id="customEquipment" type="text" placeholder="Describe other equipment needed..." />
+              
+              <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                <button 
+                  type="button" 
+                  id="customEquipmentToggle" 
+                  style="width: 100%; padding: 0.75rem; border: 1px dashed var(--border); background: transparent; border-radius: 8px; color: var(--primary); font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.2s; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+                >
+                  + Other equipment
+                </button>
+                <div id="customEquipmentField" style="display: none; margin-top: 0.75rem;">
+                  <input 
+                    id="customEquipment" 
+                    type="text" 
+                    placeholder="Describe other equipment needed..." 
+                    style="width: 100%; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; min-height: 52px; -webkit-appearance: none; touch-action: manipulation;"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -4014,6 +4079,7 @@
           <div class="field" style="margin-bottom: 1.5rem;">
             <label for="workersNeeded" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-weight: 600; font-size: 1rem;">
               <span>👥 Workers needed</span>
+              <span style="color: #dc2626; font-size: 0.9rem;">*</span>
             </label>
             <select 
               id="workersNeeded" 
@@ -4106,7 +4172,10 @@
             <div id="pricingSectionContent" style="display: none;">
               <!-- Pricing Option -->
               <div class="field" style="margin-bottom: 1rem;">
-                <label for="pricingOption" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">How do you want to set the price?</label>
+                <label for="pricingOption" style="font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                  <span>How do you want to set the price?</span>
+                  <span style="color: #dc2626; font-size: 0.9rem;">*</span>
+                </label>
                 <select 
                   id="pricingOption" 
                   style="width: 100%; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; background: white; min-height: 52px; -webkit-appearance: none; appearance: none; background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23334155%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22></polyline></svg>'); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1.5rem; padding-right: 3.5rem; touch-action: manipulation; cursor: pointer;"
@@ -4119,7 +4188,10 @@
               <!-- Price Setting Fields (shown when "set_price" is selected) -->
               <div id="priceSettingFields">
               <div class="field" style="margin-bottom: 1rem;">
-                <label for="paymentType" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Payment type</label>
+                <label for="paymentType" style="font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                  <span>Payment type</span>
+                  <span style="color: #dc2626; font-size: 0.9rem;">*</span>
+                </label>
                 <select 
                   id="paymentType" 
                   style="width: 100%; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; background: white; min-height: 52px; -webkit-appearance: none; appearance: none; background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23334155%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22></polyline></svg>'); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1.5rem; padding-right: 3.5rem; touch-action: manipulation; cursor: pointer;"
@@ -4130,7 +4202,10 @@
               </div>
               
               <div class="field" id="flatAmountField" style="margin-bottom: 1rem;">
-                <label for="flatAmount" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Pay amount ($)</label>
+                <label for="flatAmount" style="font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                  <span>Pay amount ($)</span>
+                  <span style="color: #dc2626; font-size: 0.9rem;">*</span>
+                </label>
                 <input 
                   id="flatAmount" 
                   type="number" 
@@ -7184,6 +7259,71 @@ function showChangePasswordModal() {
           extraNotesContent.style.display = isOpen ? "none" : "block";
           if (extraNotesIcon) {
             extraNotesIcon.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
+          }
+        });
+      }
+      
+      // Equipment section toggle
+      const equipmentSectionToggle = document.getElementById("equipmentSectionToggle");
+      const equipmentSectionContent = document.getElementById("equipmentSectionContent");
+      const equipmentSectionIcon = document.getElementById("equipmentSectionIcon");
+      if (equipmentSectionToggle && equipmentSectionContent) {
+        equipmentSectionToggle.addEventListener("click", () => {
+          const isOpen = equipmentSectionContent.style.display !== "none";
+          equipmentSectionContent.style.display = isOpen ? "none" : "block";
+          if (equipmentSectionIcon) {
+            equipmentSectionIcon.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
+          }
+        });
+      }
+      
+      // Equipment chip selection (like category chips)
+      const equipmentChips = document.querySelectorAll('.equipment-chip');
+      const selectedEquipment = new Set();
+      
+      equipmentChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+          const equipmentValue = chip.dataset.equipment;
+          const isSelected = selectedEquipment.has(equipmentValue);
+          
+          if (isSelected) {
+            selectedEquipment.delete(equipmentValue);
+            chip.style.background = '#fff';
+            chip.style.borderColor = 'var(--border)';
+            chip.style.color = 'var(--text-main)';
+            // Remove hidden checkbox if it exists
+            const hiddenCheckbox = chip.querySelector('input[type="checkbox"]');
+            if (hiddenCheckbox) hiddenCheckbox.checked = false;
+          } else {
+            selectedEquipment.add(equipmentValue);
+            chip.style.background = 'var(--primary-soft)';
+            chip.style.borderColor = 'var(--primary)';
+            chip.style.color = 'var(--primary)';
+            // Create hidden checkbox if it doesn't exist
+            let hiddenCheckbox = chip.querySelector('input[type="checkbox"]');
+            if (!hiddenCheckbox) {
+              hiddenCheckbox = document.createElement('input');
+              hiddenCheckbox.type = 'checkbox';
+              hiddenCheckbox.name = 'equipment';
+              hiddenCheckbox.value = equipmentValue;
+              hiddenCheckbox.style.display = 'none';
+              chip.appendChild(hiddenCheckbox);
+            }
+            hiddenCheckbox.checked = true;
+          }
+        });
+      });
+      
+      // Custom equipment toggle
+      const customEquipmentToggle = document.getElementById("customEquipmentToggle");
+      const customEquipmentField = document.getElementById("customEquipmentField");
+      if (customEquipmentToggle && customEquipmentField) {
+        customEquipmentToggle.addEventListener("click", () => {
+          const isOpen = customEquipmentField.style.display !== "none";
+          customEquipmentField.style.display = isOpen ? "none" : "block";
+          if (!isOpen) {
+            const input = document.getElementById("customEquipment");
+            if (input) setTimeout(() => input.focus(), 100);
           }
         });
       }
