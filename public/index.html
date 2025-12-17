@@ -8419,6 +8419,13 @@ async function initJobsMap() {
     jobsMap.on('load', () => {
       if (mapLoading) mapLoading.style.display = 'none';
       // Map is ready, but we'll render when renderJobs is called
+      
+      // Add user location marker if location is available
+      if (userLocation && userLocation.lat && userLocation.lng) {
+        if (typeof addUserLocationMarker === 'function') {
+          addUserLocationMarker(userLocation.lat, userLocation.lng);
+        }
+      }
     });
     
     jobsMap.on('error', (e) => {
@@ -8434,6 +8441,44 @@ async function initJobsMap() {
   }
 }
 
+// Function to add user location marker to map (make it globally accessible)
+function addUserLocationMarker(lat, lng) {
+  if (!jobsMap || !jobsMap.loaded()) return;
+  
+  // Remove existing marker if any
+  if (window.userLocationMarker) {
+    window.userLocationMarker.remove();
+  }
+  
+  // Create person icon element
+  const el = document.createElement('div');
+  el.className = 'user-location-marker';
+  el.style.cssText = `
+    width: 28px;
+    height: 28px;
+    background: #dc2626;
+    border: 2px solid white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    cursor: pointer;
+    z-index: 10;
+  `;
+  el.innerHTML = '👤';
+  el.title = 'Your location';
+  
+  // Create marker
+  window.userLocationMarker = new mapboxgl.Marker({
+    element: el,
+    anchor: 'center'
+  })
+    .setLngLat([lng, lat])
+    .addTo(jobsMap);
+}
+
 // Render jobs on map - SIMPLIFIED and STABLE
 async function renderJobsOnMap(jobs) {
   if (!jobsMap) return;
@@ -8444,6 +8489,11 @@ async function renderJobsOnMap(jobs) {
       await renderJobsOnMap(jobs);
     });
     return;
+  }
+  
+  // Add user location marker if available
+  if (userLocation && userLocation.lat && userLocation.lng) {
+    addUserLocationMarker(userLocation.lat, userLocation.lng);
   }
   
   if (!jobs || jobs.length === 0) {
