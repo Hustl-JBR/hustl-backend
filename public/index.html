@@ -10004,8 +10004,11 @@ async function renderJobs(reset = false) {
         const isHustler = user && user.roles && user.roles.includes('HUSTLER');
         const isOwner = user && job.customerId === user.id;
         
-        // Show apply area for hustlers (even if not logged in, show login prompt)
-        if (isHustler && !isOwner) {
+        console.log("Apply area check - user:", user, "isHustler:", isHustler, "isOwner:", isOwner);
+        
+        // Show apply area for hustlers OR if not logged in (show login prompt)
+        // Always show apply area unless user is the owner
+        if (!isOwner) {
           // Why you're a good fit textarea
           const whyFitLabel = document.createElement("label");
           whyFitLabel.style.cssText = "display: block; font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;";
