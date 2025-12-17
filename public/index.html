@@ -5100,6 +5100,8 @@ heart of Hustl.
     
     // Location and filter state
     let userLocation = null; // { lat, lng } for distance calculation
+    let locationWatchId = null; // ID for continuous location watching
+    let userLocationMarker = null; // Map marker for user's location
     let activeDistanceFilter = null; // 5, 10, 20, 30, 50, statewide
     let activeConversationJobId = null;
     let activeConversationThreadId = null;
@@ -26340,7 +26342,75 @@ meta.textContent =
         }
       }
       
-      // Request location permission
+      // Function to update user location and marker
+      function updateUserLocation(lat, lng) {
+        userLocation = { lat, lng };
+        
+        // Store in localStorage (always update)
+        localStorage.setItem('userLocation', JSON.stringify({
+          lat: userLocation.lat,
+          lng: userLocation.lng,
+          timestamp: Date.now()
+        }));
+        
+        // Update location marker on map if it exists
+        if (window.userLocationMarker && jobsMap) {
+          window.userLocationMarker.setLngLat([lng, lat]);
+        } else if (jobsMap && jobsMap.loaded()) {
+          // Create marker if it doesn't exist
+          if (typeof addUserLocationMarker === 'function') {
+            addUserLocationMarker(lat, lng);
+          }
+        }
+        
+        // Update UI
+        updateLocationUI(true);
+        
+        // Refresh jobs if distance filter is active
+        if (activeDistanceFilter && typeof renderJobs === 'function') {
+          renderJobs(true);
+        }
+      }
+      
+      // Function to add user location marker to map
+      function addUserLocationMarker(lat, lng) {
+        if (!jobsMap || !jobsMap.loaded()) return;
+        
+        // Remove existing marker if any
+        if (userLocationMarker) {
+          userLocationMarker.remove();
+        }
+        
+        // Create person icon element
+        const el = document.createElement('div');
+        el.className = 'user-location-marker';
+        el.style.cssText = `
+          width: 28px;
+          height: 28px;
+          background: #dc2626;
+          border: 2px solid white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          cursor: pointer;
+          z-index: 10;
+        `;
+        el.innerHTML = '👤';
+        el.title = 'Your location';
+        
+        // Create marker
+        userLocationMarker = new mapboxgl.Marker({
+          element: el,
+          anchor: 'center'
+        })
+          .setLngLat([lng, lat])
+          .addTo(jobsMap);
+      }
+      
+      // Request location permission and start continuous watching
       if (requestLocationBtn) {
         requestLocationBtn.addEventListener("click", () => {
           if (!navigator.geolocation) {
@@ -26348,35 +26418,41 @@ meta.textContent =
             return;
           }
           
+          // Stop any existing watch
+          if (locationWatchId !== null) {
+            navigator.geolocation.clearWatch(locationWatchId);
+            locationWatchId = null;
+          }
+          
           requestLocationBtn.textContent = 'Getting location...';
           requestLocationBtn.disabled = true;
           
+          // First get current position immediately
           navigator.geolocation.getCurrentPosition(
             (position) => {
-              userLocation = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-              };
-              
-              // Store in localStorage
-              localStorage.setItem('userLocation', JSON.stringify({
-                lat: userLocation.lat,
-                lng: userLocation.lng,
-                timestamp: Date.now()
-              }));
-              
-              updateLocationUI(true);
+              updateUserLocation(position.coords.latitude, position.coords.longitude);
               requestLocationBtn.disabled = false;
               
               // Show confirmation
               if (typeof showToast === 'function') {
-                showToast('✅ Location confirmed! You can now filter by distance.');
+                showToast('✅ Location confirmed! Tracking your location continuously.');
               }
               
-              // Refresh jobs if distance filter is active
-              if (activeDistanceFilter && typeof renderJobs === 'function') {
-                renderJobs(true);
-              }
+              // Start continuous watching (updates every 30 seconds or when position changes significantly)
+              locationWatchId = navigator.geolocation.watchPosition(
+                (position) => {
+                  updateUserLocation(position.coords.latitude, position.coords.longitude);
+                },
+                (error) => {
+                  console.warn('Location watch error:', error);
+                  // Don't show error toast for watch errors, just log
+                },
+                { 
+                  timeout: 15000, 
+                  maximumAge: 30000, // Use cached position if less than 30 seconds old
+                  enableHighAccuracy: true // Better accuracy for continuous tracking
+                }
+              );
             },
             (error) => {
               console.warn('Geolocation error:', error);
@@ -26398,9 +26474,29 @@ meta.textContent =
                 alert(errorMsg);
               }
             },
-            { timeout: 10000, maximumAge: 60000, enableHighAccuracy: false }
+            { timeout: 10000, maximumAge: 60000, enableHighAccuracy: true }
           );
         });
+      }
+      
+      // Check for stored location on page load and start watching if available
+      if (checkStoredLocation()) {
+        // If we have a stored location, start watching for updates
+        if (navigator.geolocation && locationWatchId === null) {
+          locationWatchId = navigator.geolocation.watchPosition(
+            (position) => {
+              updateUserLocation(position.coords.latitude, position.coords.longitude);
+            },
+            (error) => {
+              console.warn('Location watch error:', error);
+            },
+            { 
+              timeout: 15000, 
+              maximumAge: 30000,
+              enableHighAccuracy: true
+            }
+          );
+        }
       }
       
       // Distance filter chip handlers (in panel - only toggle temp state)
