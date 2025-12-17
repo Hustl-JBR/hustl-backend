@@ -10065,6 +10065,99 @@ async function renderJobs(reset = false) {
             charCount.textContent = `${whyFitTextarea.value.length} / 500 characters`;
           });
           
+          // Price option toggle
+          const priceOptionContainer = document.createElement("div");
+          priceOptionContainer.style.cssText = "margin-bottom: 1rem;";
+          
+          const priceOptionLabel = document.createElement("label");
+          priceOptionLabel.style.cssText = "display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;";
+          priceOptionLabel.textContent = "Price Option";
+          priceOptionContainer.appendChild(priceOptionLabel);
+          
+          const priceOptions = document.createElement("div");
+          priceOptions.style.cssText = "display: flex; flex-direction: column; gap: 0.5rem;";
+          
+          // Accept listed price option
+          const acceptPriceLabel = document.createElement("label");
+          acceptPriceLabel.style.cssText = "display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;";
+          
+          const acceptPriceRadio = document.createElement("input");
+          acceptPriceRadio.type = "radio";
+          acceptPriceRadio.name = `priceOption-${job.id}`;
+          acceptPriceRadio.value = "accept";
+          acceptPriceRadio.checked = true;
+          acceptPriceRadio.style.accentColor = "var(--primary)";
+          
+          const acceptPriceText = document.createElement("span");
+          const pricingOption = requirements.pricing_option;
+          let listedPriceText = "";
+          if (pricingOption === "hustlers_quote") {
+            listedPriceText = "Hustler suggests price";
+          } else if (job.payType === "flat") {
+            const total = Number(job.amount) || 0;
+            listedPriceText = `$${total.toFixed(0)} flat`;
+          } else if (job.payType === "hourly") {
+            const hr = Number(job.hourlyRate) || 0;
+            listedPriceText = `$${hr.toFixed(0)}/hr`;
+          } else {
+            const total = Number(job.amount) || 0;
+            listedPriceText = `$${total.toFixed(0)}`;
+          }
+          acceptPriceText.textContent = `Accept listed price: ${listedPriceText}`;
+          
+          acceptPriceLabel.appendChild(acceptPriceRadio);
+          acceptPriceLabel.appendChild(acceptPriceText);
+          priceOptions.appendChild(acceptPriceLabel);
+          
+          // Suggest own price option
+          const suggestPriceLabel = document.createElement("label");
+          suggestPriceLabel.style.cssText = "display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;";
+          
+          const suggestPriceRadio = document.createElement("input");
+          suggestPriceRadio.type = "radio";
+          suggestPriceRadio.name = `priceOption-${job.id}`;
+          suggestPriceRadio.value = "suggest";
+          suggestPriceRadio.style.accentColor = "var(--primary)";
+          
+          const suggestPriceText = document.createElement("span");
+          suggestPriceText.textContent = "Suggest my own price";
+          
+          suggestPriceLabel.appendChild(suggestPriceRadio);
+          suggestPriceLabel.appendChild(suggestPriceText);
+          priceOptions.appendChild(suggestPriceLabel);
+          
+          // Proposed price input (shown when suggest is selected)
+          const proposedPriceContainer = document.createElement("div");
+          proposedPriceContainer.id = `proposedPriceContainer-${job.id}`;
+          proposedPriceContainer.style.cssText = "display: none; margin-top: 0.75rem;";
+          
+          const proposedPriceLabel = document.createElement("label");
+          proposedPriceLabel.style.cssText = "display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;";
+          proposedPriceLabel.textContent = "Your suggested price ($)";
+          proposedPriceContainer.appendChild(proposedPriceLabel);
+          
+          const proposedPriceInput = document.createElement("input");
+          proposedPriceInput.type = "number";
+          proposedPriceInput.id = `proposedPrice-${job.id}`;
+          proposedPriceInput.placeholder = "Enter amount";
+          proposedPriceInput.min = "1";
+          proposedPriceInput.step = "1";
+          proposedPriceInput.style.cssText = "width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-family: inherit; font-size: 0.95rem; box-sizing: border-box;";
+          proposedPriceContainer.appendChild(proposedPriceInput);
+          
+          // Toggle proposed price input visibility
+          acceptPriceRadio.addEventListener("change", () => {
+            proposedPriceContainer.style.display = "none";
+          });
+          suggestPriceRadio.addEventListener("change", () => {
+            proposedPriceContainer.style.display = "block";
+            proposedPriceInput.focus();
+          });
+          
+          priceOptionContainer.appendChild(priceOptions);
+          priceOptionContainer.appendChild(proposedPriceContainer);
+          actionsSection.appendChild(priceOptionContainer);
+          
           const applyBtn = document.createElement("button");
           applyBtn.className = "btn btn-primary";
           applyBtn.textContent = "Apply for Job";
@@ -10077,12 +10170,29 @@ async function renderJobs(reset = false) {
               return;
             }
             
+            // Get selected price option
+            const selectedPriceOption = document.querySelector(`input[name="priceOption-${job.id}"]:checked`)?.value || "accept";
+            let proposedAmount = null;
+            
+            if (selectedPriceOption === "suggest") {
+              const proposedPrice = parseFloat(proposedPriceInput.value);
+              if (!proposedPrice || proposedPrice <= 0) {
+                showToast("Please enter a valid suggested price.");
+                proposedPriceInput.focus();
+                return;
+              }
+              proposedAmount = proposedPrice;
+            }
+            
             // Close detail modal
             document.body.removeChild(modalOverlay);
             document.body.style.overflow = "";
             
-            // Show apply modal with the whyFit pre-filled
+            // Show apply modal with the whyFit and proposedAmount pre-filled
             job._prefilledWhyFit = whyFit;
+            if (proposedAmount) {
+              job._prefilledProposedAmount = proposedAmount;
+            }
             showApplyJobModal(job);
           });
           actionsSection.appendChild(applyBtn);
