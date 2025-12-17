@@ -26620,7 +26620,6 @@ meta.textContent =
       // Temporary filter state (for panel editing)
       let tempCategoryFilters = new Set();
       let tempPriceTypeFilters = new Set();
-      let tempTimeFilters = new Set();
       let tempWorkersFilters = new Set();
       let tempDistanceFilter = null;
       
@@ -26629,7 +26628,6 @@ meta.textContent =
         let count = 0;
         count += activeCategoryFilters.size;
         count += activePriceTypeFilters.size;
-        count += activeTimeFilters.size;
         count += activeWorkersFilters.size;
         if (activeDistanceFilter) count += 1;
         return count;
@@ -26658,7 +26656,6 @@ meta.textContent =
       function syncTempToActive() {
         tempCategoryFilters = new Set(activeCategoryFilters);
         tempPriceTypeFilters = new Set(activePriceTypeFilters);
-        tempTimeFilters = new Set(activeTimeFilters);
         tempWorkersFilters = new Set(activeWorkersFilters);
         tempDistanceFilter = activeDistanceFilter;
       }
@@ -26667,7 +26664,6 @@ meta.textContent =
       function syncActiveToTemp() {
         activeCategoryFilters = new Set(tempCategoryFilters);
         activePriceTypeFilters = new Set(tempPriceTypeFilters);
-        activeTimeFilters = new Set(tempTimeFilters);
         activeWorkersFilters = new Set(tempWorkersFilters);
         activeDistanceFilter = tempDistanceFilter;
       }
@@ -26692,20 +26688,6 @@ meta.textContent =
         document.querySelectorAll('.price-chip').forEach(chip => {
           const priceType = chip.dataset.priceType;
           if (tempPriceTypeFilters.has(priceType)) {
-            chip.style.background = "var(--primary)";
-            chip.style.color = "white";
-            chip.style.border = "1.5px solid var(--primary)";
-          } else {
-            chip.style.background = "white";
-            chip.style.color = "var(--text-main)";
-            chip.style.border = "1.5px solid var(--border)";
-          }
-        });
-        
-        // Time chips
-        document.querySelectorAll('.time-chip').forEach(chip => {
-          const time = chip.dataset.time;
-          if (tempTimeFilters.has(time)) {
             chip.style.background = "var(--primary)";
             chip.style.color = "white";
             chip.style.border = "1.5px solid var(--primary)";
@@ -26822,12 +26804,37 @@ meta.textContent =
         clearFiltersBtn.addEventListener("click", () => {
           tempCategoryFilters.clear();
           tempPriceTypeFilters.clear();
-          tempTimeFilters.clear();
           tempWorkersFilters.clear();
           tempDistanceFilter = null;
           updateChipVisuals();
         });
       }
+      
+      // Price type filter chips - add click handlers for multiple selection
+      document.querySelectorAll('.price-chip').forEach(chip => {
+        chip.addEventListener("click", () => {
+          const priceType = chip.dataset.priceType;
+          if (tempPriceTypeFilters.has(priceType)) {
+            tempPriceTypeFilters.delete(priceType);
+          } else {
+            tempPriceTypeFilters.add(priceType);
+          }
+          updateChipVisuals();
+        });
+      });
+      
+      // Workers filter chips - add click handlers for multiple selection
+      document.querySelectorAll('.workers-chip').forEach(chip => {
+        chip.addEventListener("click", () => {
+          const workers = chip.dataset.workers;
+          if (tempWorkersFilters.has(workers)) {
+            tempWorkersFilters.delete(workers);
+          } else {
+            tempWorkersFilters.add(workers);
+          }
+          updateChipVisuals();
+        });
+      });
       
       // Sort dropdown
       const sortSelect = document.getElementById("jobsSortSelect");
