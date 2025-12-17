@@ -9719,20 +9719,24 @@ async function renderJobs(reset = false) {
         modalContent.className = "modal-content";
         // Mobile: full screen with top padding for blue header, Desktop: centered modal
         if (window.innerWidth <= 768) {
-          modalContent.style.cssText = "background: white; border-radius: 0; max-width: 100%; width: 100%; min-height: 100vh; overflow-y: auto; position: relative; margin: 0; box-shadow: none; padding-top: 60px;";
+          modalContent.style.cssText = "background: white; border-radius: 0; max-width: 100%; width: 100%; min-height: 100vh; overflow-y: auto; position: relative; margin: 0; box-shadow: none; padding-top: 80px;";
         } else {
           modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 600px; width: 90%; max-height: 95vh; overflow-y: auto; position: relative; margin: 2rem auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
         }
         
-        // Close button - positioned to align with title
+        // Close button - positioned below blue header on mobile
         const closeBtn = document.createElement("button");
         closeBtn.innerHTML = "×";
-        closeBtn.style.cssText = "position: absolute; top: 0.75rem; right: 0.75rem; width: 36px; height: 36px; border-radius: 50%; background: rgba(0, 0, 0, 0.7); border: 2px solid white; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; z-index: 10001; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.3);";
+        if (window.innerWidth <= 768) {
+          closeBtn.style.cssText = "position: fixed; top: 80px; right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: rgba(0, 0, 0, 0.8); border: 2px solid white; font-size: 1.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; z-index: 10002; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.4);";
+        } else {
+          closeBtn.style.cssText = "position: absolute; top: 0.75rem; right: 0.75rem; width: 36px; height: 36px; border-radius: 50%; background: rgba(0, 0, 0, 0.7); border: 2px solid white; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; z-index: 10001; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.3);";
+        }
         closeBtn.addEventListener("click", () => {
           document.body.removeChild(modalOverlay);
           document.body.style.overflow = "";
         });
-        modalContent.appendChild(closeBtn); // Add to content so it aligns with title section
+        modalOverlay.appendChild(closeBtn); // Add to overlay on mobile so it's above everything
         
         // 1. JOB TITLE
         const header = document.createElement("div");
@@ -10087,8 +10091,7 @@ async function renderJobs(reset = false) {
           const acceptPriceBtn = document.createElement("button");
           acceptPriceBtn.type = "button";
           acceptPriceBtn.id = `acceptPrice-${job.id}`;
-          acceptPriceBtn.className = "btn btn-primary";
-          acceptPriceBtn.style.cssText = "width: 100%; padding: 0.875rem; font-size: 1rem; font-weight: 600; border-radius: 8px; text-align: center;";
+          acceptPriceBtn.style.cssText = "width: 100%; padding: 0.625rem; font-size: 0.9rem; font-weight: 500; border-radius: 8px; text-align: center; background: #10b981; color: white; border: none; cursor: pointer; transition: all 0.2s;";
           acceptPriceBtn.textContent = `Accept listed price: ${listedPriceText}`;
           acceptPriceBtn.dataset.priceOption = "accept";
           priceOptions.appendChild(acceptPriceBtn);
@@ -10097,32 +10100,29 @@ async function renderJobs(reset = false) {
           const suggestPriceBtn = document.createElement("button");
           suggestPriceBtn.type = "button";
           suggestPriceBtn.id = `suggestPrice-${job.id}`;
-          suggestPriceBtn.className = "btn btn-secondary";
-          suggestPriceBtn.style.cssText = "width: 100%; padding: 0.875rem; font-size: 1rem; font-weight: 600; border-radius: 8px; text-align: center;";
+          suggestPriceBtn.style.cssText = "width: 100%; padding: 0.625rem; font-size: 0.9rem; font-weight: 500; border-radius: 8px; text-align: center; background: #6b7280; color: white; border: none; cursor: pointer; transition: all 0.2s; opacity: 0.7;";
           suggestPriceBtn.textContent = "Suggest my own price";
           suggestPriceBtn.dataset.priceOption = "suggest";
           priceOptions.appendChild(suggestPriceBtn);
           
           // Track selected option
           let selectedPriceOption = "accept";
-          acceptPriceBtn.style.opacity = "1";
-          suggestPriceBtn.style.opacity = "0.6";
           
           acceptPriceBtn.addEventListener("click", () => {
             selectedPriceOption = "accept";
-            acceptPriceBtn.className = "btn btn-primary";
+            acceptPriceBtn.style.background = "#10b981";
             acceptPriceBtn.style.opacity = "1";
-            suggestPriceBtn.className = "btn btn-secondary";
-            suggestPriceBtn.style.opacity = "0.6";
+            suggestPriceBtn.style.background = "#6b7280";
+            suggestPriceBtn.style.opacity = "0.7";
             proposedPriceContainer.style.display = "none";
           });
           
           suggestPriceBtn.addEventListener("click", () => {
             selectedPriceOption = "suggest";
-            suggestPriceBtn.className = "btn btn-primary";
+            suggestPriceBtn.style.background = "#10b981";
             suggestPriceBtn.style.opacity = "1";
-            acceptPriceBtn.className = "btn btn-secondary";
-            acceptPriceBtn.style.opacity = "0.6";
+            acceptPriceBtn.style.background = "#6b7280";
+            acceptPriceBtn.style.opacity = "0.7";
             proposedPriceContainer.style.display = "block";
             proposedPriceInput.focus();
           });
