@@ -9724,19 +9724,15 @@ async function renderJobs(reset = false) {
           modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 600px; width: 90%; max-height: 95vh; overflow-y: auto; position: relative; margin: 2rem auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
         }
         
-        // Close button - positioned to avoid iPhone banner
+        // Close button - positioned to align with title
         const closeBtn = document.createElement("button");
         closeBtn.innerHTML = "×";
-        closeBtn.style.cssText = "position: fixed; top: 1rem; right: 1rem; width: 44px; height: 44px; border-radius: 50%; background: rgba(0, 0, 0, 0.7); border: 2px solid white; font-size: 1.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; z-index: 10001; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.3);";
-        // On mobile, position lower to avoid status bar
-        if (window.innerWidth <= 768) {
-          closeBtn.style.top = "3.5rem"; // Below iPhone status bar area
-        }
+        closeBtn.style.cssText = "position: absolute; top: 1.25rem; right: 1.25rem; width: 36px; height: 36px; border-radius: 50%; background: rgba(0, 0, 0, 0.7); border: 2px solid white; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; z-index: 10001; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.3);";
         closeBtn.addEventListener("click", () => {
           document.body.removeChild(modalOverlay);
           document.body.style.overflow = "";
         });
-        modalOverlay.appendChild(closeBtn); // Add to overlay, not content, so it's always visible
+        modalContent.appendChild(closeBtn); // Add to content so it aligns with title section
         
         // 1. JOB TITLE
         const header = document.createElement("div");
@@ -10079,7 +10075,7 @@ async function renderJobs(reset = false) {
           
           // Accept listed price option
           const acceptPriceLabel = document.createElement("label");
-          acceptPriceLabel.style.cssText = "display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;";
+          acceptPriceLabel.style.cssText = "display: flex; align-items: center; gap: 0.75rem; padding: 1rem; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; font-size: 0.95rem; transition: all 0.2s; min-height: 56px; box-sizing: border-box;";
           
           const acceptPriceRadio = document.createElement("input");
           acceptPriceRadio.type = "radio";
@@ -10087,8 +10083,12 @@ async function renderJobs(reset = false) {
           acceptPriceRadio.value = "accept";
           acceptPriceRadio.checked = true;
           acceptPriceRadio.style.accentColor = "var(--primary)";
+          acceptPriceRadio.style.flexShrink = "0";
+          acceptPriceRadio.style.width = "20px";
+          acceptPriceRadio.style.height = "20px";
           
           const acceptPriceText = document.createElement("span");
+          acceptPriceText.style.cssText = "flex: 1; word-wrap: break-word; line-height: 1.4;";
           const pricingOption = requirements.pricing_option;
           let listedPriceText = "";
           if (pricingOption === "hustlers_quote") {
@@ -10111,15 +10111,19 @@ async function renderJobs(reset = false) {
           
           // Suggest own price option
           const suggestPriceLabel = document.createElement("label");
-          suggestPriceLabel.style.cssText = "display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;";
+          suggestPriceLabel.style.cssText = "display: flex; align-items: center; gap: 0.75rem; padding: 1rem; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; font-size: 0.95rem; transition: all 0.2s; min-height: 56px; box-sizing: border-box;";
           
           const suggestPriceRadio = document.createElement("input");
           suggestPriceRadio.type = "radio";
           suggestPriceRadio.name = `priceOption-${job.id}`;
           suggestPriceRadio.value = "suggest";
           suggestPriceRadio.style.accentColor = "var(--primary)";
+          suggestPriceRadio.style.flexShrink = "0";
+          suggestPriceRadio.style.width = "20px";
+          suggestPriceRadio.style.height = "20px";
           
           const suggestPriceText = document.createElement("span");
+          suggestPriceText.style.cssText = "flex: 1; word-wrap: break-word; line-height: 1.4;";
           suggestPriceText.textContent = "Suggest my own price";
           
           suggestPriceLabel.appendChild(suggestPriceRadio);
