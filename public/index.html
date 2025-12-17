@@ -3764,7 +3764,11 @@
           </div>
 
           <div class="field">
-            <label for="jobTitle">Job title <span style="color: var(--text-muted); font-size: 0.85rem;">(max 5 words)</span></label>
+            <label for="jobTitle" style="display: flex; align-items: center; gap: 0.5rem;">
+              <span>Job title</span>
+              <span style="color: #dc2626; font-size: 0.9rem;">*</span>
+              <span style="color: var(--text-muted); font-size: 0.85rem;">(max 5 words)</span>
+            </label>
             <input id="jobTitle" type="text" placeholder="Example: Dump run from West Nashville" maxlength="60" />
             <div id="jobTitleError" style="display: none; color: #dc2626; font-size: 0.8rem; margin-top: 0.25rem;">Job title must be 5 words or less</div>
           </div>
@@ -3773,6 +3777,7 @@
           <div class="field">
             <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
               <span>📂 What do you need help with?</span>
+              <span style="color: #dc2626; font-size: 0.9rem;">*</span>
             </label>
             
             <!-- Hidden select for form submission -->
@@ -7240,10 +7245,10 @@ function showChangePasswordModal() {
       const pricingSectionContent = document.getElementById("pricingSectionContent");
       const pricingSectionIcon = document.getElementById("pricingSectionIcon");
       if (pricingSectionToggle && pricingSectionContent) {
-        // Default to open
-        pricingSectionContent.style.display = "block";
+        // Default to collapsed (clean start)
+        pricingSectionContent.style.display = "none";
         if (pricingSectionIcon) {
-          pricingSectionIcon.style.transform = "rotate(180deg)";
+          pricingSectionIcon.style.transform = "rotate(0deg)";
         }
         
         pricingSectionToggle.addEventListener("click", () => {
