@@ -15832,6 +15832,45 @@ async function renderJobs(reset = false) {
         const text = newInput.value.trim();
         if (!text) return;
         
+        // Check for contact info sharing before job starts (client-side check)
+        try {
+          // Get job status for this thread
+          const threadResponse = await fetch(`${API_BASE}/threads/${activeConversationThreadId}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('hustl_token')}` }
+          });
+          if (threadResponse.ok) {
+            const thread = await threadResponse.json();
+            if (thread.jobId) {
+              const jobResponse = await fetch(`${API_BASE}/jobs/${thread.jobId}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('hustl_token')}` }
+              });
+              if (jobResponse.ok) {
+                const job = await jobResponse.json();
+                // Block contact info if job hasn't started (no start code verified)
+                if (job.status !== 'IN_PROGRESS' && !job.startCodeVerified) {
+                  const phoneRegex = /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/;
+                  const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
+                  const contactPatterns = [
+                    /\b(text me|call me|email me|phone me|contact me|reach me|my number|my phone|my email)\b/i,
+                    /\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/,
+                    /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/
+                  ];
+                  
+                  const hasContactInfo = contactPatterns.some(pattern => pattern.test(text));
+                  
+                  if (hasContactInfo) {
+                    showToast("For your safety and payment protection, contact details are hidden until the job is accepted and started.");
+                    return;
+                  }
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Could not check job status for message restriction:", e);
+          // Continue with message send if check fails
+        }
+        
         // Disable input while sending
         newSendBtn.disabled = true;
         newInput.disabled = true;
@@ -16736,7 +16775,7 @@ async function renderJobs(reset = false) {
               alt="${user.name || 'User'}" 
               ${dataUserIdAttr}
               style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: cover; object-position: center; border-radius: 50%; display: block; ${(finalOnClick || shouldShowProfile) ? 'cursor: pointer;' : ''}"
-              onerror="this.parentElement.innerHTML='<div style=\\'width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: ${fontSize}; font-weight: 700; color: var(--primary); background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);\\'>${initial}</div>'"
+              onerror="this.onerror=null; this.style.display='none'; const fallback=this.parentElement.querySelector('.avatar-fallback') || document.createElement('div'); fallback.className='avatar-fallback'; fallback.style.cssText='width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: ${fontSize}; font-weight: 700; color: var(--primary); background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%); border-radius: 50%;'; fallback.textContent='${initial}'; if(!this.parentElement.querySelector('.avatar-fallback')) this.parentElement.appendChild(fallback);"
             />
           </div>
         `;
@@ -21569,8 +21608,26 @@ meta.textContent =
         const timeStr = jobDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
         
         if (role === 'customer') {
-          // Customer View Modal - Simplified
+          // Customer View Modal - Improved
           const hustler = job.hustler || {};
+          const requirements = job.requirements || {};
+          const payType = job.payType || 'flat';
+          const hourlyRate = parseFloat(job.hourlyRate || 0);
+          const maxHours = Number(job.estHours) || Number(requirements.maxHours) || 0;
+          const jobAmount = parseFloat(job.amount || 0);
+          
+          // Format price display
+          let priceDisplay = '';
+          if (payType === 'hourly' && hourlyRate > 0) {
+            const maxTotal = hourlyRate * maxHours;
+            if (maxHours > 0) {
+              priceDisplay = `$${hourlyRate.toFixed(0)}/hr (max ${maxHours}h = $${maxTotal.toFixed(0)})`;
+            } else {
+              priceDisplay = `$${hourlyRate.toFixed(0)}/hr`;
+            }
+          } else {
+            priceDisplay = `$${jobAmount.toFixed(0)} flat`;
+          }
           
           modalOverlay.innerHTML = `
             <div style="
@@ -21600,11 +21657,17 @@ meta.textContent =
                 z-index: 1;
               ">×</button>
               
-              <div style="padding: 2rem;">
+              <!-- Price in top corner -->
+              <div style="position: absolute; top: 1rem; left: 1rem; padding: 0.5rem 1rem; background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-radius: 8px; border: 2px solid #10b981; z-index: 1;">
+                <div style="font-size: 0.75rem; color: #047857; font-weight: 600; margin-bottom: 0.25rem;">PAY</div>
+                <div style="font-size: 1.1rem; font-weight: 700; color: #059669;">${priceDisplay}</div>
+              </div>
+              
+              <div style="padding: 2rem; padding-top: 4rem;">
                 <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 1.5rem 0; color: var(--text-main);">${job.title || 'Untitled Job'}</h2>
                 
                 <!-- Accepted Hustler Section -->
-                <div style="padding: 1.5rem; background: #f0fdf4; border-radius: 12px; margin-bottom: 2rem; border: 2px solid #10b981;">
+                <div style="padding: 1.5rem; background: #f0fdf4; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #10b981;">
                   <div style="font-size: 0.85rem; color: #059669; margin-bottom: 0.75rem; font-weight: 600;">✅ HUSTLER ACCEPTED</div>
                   <div style="display: flex; gap: 1rem; align-items: center;">
                     ${renderUserAvatar(hustler, 60, {
@@ -21617,12 +21680,12 @@ meta.textContent =
                   </div>
                 </div>
                 
-                <!-- Verification Codes Section -->
+                <!-- Start Code Section - Prominent for Customer to Share -->
                 ${job.startCode ? `
-                  <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
-                    <div style="font-weight: 700; color: #92400e; margin-bottom: 0.75rem;">🔐 Start Code</div>
-                    <div style="font-size: 2rem; font-weight: 700; letter-spacing: 0.3em; color: #92400e; text-align: center; padding: 1rem; background: white; border-radius: 8px; font-family: 'Courier New', monospace; margin-bottom: 0.75rem;">${job.startCode}</div>
-                    <div style="font-size: 0.85rem; color: #92400e;">${job.startCodeVerified ? '✅ Verified by hustler' : '⏳ Waiting for hustler to verify'}</div>
+                  <div style="padding: 1.5rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; margin-bottom: 1.5rem; border: 3px solid #f59e0b; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);">
+                    <div style="font-weight: 700; color: #92400e; margin-bottom: 0.5rem; font-size: 1rem;">🔐 Start Code - Give this to your hustler</div>
+                    <div style="font-size: 2.5rem; font-weight: 700; letter-spacing: 0.4em; color: #92400e; text-align: center; padding: 1.25rem; background: white; border-radius: 10px; font-family: 'Courier New', monospace; margin-bottom: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">${job.startCode}</div>
+                    <div style="font-size: 0.85rem; color: #92400e; text-align: center; font-weight: 500;">${job.startCodeVerified ? '✅ Verified by hustler - Job started!' : '⏳ Share this code with your hustler to start the job'}</div>
                   </div>
                 ` : ''}
                 
@@ -21642,6 +21705,15 @@ meta.textContent =
                 ` : job.status === 'COMPLETED_BY_HUSTLER' && !job.completionCode ? `
                   <div style="padding: 1rem; background: #fef3c7; border-radius: 8px; margin-bottom: 1.5rem;">
                     <div style="font-weight: 600; color: #92400e;">⏳ Waiting for completion code from hustler</div>
+                  </div>
+                ` : ''}
+                
+                <!-- Price Adjustment Section (if job not started) -->
+                ${(job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified ? `
+                  <div style="padding: 1.25rem; background: #f8f9fa; border-radius: 12px; margin-bottom: 1.5rem; border: 1px solid #e5e7eb;">
+                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.75rem; font-size: 0.95rem;">💰 Adjust Price (if needed)</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.4;">If you need to change the price before the job starts, you can adjust it here. The hustler will be notified.</div>
+                    <button class="btn btn-ghost adjustPriceBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.75rem; font-weight: 600; border-color: #3b82f6; color: #3b82f6;">✏️ Adjust Price</button>
                   </div>
                 ` : ''}
                 
@@ -21866,6 +21938,93 @@ meta.textContent =
                 showToast('Error deleting job. Please try again.');
               }
             }
+          });
+          
+          modalOverlay.querySelector('.adjustPriceBtn')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const payType = job.payType || 'flat';
+            const hourlyRate = parseFloat(job.hourlyRate || 0);
+            const maxHours = Number(job.estHours) || Number(job.requirements?.maxHours) || 0;
+            const jobAmount = parseFloat(job.amount || 0);
+            
+            // Open price adjustment modal
+            const adjustModal = document.createElement('div');
+            adjustModal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 1rem;';
+            adjustModal.innerHTML = `
+              <div style="background: white; border-radius: 16px; max-width: 500px; width: 100%; padding: 2rem; position: relative;">
+                <button class="closeAdjustModal" style="position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; border-radius: 50%; border: none; background: #f3f4f6; cursor: pointer; font-size: 1.25rem;">×</button>
+                <h3 style="font-size: 1.25rem; font-weight: 700; margin: 0 0 1rem 0;">Adjust Job Price</h3>
+                <div style="margin-bottom: 1.5rem;">
+                  <label style="display: block; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">New Price</label>
+                  ${payType === 'hourly' ? `
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem;">
+                      <div>
+                        <input type="number" id="newHourlyRate" placeholder="Hourly rate" min="1" step="0.01" style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem;" value="${hourlyRate || ''}">
+                      </div>
+                      <div>
+                        <input type="number" id="newMaxHours" placeholder="Max hours" min="1" step="1" style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem;" value="${maxHours || ''}">
+                      </div>
+                    </div>
+                  ` : `
+                    <input type="number" id="newAmount" placeholder="Total amount" min="1" step="0.01" style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem;" value="${jobAmount || ''}">
+                  `}
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                  <button class="btn btn-primary savePriceBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem; font-weight: 600;">Save Changes</button>
+                  <button class="btn btn-ghost cancelPriceBtn" style="flex: 1; padding: 0.75rem;">Cancel</button>
+                </div>
+              </div>
+            `;
+            document.body.appendChild(adjustModal);
+            
+            adjustModal.querySelector('.closeAdjustModal')?.addEventListener('click', () => {
+              document.body.removeChild(adjustModal);
+            });
+            adjustModal.querySelector('.cancelPriceBtn')?.addEventListener('click', () => {
+              document.body.removeChild(adjustModal);
+            });
+            adjustModal.querySelector('.savePriceBtn')?.addEventListener('click', async () => {
+              try {
+                const token = localStorage.getItem('hustl_token');
+                const updateData = {};
+                if (payType === 'hourly') {
+                  const newRate = parseFloat(document.getElementById('newHourlyRate')?.value);
+                  const newHours = parseInt(document.getElementById('newMaxHours')?.value);
+                  if (newRate && newRate > 0) updateData.hourlyRate = newRate;
+                  if (newHours && newHours > 0) updateData.estHours = newHours;
+                } else {
+                  const newAmount = parseFloat(document.getElementById('newAmount')?.value);
+                  if (newAmount && newAmount > 0) updateData.amount = newAmount;
+                }
+                
+                if (Object.keys(updateData).length === 0) {
+                  showToast('Please enter a valid price');
+                  return;
+                }
+                
+                const response = await fetch(`${API_BASE}/jobs/${job.id}`, {
+                  method: 'PATCH',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify(updateData)
+                });
+                
+                if (response.ok) {
+                  showToast('Price updated successfully');
+                  document.body.removeChild(adjustModal);
+                  document.body.removeChild(modalOverlay);
+                  loadActiveJobs();
+                  setTimeout(() => showActiveJobModal(job.id, 'customer'), 300);
+                } else {
+                  throw new Error('Failed to update price');
+                }
+              } catch (error) {
+                console.error('Error updating price:', error);
+                showToast('Error updating price. Please try again.');
+              }
+            });
           });
           
           modalOverlay.querySelector('.verifyCompletionBtn')?.addEventListener('click', async () => {

@@ -249,19 +249,31 @@ router.post('/:id/messages', [
       });
     }
     
-    // Block phone/email patterns before assignment
+    // Block phone/email patterns before job starts (for payment protection)
     const job = await prisma.job.findUnique({
       where: { id: thread.jobId },
-      select: { status: true },
+      select: { 
+        status: true,
+        startCodeVerified: true 
+      },
     });
 
-    if (job.status === 'OPEN' || job.status === 'REQUESTED') {
+    // Block contact info if job hasn't started (no start code verified)
+    // This ensures payment protection - all communication stays in-app until job officially starts
+    if (job && job.status !== 'IN_PROGRESS' && !job.startCodeVerified) {
       const phoneRegex = /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/;
       const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
+      const contactPatterns = [
+        /\b(text me|call me|email me|phone me|contact me|reach me|my number|my phone|my email)\b/i,
+        phoneRegex,
+        emailRegex
+      ];
       
-      if (phoneRegex.test(body) || emailRegex.test(body)) {
+      const hasContactInfo = contactPatterns.some(pattern => pattern.test(body));
+      
+      if (hasContactInfo) {
         return res.status(400).json({ 
-          error: 'Contact information cannot be shared before job assignment' 
+          error: 'For your safety and payment protection, contact details are hidden until the job is accepted and started.' 
         });
       }
     }
