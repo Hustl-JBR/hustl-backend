@@ -9996,7 +9996,7 @@ async function renderJobs(reset = false) {
           modalContent.appendChild(notesSection);
         }
         
-        // 9. APPLY AREA (with why you're a good fit)
+        // 9. APPLY AREA (with why you're a good fit) - Always show for hustlers
         const actionsSection = document.createElement("div");
         actionsSection.style.cssText = "padding: 1.25rem; background: #f8f9fa; position: sticky; bottom: 0; border-top: 2px solid #e5e7eb;";
         
@@ -10004,6 +10004,7 @@ async function renderJobs(reset = false) {
         const isHustler = user && user.roles && user.roles.includes('HUSTLER');
         const isOwner = user && job.customerId === user.id;
         
+        // Show apply area for hustlers (even if not logged in, show login prompt)
         if (isHustler && !isOwner) {
           // Why you're a good fit textarea
           const whyFitLabel = document.createElement("label");
@@ -10050,6 +10051,23 @@ async function renderJobs(reset = false) {
             showApplyJobModal(job);
           });
           actionsSection.appendChild(applyBtn);
+        } else if (!user) {
+          // Not logged in - show login prompt
+          const loginPrompt = document.createElement("div");
+          loginPrompt.style.cssText = "text-align: center; margin-bottom: 1rem;";
+          loginPrompt.innerHTML = '<div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.75rem;">Please log in to apply for this job</div>';
+          actionsSection.appendChild(loginPrompt);
+          
+          const loginBtn = document.createElement("button");
+          loginBtn.className = "btn btn-primary";
+          loginBtn.textContent = "Log In to Apply";
+          loginBtn.style.cssText = "width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 700; border-radius: 12px;";
+          loginBtn.addEventListener("click", () => {
+            document.body.removeChild(modalOverlay);
+            document.body.style.overflow = "";
+            setView("login");
+          });
+          actionsSection.appendChild(loginBtn);
         } else {
           const closeBtn2 = document.createElement("button");
           closeBtn2.className = "btn btn-ghost";
@@ -10068,9 +10086,9 @@ async function renderJobs(reset = false) {
         document.body.appendChild(modalOverlay);
         document.body.style.overflow = "hidden";
         
-        // Initialize map after modal is added to DOM
+        // Initialize map after modal is added to DOM (pass user location)
         setTimeout(() => {
-          initJobDetailMap(job, mapContainer.id);
+          initJobDetailMap(job, mapContainer.id, currentUserLocation);
         }, 100);
         
       } catch (error) {
@@ -10080,7 +10098,7 @@ async function renderJobs(reset = false) {
     }
     
     // Initialize map for job detail modal
-    function initJobDetailMap(job, containerId) {
+    function initJobDetailMap(job, containerId, userLoc = null) {
       const container = document.getElementById(containerId);
       if (!container) return;
       
@@ -10106,11 +10124,23 @@ async function renderJobs(reset = false) {
       try {
         mapboxgl.accessToken = mapboxToken;
         
+        // Center map between job and user location if both available
+        let centerLng = lng;
+        let centerLat = lat;
+        let zoom = 14;
+        
+        if (userLoc && userLoc.lat && userLoc.lng) {
+          // Center between both points
+          centerLng = (lng + userLoc.lng) / 2;
+          centerLat = (lat + userLoc.lat) / 2;
+          zoom = 13; // Zoom out a bit to show both
+        }
+        
         const map = new mapboxgl.Map({
           container: containerId,
           style: 'mapbox://styles/mapbox/streets-v12',
-          center: [lng, lat],
-          zoom: 14,
+          center: [centerLng, centerLat],
+          zoom: zoom,
           interactive: true
         });
         
@@ -10119,10 +10149,16 @@ async function renderJobs(reset = false) {
           .setLngLat([lng, lat])
           .addTo(map);
         
-        // Add user's location marker (red) if available
-        if (typeof userLocation !== 'undefined' && userLocation && userLocation.lat && userLocation.lng) {
-          new mapboxgl.Marker({ color: '#dc2626' })
-            .setLngLat([userLocation.lng, userLocation.lat])
+        // Add user's location marker (red person icon) if available
+        if (userLoc && userLoc.lat && userLoc.lng) {
+          // Create a custom person icon marker (pin shape with person emoji)
+          const personIcon = document.createElement('div');
+          personIcon.style.cssText = 'width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 50%; border: 3px solid #dc2626; box-shadow: 0 2px 6px rgba(0,0,0,0.3);';
+          personIcon.innerHTML = '👤';
+          personIcon.style.fontSize = '24px';
+          
+          new mapboxgl.Marker({ element: personIcon, anchor: 'center' })
+            .setLngLat([userLoc.lng, userLoc.lat])
             .addTo(map);
         }
         
