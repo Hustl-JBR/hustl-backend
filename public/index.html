@@ -9760,11 +9760,11 @@ async function renderJobs(reset = false) {
         
         // Create one box for all job details
         const jobDetailsBox = document.createElement("div");
-        jobDetailsBox.style.cssText = "padding: 1.25rem; margin-bottom: 1.5rem; background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);";
+        jobDetailsBox.style.cssText = "padding: 1rem; margin-bottom: 1rem; background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);";
         
         // 1. JOB TITLE
         const header = document.createElement("div");
-        header.style.cssText = "margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #e5e7eb;";
+        header.style.cssText = "margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb;";
         
         const title = document.createElement("h1");
         title.style.cssText = "margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--text-main); line-height: 1.3;";
@@ -9775,7 +9775,7 @@ async function renderJobs(reset = false) {
         // 2. CUSTOMER PROFILE (who posted) - at top
         if (job.customer) {
           const customerSection = document.createElement("div");
-          customerSection.style.cssText = "margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 0.75rem;";
+          customerSection.style.cssText = "margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 0.75rem;";
           
           const profilePic = document.createElement("img");
           profilePic.style.cssText = "width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); flex-shrink: 0; cursor: pointer;";
@@ -9850,14 +9850,14 @@ async function renderJobs(reset = false) {
         const catName = categoryNames[jobCategory] || job.category || 'Job';
         
         const categorySection = document.createElement("div");
-        categorySection.style.cssText = "padding: 0.875rem 1rem; border-bottom: 1px solid #e5e7eb;";
+        categorySection.style.cssText = "margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb;";
         
         const categoryLabel = document.createElement("div");
-        categoryLabel.style.cssText = "font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.375rem;";
+        categoryLabel.style.cssText = "font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;";
         categoryLabel.textContent = "Job Category";
         
         const category = document.createElement("div");
-        category.style.cssText = "font-size: 1rem; color: var(--text-main); font-weight: 600;";
+        category.style.cssText = "font-size: 0.95rem; color: var(--text-main); font-weight: 600;";
         category.textContent = `${catIcon} ${catName}`;
         
         categorySection.appendChild(categoryLabel);
@@ -9866,7 +9866,7 @@ async function renderJobs(reset = false) {
         
         // 4. DESCRIPTION
         const descriptionSection = document.createElement("div");
-        descriptionSection.style.cssText = "margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #e5e7eb;";
+        descriptionSection.style.cssText = "margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb;";
         
         const descTitle = document.createElement("h2");
         descTitle.style.cssText = "margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 700; color: var(--text-main);";
@@ -9877,14 +9877,14 @@ async function renderJobs(reset = false) {
         description.style.cssText = "font-size: 0.95rem; color: var(--text-main); line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;";
         description.textContent = job.description || "No description provided.";
         descriptionSection.appendChild(description);
-        modalContent.appendChild(descriptionSection);
+        jobDetailsBox.appendChild(descriptionSection);
         
         // 5. PRICING - Hourly Pay Breakdown
         const pricingSection = document.createElement("div");
-        pricingSection.style.cssText = "padding: 0.875rem 1rem; border-bottom: 1px solid #e5e7eb; background: #f8f9fa;";
+        pricingSection.style.cssText = "margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; background: #f8f9fa; padding: 0.75rem; border-radius: 8px;";
         
         const pricingTitle = document.createElement("h2");
-        pricingTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 700; color: var(--text-main);";
+        pricingTitle.style.cssText = "margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 700; color: var(--text-main);";
         pricingTitle.textContent = "💰 Pricing";
         pricingSection.appendChild(pricingTitle);
         
@@ -9906,19 +9906,19 @@ async function renderJobs(reset = false) {
           
           // Main pricing display - clear and prominent
           const mainPriceRow = document.createElement("div");
-          mainPriceRow.style.cssText = "padding: 0.75rem; background: white; border-radius: 8px; border: 2px solid var(--success);";
+          mainPriceRow.style.cssText = "padding: 0.625rem; background: white; border-radius: 6px; border: 2px solid var(--success);";
           const mainPriceLabel = document.createElement("div");
-          mainPriceLabel.style.cssText = "font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem; font-weight: 600;";
+          mainPriceLabel.style.cssText = "font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem; font-weight: 600;";
           mainPriceLabel.textContent = "PAY RATE";
           const mainPriceValue = document.createElement("div");
-          mainPriceValue.style.cssText = "font-size: 1.5rem; font-weight: 700; color: var(--success); line-height: 1.2; margin-bottom: 0.5rem;";
+          mainPriceValue.style.cssText = "font-size: 1.25rem; font-weight: 700; color: var(--success); line-height: 1.2; margin-bottom: 0.375rem;";
           if (maxHours > 0) {
             mainPriceValue.textContent = `$${hourlyRate.toFixed(0)}/hr (maximum ${maxHours} hours = $${maxTotal.toFixed(0)} total)`;
           } else {
             mainPriceValue.textContent = `$${hourlyRate.toFixed(0)}/hr`;
           }
           const maxNote = document.createElement("div");
-          maxNote.style.cssText = "font-size: 0.85rem; color: var(--text-muted); font-style: italic; line-height: 1.3;";
+          maxNote.style.cssText = "font-size: 0.75rem; color: var(--text-muted); font-style: italic; line-height: 1.2;";
           maxNote.textContent = "Note: This is the maximum you're willing to pay. You may only pay for actual hours worked (up to this maximum).";
           mainPriceRow.appendChild(mainPriceLabel);
           mainPriceRow.appendChild(mainPriceValue);
@@ -9966,12 +9966,12 @@ async function renderJobs(reset = false) {
           
           // Main pricing display - clear and prominent
           const mainPriceRow = document.createElement("div");
-          mainPriceRow.style.cssText = "padding: 0.75rem; background: white; border-radius: 8px; border: 2px solid var(--success);";
+          mainPriceRow.style.cssText = "padding: 0.625rem; background: white; border-radius: 6px; border: 2px solid var(--success);";
           const mainPriceLabel = document.createElement("div");
-          mainPriceLabel.style.cssText = "font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem; font-weight: 600;";
+          mainPriceLabel.style.cssText = "font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem; font-weight: 600;";
           mainPriceLabel.textContent = "PAY RATE";
           const mainPriceValue = document.createElement("div");
-          mainPriceValue.style.cssText = "font-size: 1.5rem; font-weight: 700; color: var(--success); line-height: 1.2;";
+          mainPriceValue.style.cssText = "font-size: 1.25rem; font-weight: 700; color: var(--success); line-height: 1.2;";
           mainPriceValue.textContent = `$${total.toFixed(0)} total (flat rate)`;
           mainPriceRow.appendChild(mainPriceLabel);
           mainPriceRow.appendChild(mainPriceValue);
@@ -10000,10 +10000,10 @@ async function renderJobs(reset = false) {
         
         // 6. TOOLS/EQUIPMENT NEEDED (always show, even if empty)
         const toolsSection = document.createElement("div");
-        toolsSection.style.cssText = "margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #e5e7eb;";
+        toolsSection.style.cssText = "margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb;";
         
         const toolsTitle = document.createElement("h2");
-        toolsTitle.style.cssText = "margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 700; color: var(--text-main);";
+        toolsTitle.style.cssText = "margin: 0 0 0.375rem 0; font-size: 0.95rem; font-weight: 700; color: var(--text-main);";
         toolsTitle.textContent = "🔧 Tools / Equipment Needed";
         toolsSection.appendChild(toolsTitle);
         
@@ -10040,22 +10040,22 @@ async function renderJobs(reset = false) {
         
         // 7. LOCATION MAP
         const locationSection = document.createElement("div");
-        locationSection.style.cssText = "margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #e5e7eb;";
+        locationSection.style.cssText = "margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb;";
         
         const locTitle = document.createElement("h2");
-        locTitle.style.cssText = "margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 700; color: var(--text-main);";
+        locTitle.style.cssText = "margin: 0 0 0.375rem 0; font-size: 0.95rem; font-weight: 700; color: var(--text-main);";
         locTitle.textContent = "📍 Location";
         locationSection.appendChild(locTitle);
         
         const locNote = document.createElement("div");
-        locNote.style.cssText = "font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem; padding: 0.5rem; background: #f3f4f6; border-radius: 6px; line-height: 1.4;";
+        locNote.style.cssText = "font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem; padding: 0.375rem; background: #f3f4f6; border-radius: 6px; line-height: 1.3;";
         locNote.textContent = "This is an approximate location. Exact address will be shared after you're accepted.";
         locationSection.appendChild(locNote);
         
         // Map container
         const mapContainer = document.createElement("div");
         mapContainer.id = `jobDetailMap-${job.id}`;
-        mapContainer.style.cssText = "width: 100%; height: 160px; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb;";
+        mapContainer.style.cssText = "width: 100%; height: 140px; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb;";
         locationSection.appendChild(mapContainer);
         jobDetailsBox.appendChild(locationSection);
         
@@ -22492,16 +22492,16 @@ meta.textContent =
                           
                           ${hasSuggestedPrice ? `
                           <!-- Suggested New Price from Hustler - Yellow -->
-                          <div style="padding: 1.5rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; border: 3px solid #f59e0b; margin-bottom: 1.25rem; text-align: center; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);">
-                            <div style="font-size: 0.9rem; color: #92400e; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: 0.5px; text-transform: uppercase;">💡 Suggested New Price from Hustler</div>
-                            <div style="font-size: 2.5rem; font-weight: 700; color: #b45309; line-height: 1;">${suggestedPriceDisplay}</div>
-                            <div style="font-size: 0.8rem; color: #92400e; margin-top: 0.5rem; font-style: italic;">If you accept this hustler, this becomes the official price</div>
+                          <div style="padding: 1rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 2px solid #f59e0b; margin-bottom: 1rem; text-align: center; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);">
+                            <div style="font-size: 0.85rem; color: #92400e; font-weight: 700; margin-bottom: 0.375rem; letter-spacing: 0.5px; text-transform: uppercase;">💡 Suggested New Price from Hustler</div>
+                            <div style="font-size: 1.75rem; font-weight: 700; color: #b45309; line-height: 1.2;">${suggestedPriceDisplay}</div>
+                            <div style="font-size: 0.75rem; color: #92400e; margin-top: 0.375rem; font-style: italic;">If you accept this hustler, this becomes the official price</div>
                           </div>
                           ` : `
                           <!-- No Price Suggestion - Show Original Price -->
-                          <div style="padding: 1.5rem; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 16px; border: 3px solid #10b981; margin-bottom: 1.25rem; text-align: center; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);">
-                            <div style="font-size: 1rem; color: #047857; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: 0.5px;">Accepted Your Price</div>
-                            <div style="font-size: 2.5rem; font-weight: 700; color: #059669; line-height: 1;">${customerPriceDisplay}</div>
+                          <div style="padding: 1rem; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 12px; border: 2px solid #10b981; margin-bottom: 1rem; text-align: center; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);">
+                            <div style="font-size: 0.9rem; color: #047857; font-weight: 700; margin-bottom: 0.375rem; letter-spacing: 0.5px;">Hustler Accepted Your Price</div>
+                            <div style="font-size: 1.75rem; font-weight: 700; color: #059669; line-height: 1.2;">${customerPriceDisplay}</div>
                           </div>
                           `}
                           
