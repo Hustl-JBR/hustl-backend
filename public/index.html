@@ -3906,7 +3906,7 @@
                     <span style="font-size: 1.25rem; flex-shrink: 0;">🚛</span>
                     <div>
                       <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.25rem;">Truck / Vehicle Needed</div>
-                      <div style="font-size: 0.9rem; color: #1e3a8a; line-height: 1.5;">Do they need to rent a U-Haul or bring a big truck? What size? (e.g., "Need U-Haul 15ft truck", "Pickup truck required")</div>
+                      <div style="font-size: 0.9rem; color: #1e3a8a; line-height: 1.5;">Do they need to rent a U-Haul or bring a big truck? What size? (e.g., "Need U-Haul 15ft truck", "Pickup truck required") Will you give money for the U-Haul or supply it yourself?</div>
                     </div>
                   </div>
                   
@@ -7723,6 +7723,16 @@ function showChangePasswordModal() {
           }
           const category = document.getElementById("jobCategory").value;
           const desc = document.getElementById("jobDescription").value.trim();
+          
+          // Content moderation - check for prohibited content
+          const allContent = `${title} ${desc} ${notes || ''}`;
+          const moderationResult = checkContentModeration(allContent);
+          
+          if (!moderationResult.allowed) {
+            const violationText = moderationResult.violations.join(', ');
+            showToast(`❌ Your post contains prohibited content: ${violationText}. Please remove this content and try again. All payments must go through Hustl for your protection.`, 8000);
+            return;
+          }
           // Pricing option
           const pricingOption = document.getElementById("pricingOption")?.value || "set_price";
           
@@ -8289,6 +8299,35 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+// Content moderation - check for prohibited content
+function checkContentModeration(text) {
+  if (!text || typeof text !== 'string') return { allowed: true, violations: [] };
+  
+  const contentToCheck = text.toLowerCase();
+  const prohibitedPatterns = [
+    // Sexual content
+    { pattern: /\b(sex|sexual|hookup|escort|prostitute|nude|naked|porn|xxx|adult services)\b/i, category: 'sexual content' },
+    // Drug-related
+    { pattern: /\b(drug|marijuana|weed|cocaine|heroin|meth|pills|prescription|illegal substance|dealer)\b/i, category: 'drug-related content' },
+    // Illegal activities
+    { pattern: /\b(illegal|steal|theft|robbery|fraud|scam|counterfeit|black market)\b/i, category: 'illegal activities' },
+    // Off-app payment
+    { pattern: /\b(cash only|venmo|cashapp|zelle|paypal|pay outside|off app|direct payment|avoid fee|skip fee|no fee|pay me directly|pay outside app|pay cash|under the table|bypass platform)\b/i, category: 'off-app payment requests' }
+  ];
+  
+  const violations = [];
+  prohibitedPatterns.forEach(({ pattern, category }) => {
+    if (pattern.test(contentToCheck)) {
+      violations.push(category);
+    }
+  });
+  
+  return {
+    allowed: violations.length === 0,
+    violations: [...new Set(violations)] // Remove duplicates
+  };
 }
 
 // Format distance for display

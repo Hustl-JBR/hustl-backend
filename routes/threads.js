@@ -223,8 +223,31 @@ router.post('/:id/messages', [
       return res.status(429).json({ error: 'Rate limit exceeded' });
     }
 
-    // Basic profanity check (simple - can be enhanced)
+    // Content moderation - check for prohibited content
     const { body, attachments = [] } = req.body;
+    const contentToCheck = body.toLowerCase();
+    
+    // Prohibited content patterns
+    const prohibitedPatterns = [
+      { pattern: /\b(sex|sexual|hookup|escort|prostitute|nude|naked|porn|xxx|adult services)\b/i, category: 'sexual content' },
+      { pattern: /\b(drug|marijuana|weed|cocaine|heroin|meth|pills|prescription|illegal substance|dealer)\b/i, category: 'drug-related content' },
+      { pattern: /\b(illegal|steal|theft|robbery|fraud|scam|counterfeit|black market)\b/i, category: 'illegal activities' },
+      { pattern: /\b(cash only|venmo|cashapp|zelle|paypal|pay outside|off app|direct payment|avoid fee|skip fee|no fee|pay me directly|pay outside app|pay cash|under the table|bypass platform)\b/i, category: 'off-app payment requests' }
+    ];
+    
+    const violations = [];
+    prohibitedPatterns.forEach(({ pattern, category }) => {
+      if (pattern.test(contentToCheck)) {
+        violations.push(category);
+      }
+    });
+    
+    if (violations.length > 0) {
+      const violationText = [...new Set(violations)].join(', ');
+      return res.status(400).json({ 
+        error: `Your message contains prohibited content: ${violationText}. Please remove this content and try again. All payments must go through Hustl for your protection.` 
+      });
+    }
     
     // Block phone/email patterns before assignment
     const job = await prisma.job.findUnique({
