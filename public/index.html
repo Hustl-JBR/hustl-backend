@@ -10366,6 +10366,246 @@ async function renderJobs(reset = false) {
     
     // Function is already assigned to window.openJobDetails above
 
+    // Show Hustler Profile Popup - lightweight quick-view
+    window.showHustlerProfilePopup = async function showHustlerProfilePopup(hustlerId) {
+      if (!hustlerId) {
+        console.error("No hustler ID provided");
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("hustl_token");
+        
+        // Fetch user profile
+        const profileResponse = await fetch(`${API_BASE}/users/${hustlerId}`, {
+          headers: token ? { "Authorization": `Bearer ${token}` } : {}
+        });
+        
+        if (!profileResponse.ok) {
+          showToast("Unable to load profile.");
+          return;
+        }
+        
+        const profile = await profileResponse.json();
+        
+        // Fetch latest 3 reviews
+        const reviewsResponse = await fetch(`${API_BASE}/reviews?userId=${hustlerId}&limit=3&offset=0`, {
+          headers: token ? { "Authorization": `Bearer ${token}` } : {}
+        });
+        
+        let reviews = [];
+        let totalReviews = 0;
+        if (reviewsResponse.ok) {
+          const reviewsData = await reviewsResponse.json();
+          reviews = reviewsData.reviews || [];
+          totalReviews = reviewsData.total || 0;
+        }
+        
+        // Create modal overlay
+        const modalOverlay = document.createElement("div");
+        modalOverlay.id = "hustlerProfileModal";
+        modalOverlay.className = "modal-overlay";
+        modalOverlay.style.cssText = "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto;";
+        
+        const modalContent = document.createElement("div");
+        modalContent.className = "modal-content";
+        if (window.innerWidth <= 768) {
+          modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 100%; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
+        } else {
+          modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
+        }
+        
+        // Close button
+        const closeBtn = document.createElement("button");
+        closeBtn.innerHTML = "×";
+        closeBtn.style.cssText = "position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; border-radius: 50%; background: #f3f4f6; border: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6b7280; z-index: 10;";
+        closeBtn.addEventListener("click", () => {
+          document.body.removeChild(modalOverlay);
+          document.body.style.overflow = "";
+        });
+        modalContent.appendChild(closeBtn);
+        
+        // Profile Picture
+        const profileSection = document.createElement("div");
+        profileSection.style.cssText = "padding: 2rem 1.5rem 1.5rem; text-align: center; border-bottom: 1px solid #e5e7eb;";
+        
+        const profilePic = document.createElement("img");
+        profilePic.style.cssText = "width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); margin: 0 auto 1rem; display: block;";
+        profilePic.src = profile.photoUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(profile.name || "User") + "&background=6366f1&color=fff&size=128";
+        profilePic.alt = profile.name || "Profile";
+        profilePic.onerror = function() {
+          this.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(profile.name || "User") + "&background=6366f1&color=fff&size=128";
+        };
+        profileSection.appendChild(profilePic);
+        
+        // Name
+        const name = document.createElement("h2");
+        name.style.cssText = "margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main);";
+        name.textContent = profile.name || "Hustler";
+        profileSection.appendChild(name);
+        
+        // Average Rating
+        if (profile.ratingAvg && profile.ratingCount > 0) {
+          const rating = document.createElement("div");
+          rating.style.cssText = "display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem;";
+          const stars = "⭐".repeat(Math.round(profile.ratingAvg));
+          rating.innerHTML = `<span style="font-size: 1.1rem;">${stars}</span> <span style="font-size: 1rem; font-weight: 600; color: var(--text-main);">${profile.ratingAvg.toFixed(1)}</span> <span style="font-size: 0.9rem; color: var(--text-muted);">(${profile.ratingCount})</span>`;
+          profileSection.appendChild(rating);
+        }
+        
+        modalContent.appendChild(profileSection);
+        
+        // Bio
+        if (profile.bio) {
+          const bioSection = document.createElement("div");
+          bioSection.style.cssText = "padding: 1.5rem; border-bottom: 1px solid #e5e7eb;";
+          const bioTitle = document.createElement("h3");
+          bioTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 600; color: var(--text-main);";
+          bioTitle.textContent = "About";
+          bioSection.appendChild(bioTitle);
+          const bio = document.createElement("p");
+          bio.style.cssText = "margin: 0; font-size: 0.95rem; color: var(--text-main); line-height: 1.6;";
+          bio.textContent = profile.bio;
+          bioSection.appendChild(bio);
+          modalContent.appendChild(bioSection);
+        }
+        
+        // Gender
+        if (profile.gender) {
+          const genderSection = document.createElement("div");
+          genderSection.style.cssText = "padding: 1rem 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 0.5rem;";
+          const genderLabel = document.createElement("span");
+          genderLabel.style.cssText = "font-size: 0.9rem; color: var(--text-muted);";
+          genderLabel.textContent = "Gender:";
+          const genderValue = document.createElement("span");
+          genderValue.style.cssText = "font-size: 0.95rem; color: var(--text-main); font-weight: 500;";
+          genderValue.textContent = profile.gender;
+          genderSection.appendChild(genderLabel);
+          genderSection.appendChild(genderValue);
+          modalContent.appendChild(genderSection);
+        }
+        
+        // Tools (if available in future)
+        if (profile.tools && Array.isArray(profile.tools) && profile.tools.length > 0) {
+          const toolsSection = document.createElement("div");
+          toolsSection.style.cssText = "padding: 1.5rem; border-bottom: 1px solid #e5e7eb;";
+          const toolsTitle = document.createElement("h3");
+          toolsTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 600; color: var(--text-main);";
+          toolsTitle.textContent = "Tools Available";
+          toolsSection.appendChild(toolsTitle);
+          const toolsList = document.createElement("div");
+          toolsList.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.5rem;";
+          profile.tools.forEach(tool => {
+            const toolChip = document.createElement("span");
+            toolChip.style.cssText = "padding: 0.5rem 0.75rem; background: #f3f4f6; border-radius: 8px; font-size: 0.9rem; color: var(--text-main);";
+            toolChip.textContent = tool;
+            toolsList.appendChild(toolChip);
+          });
+          toolsSection.appendChild(toolsList);
+          modalContent.appendChild(toolsSection);
+        }
+        
+        // Reviews Section
+        const reviewsSection = document.createElement("div");
+        reviewsSection.style.cssText = "padding: 1.5rem;";
+        const reviewsTitle = document.createElement("h3");
+        reviewsTitle.style.cssText = "margin: 0 0 1rem 0; font-size: 1rem; font-weight: 600; color: var(--text-main);";
+        reviewsTitle.textContent = `Reviews (${totalReviews})`;
+        reviewsSection.appendChild(reviewsTitle);
+        
+        if (reviews.length > 0) {
+          const reviewsList = document.createElement("div");
+          reviewsList.style.cssText = "display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem;";
+          
+          reviews.forEach(review => {
+            const reviewItem = document.createElement("div");
+            reviewItem.style.cssText = "padding: 1rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;";
+            
+            // Reviewer info
+            const reviewerInfo = document.createElement("div");
+            reviewerInfo.style.cssText = "display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;";
+            
+            const reviewerPic = document.createElement("img");
+            reviewerPic.style.cssText = "width: 32px; height: 32px; border-radius: 50%; object-fit: cover;";
+            reviewerPic.src = review.reviewer?.photoUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(review.reviewer?.name || "User") + "&background=6366f1&color=fff&size=128";
+            reviewerPic.alt = review.reviewer?.name || "Reviewer";
+            
+            const reviewerName = document.createElement("span");
+            reviewerName.style.cssText = "font-size: 0.9rem; font-weight: 600; color: var(--text-main);";
+            reviewerName.textContent = review.reviewer?.name || "Anonymous";
+            
+            const reviewStars = document.createElement("span");
+            reviewStars.style.cssText = "margin-left: auto; font-size: 0.9rem;";
+            reviewStars.textContent = "⭐".repeat(review.rating || 5);
+            
+            reviewerInfo.appendChild(reviewerPic);
+            reviewerInfo.appendChild(reviewerName);
+            reviewerInfo.appendChild(reviewStars);
+            reviewItem.appendChild(reviewerInfo);
+            
+            // Review text
+            if (review.comment) {
+              const reviewText = document.createElement("p");
+              reviewText.style.cssText = "margin: 0; font-size: 0.9rem; color: var(--text-main); line-height: 1.5;";
+              reviewText.textContent = review.comment;
+              reviewItem.appendChild(reviewText);
+            }
+            
+            // Job info
+            if (review.job) {
+              const jobInfo = document.createElement("div");
+              jobInfo.style.cssText = "margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
+              jobInfo.textContent = review.job.title || "Job";
+              reviewItem.appendChild(jobInfo);
+            }
+            
+            reviewsList.appendChild(reviewItem);
+          });
+          
+          reviewsSection.appendChild(reviewsList);
+        } else {
+          const noReviews = document.createElement("div");
+          noReviews.style.cssText = "padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.9rem;";
+          noReviews.textContent = "No reviews yet";
+          reviewsSection.appendChild(noReviews);
+        }
+        
+        // Load more reviews button (if more than 3)
+        if (totalReviews > 3) {
+          const loadMoreBtn = document.createElement("button");
+          loadMoreBtn.className = "btn btn-secondary";
+          loadMoreBtn.textContent = `Load more reviews (${totalReviews - 3} more)`;
+          loadMoreBtn.style.cssText = "width: 100%; padding: 0.75rem; font-size: 0.95rem;";
+          loadMoreBtn.addEventListener("click", () => {
+            // Close popup and navigate to full profile (or expand reviews)
+            document.body.removeChild(modalOverlay);
+            document.body.style.overflow = "";
+            // Could navigate to full profile page or expand reviews in place
+            showToast("Full profile view coming soon");
+          });
+          reviewsSection.appendChild(loadMoreBtn);
+        }
+        
+        modalContent.appendChild(reviewsSection);
+        
+        modalOverlay.appendChild(modalContent);
+        document.body.appendChild(modalOverlay);
+        document.body.style.overflow = "hidden";
+        
+        // Close on overlay click
+        modalOverlay.addEventListener("click", (e) => {
+          if (e.target === modalOverlay) {
+            document.body.removeChild(modalOverlay);
+            document.body.style.overflow = "";
+          }
+        });
+        
+      } catch (error) {
+        console.error("Error showing hustler profile:", error);
+        showToast("Unable to load profile.");
+      }
+    };
+
     // Show "Apply for Job" popup modal
     async function showApplyJobModal(job) {
       const user = getCurrentUser();
