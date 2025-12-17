@@ -6259,6 +6259,11 @@ function showChangePasswordModal() {
         document.querySelectorAll('input[name="equipment"]:checked').forEach(cb => {
           equipmentNeeded.push(cb.value);
         });
+        // Add custom equipment if provided
+        const customEquipment = document.getElementById("customEquipment")?.value.trim();
+        if (customEquipment) {
+          equipmentNeeded.push(customEquipment);
+        }
         
         // Get date/time
         const jobWhen = document.getElementById("jobWhen")?.value || document.getElementById("deadlinePreference")?.value || "today_asap";
