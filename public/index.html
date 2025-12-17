@@ -10338,10 +10338,32 @@ async function renderJobs(reset = false) {
               
               showToast("✅ Application submitted successfully!");
               
-              // Refresh jobs list to remove the applied job
+              // Refresh user's applied jobs list and re-render jobs to show "Applied" badge
+              try {
+                const token = localStorage.getItem('hustl_token');
+                if (token) {
+                  const offersResponse = await fetch(`${API_BASE}/offers/user/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                  if (offersResponse.ok) {
+                    const offers = await offersResponse.json();
+                    const relevantOffers = Array.isArray(offers) ? offers.filter(o => o.status === 'PENDING' || o.status === 'ACCEPTED') : [];
+                    userAppliedJobIds = new Set(relevantOffers.map(offer => offer.jobId).filter(Boolean));
+                    userAppliedOffers.clear();
+                    relevantOffers.forEach(offer => {
+                      if (offer.jobId) {
+                        userAppliedOffers.set(offer.jobId, offer);
+                      }
+                    });
+                  }
+                }
+              } catch (e) {
+                console.warn("Could not refresh applied jobs:", e);
+              }
+              
+              // Re-render jobs to show "Applied" badge
               if (typeof renderJobs === 'function') {
-                allLoadedJobs = [];
-                await renderJobs(true);
+                await renderJobs(false); // Don't reset, just re-render
               }
             } catch (error) {
               console.error("Error submitting application:", error);
