@@ -351,7 +351,9 @@ router.post('/', authenticate, requireRole('CUSTOMER'), [
   body('title').trim().notEmpty().isLength({ max: 200 }),
   body('category').trim().notEmpty(),
   body('description').trim().notEmpty(),
-  body('address').trim().notEmpty(),
+  body('address').optional().trim(), // Address is now optional (generic string)
+  body('approximateLat').isFloat({ min: -90, max: 90 }), // Required approximate location
+  body('approximateLng').isFloat({ min: -180, max: 180 }), // Required approximate location
   body('date').isISO8601(),
   body('startTime').isISO8601(),
   body('endTime').isISO8601(),
@@ -408,6 +410,8 @@ router.post('/', authenticate, requireRole('CUSTOMER'), [
       description,
       photos = [],
       address,
+      approximateLat,
+      approximateLng,
       date,
       startTime,
       endTime,
@@ -422,16 +426,9 @@ router.post('/', authenticate, requireRole('CUSTOMER'), [
       keepActiveFor, // Days to keep job active (1, 3, 7, 14, 30)
     } = req.body;
 
-    // Geocode address (with error handling)
-    let lat = null, lng = null;
-    try {
-      const coords = await geocodeAddress(address);
-      lat = coords.lat;
-      lng = coords.lng;
-    } catch (geocodeError) {
-      console.error('Geocoding error:', geocodeError);
-      // Continue without coordinates - address will still be stored
-    }
+    // Use approximate location (no geocoding needed)
+    const lat = approximateLat ? parseFloat(approximateLat) : null;
+    const lng = approximateLng ? parseFloat(approximateLng) : null;
 
     // Calculate next recurrence date if recurring
     let nextRecurrenceDate = null;
@@ -463,9 +460,11 @@ router.post('/', authenticate, requireRole('CUSTOMER'), [
       category,
       description,
       photos: Array.isArray(photos) ? photos : [],
-      address,
-      lat,
+      address: address || 'Approximate location (exact address shared after acceptance)',
+      lat, // Use approximate location for lat/lng (for backward compatibility)
       lng,
+      approximateLat: lat, // Store approximate location
+      approximateLng: lng,
       date: new Date(date),
       startTime: new Date(startTime),
       endTime: new Date(endTime),
