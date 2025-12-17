@@ -10361,18 +10361,22 @@ async function renderJobs(reset = false) {
       const whyFitTextarea = document.createElement("textarea");
       whyFitTextarea.id = "applyWhyFit";
       whyFitTextarea.placeholder = "Write a short message...";
-      whyFitTextarea.maxLength = 400;
+      whyFitTextarea.maxLength = 500;
       whyFitTextarea.rows = 5;
       whyFitTextarea.style.cssText = "width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-family: inherit; font-size: 0.9rem; resize: vertical; margin-bottom: 0.5rem;";
+      // Pre-fill if coming from job detail modal
+      if (job._prefilledWhyFit) {
+        whyFitTextarea.value = job._prefilledWhyFit;
+      }
       formSection.appendChild(whyFitTextarea);
 
       const charCount = document.createElement("div");
       charCount.style.cssText = "font-size: 0.75rem; color: #6b7280; text-align: right; margin-bottom: 1rem;";
-      charCount.textContent = "0 / 400 characters";
+      charCount.textContent = `${whyFitTextarea.value.length} / 500 characters`;
       formSection.appendChild(charCount);
 
       whyFitTextarea.addEventListener("input", () => {
-        charCount.textContent = `${whyFitTextarea.value.length} / 400 characters`;
+        charCount.textContent = `${whyFitTextarea.value.length} / 500 characters`;
       });
 
       // Price Negotiation Section
