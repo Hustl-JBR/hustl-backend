@@ -10284,7 +10284,7 @@ async function renderJobs(reset = false) {
             
             try {
               // Submit application directly via API
-              const response = await fetch(`${API_BASE}/jobs/${job.id}/offers`, {
+              const response = await fetch(`${API_BASE}/offers/${job.id}`, {
                 method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${authToken}`,
