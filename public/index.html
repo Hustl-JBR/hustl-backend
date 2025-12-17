@@ -10110,7 +10110,7 @@ async function renderJobs(reset = false) {
           const charCount = document.createElement("div");
           charCount.id = `charCount-${job.id}`;
           charCount.style.cssText = "font-size: 0.8rem; color: var(--text-muted); text-align: right; margin-bottom: 1rem;";
-          charCount.textContent = "0 / 500 characters";
+          charCount.textContent = "0/500";
           actionsSection.appendChild(charCount);
           
           whyFitTextarea.addEventListener("input", () => {
@@ -10268,8 +10268,9 @@ async function renderJobs(reset = false) {
               proposedAmount = proposedPrice;
             }
             
-            // Check authentication (token already declared in outer scope)
-            if (!token) {
+            // Get token fresh to ensure it's available
+            const authToken = localStorage.getItem('hustl_token');
+            if (!authToken) {
               showToast("Please log in to apply for jobs.");
               document.body.removeChild(modalOverlay);
               document.body.style.overflow = "";
@@ -10286,7 +10287,7 @@ async function renderJobs(reset = false) {
               const response = await fetch(`${API_BASE}/jobs/${job.id}/offers`, {
                 method: 'POST',
                 headers: {
-                  'Authorization': `Bearer ${token}`,
+                  'Authorization': `Bearer ${authToken}`,
                   'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
