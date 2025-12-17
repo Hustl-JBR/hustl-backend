@@ -10067,10 +10067,10 @@ async function renderJobs(reset = false) {
         actionsSection.style.cssText = "padding: 1.25rem; background: #f8f9fa; border-top: 2px solid #e5e7eb;";
         
         // Get current user from API (async)
+        // Note: token is already declared at line 9701 in this function
         let user = null;
         let isHustler = false;
         let isOwner = false;
-        const token = localStorage.getItem('hustl_token');
         
         try {
           if (window.hustlAPI && window.hustlAPI.auth) {
