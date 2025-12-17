@@ -7542,9 +7542,6 @@ function showChangePasswordModal() {
               return showToast("❌ Please set a valid price amount.");
             }
             
-            // Get preferred time (morning, afternoon, evening, anytime)
-            const preferredTime = document.getElementById("preferredTime")?.value || "anytime";
-            
             // Build job data - only include hourlyRate/estHours if they have values
             const jobData = {
               title,
