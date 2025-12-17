@@ -7724,15 +7724,6 @@ function showChangePasswordModal() {
           const category = document.getElementById("jobCategory").value;
           const desc = document.getElementById("jobDescription").value.trim();
           
-          // Content moderation - check for prohibited content
-          const allContent = `${title} ${desc} ${notes || ''}`;
-          const moderationResult = checkContentModeration(allContent);
-          
-          if (!moderationResult.allowed) {
-            const violationText = moderationResult.violations.join(', ');
-            showToast(`❌ Your post contains prohibited content: ${violationText}. Please remove this content and try again. All payments must go through Hustl for your protection.`, 8000);
-            return;
-          }
           // Pricing option
           const pricingOption = document.getElementById("pricingOption")?.value || "set_price";
           
@@ -7756,7 +7747,17 @@ function showChangePasswordModal() {
           
           const notes = document
             .getElementById("jobNotes")
-            .value.trim();
+            ?.value.trim() || '';
+          
+          // Content moderation - check for prohibited content (after notes is declared)
+          const allContent = `${title} ${desc} ${notes}`;
+          const moderationResult = checkContentModeration(allContent);
+          
+          if (!moderationResult.allowed) {
+            const violationText = moderationResult.violations.join(', ');
+            showToast(`❌ Your post contains prohibited content: ${violationText}. Please remove this content and try again. All payments must go through Hustl for your protection.`, 8000);
+            return;
+          }
 
           // Collect new fields
           const customCategory = document.getElementById("customCategory")?.value.trim() || "";
