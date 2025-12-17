@@ -3147,6 +3147,24 @@
         max-width: 100% !important;
       }
       
+      /* Location section - Mobile optimized */
+      #approximateLocationMap {
+        height: 350px !important;
+        min-height: 350px !important;
+      }
+      
+      #useCurrentLocationBtn,
+      #approximateLocationSearch {
+        font-size: 1rem !important; /* Prevent zoom on iOS */
+        min-height: 48px !important; /* Larger touch target */
+        padding: 1rem !important;
+      }
+      
+      #useCurrentLocationBtn:active {
+        background: var(--primary-soft) !important;
+        transform: scale(0.98);
+      }
+      
       /* Jobs list - COMPACT */
       .jobs-list {
         width: 100% !important;
@@ -4028,15 +4046,13 @@
             <div class="field" style="margin-bottom: 0.75rem;">
               <label for="approximateLocationMap">Tap the map to set approximate location <span style="color: #dc2626;">*</span></label>
               
-              <!-- Location helpers (not stored, just for navigation) -->
+              <!-- Location helpers (not stored, just for navigation) - Mobile optimized -->
               <div style="margin-bottom: 0.75rem;">
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem;">
                   <button 
                     type="button"
                     id="useCurrentLocationBtn" 
-                    style="flex: 1; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; font-weight: 400; transition: all 0.2s;"
-                    onmouseover="this.style.background='var(--primary-soft)'; this.style.borderColor='var(--primary)';"
-                    onmouseout="this.style.background='white'; this.style.borderColor='var(--border)';"
+                    style="width: 100%; padding: 0.875rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; background: white; color: var(--text-main); cursor: pointer; font-weight: 500; transition: all 0.2s; min-height: 44px; -webkit-tap-highlight-color: transparent; touch-action: manipulation;"
                   >
                     📍 Current Location
                   </button>
@@ -4044,16 +4060,16 @@
                     type="text" 
                     id="approximateLocationSearch" 
                     placeholder="🔍 Or search address"
-                    style="flex: 1; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem;"
+                    style="width: 100%; padding: 0.875rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; min-height: 44px; -webkit-appearance: none; touch-action: manipulation;"
                     autocomplete="off"
                   />
                 </div>
-                <div style="font-size: 0.75rem; color: var(--text-muted);">
+                <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
                   These help you find the area on the map. Your exact location is never stored.
                 </div>
               </div>
               
-              <div id="approximateLocationMap" style="width: 100%; height: 300px; border: 2px solid var(--border); border-radius: 8px; position: relative; background: #f3f4f6; cursor: crosshair;"></div>
+              <div id="approximateLocationMap" style="width: 100%; height: 300px; min-height: 300px; border: 2px solid var(--border); border-radius: 8px; position: relative; background: #f3f4f6; cursor: crosshair; touch-action: pan-x pan-y pinch-zoom;"></div>
               <input type="hidden" id="approximateLat" />
               <input type="hidden" id="approximateLng" />
               <div id="locationStatus" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
@@ -6902,12 +6918,23 @@ function showChangePasswordModal() {
       });
     }
     
-    // Initialize current location button
+    // Initialize current location button (mobile-friendly)
     function initCurrentLocationButton() {
       const currentLocationBtn = document.getElementById('useCurrentLocationBtn');
-      if (!currentLocationBtn || !approximateLocationMap) return;
+      if (!currentLocationBtn || !approximateLocationMap) {
+        // Try again after a short delay if map isn't ready
+        setTimeout(() => {
+          if (approximateLocationMap) {
+            initCurrentLocationButton();
+          }
+        }, 500);
+        return;
+      }
       
-      currentLocationBtn.addEventListener('click', () => {
+      currentLocationBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
         if (!navigator.geolocation) {
           showToast('Geolocation is not supported by your browser.');
           return;
@@ -6919,48 +6946,69 @@ function showChangePasswordModal() {
         currentLocationBtn.disabled = true;
         currentLocationBtn.style.opacity = '0.6';
         currentLocationBtn.style.cursor = 'wait';
+        currentLocationBtn.style.pointerEvents = 'none';
+        
+        // Mobile-friendly geolocation options (less strict for better mobile compatibility)
+        const geoOptions = {
+          enableHighAccuracy: false, // Set to false for mobile - high accuracy can fail on mobile
+          timeout: 15000, // Longer timeout for mobile
+          maximumAge: 60000 // Accept cached location up to 1 minute old
+        };
         
         navigator.geolocation.getCurrentPosition(
           (position) => {
-            const { latitude, longitude } = position.coords;
-            
-            // Center map on current location
-            approximateLocationMap.flyTo({
-              center: [longitude, latitude],
-              zoom: 14,
-              duration: 1000
-            });
-            
-            // Update status message
-            const statusDiv = document.getElementById('locationStatus');
-            if (statusDiv) {
-              statusDiv.textContent = 'Map centered on your location. Now tap the map to set your approximate location (not your exact address).';
-              statusDiv.style.color = 'var(--text-muted)';
+            try {
+              const { latitude, longitude } = position.coords;
+              
+              if (!latitude || !longitude || isNaN(latitude) || isNaN(longitude)) {
+                throw new Error('Invalid coordinates');
+              }
+              
+              // Center map on current location
+              approximateLocationMap.flyTo({
+                center: [longitude, latitude],
+                zoom: 14,
+                duration: 1000
+              });
+              
+              // Update status message
+              const statusDiv = document.getElementById('locationStatus');
+              if (statusDiv) {
+                statusDiv.textContent = 'Map centered on your location. Now tap the map to set your approximate location (not your exact address).';
+                statusDiv.style.color = 'var(--text-muted)';
+              }
+            } catch (err) {
+              console.error('Error processing location:', err);
+              showToast('Got your location but had trouble centering the map. Please try again.');
+            } finally {
+              // Reset button
+              currentLocationBtn.textContent = originalText;
+              currentLocationBtn.disabled = false;
+              currentLocationBtn.style.opacity = '1';
+              currentLocationBtn.style.cursor = 'pointer';
+              currentLocationBtn.style.pointerEvents = 'auto';
             }
-            
-            // Reset button
-            currentLocationBtn.textContent = originalText;
-            currentLocationBtn.disabled = false;
-            currentLocationBtn.style.opacity = '1';
-            currentLocationBtn.style.cursor = 'pointer';
           },
           (error) => {
             console.error('Geolocation error:', error);
-            let errorMessage = 'Unable to get your location. ';
+            let errorMessage = '';
+            
+            // Better error messages for mobile
             switch(error.code) {
               case error.PERMISSION_DENIED:
-                errorMessage += 'Please allow location access in your browser settings.';
+                errorMessage = 'Location access denied. Please allow location access in your browser settings and try again.';
                 break;
               case error.POSITION_UNAVAILABLE:
-                errorMessage += 'Location information is unavailable.';
+                errorMessage = 'Location unavailable. Make sure GPS is enabled on your device.';
                 break;
               case error.TIMEOUT:
-                errorMessage += 'Location request timed out.';
+                errorMessage = 'Location request timed out. Please try again.';
                 break;
               default:
-                errorMessage += 'An unknown error occurred.';
+                errorMessage = 'Unable to get your location. Please try again or use the address search instead.';
                 break;
             }
+            
             showToast(errorMessage);
             
             // Reset button
@@ -6968,12 +7016,9 @@ function showChangePasswordModal() {
             currentLocationBtn.disabled = false;
             currentLocationBtn.style.opacity = '1';
             currentLocationBtn.style.cursor = 'pointer';
+            currentLocationBtn.style.pointerEvents = 'auto';
           },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-          }
+          geoOptions
         );
       });
     }
