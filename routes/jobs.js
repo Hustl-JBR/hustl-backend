@@ -1130,10 +1130,21 @@ router.patch('/:id', authenticate, requireRole('CUSTOMER'), [
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    // Only allow editing OPEN jobs
-    if (job.status !== 'OPEN') {
+    // Allow editing OPEN jobs, or price adjustments for SCHEDULED/ASSIGNED jobs (before start)
+    const isPriceOnlyUpdate = Object.keys(req.body).every(key => 
+      ['amount', 'hourlyRate', 'estHours'].includes(key)
+    );
+    
+    if (job.status !== 'OPEN' && !(isPriceOnlyUpdate && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified)) {
       return res.status(400).json({ 
-        error: 'Can only edit jobs that are currently open' 
+        error: 'Can only edit open jobs, or adjust price for scheduled jobs before they start' 
+      });
+    }
+    
+    // For scheduled jobs, only allow price adjustments
+    if (job.status !== 'OPEN' && !isPriceOnlyUpdate) {
+      return res.status(400).json({ 
+        error: 'For scheduled jobs, only price adjustments are allowed' 
       });
     }
 
