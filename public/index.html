@@ -7635,15 +7635,6 @@ function showChangePasswordModal() {
         });
       }
 
-      // Custom equipment toggle
-      const customEquipmentToggle = document.getElementById("customEquipmentToggle");
-      const customEquipmentField = document.getElementById("customEquipmentField");
-      if (customEquipmentToggle && customEquipmentField) {
-        customEquipmentToggle.addEventListener("change", () => {
-          customEquipmentField.style.display = customEquipmentToggle.checked ? "block" : "none";
-        });
-      }
-      
       // Workers needed - handle custom and my_team options
       const workersNeededSelect2 = document.getElementById("workersNeeded");
       const customWorkersField = document.getElementById("customWorkersField");
