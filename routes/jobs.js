@@ -681,11 +681,20 @@ router.get('/', optionalAuth, [
     
     if (userLat && userLng && !isNaN(userLat) && !isNaN(userLng)) {
       filteredJobs = filteredJobs.map(job => {
+        // Use approximate location for distance calculation (privacy-first)
+        // Priority: approximateLat/approximateLng, fallback to lat/lng for backward compatibility
+        const jobLat = job.approximateLat !== null && job.approximateLat !== undefined 
+          ? parseFloat(job.approximateLat) 
+          : (job.lat ? parseFloat(job.lat) : null);
+        const jobLng = job.approximateLng !== null && job.approximateLng !== undefined 
+          ? parseFloat(job.approximateLng) 
+          : (job.lng ? parseFloat(job.lng) : null);
+        
         // Only calculate distance if job has valid coordinates
         let distance = null;
-        if (job.lat && job.lng && !isNaN(job.lat) && !isNaN(job.lng)) {
+        if (jobLat && jobLng && !isNaN(jobLat) && !isNaN(jobLng)) {
           try {
-            distance = calculateDistance(userLat, userLng, job.lat, job.lng);
+            distance = calculateDistance(userLat, userLng, jobLat, jobLng);
             
             // Validate distance is reasonable (not NaN or Infinity)
             if (isNaN(distance) || !isFinite(distance)) {
@@ -705,7 +714,7 @@ router.get('/', optionalAuth, [
         return {
           ...job,
           distance,
-          distanceFormatted: formatDistance(distance),
+          distanceFormatted: distance !== null ? `~${formatDistance(distance)}` : null, // Add ~ to indicate approximate
         };
       }).filter(job => job !== null); // Remove jobs beyond radius
       

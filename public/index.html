@@ -8310,7 +8310,7 @@ async function renderJobsOnMap(jobs) {
     return;
   }
   
-  // Clear ALL existing markers first
+  // Clear ALL existing markers and circles first (Step 3)
   mapMarkers.forEach(marker => {
     try {
       marker.remove();
@@ -8319,6 +8319,23 @@ async function renderJobsOnMap(jobs) {
     }
   });
   mapMarkers = [];
+  
+  // Remove all job circles
+  if (window.jobCircleIds && jobsMap && jobsMap.loaded()) {
+    window.jobCircleIds.forEach(circleId => {
+      try {
+        if (jobsMap.getLayer(circleId)) {
+          jobsMap.removeLayer(circleId);
+        }
+        if (jobsMap.getSource(circleId)) {
+          jobsMap.removeSource(circleId);
+        }
+      } catch (e) {
+        // Ignore errors
+      }
+    });
+  }
+  window.jobCircleIds = [];
   
   // Deduplicate jobs by ID to ensure one marker per job
   const uniqueJobs = [];
@@ -8364,37 +8381,23 @@ async function renderJobsOnMap(jobs) {
       }
     }
     
-    // Get coordinates - priority: requirements pickup coordinates
+    // Get approximate coordinates (Step 3: Use approximate location only)
+    // Priority: approximateLat/approximateLng, fallback to lat/lng for backward compatibility
     let lat = null;
     let lng = null;
     
-    const reqLat = requirements.pickup_lat || requirements.pickupLat;
-    const reqLng = requirements.pickup_lng || requirements.pickupLng;
-    if (reqLat && reqLng) {
-      lat = parseFloat(reqLat);
-      lng = parseFloat(reqLng);
+    // Use approximate location if available
+    if (job.approximateLat !== null && job.approximateLat !== undefined && 
+        job.approximateLng !== null && job.approximateLng !== undefined) {
+      lat = parseFloat(job.approximateLat);
+      lng = parseFloat(job.approximateLng);
     } else if (job.lat && job.lng) {
+      // Fallback to lat/lng for jobs created before Step 2
       lat = parseFloat(job.lat);
       lng = parseFloat(job.lng);
     }
     
-    // If address is hidden, use original coordinates but add small random offset for privacy
-    // This keeps the marker close to where the job was posted while not revealing exact location
-    if (isAreaBased && lat && lng) {
-      // Use original coordinates with small offset (~100-150m) to maintain proximity
-      // This is better than geocoding which can place markers far from original location
-      const offsetLat = lat + (Math.random() - 0.5) * 0.0015; // ~150m max offset
-      const offsetLng = lng + (Math.random() - 0.5) * 0.0015;
-      validJobs.push({
-        job: job,
-        lat: offsetLat,
-        lng: offsetLng,
-        isAreaBased: true,
-        showExactAddress: showExactAddress
-      });
-      return; // Skip adding to validJobs below
-    }
-    
+    // All jobs now use approximate location (no exact pins)
     // Validate coordinates and add to validJobs
     if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng) && 
         lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
@@ -8402,8 +8405,7 @@ async function renderJobsOnMap(jobs) {
         job: job,
         lat: lat,
         lng: lng,
-        isAreaBased: isAreaBased,
-        showExactAddress: showExactAddress
+        isApproximate: true // All locations are approximate now
       });
     }
   });
@@ -8436,66 +8438,50 @@ async function renderJobsOnMap(jobs) {
     });
   }
   
-  // Create ONE marker per job
-  validJobs.forEach(({ job, lat, lng, isAreaBased, showExactAddress }) => {
+  // Create ONE marker per job with 0.25 mile radius circle (Step 3: Approximate location only)
+  validJobs.forEach(({ job, lat, lng, isApproximate }) => {
     const requirements = job.requirements || {};
     
-    // Distance calculation
+    // Distance calculation (approximate)
     let distanceText = '';
     if (userLoc && userLoc.lat && userLoc.lng) {
       const distance = calculateDistance(userLoc.lat, userLoc.lng, lat, lng);
-      distanceText = formatDistance(distance);
+      distanceText = `~${formatDistance(distance)}`; // Add ~ to indicate approximate
     }
     
-    // Location text - use formatPublicLocation for consistency, pass showExactAddress
-    const locationText = formatPublicLocation(job, requirements, showExactAddress || false);
+    // Location text - no exact address shown (Step 3)
+    const locationText = 'Approximate location (exact address shared after acceptance)';
     
-    // Popup content
+    // Popup content (mobile-friendly)
     const popupContent = document.createElement('div');
-    popupContent.style.cssText = 'padding: 0.75rem; min-width: 200px;';
+    popupContent.style.cssText = 'padding: 0.875rem; min-width: 220px; max-width: 280px;';
     popupContent.innerHTML = `
-      <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.5rem; color: #111827;">${job.title || 'Untitled Job'}</div>
-      ${distanceText ? `<div style="font-size: 0.85rem; color: #3b82f6; margin-bottom: 0.25rem;">📍 ${distanceText}</div>` : ''}
-      <div style="font-size: 0.85rem; color: #6b7280; margin-bottom: 0.5rem;">${locationText}</div>
-      <div style="font-weight: 700; font-size: 0.9rem; color: #059669;">
+      <div style="font-weight: 700; font-size: 1rem; margin-bottom: 0.5rem; color: #111827; line-height: 1.3;">${job.title || 'Untitled Job'}</div>
+      ${distanceText ? `<div style="font-size: 0.875rem; color: #3b82f6; margin-bottom: 0.375rem; font-weight: 500;">📍 ${distanceText} away</div>` : ''}
+      <div style="font-size: 0.8rem; color: #6b7280; margin-bottom: 0.5rem; line-height: 1.4;">${locationText}</div>
+      <div style="font-weight: 700; font-size: 0.95rem; color: #059669; margin-bottom: 0.5rem;">
         ${job.payType === 'hourly' ? `$${parseFloat(job.hourlyRate || 0).toFixed(0)}/hr` : `$${parseFloat(job.amount || 0).toFixed(0)} flat`}
       </div>
-      <button class="view-job-map-btn" data-job-id="${job.id}" style="margin-top: 0.5rem; padding: 0.5rem 1rem; width: 100%; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+      <button class="view-job-map-btn" data-job-id="${job.id}" style="margin-top: 0.5rem; padding: 0.625rem 1rem; width: 100%; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer; min-height: 44px; touch-action: manipulation;">
         View Details
       </button>
     `;
     
-    // Create marker element
+    // Create marker element - always use circle (no exact pins, Step 3)
     const el = document.createElement('div');
     el.className = 'job-marker';
-    
-    if (isAreaBased) {
-      // Soft circle for area-based (hidden address)
-      el.style.cssText = `
-        width: 20px;
-        height: 20px;
-        background: rgba(59, 130, 246, 0.6);
-        border: 2px solid rgba(59, 130, 246, 0.8);
-        border-radius: 50%;
-        cursor: pointer;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-        position: absolute;
-        pointer-events: auto;
-      `;
-    } else {
-      // Precise pin for exact address
-      el.style.cssText = `
-        width: 20px;
-        height: 20px;
-        background: #3b82f6;
-        border: 2px solid white;
-        border-radius: 50%;
-        cursor: pointer;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        position: absolute;
-        pointer-events: auto;
-      `;
-    }
+    el.style.cssText = `
+      width: 20px;
+      height: 20px;
+      background: rgba(59, 130, 246, 0.6);
+      border: 2px solid rgba(59, 130, 246, 0.9);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      position: absolute;
+      pointer-events: auto;
+      z-index: 1;
+    `;
     
     el.title = job.title || 'Job';
     
@@ -8522,6 +8508,76 @@ async function renderJobsOnMap(jobs) {
       }).setDOMContent(popupContent))
       .addTo(jobsMap);
     
+    // Add 0.25 mile radius circle for approximate location (Step 3)
+    // 0.25 miles = 402.336 meters
+    const radiusMeters = 402.336;
+    const circleId = `job-circle-${job.id}`;
+    
+    try {
+      // Create circle geometry
+      const circle = createCircle([lng, lat], radiusMeters);
+      
+      // Add circle source and layer if map is loaded
+      if (jobsMap.loaded()) {
+        jobsMap.addSource(circleId, {
+          type: 'geojson',
+          data: circle
+        });
+        
+        jobsMap.addLayer({
+          id: circleId,
+          type: 'fill',
+          source: circleId,
+          paint: {
+            'fill-color': '#3b82f6',
+            'fill-opacity': 0.1
+          }
+        });
+        
+        jobsMap.addLayer({
+          id: `${circleId}-outline`,
+          type: 'line',
+          source: circleId,
+          paint: {
+            'line-color': '#3b82f6',
+            'line-width': 2,
+            'line-opacity': 0.4
+          }
+        });
+      } else {
+        // Wait for map to load
+        jobsMap.once('load', () => {
+          jobsMap.addSource(circleId, {
+            type: 'geojson',
+            data: circle
+          });
+          
+          jobsMap.addLayer({
+            id: circleId,
+            type: 'fill',
+            source: circleId,
+            paint: {
+              'fill-color': '#3b82f6',
+              'fill-opacity': 0.1
+            }
+          });
+          
+          jobsMap.addLayer({
+            id: `${circleId}-outline`,
+            type: 'line',
+            source: circleId,
+            paint: {
+              'line-color': '#3b82f6',
+              'line-width': 2,
+              'line-opacity': 0.4
+            }
+          });
+        });
+      }
+    } catch (e) {
+      console.warn('Error adding circle for job:', job.id, e);
+    }
+    
     // Popup button handler
     setTimeout(() => {
       const btn = popupContent.querySelector('.view-job-map-btn');
@@ -8537,6 +8593,15 @@ async function renderJobsOnMap(jobs) {
     }, 50);
     
     mapMarkers.push(marker);
+  });
+  
+  // Store circle IDs for cleanup
+  if (!window.jobCircleIds) {
+    window.jobCircleIds = [];
+  }
+  validJobs.forEach(({ job }) => {
+    window.jobCircleIds.push(`job-circle-${job.id}`);
+    window.jobCircleIds.push(`job-circle-${job.id}-outline`);
   });
 }
 
@@ -8986,20 +9051,29 @@ async function renderJobs(reset = false) {
       });
     }
     
-    // Apply distance filter if location is set and filter is active
+    // Apply distance filter if location is set and filter is active (Step 3: Use approximate location)
     if (activeDistanceFilter && userLocation) {
       const maxDistance = activeDistanceFilter === 'statewide' ? Infinity : parseInt(activeDistanceFilter);
       filteredJobs = filteredJobs.filter((j) => {
         if (activeDistanceFilter === 'statewide') return true;
-        if (!j.lat || !j.lng) return false;
+        
+        // Use approximate location for distance calculation
+        const jobLat = j.approximateLat !== null && j.approximateLat !== undefined 
+          ? parseFloat(j.approximateLat) 
+          : (j.lat ? parseFloat(j.lat) : null);
+        const jobLng = j.approximateLng !== null && j.approximateLng !== undefined 
+          ? parseFloat(j.approximateLng) 
+          : (j.lng ? parseFloat(j.lng) : null);
+        
+        if (!jobLat || !jobLng) return false;
         
         // Calculate distance using Haversine formula
         const R = 3959; // Earth's radius in miles
-        const dLat = (j.lat - userLocation.lat) * Math.PI / 180;
-        const dLng = (j.lng - userLocation.lng) * Math.PI / 180;
+        const dLat = (jobLat - userLocation.lat) * Math.PI / 180;
+        const dLng = (jobLng - userLocation.lng) * Math.PI / 180;
         const a = 
           Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(j.lat * Math.PI / 180) *
+          Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(jobLat * Math.PI / 180) *
           Math.sin(dLng / 2) * Math.sin(dLng / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         const distance = R * c;
@@ -9029,23 +9103,37 @@ async function renderJobs(reset = false) {
       });
     } else if (activeSortBy === 'closest' && userLocation) {
       filteredJobs.sort((a, b) => {
-        if (!a.lat || !a.lng) return 1;
-        if (!b.lat || !b.lng) return -1;
+        // Use approximate location for sorting (Step 3)
+        const aLat = a.approximateLat !== null && a.approximateLat !== undefined 
+          ? parseFloat(a.approximateLat) 
+          : (a.lat ? parseFloat(a.lat) : null);
+        const aLng = a.approximateLng !== null && a.approximateLng !== undefined 
+          ? parseFloat(a.approximateLng) 
+          : (a.lng ? parseFloat(a.lng) : null);
+        const bLat = b.approximateLat !== null && b.approximateLat !== undefined 
+          ? parseFloat(b.approximateLat) 
+          : (b.lat ? parseFloat(b.lat) : null);
+        const bLng = b.approximateLng !== null && b.approximateLng !== undefined 
+          ? parseFloat(b.approximateLng) 
+          : (b.lng ? parseFloat(b.lng) : null);
+        
+        if (!aLat || !aLng) return 1;
+        if (!bLat || !bLng) return -1;
         
         const R = 3959;
         const distA = (() => {
-          const dLat = (a.lat - userLocation.lat) * Math.PI / 180;
-          const dLng = (a.lng - userLocation.lng) * Math.PI / 180;
+          const dLat = (aLat - userLocation.lat) * Math.PI / 180;
+          const dLng = (aLng - userLocation.lng) * Math.PI / 180;
           const calc = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(a.lat * Math.PI / 180) *
+            Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(aLat * Math.PI / 180) *
             Math.sin(dLng / 2) * Math.sin(dLng / 2);
           return R * 2 * Math.atan2(Math.sqrt(calc), Math.sqrt(1 - calc));
         })();
         const distB = (() => {
-          const dLat = (b.lat - userLocation.lat) * Math.PI / 180;
-          const dLng = (b.lng - userLocation.lng) * Math.PI / 180;
+          const dLat = (bLat - userLocation.lat) * Math.PI / 180;
+          const dLng = (bLng - userLocation.lng) * Math.PI / 180;
           const calc = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) *
+            Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(bLat * Math.PI / 180) *
             Math.sin(dLng / 2) * Math.sin(dLng / 2);
           return R * 2 * Math.atan2(Math.sqrt(calc), Math.sqrt(1 - calc));
         })();
@@ -9324,33 +9412,34 @@ async function renderJobs(reset = false) {
         textContent.appendChild(workersBadge);
       }
       
-      // 5. Location logic - public view: street name + city + ZIP only
-      const hidePickupAddressUntilAssigned = requirements.hide_pickup_address_until_assigned || requirements.hidePickupAddressUntilAssigned;
-      let showExactAddress = false;
-      
-      // Check if user is accepted hustler (can see exact address)
-      if (hidePickupAddressUntilAssigned) {
-        try {
-          const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
-          if (user) {
-            const isHustler = user && !user.roles?.includes('CUSTOMER');
-            const jobAccepted = job.hustlerId && job.hustlerId === user.id && 
-                               (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
-            showExactAddress = isHustler && jobAccepted;
-          }
-        } catch (e) {
-          showExactAddress = false;
+      // 5. Location logic - Step 3: Show approximate location only (no exact address)
+      // Calculate approximate distance if user location is available
+      let distanceText = '';
+      if (userLocation && userLocation.lat && userLocation.lng) {
+        // Use approximate location for distance calculation
+        const jobLat = job.approximateLat !== null && job.approximateLat !== undefined 
+          ? parseFloat(job.approximateLat) 
+          : (job.lat ? parseFloat(job.lat) : null);
+        const jobLng = job.approximateLng !== null && job.approximateLng !== undefined 
+          ? parseFloat(job.approximateLng) 
+          : (job.lng ? parseFloat(job.lng) : null);
+        
+        if (jobLat && jobLng && !isNaN(jobLat) && !isNaN(jobLng)) {
+          const distance = calculateDistance(userLocation.lat, userLocation.lng, jobLat, jobLng);
+          distanceText = `~${formatDistance(distance)}`; // Add ~ to indicate approximate
         }
       }
       
-      const locationDisplay = formatPublicLocation(job, requirements, showExactAddress);
-      if (locationDisplay && locationDisplay !== 'Location TBD') {
-        const loc = document.createElement("div");
-        loc.className = "job-meta";
-        loc.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
-        loc.textContent = `📍 ${locationDisplay}`;
-        textContent.appendChild(loc);
+      // Show approximate location message (no exact address)
+      const loc = document.createElement("div");
+      loc.className = "job-meta";
+      loc.style.cssText = "margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
+      if (distanceText) {
+        loc.textContent = `📍 Approximate location • ${distanceText} away`;
+      } else {
+        loc.textContent = `📍 Approximate location`;
       }
+      textContent.appendChild(loc);
       
       // 6. Price (flat/hourly) - positioned in top right
       const pricingOption = requirements.pricing_option;
