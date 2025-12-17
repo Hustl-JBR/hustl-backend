@@ -9663,6 +9663,34 @@ async function renderJobs(reset = false) {
     // Define at global scope
     window.openJobDetails = async function openJobDetails(jobId) {
       console.log("openJobDetails called with jobId:", jobId);
+      
+      // Get user's current location for the map (do this first, before try block)
+      let currentUserLocation = null;
+      if (typeof userLocation !== 'undefined' && userLocation && userLocation.lat && userLocation.lng) {
+        currentUserLocation = userLocation;
+      } else {
+        // Try to get location from navigator if not already set
+        try {
+          if (navigator.geolocation) {
+            await new Promise((resolve) => {
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  currentUserLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                  };
+                  resolve();
+                },
+                () => resolve(), // Fail silently if location unavailable
+                { timeout: 5000, maximumAge: 60000 }
+              );
+            });
+          }
+        } catch (e) {
+          console.log("Could not get user location:", e);
+        }
+      }
+      
       try {
         // Fetch job details
         const token = localStorage.getItem("hustl_token");
