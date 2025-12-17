@@ -10113,6 +10113,25 @@ async function renderJobs(reset = false) {
           // Track selected option
           let selectedPriceOption = isHustlerQuote ? "suggest" : "accept";
           
+          // Proposed price input (create before event listeners so it can be referenced)
+          const proposedPriceContainer = document.createElement("div");
+          proposedPriceContainer.id = `proposedPriceContainer-${job.id}`;
+          proposedPriceContainer.style.cssText = "display: none; margin-top: 0.75rem;";
+          
+          const proposedPriceLabel = document.createElement("label");
+          proposedPriceLabel.style.cssText = "display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;";
+          proposedPriceLabel.textContent = "Your suggested price ($)";
+          proposedPriceContainer.appendChild(proposedPriceLabel);
+          
+          const proposedPriceInput = document.createElement("input");
+          proposedPriceInput.type = "number";
+          proposedPriceInput.id = `proposedPrice-${job.id}`;
+          proposedPriceInput.placeholder = "Enter amount";
+          proposedPriceInput.min = "1";
+          proposedPriceInput.step = "1";
+          proposedPriceInput.style.cssText = "width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-family: inherit; font-size: 0.95rem; box-sizing: border-box;";
+          proposedPriceContainer.appendChild(proposedPriceInput);
+          
           // Only show "Accept listed price" if NOT hustler quote
           if (!isHustlerQuote) {
             let listedPriceText = "";
