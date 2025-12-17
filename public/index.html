@@ -8660,14 +8660,18 @@ async function renderJobsOnMap(jobs) {
       </button>
     `;
     
+    // Check if user has applied to this job
+    const hasApplied = userAppliedJobIds && userAppliedJobIds.has(job.id);
+    const markerColor = hasApplied ? '#10b981' : '#3b82f6'; // Green for applied, blue for not applied
+    
     // Create marker element - always use circle (no exact pins, Step 3)
     const el = document.createElement('div');
     el.className = 'job-marker';
       el.style.cssText = `
         width: 20px;
         height: 20px;
-        background: rgba(59, 130, 246, 0.6);
-      border: 2px solid rgba(59, 130, 246, 0.9);
+        background: ${hasApplied ? 'rgba(16, 185, 129, 0.6)' : 'rgba(59, 130, 246, 0.6)'};
+      border: 2px solid ${hasApplied ? 'rgba(16, 185, 129, 0.9)' : 'rgba(59, 130, 246, 0.9)'};
         border-radius: 50%;
         cursor: pointer;
         box-shadow: 0 2px 6px rgba(0,0,0,0.3);
@@ -8722,7 +8726,7 @@ async function renderJobsOnMap(jobs) {
           type: 'fill',
           source: circleId,
           paint: {
-            'fill-color': '#3b82f6',
+            'fill-color': hasApplied ? '#10b981' : '#3b82f6', // Green for applied, blue for not applied
             'fill-opacity': 0.1
           }
         });
@@ -8732,7 +8736,7 @@ async function renderJobsOnMap(jobs) {
           type: 'line',
           source: circleId,
           paint: {
-            'line-color': '#3b82f6',
+            'line-color': hasApplied ? '#10b981' : '#3b82f6', // Green for applied, blue for not applied
             'line-width': 2,
             'line-opacity': 0.4
           }
@@ -8750,7 +8754,7 @@ async function renderJobsOnMap(jobs) {
             type: 'fill',
             source: circleId,
             paint: {
-              'fill-color': '#3b82f6',
+              'fill-color': hasApplied ? '#10b981' : '#3b82f6', // Green for applied, blue for not applied
               'fill-opacity': 0.1
             }
           });
@@ -8760,7 +8764,7 @@ async function renderJobsOnMap(jobs) {
             type: 'line',
             source: circleId,
             paint: {
-              'line-color': '#3b82f6',
+              'line-color': hasApplied ? '#10b981' : '#3b82f6', // Green for applied, blue for not applied
               'line-width': 2,
               'line-opacity': 0.4
             }
@@ -9169,10 +9173,10 @@ async function renderJobs(reset = false) {
         }
       }
       
-      // Filter out jobs the user has already applied to
-      if (userAppliedJobIds && userAppliedJobIds.has(j.id)) {
-        return false;
-      }
+      // Don't filter out applied jobs - show them with "Applied" badge instead
+      // if (userAppliedJobIds && userAppliedJobIds.has(j.id)) {
+      //   return false;
+      // }
       
       return true;
     }) : [];
@@ -9504,6 +9508,31 @@ async function renderJobs(reset = false) {
       }
       card.appendChild(pay);
       
+      // 6. Applied/Suggested Price badge - positioned below price
+      const hasApplied = userAppliedJobIds && userAppliedJobIds.has(job.id);
+      if (hasApplied) {
+        const offer = userAppliedOffers.get(job.id);
+        const hasProposedPrice = offer && offer.proposedAmount;
+        
+        const statusBadge = document.createElement("div");
+        statusBadge.style.cssText = "position: absolute; top: 2.75rem; right: 0.75rem; font-weight: 700; font-size: 0.75rem; z-index: 10; padding: 0.25rem 0.5rem; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px;";
+        
+        if (hasProposedPrice) {
+          // Yellow badge for suggested price
+          statusBadge.textContent = "💡 Suggested New Price!";
+          statusBadge.style.background = "#fef3c7";
+          statusBadge.style.color = "#92400e";
+          statusBadge.style.border = "1px solid #fbbf24";
+        } else {
+          // Green badge for applied
+          statusBadge.textContent = "✓ Applied";
+          statusBadge.style.background = "#d1fae5";
+          statusBadge.style.color = "#065f46";
+          statusBadge.style.border = "1px solid #10b981";
+        }
+        card.appendChild(statusBadge);
+      }
+      
       // Add textContent to card
       card.appendChild(textContent);
 
@@ -9747,10 +9776,10 @@ async function renderJobs(reset = false) {
         
         // 1. JOB TITLE
         const header = document.createElement("div");
-        header.style.cssText = "padding: 1.25rem; padding-top: 1.5rem; border-bottom: 1px solid #e5e7eb;";
+        header.style.cssText = "padding: 1rem; padding-top: 1.25rem; border-bottom: 1px solid #e5e7eb;";
         
         const title = document.createElement("h1");
-        title.style.cssText = "margin: 0 0 1rem 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main); line-height: 1.3;";
+        title.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1.35rem; font-weight: 700; color: var(--text-main); line-height: 1.3;";
         title.textContent = job.title || "Job Details";
         header.appendChild(title);
         modalContent.appendChild(header);
@@ -9758,7 +9787,7 @@ async function renderJobs(reset = false) {
         // 2. CUSTOMER PROFILE (who posted) - at top
         if (job.customer) {
           const customerSection = document.createElement("div");
-          customerSection.style.cssText = "padding: 1.25rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 1rem;";
+          customerSection.style.cssText = "padding: 1rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 0.75rem;";
           
           const profilePic = document.createElement("img");
           profilePic.style.cssText = "width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); flex-shrink: 0; cursor: pointer;";
@@ -9833,14 +9862,14 @@ async function renderJobs(reset = false) {
         const catName = categoryNames[jobCategory] || job.category || 'Job';
         
         const categorySection = document.createElement("div");
-        categorySection.style.cssText = "padding: 1.25rem; border-bottom: 1px solid #e5e7eb;";
+        categorySection.style.cssText = "padding: 0.875rem 1rem; border-bottom: 1px solid #e5e7eb;";
         
         const categoryLabel = document.createElement("div");
-        categoryLabel.style.cssText = "font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;";
+        categoryLabel.style.cssText = "font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.375rem;";
         categoryLabel.textContent = "Job Category";
         
         const category = document.createElement("div");
-        category.style.cssText = "font-size: 1.1rem; color: var(--text-main); font-weight: 600;";
+        category.style.cssText = "font-size: 1rem; color: var(--text-main); font-weight: 600;";
         category.textContent = `${catIcon} ${catName}`;
         
         categorySection.appendChild(categoryLabel);
@@ -9849,25 +9878,25 @@ async function renderJobs(reset = false) {
         
         // 4. DESCRIPTION
         const descriptionSection = document.createElement("div");
-        descriptionSection.style.cssText = "padding: 1.25rem; border-bottom: 1px solid #e5e7eb;";
+        descriptionSection.style.cssText = "padding: 0.875rem 1rem; border-bottom: 1px solid #e5e7eb;";
         
         const descTitle = document.createElement("h2");
-        descTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);";
+        descTitle.style.cssText = "margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 700; color: var(--text-main);";
         descTitle.textContent = "Description";
         descriptionSection.appendChild(descTitle);
         
         const description = document.createElement("div");
-        description.style.cssText = "font-size: 1rem; color: var(--text-main); line-height: 1.7; white-space: pre-wrap; word-wrap: break-word;";
+        description.style.cssText = "font-size: 0.95rem; color: var(--text-main); line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;";
         description.textContent = job.description || "No description provided.";
         descriptionSection.appendChild(description);
         modalContent.appendChild(descriptionSection);
         
         // 5. PRICING - Hourly Pay Breakdown
         const pricingSection = document.createElement("div");
-        pricingSection.style.cssText = "padding: 1.25rem; border-bottom: 1px solid #e5e7eb; background: #f8f9fa;";
+        pricingSection.style.cssText = "padding: 0.875rem 1rem; border-bottom: 1px solid #e5e7eb; background: #f8f9fa;";
         
         const pricingTitle = document.createElement("h2");
-        pricingTitle.style.cssText = "margin: 0 0 1rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);";
+        pricingTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 700; color: var(--text-main);";
         pricingTitle.textContent = "💰 Pricing";
         pricingSection.appendChild(pricingTitle);
         
@@ -9986,10 +10015,10 @@ async function renderJobs(reset = false) {
         
         // 6. TOOLS/EQUIPMENT NEEDED (always show, even if empty)
         const toolsSection = document.createElement("div");
-        toolsSection.style.cssText = "padding: 1.25rem; border-bottom: 1px solid #e5e7eb;";
+        toolsSection.style.cssText = "padding: 0.875rem 1rem; border-bottom: 1px solid #e5e7eb;";
         
         const toolsTitle = document.createElement("h2");
-        toolsTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);";
+        toolsTitle.style.cssText = "margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 700; color: var(--text-main);";
         toolsTitle.textContent = "🔧 Tools / Equipment Needed";
         toolsSection.appendChild(toolsTitle);
         
@@ -10026,37 +10055,37 @@ async function renderJobs(reset = false) {
         
         // 7. LOCATION MAP
         const locationSection = document.createElement("div");
-        locationSection.style.cssText = "padding: 1.25rem; border-bottom: 1px solid #e5e7eb;";
+        locationSection.style.cssText = "padding: 0.875rem 1rem; border-bottom: 1px solid #e5e7eb;";
         
         const locTitle = document.createElement("h2");
-        locTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);";
+        locTitle.style.cssText = "margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 700; color: var(--text-main);";
         locTitle.textContent = "📍 Location";
         locationSection.appendChild(locTitle);
         
         const locNote = document.createElement("div");
-        locNote.style.cssText = "font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem; padding: 0.75rem; background: #f3f4f6; border-radius: 8px; line-height: 1.5;";
+        locNote.style.cssText = "font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem; padding: 0.5rem; background: #f3f4f6; border-radius: 6px; line-height: 1.4;";
         locNote.textContent = "This is an approximate location. Exact address will be shared after you're accepted.";
         locationSection.appendChild(locNote);
         
         // Map container
         const mapContainer = document.createElement("div");
         mapContainer.id = `jobDetailMap-${job.id}`;
-        mapContainer.style.cssText = "width: 100%; height: 200px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb;";
+        mapContainer.style.cssText = "width: 100%; height: 160px; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb;";
         locationSection.appendChild(mapContainer);
         modalContent.appendChild(locationSection);
         
         // 8. EXTRA NOTES
         if (requirements.notes) {
           const notesSection = document.createElement("div");
-          notesSection.style.cssText = "padding: 1.25rem; border-bottom: 1px solid #e5e7eb;";
+          notesSection.style.cssText = "padding: 0.875rem 1rem; border-bottom: 1px solid #e5e7eb;";
           
           const notesTitle = document.createElement("h2");
-          notesTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);";
+          notesTitle.style.cssText = "margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 700; color: var(--text-main);";
           notesTitle.textContent = "📝 Extra Notes";
           notesSection.appendChild(notesTitle);
           
           const notes = document.createElement("div");
-          notes.style.cssText = "font-size: 1rem; color: var(--text-main); line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;";
+          notes.style.cssText = "font-size: 0.95rem; color: var(--text-main); line-height: 1.5; white-space: pre-wrap; word-wrap: break-word;";
           notes.textContent = requirements.notes;
           notesSection.appendChild(notes);
           modalContent.appendChild(notesSection);
@@ -10064,7 +10093,7 @@ async function renderJobs(reset = false) {
         
         // 9. APPLY AREA (with why you're a good fit) - Always show for hustlers
         const actionsSection = document.createElement("div");
-        actionsSection.style.cssText = "padding: 1.25rem; background: #f8f9fa; border-top: 2px solid #e5e7eb;";
+        actionsSection.style.cssText = "padding: 1rem; background: #f8f9fa; border-top: 2px solid #e5e7eb;";
         
         // Get current user from API (async)
         // Note: token is already declared at line 9701 in this function
