@@ -10188,10 +10188,12 @@ async function renderJobs(reset = false) {
             suggestCheckmark.style.display = "block";
             suggestCheckbox.style.borderColor = "#10b981";
             if (!isHustlerQuote) {
-              const acceptCheckmark = acceptCheckbox.querySelector("div");
               const acceptCheckboxEl = document.getElementById(`acceptCheckbox-${job.id}`);
-              if (acceptCheckmark) acceptCheckmark.style.display = "none";
-              if (acceptCheckboxEl) acceptCheckboxEl.style.borderColor = "#6b7280";
+              if (acceptCheckboxEl) {
+                const acceptCheckmark = acceptCheckboxEl.querySelector("div");
+                if (acceptCheckmark) acceptCheckmark.style.display = "none";
+                acceptCheckboxEl.style.borderColor = "#6b7280";
+              }
               const acceptPriceLabelEl = priceOptions.querySelector("label:first-child");
               if (acceptPriceLabelEl) acceptPriceLabelEl.style.borderColor = "#d1d5db";
             }
