@@ -10069,12 +10069,15 @@ async function renderJobs(reset = false) {
           notes.style.cssText = "font-size: 0.95rem; color: var(--text-main); line-height: 1.5; white-space: pre-wrap; word-wrap: break-word;";
           notes.textContent = requirements.notes;
           notesSection.appendChild(notes);
-          modalContent.appendChild(notesSection);
+          jobDetailsBox.appendChild(notesSection);
         }
+        
+        // Add the job details box to modal
+        modalContent.appendChild(jobDetailsBox);
         
         // 9. APPLY AREA (with why you're a good fit) - Always show for hustlers
         const actionsSection = document.createElement("div");
-        actionsSection.style.cssText = "padding: 1rem; background: #f8f9fa; border-top: 2px solid #e5e7eb;";
+        actionsSection.style.cssText = "padding: 1rem; background: #f8f9fa; border-radius: 12px; border: 1px solid #e5e7eb;";
         
         // Get current user from API (async)
         // Note: token is already declared at line 9701 in this function
