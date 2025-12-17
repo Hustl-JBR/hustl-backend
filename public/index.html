@@ -21950,10 +21950,30 @@ meta.textContent =
             const verified = await verifyStartCode(job.id, code);
             if (verified) {
               document.body.removeChild(modalOverlay);
-              // Refresh the modal to show updated state
-              setTimeout(() => {
-                showActiveJobModal(job.id, 'hustler');
-              }, 500);
+              loadActiveJobs();
+            }
+          });
+          
+          modalOverlay.querySelector('.leaveJobBtn')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (confirm('Are you sure you want to leave this job?')) {
+              try {
+                const token = localStorage.getItem('hustl_token');
+                const response = await fetch(`${API_BASE}/offers/job/${job.id}/hustler-cancel`, {
+                  method: 'POST',
+                  headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                  showToast('You have left the job');
+                  document.body.removeChild(modalOverlay);
+                  loadActiveJobs();
+                } else {
+                  throw new Error('Failed to leave job');
+                }
+              } catch (error) {
+                console.error('Error leaving job:', error);
+                showToast('Error leaving job. Please try again.');
+              }
             }
           });
           
