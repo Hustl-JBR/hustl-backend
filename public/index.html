@@ -22357,8 +22357,8 @@ meta.textContent =
                           box-shadow: 0 4px 6px rgba(0,0,0,0.07);
                           transition: all 0.3s;
                         " class="applicant-card" onmouseenter="this.style.boxShadow='0 8px 12px rgba(0,0,0,0.12)'; this.style.transform='translateY(-2px)'" onmouseleave="this.style.boxShadow='0 4px 6px rgba(0,0,0,0.07)'; this.style.transform='translateY(0)'">
-                          <div style="text-align: center; margin-bottom: 2rem;">
-                            <div style="display: inline-block; margin-bottom: 1rem;">
+                          <div style="text-align: center; margin-bottom: 1.25rem;">
+                            <div style="display: inline-block; margin-bottom: 0.75rem;">
                               ${renderUserAvatar(hustler, 80, { 
                                 className: 'viewApplicantProfile',
                                 style: 'cursor: pointer;'
@@ -22366,7 +22366,7 @@ meta.textContent =
                             </div>
                             <div>
                               <div style="font-weight: 700; color: #1a1a1a; font-size: 1.5rem; cursor: pointer; letter-spacing: -0.01em; margin-bottom: 0.5rem;" class="viewApplicantProfile" data-user-id="${hustler.id}">${hustler.name || 'Unknown'}</div>
-                              <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 1rem;">
+                              <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0;">
                                 <span style="font-size: 1.1rem;">${'⭐'.repeat(Math.floor(rating))}${rating % 1 >= 0.5 ? '⭐' : ''}</span>
                                 <span style="color: #4a4a4a; font-size: 1rem; font-weight: 600;">${rating.toFixed(1)} (${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})</span>
                               </div>
@@ -22374,15 +22374,15 @@ meta.textContent =
                           </div>
                           
                           <!-- Suggested Price - Prominent Display -->
-                          <div style="padding: 2rem; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 16px; border: 3px solid #10b981; margin-bottom: 2rem; text-align: center; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);">
-                            <div style="font-size: 1rem; color: #047857; font-weight: 700; margin-bottom: 0.75rem; letter-spacing: 0.5px;">Suggested Price</div>
+                          <div style="padding: 1.5rem; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 16px; border: 3px solid #10b981; margin-bottom: 1.25rem; text-align: center; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);">
+                            <div style="font-size: 1rem; color: #047857; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: 0.5px;">Suggested Price</div>
                             <div style="font-size: 2.5rem; font-weight: 700; color: #059669; line-height: 1;">${suggestedPriceDisplay}</div>
                           </div>
                           
                           <!-- Why I'm a good fit -->
                           ${offer.note ? `
-                          <div style="padding: 1.5rem; background: #f0fdf4; border-radius: 12px; border: 2px solid #10b98140; margin-bottom: 2rem;">
-                            <div style="font-size: 1.1rem; color: #047857; margin-bottom: 1rem; font-weight: 700; letter-spacing: -0.01em; text-align: center;">💬 Why I'm a good fit:</div>
+                          <div style="padding: 1.25rem; background: #f0fdf4; border-radius: 12px; border: 2px solid #10b98140; margin-bottom: 1.25rem;">
+                            <div style="font-size: 1.1rem; color: #047857; margin-bottom: 0.75rem; font-weight: 700; letter-spacing: -0.01em; text-align: center;">💬 Why I'm a good fit:</div>
                             <div style="color: #2a2a2a; line-height: 1.7; font-size: 1rem; font-weight: 500; text-align: left;">${offer.note}</div>
                           </div>
                           ` : ''}
