@@ -4034,11 +4034,11 @@
                   <button 
                     type="button"
                     id="useCurrentLocationBtn" 
-                    style="flex: 1; padding: 0.75rem; border: 1px solid var(--primary); border-radius: 8px; font-size: 0.9rem; background: var(--primary-soft); color: var(--primary); cursor: pointer; font-weight: 500; transition: all 0.2s;"
-                    onmouseover="this.style.background='var(--primary)'; this.style.color='white';"
-                    onmouseout="this.style.background='var(--primary-soft)'; this.style.color='var(--primary)';"
+                    style="flex: 1; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: white; color: var(--text-main); cursor: pointer; font-weight: 400; transition: all 0.2s;"
+                    onmouseover="this.style.background='var(--primary-soft)'; this.style.borderColor='var(--primary)';"
+                    onmouseout="this.style.background='white'; this.style.borderColor='var(--border)';"
                   >
-                    📍 Use Current Location
+                    📍 Current Location
                   </button>
                   <input 
                     type="text" 
@@ -6918,6 +6918,7 @@ function showChangePasswordModal() {
         currentLocationBtn.textContent = '📍 Getting location...';
         currentLocationBtn.disabled = true;
         currentLocationBtn.style.opacity = '0.6';
+        currentLocationBtn.style.cursor = 'wait';
         
         navigator.geolocation.getCurrentPosition(
           (position) => {
@@ -6941,6 +6942,7 @@ function showChangePasswordModal() {
             currentLocationBtn.textContent = originalText;
             currentLocationBtn.disabled = false;
             currentLocationBtn.style.opacity = '1';
+            currentLocationBtn.style.cursor = 'pointer';
           },
           (error) => {
             console.error('Geolocation error:', error);
@@ -6965,6 +6967,7 @@ function showChangePasswordModal() {
             currentLocationBtn.textContent = originalText;
             currentLocationBtn.disabled = false;
             currentLocationBtn.style.opacity = '1';
+            currentLocationBtn.style.cursor = 'pointer';
           },
           {
             enableHighAccuracy: true,
@@ -7007,17 +7010,21 @@ function showChangePasswordModal() {
     }
     
     function initJobsForm() {
+      // Note: jobOnSiteOnly and dropoffFields were removed in Step 2 (simplified form)
+      // Only initialize if elements exist (for backward compatibility)
       const jobOnSiteOnly = document.getElementById("jobOnSiteOnly");
       const dropoffFields = document.getElementById("dropoffFields");
-      jobOnSiteOnly.addEventListener("change", () => {
-        const isChecked = jobOnSiteOnly.checked;
-        dropoffFields.style.display = isChecked ? "none" : "block";
-        // Update required attribute on dropoff address
-        const dropoffAddressInput = document.getElementById("dropoffAddress");
-        if (dropoffAddressInput) {
-          dropoffAddressInput.required = !isChecked;
-        }
-      });
+      if (jobOnSiteOnly && dropoffFields) {
+        jobOnSiteOnly.addEventListener("change", () => {
+          const isChecked = jobOnSiteOnly.checked;
+          dropoffFields.style.display = isChecked ? "none" : "block";
+          // Update required attribute on dropoff address
+          const dropoffAddressInput = document.getElementById("dropoffAddress");
+          if (dropoffAddressInput) {
+            dropoffAddressInput.required = !isChecked;
+          }
+        });
+      }
       
       // Initialize Mapbox autocomplete after form is ready
       // Also ensure token is loaded for maps
