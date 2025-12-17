@@ -21664,66 +21664,66 @@ meta.textContent =
               </div>
               
               <div style="padding: 2rem; padding-top: 4rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 1.5rem 0; color: var(--text-main);">${job.title || 'Untitled Job'}</h2>
+                <h2 style="font-size: 1.75rem; font-weight: 700; margin: 0 0 1.75rem 0; color: #111827; letter-spacing: -0.02em;">${job.title || 'Untitled Job'}</h2>
                 
                 <!-- Accepted Hustler Section -->
                 <div style="padding: 1.5rem; background: #f0fdf4; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #10b981;">
-                  <div style="font-size: 0.85rem; color: #059669; margin-bottom: 0.75rem; font-weight: 600;">✅ HUSTLER ACCEPTED</div>
+                  <div style="font-size: 0.8rem; color: #059669; margin-bottom: 0.875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">✅ Hustler Accepted</div>
                   <div style="display: flex; gap: 1rem; align-items: center;">
                     ${renderUserAvatar(hustler, 60, {
                       className: 'viewHustlerProfileBtn'
                     })}
                     <div style="flex: 1;">
-                      <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.25rem;">${hustler.name || 'Unknown'}</div>
+                      <div style="font-weight: 700; font-size: 1.15rem; color: #111827; margin-bottom: 0.25rem; letter-spacing: -0.01em;">${hustler.name || 'Unknown'}</div>
                     </div>
-                    <button class="btn btn-primary messageHustlerBtn" data-job-id="${job.id}" style="padding: 0.75rem 1.5rem; font-weight: 600;">💬 Message</button>
+                    <button class="btn btn-primary messageHustlerBtn" data-job-id="${job.id}" style="padding: 0.875rem 1.5rem; font-weight: 700; font-size: 0.95rem; color: white; background: var(--primary); border: none; border-radius: 8px;">💬 Message</button>
                   </div>
                 </div>
                 
                 <!-- Start Code Section - Prominent for Customer to Share -->
                 ${job.startCode ? `
                   <div style="padding: 1.5rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; margin-bottom: 1.5rem; border: 3px solid #f59e0b; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);">
-                    <div style="font-weight: 700; color: #92400e; margin-bottom: 0.5rem; font-size: 1rem;">🔐 Start Code - Give this to your hustler</div>
-                    <div style="font-size: 2.5rem; font-weight: 700; letter-spacing: 0.4em; color: #92400e; text-align: center; padding: 1.25rem; background: white; border-radius: 10px; font-family: 'Courier New', monospace; margin-bottom: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">${job.startCode}</div>
-                    <div style="font-size: 0.85rem; color: #92400e; text-align: center; font-weight: 500;">${job.startCodeVerified ? '✅ Verified by hustler - Job started!' : '⏳ Share this code with your hustler to start the job'}</div>
+                    <div style="font-weight: 700; color: #92400e; margin-bottom: 0.75rem; font-size: 1.05rem; letter-spacing: -0.01em;">🔐 Start Code - Give this to your hustler</div>
+                    <div style="font-size: 2.5rem; font-weight: 700; letter-spacing: 0.4em; color: #92400e; text-align: center; padding: 1.25rem; background: white; border-radius: 10px; font-family: 'Courier New', monospace; margin-bottom: 0.875rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">${job.startCode}</div>
+                    <div style="font-size: 0.875rem; color: #92400e; text-align: center; font-weight: 600;">${job.startCodeVerified ? '✅ Verified by hustler - Job started!' : '⏳ Share this code with your hustler to start the job'}</div>
                   </div>
                 ` : ''}
                 
                 ${job.completionCode && job.status === 'COMPLETED_BY_HUSTLER' ? `
                   <div style="padding: 1.5rem; background: #dbeafe; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #3b82f6;">
-                    <div style="font-weight: 700; color: #1e40af; margin-bottom: 0.75rem;">✅ Completion Code (from Hustler)</div>
-                    <div style="font-size: 0.9rem; color: #1e40af; margin-bottom: 1rem;">The hustler should have provided you with a completion code. Enter it below to release payment.</div>
+                    <div style="font-weight: 700; color: #1e40af; margin-bottom: 0.875rem; font-size: 1.05rem; letter-spacing: -0.01em;">✅ Completion Code (from Hustler)</div>
+                    <div style="font-size: 0.9rem; color: #1e40af; margin-bottom: 1.25rem; line-height: 1.5; font-weight: 500;">The hustler should have provided you with a completion code. Enter it below to release payment.</div>
                     ${!job.completionCodeVerified ? `
-                      <input type="text" id="completionCodeInput" placeholder="Enter 6-digit code" maxlength="6" style="width: 100%; padding: 0.75rem; border: 2px solid #3b82f6; border-radius: 8px; font-size: 1.25rem; text-align: center; letter-spacing: 0.3em; font-family: 'Courier New', monospace;">
-                      <button class="btn btn-primary verifyCompletionBtn" data-job-id="${job.id}" style="width: 100%; margin-top: 0.75rem; padding: 0.75rem; font-weight: 600;">Verify & Release Payment</button>
+                      <input type="text" id="completionCodeInput" placeholder="Enter 6-digit code" maxlength="6" style="width: 100%; padding: 0.875rem; border: 2px solid #3b82f6; border-radius: 8px; font-size: 1.25rem; text-align: center; letter-spacing: 0.3em; font-family: 'Courier New', monospace; font-weight: 700; color: #1e40af;">
+                      <button class="btn btn-primary verifyCompletionBtn" data-job-id="${job.id}" style="width: 100%; margin-top: 0.875rem; padding: 0.875rem; font-weight: 700; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 0.95rem;">Verify & Release Payment</button>
                     ` : `
-                      <div style="padding: 1rem; background: #dcfce7; border-radius: 8px;">
-                        <div style="font-weight: 600; color: #166534;">✅ Completion verified - Payment released</div>
+                      <div style="padding: 1.25rem; background: #dcfce7; border-radius: 8px; border: 1px solid #10b981;">
+                        <div style="font-weight: 700; color: #166534; font-size: 0.95rem;">✅ Completion verified - Payment released</div>
                       </div>
                     `}
                   </div>
                 ` : job.status === 'COMPLETED_BY_HUSTLER' && !job.completionCode ? `
-                  <div style="padding: 1rem; background: #fef3c7; border-radius: 8px; margin-bottom: 1.5rem;">
-                    <div style="font-weight: 600; color: #92400e;">⏳ Waiting for completion code from hustler</div>
+                  <div style="padding: 1.25rem; background: #fef3c7; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #fbbf24;">
+                    <div style="font-weight: 700; color: #92400e; font-size: 0.95rem;">⏳ Waiting for completion code from hustler</div>
                   </div>
                 ` : ''}
                 
                 <!-- Price Adjustment Section (if job not started) -->
                 ${(job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified ? `
-                  <div style="padding: 1.25rem; background: #f8f9fa; border-radius: 12px; margin-bottom: 1.5rem; border: 1px solid #e5e7eb;">
-                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.75rem; font-size: 0.95rem;">💰 Adjust Price (if needed)</div>
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.4;">If you need to change the price before the job starts, you can adjust it here. The hustler will be notified.</div>
-                    <button class="btn btn-ghost adjustPriceBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.75rem; font-weight: 600; border-color: #3b82f6; color: #3b82f6;">✏️ Adjust Price</button>
+                  <div style="padding: 1.5rem; background: #f8f9fa; border-radius: 12px; margin-bottom: 1.5rem; border: 1px solid #e5e7eb;">
+                    <div style="font-weight: 700; color: #111827; margin-bottom: 0.875rem; font-size: 1rem; letter-spacing: -0.01em;">💰 Adjust Price (if needed)</div>
+                    <div style="font-size: 0.875rem; color: #6b7280; margin-bottom: 1.25rem; line-height: 1.5; font-weight: 500;">If you need to change the price before the job starts, you can adjust it here. The hustler will be notified.</div>
+                    <button class="btn btn-ghost adjustPriceBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.875rem; font-weight: 700; border: 2px solid #3b82f6; color: #3b82f6; border-radius: 8px; font-size: 0.95rem; background: white;">✏️ Adjust Price</button>
                   </div>
                 ` : ''}
                 
                 <!-- Actions -->
-                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                  <button class="btn btn-primary messageHustlerBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem; font-weight: 600;">💬 Message</button>
-                  <button class="btn btn-ghost viewJobBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem;">🔍 View Job</button>
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+                  <button class="btn btn-primary messageHustlerBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.875rem; font-weight: 700; font-size: 0.95rem; color: white; background: var(--primary); border: none; border-radius: 8px;">💬 Message</button>
+                  <button class="btn btn-ghost viewJobBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.875rem; font-weight: 700; font-size: 0.95rem; color: #1f2937; border: 2px solid #e5e7eb; border-radius: 8px;">🔍 View Job</button>
                   ${(job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified ? `
-                    <button class="btn btn-ghost unassignHustlerBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem; color: #f59e0b; border-color: #fde68a;">🔓 Unassign</button>
-                    <button class="btn btn-ghost deleteJobBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem; color: #dc2626; border-color: #fecaca;">🗑️ Delete</button>
+                    <button class="btn btn-primary unassignHustlerBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.875rem; font-weight: 700; font-size: 0.95rem; color: white; background: #f59e0b; border: none; border-radius: 8px;">🔓 Unassign</button>
+                    <button class="btn btn-ghost deleteJobBtn" data-job-id="${job.id}" style="padding: 0.75rem; width: 48px; height: 48px; color: #dc2626; border: 2px solid #fecaca; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; background: #fef2f2;" title="Delete Job">🗑️</button>
                   ` : ''}
                 </div>
               </div>
@@ -21784,59 +21784,60 @@ meta.textContent =
               ">×</button>
               
               <div style="padding: 2rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 1.5rem 0; color: var(--text-main);">${job.title || 'Untitled Job'}</h2>
+                <h2 style="font-size: 1.75rem; font-weight: 700; margin: 0 0 1.75rem 0; color: #111827; letter-spacing: -0.02em;">${job.title || 'Untitled Job'}</h2>
                 
                 <!-- Customer Info -->
-                <div style="padding: 1.5rem; background: #f9fafb; border-radius: 12px; margin-bottom: 1.5rem;">
-                  <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; font-weight: 600;">CUSTOMER</div>
+                <div style="padding: 1.5rem; background: #f9fafb; border-radius: 12px; margin-bottom: 1.5rem; border: 1px solid #e5e7eb;">
+                  <div style="font-size: 0.8rem; color: #6b7280; margin-bottom: 0.875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Customer</div>
                   <div style="display: flex; gap: 1rem; align-items: center;">
                     ${customer ? renderUserAvatar(customer, 60) : `<div style="width: 60px; height: 60px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); font-size: 1.5rem;">C</div>`}
                     <div style="flex: 1;">
-                      <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.25rem;">${customer.name || 'Unknown'}</div>
+                      <div style="font-weight: 700; font-size: 1.15rem; color: #111827; margin-bottom: 0.25rem; letter-spacing: -0.01em;">${customer.name || 'Unknown'}</div>
                     </div>
                   </div>
                 </div>
                 
                 <!-- Essential Job Info -->
-                <div style="padding: 1.5rem; background: #f8f9fa; border-radius: 12px; margin-bottom: 1.5rem;">
-                  <div style="display: grid; gap: 0.75rem;">
-                    <div><strong>👥 Workers:</strong> ${workersDisplay}</div>
-                    <div><strong>🔧 Tools Needed:</strong> ${toolsDisplay}</div>
-                    <div><strong>📅 Scheduled:</strong> ${dateStr} at ${timeStr}</div>
-                    <div style="padding: 0.5rem 1rem; background: ${job.status === 'IN_PROGRESS' ? '#f59e0b20' : '#3b82f620'}; color: ${job.status === 'IN_PROGRESS' ? '#f59e0b' : '#3b82f6'}; border-radius: 6px; font-weight: 600; display: inline-block; width: fit-content;">${job.status === 'IN_PROGRESS' ? 'In Progress' : 'Scheduled'}</div>
+                <div style="padding: 1.5rem; background: #f8f9fa; border-radius: 12px; margin-bottom: 1.5rem; border: 1px solid #e5e7eb;">
+                  <div style="display: grid; gap: 1rem;">
+                    <div style="font-weight: 700; color: #111827; font-size: 0.95rem;"><span style="color: #6b7280; margin-right: 0.5rem;">👥</span>Workers: <span style="color: #374151; font-weight: 600;">${workersDisplay}</span></div>
+                    <div style="font-weight: 700; color: #111827; font-size: 0.95rem;"><span style="color: #6b7280; margin-right: 0.5rem;">🔧</span>Tools Needed: <span style="color: #374151; font-weight: 600;">${toolsDisplay}</span></div>
+                    <div style="font-weight: 700; color: #111827; font-size: 0.95rem;"><span style="color: #6b7280; margin-right: 0.5rem;">📅</span>Scheduled: <span style="color: #374151; font-weight: 600;">${dateStr} at ${timeStr}</span></div>
+                    <div style="padding: 0.625rem 1.125rem; background: ${job.status === 'IN_PROGRESS' ? '#fef3c7' : '#dbeafe'}; color: ${job.status === 'IN_PROGRESS' ? '#92400e' : '#1e40af'}; border-radius: 8px; font-weight: 700; display: inline-block; width: fit-content; font-size: 0.875rem; border: 1px solid ${job.status === 'IN_PROGRESS' ? '#fbbf24' : '#3b82f6'};">${job.status === 'IN_PROGRESS' ? 'In Progress' : 'Scheduled'}</div>
                   </div>
                 </div>
                 
                 <!-- Start Code Entry - Mobile Friendly -->
                 ${job.startCode && !job.startCodeVerified ? `
-                  <div style="padding: 1.25rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
-                    <div style="font-weight: 700; color: #92400e; margin-bottom: 0.5rem; font-size: 1rem;">🔐 Enter Start Code</div>
-                    <div style="font-size: 0.85rem; color: #92400e; margin-bottom: 1rem; line-height: 1.4;">Ask the customer for the 6-digit start code to begin the job.</div>
-                    <input type="text" id="startCodeInput" placeholder="Enter 6-digit code" maxlength="6" style="width: 100%; padding: 1rem; border: 2px solid #fbbf24; border-radius: 8px; font-size: 1.5rem; text-align: center; letter-spacing: 0.3em; font-family: 'Courier New', monospace; font-weight: 600; box-sizing: border-box; min-height: 60px;" />
-                    <button class="btn btn-primary verifyStartCodeBtn" data-job-id="${job.id}" style="width: 100%; margin-top: 0.75rem; padding: 1rem; font-weight: 600; background: #f59e0b; font-size: 1rem; min-height: 50px;">Verify & Start Job</button>
+                  <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
+                    <div style="font-weight: 700; color: #92400e; margin-bottom: 0.75rem; font-size: 1.05rem; letter-spacing: -0.01em;">🔐 Enter Start Code</div>
+                    <div style="font-size: 0.875rem; color: #92400e; margin-bottom: 1.25rem; line-height: 1.5; font-weight: 500;">Ask the customer for the 6-digit start code to begin the job.</div>
+                    <input type="text" id="startCodeInput" placeholder="Enter 6-digit code" maxlength="6" style="width: 100%; padding: 1rem; border: 2px solid #fbbf24; border-radius: 8px; font-size: 1.5rem; text-align: center; letter-spacing: 0.3em; font-family: 'Courier New', monospace; font-weight: 700; box-sizing: border-box; min-height: 60px; color: #92400e;" />
+                    <button class="btn btn-primary verifyStartCodeBtn" data-job-id="${job.id}" style="width: 100%; margin-top: 0.875rem; padding: 1rem; font-weight: 700; background: #f59e0b; font-size: 1rem; min-height: 50px; color: white; border: none; border-radius: 8px;">Verify & Start Job</button>
                   </div>
                 ` : job.startCodeVerified ? `
-                  <div style="padding: 1rem; background: #dcfce7; border-radius: 8px; margin-bottom: 1.5rem;">
-                    <div style="font-weight: 600; color: #166534;">✅ Start code verified - Job in progress</div>
+                  <div style="padding: 1.25rem; background: #dcfce7; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #10b981;">
+                    <div style="font-weight: 700; color: #166534; font-size: 0.95rem;">✅ Start code verified - Job in progress</div>
                   </div>
                 ` : ''}
                 
                 <!-- Mark Complete Section -->
                 ${job.startCodeVerified && job.status !== 'COMPLETED_BY_HUSTLER' && job.status !== 'PAID' ? `
                   <div style="padding: 1.5rem; background: #dbeafe; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #3b82f6;">
-                    <div style="font-weight: 700; color: #1e40af; margin-bottom: 0.75rem;">✅ Mark Job Complete</div>
-                    <div style="font-size: 0.9rem; color: #1e40af; margin-bottom: 1rem;">When you finish the job, click below to mark it complete. A verification code will be sent to the customer.</div>
-                    <button class="btn btn-primary submitEndCodeBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.75rem; font-weight: 600;">Mark Complete</button>
+                    <div style="font-weight: 700; color: #1e40af; margin-bottom: 0.875rem; font-size: 1.05rem; letter-spacing: -0.01em;">✅ Mark Job Complete</div>
+                    <div style="font-size: 0.9rem; color: #1e40af; margin-bottom: 1.25rem; line-height: 1.5; font-weight: 500;">When you finish the job, click below to mark it complete. A verification code will be sent to the customer.</div>
+                    <button class="btn btn-primary submitEndCodeBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.875rem; font-weight: 700; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 0.95rem;">Mark Complete</button>
                   </div>
                 ` : job.status === 'COMPLETED_BY_HUSTLER' ? `
-                  <div style="padding: 1rem; background: #dcfce7; border-radius: 8px; margin-bottom: 1.5rem;">
-                    <div style="font-weight: 600; color: #166534;">✅ Job marked as complete - Waiting for customer confirmation</div>
+                  <div style="padding: 1.25rem; background: #dcfce7; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #10b981;">
+                    <div style="font-weight: 700; color: #166534; font-size: 0.95rem;">✅ Job marked as complete - Waiting for customer confirmation</div>
                   </div>
                 ` : ''}
                 
                 <!-- Actions -->
-                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                  ${(job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && !job.startCodeVerified ? `<button class="btn btn-ghost leaveJobBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem; color: #dc2626; border-color: #fecaca; font-weight: 600;">🚪 Leave Job</button>` : ''}
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+                  <button class="btn btn-primary messageCustomerBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.875rem; font-weight: 700; font-size: 0.95rem; color: white; background: var(--primary); border: none; border-radius: 8px;">💬 Message</button>
+                  ${(job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && !job.startCodeVerified ? `<button class="btn btn-primary leaveJobBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.875rem; font-weight: 700; font-size: 0.95rem; color: white; background: #dc2626; border: none; border-radius: 8px;">🚪 Leave Job</button>` : ''}
                 </div>
               </div>
             </div>
