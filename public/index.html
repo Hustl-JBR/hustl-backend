@@ -9717,9 +9717,11 @@ async function renderJobs(reset = false) {
         
         const modalContent = document.createElement("div");
         modalContent.className = "modal-content";
-        // Mobile: full screen with top padding for blue header, Desktop: centered modal
+        // Mobile: full screen positioned below blue header, Desktop: centered modal
         if (window.innerWidth <= 768) {
-          modalContent.style.cssText = "background: white; border-radius: 0; max-width: 100%; width: 100%; min-height: 100vh; overflow-y: auto; position: relative; margin: 0; box-shadow: none; padding-top: 400px;";
+          // Position content below browser header (approximately 120px for status bar + browser UI)
+          const headerOffset = 120;
+          modalContent.style.cssText = `background: white; border-radius: 0; max-width: 100%; width: 100%; min-height: calc(100vh - ${headerOffset}px); overflow-y: auto; position: relative; margin: 0; margin-top: ${headerOffset}px; box-shadow: none;`;
         } else {
           modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 600px; width: 90%; max-height: 95vh; overflow-y: auto; position: relative; margin: 2rem auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
         }
