@@ -22245,13 +22245,22 @@ meta.textContent =
         };
         const categoryIcon = categoryIcons[job.category] || '📋';
         
-        // Posted date
+        // Posted date - calculate hours ago
         const postedDate = new Date(job.createdAt);
-        const daysAgo = Math.floor((Date.now() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
-        const postedText = daysAgo === 0 ? 'Posted today' : daysAgo === 1 ? 'Posted 1 day ago' : `Posted ${daysAgo} days ago`;
+        const hoursAgo = Math.floor((Date.now() - postedDate.getTime()) / (1000 * 60 * 60));
+        const minutesAgo = Math.floor((Date.now() - postedDate.getTime()) / (1000 * 60));
+        let postedText = '';
+        if (minutesAgo < 60) {
+          postedText = minutesAgo < 1 ? 'Just now' : `${minutesAgo} ${minutesAgo === 1 ? 'minute' : 'minutes'} ago`;
+        } else if (hoursAgo < 24) {
+          postedText = `${hoursAgo} ${hoursAgo === 1 ? 'hour' : 'hours'} ago`;
+        } else {
+          const daysAgo = Math.floor(hoursAgo / 24);
+          postedText = `${daysAgo} ${daysAgo === 1 ? 'day' : 'days'} ago`;
+        }
         
         if (actualRole === 'customer') {
-          // CUSTOMER VIEW - Full job details with applicants
+          // CUSTOMER VIEW - Simplified: Essential info + Applicants
           modalOverlay.innerHTML = `
             <div style="
               background: white;
@@ -22282,200 +22291,26 @@ meta.textContent =
               ">×</button>
               
               <div style="padding: 2rem;">
-                <!-- Job Header -->
-                <div style="margin-bottom: 2rem;">
-                  <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
-                    <span style="font-size: 2rem;">${categoryIcon}</span>
-                    <h2 style="font-size: 1.75rem; font-weight: 700; margin: 0; color: var(--text-main);">${job.title || 'Untitled Job'}</h2>
-                  </div>
-                  
-                  <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
-                    <span style="padding: 0.35rem 0.75rem; background: var(--primary-soft); color: var(--primary); border-radius: 6px; font-weight: 600;">${job.category || 'General'}</span>
-                    <span style="font-weight: 600; color: var(--text-main);">💰 ${payDisplay}</span>
-                    <span style="padding: 0.35rem 0.75rem; background: #10b98120; color: #10b981; border-radius: 6px; font-weight: 600;">${job.status || 'Open'}</span>
-                    <span>📅 ${postedText}</span>
-                  </div>
-                </div>
-                
-                <!-- Full Job Description -->
-                <div style="margin-bottom: 2rem; padding: 1.5rem; background: #f9fafb; border-radius: 12px; border: 1px solid var(--border);">
-                  <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">📝 Full Description</h3>
-                  <div style="color: var(--text-main); line-height: 1.7; white-space: pre-wrap;">${job.description || 'No description provided.'}</div>
-                </div>
-                
-                <!-- Job Details Grid -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
-                  <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">💰 Pay</div>
-                    <div style="font-weight: 700; color: var(--text-main); font-size: 1.1rem;">${payDisplay}</div>
-                  </div>
-                  <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">⏰ Timing</div>
-                    <div style="font-weight: 600; color: var(--text-main);">${timingDisplay}</div>
-                    ${neededByDisplay ? `<div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border);">
-                      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">📅 Needed By</div>
-                      <div style="font-weight: 600; color: var(--text-main);">${neededByDisplay}</div>
-                    </div>` : ''}
-                  </div>
-                  <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">🕐 Preferred Time</div>
-                    <div style="font-weight: 600; color: var(--text-main);">${preferredTimeDisplay}</div>
-                  </div>
-                  <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">👥 Workers</div>
-                    <div style="font-weight: 600; color: var(--text-main);">${workersDisplay}</div>
-                  </div>
-                  <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">📍 Location</div>
-                    <div style="font-weight: 600; color: var(--text-main); font-size: 0.9rem;">${locationDisplay}</div>
-                    ${(() => {
-                      // Add map preview if coordinates are available
-                      const reqLat = requirements.pickup_lat || requirements.pickupLat;
-                      const reqLng = requirements.pickup_lng || requirements.pickupLng;
-                      const jobLat = job.lat;
-                      const jobLng = job.lng;
-                      const lat = reqLat || jobLat;
-                      const lng = reqLng || jobLng;
-                      
-                      if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
-                        return `
-                          <div id="jobMapPreview_${job.id}" style="margin-top: 0.75rem; width: 100%; height: 200px; border-radius: 8px; overflow: hidden; border: 2px solid var(--border); cursor: pointer; position: relative;" data-job-id="${job.id}" data-lat="${lat}" data-lng="${lng}">
-                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #f3f4f6; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.85rem;">
-                              Loading map...
-                            </div>
-                          </div>
-                          <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-muted); text-align: center;">Click to open in Google Maps</div>
-                        `;
-                      }
-                      return '';
-                    })()}
-                  </div>
-                  ${(() => {
-                    const requirements = job.requirements || {};
-                    const isKeepOpenEnabled = requirements.keepOpenUntilAccepted === true;
-                    const displayText = isKeepOpenEnabled ? 'Stays open until hustler assigned' : (expirationDisplay || '');
-                    const displayColor = isKeepOpenEnabled ? '#1e40af' : expirationColor || '#d97706';
-                    const bgColor = isKeepOpenEnabled ? '#dbeafe' : (expiresAt && expiresAt <= new Date() ? '#fee2e2' : '#fef3c7');
-                    const borderColor = isKeepOpenEnabled ? '#3b82f6' : (expiresAt && expiresAt <= new Date() ? '#fca5a5' : '#fbbf24');
-                    
-                    if (!displayText && !isKeepOpenEnabled) return '';
-                    return `
-                  <div style="padding: 1rem; background: ${bgColor}; border-radius: 8px; border: 1px solid ${borderColor};">
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">⏳ Visibility</div>
-                    <div id="expirationDisplay_${job.id}" data-expiration-display style="font-weight: 600; color: ${displayColor};">${displayText}</div>
-                  </div>
-                  `;
-                  })()}
-                </div>
-                
-                ${requirements.notes ? `
-                <!-- Notes Section -->
-                <div style="margin-bottom: 2rem; padding: 1.5rem; background: #fef3c7; border-radius: 12px; border: 1px solid #fbbf24;">
-                  <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; color: #92400e;">📝 Additional Notes</h3>
-                  <div style="color: #92400e; line-height: 1.7; white-space: pre-wrap;">${requirements.notes}</div>
-                </div>
-                ` : ''}
-                
-                <!-- Job Timeline -->
-                <div style="margin-bottom: 2rem; padding: 1.5rem; background: #f9fafb; border-radius: 12px;">
-                  <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">📊 Job Timeline</h3>
-                  <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                      <span style="padding: 0.5rem; background: #10b981; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;">1</span>
-                      <div>
-                        <div style="font-weight: 600; color: var(--text-main);">Posted</div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted);">${postedText}</div>
+                <!-- Job Header - Essential Info -->
+                <div style="margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 2px solid var(--border);">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                    <div style="flex: 1;">
+                      <h2 style="font-size: 1.75rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-main);">${job.title || 'Untitled Job'}</h2>
+                      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <div style="font-size: 1.1rem; font-weight: 600; color: var(--text-main);">💰 ${payDisplay}</div>
+                        <div style="font-size: 0.95rem; color: var(--text-muted);">👥 ${workersDisplay}</div>
+                        <div style="font-size: 0.95rem; color: var(--text-muted);">📍 ${locationDisplay}</div>
                       </div>
                     </div>
-                    ${job.hustlerId ? `
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                      <span style="padding: 0.5rem; background: #3b82f6; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;">2</span>
-                      <div>
-                        <div style="font-weight: 600; color: var(--text-main);">Accepted</div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted);">Hustler accepted the job</div>
-                      </div>
-                    </div>
-                    ` : ''}
-                    ${job.status === 'ASSIGNED' || job.status === 'REQUESTED' ? `
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                      <span style="padding: 0.5rem; background: #f59e0b; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;">3</span>
-                      <div>
-                        <div style="font-weight: 600; color: var(--text-main);">Active</div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted);">Job is in progress</div>
-                      </div>
-                    </div>
-                    ` : ''}
-                    ${job.status === 'PAID' ? `
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                      <span style="padding: 0.5rem; background: #10b981; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;">4</span>
-                      <div>
-                        <div style="font-weight: 600; color: var(--text-main);">Completed</div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted);">Job finished and paid</div>
-                      </div>
-                    </div>
-                    ` : ''}
-                  </div>
-                </div>
-                
-                <!-- Start Code Section (Customer) - NOT for completed jobs -->
-                ${job.hustlerId && job.startCode && !job.startCodeVerified && (job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && job.status !== 'PAID' ? `
-                <div style="border-top: 2px solid var(--border); padding-top: 2rem; margin-bottom: 2rem;">
-                  <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; border: 2px solid #fbbf24;">
-                    <div style="font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 0.75rem;">🔐 Start Code (Give to Hustler)</div>
-                    <div style="font-size: 2rem; font-weight: 700; letter-spacing: 0.3em; color: #92400e; text-align: center; padding: 1rem; background: white; border-radius: 8px; font-family: 'Courier New', monospace; margin-bottom: 0.75rem;">${job.startCode}</div>
-                    <div style="padding: 0.75rem; background: #fee2e2; border-left: 4px solid #dc2626; border-radius: 6px; margin-bottom: 0.75rem;">
-                      <div style="font-weight: 600; color: #991b1b; margin-bottom: 0.25rem;">⚠️ Safety Warning</div>
-                      <div style="font-size: 0.85rem; color: #991b1b;">Do not give the Start Code until the hustler is physically there and ready to begin the job.</div>
-                    </div>
-                    <div style="font-size: 0.9rem; color: #92400e; margin-bottom: 0.75rem;">
-                      Share this 6-digit code with your hustler when they arrive to start the job.
-                    </div>
-                    <button class="btn btn-ghost regenerateStartCodeBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.5rem; font-size: 0.85rem;">🔄 Regenerate Code</button>
-                  </div>
-                </div>
-                ` : ''}
-                
-                <!-- Completion Code Section (Customer) - NOT for completed jobs -->
-                ${job.startCodeVerified && job.status === 'IN_PROGRESS' && job.status !== 'PAID' && job.completionCode && !job.completionCodeVerified ? `
-                <div style="border-top: 2px solid var(--border); padding-top: 2rem; margin-bottom: 2rem;">
-                  <div style="padding: 1.5rem; background: #dcfce7; border-radius: 12px; border: 2px solid #16a34a;">
-                    <div style="font-weight: 700; font-size: 1.1rem; color: #166534; margin-bottom: 0.75rem;">🔐 Completion Code (For Hustler)</div>
-                    <div style="font-size: 2rem; font-weight: 700; letter-spacing: 0.3em; color: #166534; text-align: center; padding: 1rem; background: white; border-radius: 8px; font-family: 'Courier New', monospace; margin-bottom: 0.75rem;">${job.completionCode}</div>
-                    <div style="padding: 0.75rem; background: #fee2e2; border-left: 4px solid #dc2626; border-radius: 6px; margin-bottom: 0.75rem;">
-                      <div style="font-weight: 600; color: #991b1b; margin-bottom: 0.25rem;">⚠️ Safety Warning</div>
-                      <div style="font-size: 0.85rem; color: #991b1b;">Only give the Completion Code after the job is fully done and you are satisfied with the work.</div>
-                    </div>
-                    <div style="font-size: 0.9rem; color: #166534; margin-bottom: 0.75rem;">
-                      The hustler will enter this code when the job is complete. Do not share it until you are satisfied with the work.
-                    </div>
-                    <button class="btn btn-ghost regenerateCompletionCodeBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.5rem; font-size: 0.85rem;">🔄 Regenerate Code</button>
-                  </div>
-                </div>
-                ` : ''}
-                
-                <!-- Assigned Hustler Section (when job is assigned) -->
-                ${job.hustlerId ? `
-                <div style="border-top: 2px solid var(--border); padding-top: 2rem; margin-bottom: 2rem;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                    <h3 style="font-size: 1.25rem; font-weight: 700; margin: 0; color: var(--text-main);">
-                      ✅ Assigned Hustler
-                    </h3>
-                  </div>
-                  <div style="padding: 1.5rem; border: 2px solid var(--border); border-radius: 12px; background: white;">
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                      <div style="width: 60px; height: 60px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); font-size: 1.5rem;">👤</div>
-                      <div style="flex: 1;">
-                        <div style="font-weight: 700; color: var(--text-main); font-size: 1.1rem; margin-bottom: 0.25rem;">Assigned</div>
-                        <div style="font-size: 0.9rem; color: var(--text-muted);">Job has been assigned to a hustler</div>
-                      </div>
+                    <div style="text-align: right; color: var(--text-muted); font-size: 0.9rem;">
+                      ${postedText}
                     </div>
                   </div>
                 </div>
-                ` : ''}
                 
                 <!-- Applicants Section (only show if job is OPEN and has pending offers) -->
                 ${job.status === 'OPEN' && pendingOffers.length > 0 ? `
-                <div style="border-top: 2px solid var(--border); padding-top: 2rem;">
+                <div>
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                     <h3 style="font-size: 1.5rem; font-weight: 700; margin: 0; color: var(--text-main);">
                       👥 Applicants (${pendingOffers.length})
@@ -22541,38 +22376,6 @@ meta.textContent =
                   </div>
                 </div>
                 ` : ''}
-                
-                <!-- Action Buttons -->
-                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 2rem; padding-top: 2rem; border-top: 2px solid var(--border);">
-                  ${job.status === 'OPEN' ? `
-                  <button class="btn btn-ghost cancelJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; color: #dc2626; border-color: #fecaca; font-weight: 600;">🚫 Delete Job</button>
-                  ${(() => {
-                    const requirements = job.requirements || {};
-                    const isKeepOpenEnabled = requirements.keepOpenUntilAccepted === true;
-                    return `
-                  <div style="width: 100%; margin-top: 1rem; padding: 1rem; background: ${isKeepOpenEnabled ? '#dbeafe' : '#f9fafb'}; border: 2px solid ${isKeepOpenEnabled ? '#3b82f6' : '#e5e7eb'}; border-radius: 8px;">
-                    ${isKeepOpenEnabled ? `
-                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; padding: 0.5rem; background: #3b82f6; color: white; border-radius: 6px; font-weight: 700; font-size: 0.9rem;">
-                      <span>✅</span>
-                      <span>Setting Active: Job will stay open until you accept a hustler</span>
-                    </div>
-                    ` : ''}
-                    <label class="checkbox-field" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem 0.5rem 0.5rem 0 !important; margin-left: 0 !important; min-height: 44px;">
-                      <input type="checkbox" id="keepOpenUntilAccepted" ${isKeepOpenEnabled ? 'checked' : ''} style="width: 16px; height: 16px; min-width: 16px; min-height: 16px; accent-color: var(--primary); cursor: pointer; flex-shrink: 0; margin: 0;">
-                      <span style="font-size: 0.85rem; color: var(--text-main); font-weight: 600; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Keep active until assigned</span>
-                    </label>
-                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; margin-left: 0;">
-                      ${isKeepOpenEnabled ? '✅ Active - Auto-closes when assigned' : 'Auto-closes when assigned'}
-                    </div>
-                    <button class="btn btn-primary saveKeepOpenSettingBtn" data-job-id="${job.id}" style="margin-top: 0.5rem; padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 600; min-height: 44px;">💾 Save</button>
-                  </div>
-                  `;
-                  })()}
-                  ` : ''}
-                  ${pendingOffers.length === 0 && job.status === 'OPEN' ? `
-                  <button class="btn btn-primary repostJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">🔄 Repost Job</button>
-                  ` : ''}
-                </div>
               </div>
             </div>
           `;
