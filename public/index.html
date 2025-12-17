@@ -4704,6 +4704,16 @@ heart of Hustl.
     document.querySelectorAll(".nav-tab").forEach((tab) => {
       tab.classList.toggle("active", tab.dataset.view === view);
     });
+    
+    // Initialize map when post view is shown
+    if (view === 'post') {
+      setTimeout(async () => {
+        if (typeof initApproximateLocationMap === 'function') {
+          await initApproximateLocationMap();
+        }
+      }, 300);
+    }
+    
     // Call renderAll if available
     if (typeof window.renderAll === 'function') {
       setTimeout(async () => {
@@ -6565,7 +6575,29 @@ function showChangePasswordModal() {
     
     async function initApproximateLocationMap() {
       const mapContainer = document.getElementById('approximateLocationMap');
-      if (!mapContainer) return;
+      if (!mapContainer) {
+        console.log('Map container not found');
+        return;
+      }
+      
+      // Check if container is visible
+      const containerParent = mapContainer.closest('#view-post');
+      if (containerParent && containerParent.style.display === 'none') {
+        console.log('Post view not visible, will initialize when shown');
+        return;
+      }
+      
+      // If map already exists, remove it first
+      if (approximateLocationMap) {
+        try {
+          approximateLocationMap.remove();
+        } catch (e) {
+          console.warn('Error removing existing map:', e);
+        }
+        approximateLocationMap = null;
+        approximateLocationMarker = null;
+        approximateLocationCircle = null;
+      }
       
       // Wait for Mapbox token
       let MAPBOX_TOKEN = window.MAPBOX_TOKEN;
@@ -6583,73 +6615,126 @@ function showChangePasswordModal() {
         }
       }
       
-      if (!MAPBOX_TOKEN || typeof mapboxgl === 'undefined') {
-        mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);">Map loading...</div>';
+      // Check if mapboxgl is loaded - wait up to 5 seconds
+      let attempts = 0;
+      const maxAttempts = 10;
+      const checkMapbox = () => {
+        if (typeof mapboxgl !== 'undefined') {
+          return true;
+        }
+        attempts++;
+        if (attempts >= maxAttempts) {
+          mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #dc2626; padding: 1rem; text-align: center;">Map library failed to load. Please refresh the page.</div>';
+          return false;
+        }
+        return false;
+      };
+      
+      if (!checkMapbox()) {
+        mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); padding: 1rem; text-align: center;">Loading map library...</div>';
+        // Wait and check again
+        const interval = setInterval(() => {
+          if (checkMapbox()) {
+            clearInterval(interval);
+            initApproximateLocationMap();
+          }
+        }, 500);
         return;
       }
       
-      mapboxgl.accessToken = MAPBOX_TOKEN;
+      if (!MAPBOX_TOKEN) {
+        mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #dc2626; padding: 1rem; text-align: center;">Map token not available. Please check configuration.</div>';
+        return;
+      }
       
-      // Initialize map centered on Tennessee (Nashville area)
-      approximateLocationMap = new mapboxgl.Map({
-        container: 'approximateLocationMap',
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: [-86.7816, 36.1627], // Nashville center
-        zoom: 11
-      });
-      
-      // Wait for map to load
-      approximateLocationMap.on('load', () => {
-        // Add click handler
-        approximateLocationMap.on('click', (e) => {
-          const { lng, lat } = e.lngLat;
-          
-          // Store coordinates
-          document.getElementById('approximateLat').value = lat;
-          document.getElementById('approximateLng').value = lng;
-          
-          // Update status
-          const statusDiv = document.getElementById('locationStatus');
-          if (statusDiv) {
-            statusDiv.textContent = `Location set: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-            statusDiv.style.color = 'var(--primary)';
-          }
-          
-          // Remove existing marker and circle
-          if (approximateLocationMarker) {
-            approximateLocationMarker.remove();
-          }
-          if (approximateLocationCircle) {
-            approximateLocationMap.removeLayer('approximate-circle');
-            approximateLocationMap.removeSource('approximate-circle');
-          }
-          
-          // Add marker
-          approximateLocationMarker = new mapboxgl.Marker({
-            color: '#2563eb',
-            draggable: true
-          })
-            .setLngLat([lng, lat])
-            .addTo(approximateLocationMap);
-          
-          // Handle marker drag
-          approximateLocationMarker.on('dragend', () => {
-            const markerLngLat = approximateLocationMarker.getLngLat();
-            document.getElementById('approximateLat').value = markerLngLat.lat;
-            document.getElementById('approximateLng').value = markerLngLat.lng;
-            
-            // Update circle
-            updateApproximateCircle(markerLngLat.lng, markerLngLat.lat);
-            
-            if (statusDiv) {
-              statusDiv.textContent = `Location set: ${markerLngLat.lat.toFixed(6)}, ${markerLngLat.lng.toFixed(6)}`;
-            }
-          });
-          
-          // Add 0.25 mile radius circle (0.25 miles = ~402 meters)
-          updateApproximateCircle(lng, lat);
+      try {
+        mapboxgl.accessToken = MAPBOX_TOKEN;
+        
+        // Initialize map centered on Tennessee (Nashville area)
+        approximateLocationMap = new mapboxgl.Map({
+          container: 'approximateLocationMap',
+          style: 'mapbox://styles/mapbox/streets-v12',
+          center: [-86.7816, 36.1627], // Nashville center
+          zoom: 11
         });
-      });
+        
+        // Handle map errors
+        approximateLocationMap.on('error', (e) => {
+          console.error('Map error:', e);
+          mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #dc2626; padding: 1rem; text-align: center;">Map failed to load. Please refresh the page.</div>';
+        });
+        
+        // Wait for map to load
+        approximateLocationMap.on('load', () => {
+          console.log('Map loaded successfully');
+          
+          // Add click handler
+          approximateLocationMap.on('click', (e) => {
+            const { lng, lat } = e.lngLat;
+            
+            // Store coordinates
+            const latInput = document.getElementById('approximateLat');
+            const lngInput = document.getElementById('approximateLng');
+            if (latInput) latInput.value = lat;
+            if (lngInput) lngInput.value = lng;
+            
+            // Update status
+            const statusDiv = document.getElementById('locationStatus');
+            if (statusDiv) {
+              statusDiv.textContent = `Location set: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+              statusDiv.style.color = 'var(--primary)';
+            }
+            
+            // Remove existing marker and circle
+            if (approximateLocationMarker) {
+              approximateLocationMarker.remove();
+            }
+            if (approximateLocationCircle) {
+              try {
+                if (approximateLocationMap.getLayer('approximate-circle')) {
+                  approximateLocationMap.removeLayer('approximate-circle');
+                }
+                if (approximateLocationMap.getLayer('approximate-circle-outline')) {
+                  approximateLocationMap.removeLayer('approximate-circle-outline');
+                }
+                if (approximateLocationMap.getSource('approximate-circle')) {
+                  approximateLocationMap.removeSource('approximate-circle');
+                }
+              } catch (e) {
+                console.warn('Error removing circle:', e);
+              }
+            }
+            
+            // Add marker
+            approximateLocationMarker = new mapboxgl.Marker({
+              color: '#2563eb',
+              draggable: true
+            })
+              .setLngLat([lng, lat])
+              .addTo(approximateLocationMap);
+            
+            // Handle marker drag
+            approximateLocationMarker.on('dragend', () => {
+              const markerLngLat = approximateLocationMarker.getLngLat();
+              if (latInput) latInput.value = markerLngLat.lat;
+              if (lngInput) lngInput.value = markerLngLat.lng;
+              
+              // Update circle
+              updateApproximateCircle(markerLngLat.lng, markerLngLat.lat);
+              
+              if (statusDiv) {
+                statusDiv.textContent = `Location set: ${markerLngLat.lat.toFixed(6)}, ${markerLngLat.lng.toFixed(6)}`;
+              }
+            });
+            
+            // Add 0.25 mile radius circle (0.25 miles = ~402 meters)
+            updateApproximateCircle(lng, lat);
+          });
+        });
+      } catch (error) {
+        console.error('Error initializing map:', error);
+        mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #dc2626; padding: 1rem; text-align: center;">Error loading map. Please refresh the page.</div>';
+      }
     }
     
     function updateApproximateCircle(lng, lat) {
