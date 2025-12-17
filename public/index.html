@@ -10512,14 +10512,15 @@ async function renderJobs(reset = false) {
           modalContent.appendChild(genderSection);
         }
         
-        // Tools (if available in future)
+        // Tools Section (always show, right below gender)
+        const toolsSection = document.createElement("div");
+        toolsSection.style.cssText = "padding: 1.5rem; border-bottom: 1px solid #e5e7eb;";
+        const toolsTitle = document.createElement("h3");
+        toolsTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 600; color: var(--text-main);";
+        toolsTitle.textContent = "🔧 Tools Available";
+        toolsSection.appendChild(toolsTitle);
+        
         if (profile.tools && Array.isArray(profile.tools) && profile.tools.length > 0) {
-          const toolsSection = document.createElement("div");
-          toolsSection.style.cssText = "padding: 1.5rem; border-bottom: 1px solid #e5e7eb;";
-          const toolsTitle = document.createElement("h3");
-          toolsTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 600; color: var(--text-main);";
-          toolsTitle.textContent = "Tools Available";
-          toolsSection.appendChild(toolsTitle);
           const toolsList = document.createElement("div");
           toolsList.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.5rem;";
           profile.tools.forEach(tool => {
@@ -10529,8 +10530,13 @@ async function renderJobs(reset = false) {
             toolsList.appendChild(toolChip);
           });
           toolsSection.appendChild(toolsList);
-          modalContent.appendChild(toolsSection);
+        } else {
+          const noTools = document.createElement("div");
+          noTools.style.cssText = "font-size: 0.9rem; color: var(--text-muted);";
+          noTools.textContent = "No tools listed";
+          toolsSection.appendChild(noTools);
         }
+        modalContent.appendChild(toolsSection);
         
         // Reviews Section
         const reviewsSection = document.createElement("div");
