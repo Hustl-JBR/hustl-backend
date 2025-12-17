@@ -10576,11 +10576,14 @@ async function renderJobs(reset = false) {
       const acceptPriceLabel = document.createElement("label");
       acceptPriceLabel.style.cssText = "display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;";
       
+      // Check if prefilled proposed amount exists (from job detail modal)
+      const hasPrefilledPrice = job._prefilledProposedAmount && job._prefilledProposedAmount > 0;
+      
       const acceptPriceRadio = document.createElement("input");
       acceptPriceRadio.type = "radio";
       acceptPriceRadio.name = "priceOption";
       acceptPriceRadio.value = "accept";
-      acceptPriceRadio.checked = true;
+      acceptPriceRadio.checked = !hasPrefilledPrice; // Check accept if no prefilled price
       acceptPriceRadio.style.accentColor = "var(--primary)";
       
       const acceptPriceText = document.createElement("span");
@@ -10597,6 +10600,7 @@ async function renderJobs(reset = false) {
       negotiatePriceRadio.type = "radio";
       negotiatePriceRadio.name = "priceOption";
       negotiatePriceRadio.value = "negotiate";
+      negotiatePriceRadio.checked = hasPrefilledPrice; // Check negotiate if prefilled price exists
       negotiatePriceRadio.style.accentColor = "var(--primary)";
       
       const negotiatePriceText = document.createElement("span");
@@ -10610,7 +10614,7 @@ async function renderJobs(reset = false) {
       // Proposed price input (shown when negotiate is selected)
       const proposedPriceContainer = document.createElement("div");
       proposedPriceContainer.id = "proposedPriceContainer";
-      proposedPriceContainer.style.cssText = "display: none; margin-bottom: 1rem;";
+      proposedPriceContainer.style.cssText = hasPrefilledPrice ? "display: block; margin-bottom: 1rem;" : "display: none; margin-bottom: 1rem;";
       
       const proposedPriceLabel = document.createElement("label");
       proposedPriceLabel.style.cssText = "display: block; font-size: 0.85rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;";
@@ -10624,6 +10628,10 @@ async function renderJobs(reset = false) {
       proposedPriceInput.step = "0.01";
       proposedPriceInput.placeholder = job.payType === "hourly" ? "Enter hourly rate" : "Enter total amount";
       proposedPriceInput.style.cssText = "width: 100%; padding: 1.25rem; border: 2px solid var(--primary); border-radius: 10px; font-size: 1.25rem; font-weight: 600; text-align: center; background: #f0fdf4; min-height: 50px; box-sizing: border-box;";
+      // Pre-fill if coming from job detail modal
+      if (hasPrefilledPrice) {
+        proposedPriceInput.value = job._prefilledProposedAmount;
+      }
       proposedPriceContainer.appendChild(proposedPriceInput);
 
       const priceTypeLabel = document.createElement("div");
