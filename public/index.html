@@ -2712,9 +2712,15 @@
       }
       
       .profile-tabs {
-        gap: 0.25rem !important;
-        margin-bottom: 0.5rem !important;
-        padding-bottom: 0.35rem !important;
+        gap: 0.75rem !important;
+        margin-bottom: 0.75rem !important;
+        padding-bottom: 0.5rem !important;
+      }
+      
+      /* More spacing for manage tabs specifically on mobile */
+      .manage-tab {
+        margin-right: 0.5rem !important;
+        padding: 0.75rem 1rem !important;
       }
       
       .profile-tab {
@@ -10270,24 +10276,52 @@ async function renderJobs(reset = false) {
         toolsTitle.textContent = "🔧 Tools / Equipment Needed";
         toolsSection.appendChild(toolsTitle);
         
-        // Check both camelCase and snake_case field names
-        const equipmentNeeded = parsedRequirements.equipmentNeeded || parsedRequirements.equipment_needed || [];
-        const customEquipment = parsedRequirements.customEquipment || parsedRequirements.custom_equipment || '';
+        // Check both camelCase and snake_case field names - try multiple paths
+        let equipmentNeeded = parsedRequirements.equipmentNeeded || parsedRequirements.equipment_needed || [];
+        let customEquipment = parsedRequirements.customEquipment || parsedRequirements.custom_equipment || '';
         
-        console.log("Equipment needed found:", equipmentNeeded);
+        // Also check if it's stored directly in requirements object (fallback)
+        if (!equipmentNeeded || equipmentNeeded.length === 0) {
+          equipmentNeeded = requirements.equipmentNeeded || requirements.equipment_needed || [];
+        }
+        if (!customEquipment || !customEquipment.trim()) {
+          customEquipment = requirements.customEquipment || requirements.custom_equipment || '';
+        }
+        
+        console.log("Equipment needed found:", equipmentNeeded, "Type:", typeof equipmentNeeded);
         console.log("Custom equipment found:", customEquipment);
+        console.log("Full parsedRequirements:", JSON.stringify(parsedRequirements, null, 2));
         
         // Ensure equipmentNeeded is an array
-        const equipmentArray = Array.isArray(equipmentNeeded) ? equipmentNeeded : (equipmentNeeded ? [equipmentNeeded] : []);
+        let equipmentArray = [];
+        if (Array.isArray(equipmentNeeded)) {
+          equipmentArray = equipmentNeeded;
+        } else if (equipmentNeeded && typeof equipmentNeeded === 'string') {
+          // Try to parse if it's a JSON string
+          try {
+            const parsed = JSON.parse(equipmentNeeded);
+            equipmentArray = Array.isArray(parsed) ? parsed : [parsed];
+          } catch (e) {
+            equipmentArray = [equipmentNeeded];
+          }
+        } else if (equipmentNeeded) {
+          equipmentArray = [equipmentNeeded];
+        }
+        
+        // Filter out empty/null values
+        equipmentArray = equipmentArray.filter(tool => tool && String(tool).trim());
+        
+        console.log("Final equipment array:", equipmentArray);
         
         if (equipmentArray.length > 0) {
           const toolsList = document.createElement("div");
           toolsList.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;";
           equipmentArray.forEach(tool => {
-            if (tool && tool.trim()) { // Only show non-empty tools
+            const toolStr = String(tool).trim();
+            if (toolStr) {
               const toolChip = document.createElement("span");
               toolChip.style.cssText = "padding: 0.5rem 0.75rem; background: #f3f4f6; border-radius: 8px; font-size: 0.9rem; color: var(--text-main); font-weight: 500;";
-              toolChip.textContent = tool;
+              toolChip.textContent = toolStr;
               toolsList.appendChild(toolChip);
             }
           });
@@ -10296,15 +10330,15 @@ async function renderJobs(reset = false) {
           }
         }
         
-        if (customEquipment && customEquipment.trim()) {
+        if (customEquipment && String(customEquipment).trim()) {
           const customTool = document.createElement("div");
           customTool.style.cssText = "font-size: 0.95rem; color: var(--text-main); line-height: 1.5; margin-bottom: 0.75rem; padding: 0.5rem; background: #f9fafb; border-radius: 6px;";
-          customTool.textContent = customEquipment;
+          customTool.textContent = String(customEquipment).trim();
           toolsSection.appendChild(customTool);
         }
         
         // Show "no tools" message only if both are empty
-        const hasEquipment = (equipmentArray.length > 0 && equipmentArray.some(t => t && t.trim())) || (customEquipment && customEquipment.trim());
+        const hasEquipment = equipmentArray.length > 0 || (customEquipment && String(customEquipment).trim());
         if (!hasEquipment) {
           const noTools = document.createElement("div");
           noTools.style.cssText = "font-size: 0.95rem; color: var(--text-muted); font-style: italic;";
