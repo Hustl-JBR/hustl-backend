@@ -12548,10 +12548,10 @@ async function renderJobs(reset = false) {
               document.body.removeChild(modalOverlay);
               document.body.style.overflow = "";
             }
-            // Open user profile
-            if (typeof openUserProfile === 'function') {
+            // Open user profile using standardized popup
+            if (typeof window.showHustlerProfilePopup === 'function') {
               setTimeout(() => {
-                openUserProfile(poster.id);
+                window.showHustlerProfilePopup(poster.id);
               }, 100);
             } else {
               // Fallback: navigate to profile view
@@ -13672,7 +13672,9 @@ async function renderJobs(reset = false) {
               document.body.removeChild(modalOverlay);
               document.body.style.overflow = "";
               if (typeof openUserProfile === 'function') {
-                openUserProfile(hustler.id);
+                if (typeof window.showHustlerProfilePopup === 'function') {
+                  window.showHustlerProfilePopup(hustler.id);
+                }
               }
             });
             topRow.appendChild(avatar);
@@ -13687,7 +13689,9 @@ async function renderJobs(reset = false) {
               document.body.removeChild(modalOverlay);
               document.body.style.overflow = "";
               if (typeof openUserProfile === 'function') {
-                openUserProfile(hustler.id);
+                if (typeof window.showHustlerProfilePopup === 'function') {
+                  window.showHustlerProfilePopup(hustler.id);
+                }
               }
             });
             nameRating.appendChild(name);
@@ -14499,7 +14503,9 @@ async function renderJobs(reset = false) {
           reviewProfileBtn.style.padding = "0.6rem";
           reviewProfileBtn.style.fontSize = "0.9rem";
           reviewProfileBtn.addEventListener("click", () => {
-            openUserProfile(job.customerId);
+            if (typeof window.showHustlerProfilePopup === 'function') {
+              window.showHustlerProfilePopup(job.customerId);
+            }
           });
           applySection.appendChild(reviewProfileBtn);
 
@@ -14962,7 +14968,9 @@ async function renderJobs(reset = false) {
             applicationsSection.querySelectorAll('.view-profile-btn').forEach(btn => {
               btn.addEventListener('click', () => {
                 const hustlerId = btn.dataset.hustlerId;
-                if (hustlerId) openUserProfile(hustlerId);
+                if (hustlerId && typeof window.showHustlerProfilePopup === 'function') {
+                  window.showHustlerProfilePopup(hustlerId);
+                }
               });
             });
             
@@ -15263,7 +15271,9 @@ async function renderJobs(reset = false) {
           viewProfileBtn.addEventListener("click", () => {
             overlay.remove();
             document.body.style.overflow = "";
-            openUserProfile(job.hustlerId);
+            if (typeof window.showHustlerProfilePopup === 'function') {
+              window.showHustlerProfilePopup(job.hustlerId);
+            }
           });
           messageBtnRow.appendChild(viewProfileBtn);
           
@@ -15639,7 +15649,11 @@ async function renderJobs(reset = false) {
             avatar.innerHTML = renderUserAvatar(hustler, 50, { 
               style: 'cursor: pointer;'
             });
-            avatar.addEventListener("click", () => openUserProfile(hustler.id));
+            avatar.addEventListener("click", () => {
+              if (typeof window.showHustlerProfilePopup === 'function') {
+                window.showHustlerProfilePopup(hustler.id);
+              }
+            });
             topRow.appendChild(avatar);
 
             // Name and Rating
@@ -15649,7 +15663,11 @@ async function renderJobs(reset = false) {
             const name = document.createElement("div");
             name.style.cssText = "font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem; cursor: pointer;";
             name.textContent = hustler.name || hustler.username || hustler.email?.split('@')[0] || "Unknown User";
-            name.addEventListener("click", () => openUserProfile(hustler.id));
+            name.addEventListener("click", () => {
+              if (typeof window.showHustlerProfilePopup === 'function') {
+                window.showHustlerProfilePopup(hustler.id);
+              }
+            });
             nameRating.appendChild(name);
 
             // Use centralized rating display - always from backend (single source of truth)
@@ -15682,7 +15700,11 @@ async function renderJobs(reset = false) {
             viewProfileBtn.className = "btn btn-ghost";
             viewProfileBtn.textContent = "View Profile";
             viewProfileBtn.style.cssText = "flex: 1; padding: 0.6rem; font-size: 0.9rem;";
-            viewProfileBtn.addEventListener("click", () => openUserProfile(hustler.id));
+            viewProfileBtn.addEventListener("click", () => {
+              if (typeof window.showHustlerProfilePopup === 'function') {
+                window.showHustlerProfilePopup(hustler.id);
+              }
+            });
             actionsRow.appendChild(viewProfileBtn);
 
             if (isAccepted) {
