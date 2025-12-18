@@ -801,7 +801,7 @@ async function sendJobUnacceptedEmail(email, name, jobTitle, jobId, customerName
           </p>
           
           <div style="margin: 2rem 0; text-align: center;">
-            <a href="${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'https://hustljobs.com'}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+            <a href="${process.env.APP_BASE_URL || 'https://hustljobs.com'}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
               Browse More Jobs →
             </a>
           </div>
@@ -881,7 +881,7 @@ async function sendJobDeletedEmail(email, name, jobTitle, customerName) {
           </p>
           
           <div style="margin: 2rem 0; text-align: center;">
-            <a href="${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'https://hustljobs.com'}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+            <a href="${process.env.APP_BASE_URL || 'https://hustljobs.com'}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
               Browse More Jobs →
             </a>
           </div>
@@ -985,7 +985,7 @@ async function sendHustlerLeftConfirmationEmail(email, name, jobTitle, customerN
           </p>
           
           <div style="margin: 2rem 0; text-align: center;">
-            <a href="${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'https://hustljobs.com'}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+            <a href="${process.env.APP_BASE_URL || 'https://hustljobs.com'}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
               Browse More Jobs →
             </a>
           </div>
