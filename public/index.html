@@ -9078,10 +9078,12 @@ async function renderJobs(reset = false) {
     const radius = locationRadiusFilter ? parseInt(locationRadiusFilter.value) : 25;
     
     // Build filters for API
+    // CRITICAL: Always request OPEN status for Browse Jobs
     const filters = {
       page: currentJobsPage,
       limit: 20,
-      sortBy: activeSortBy
+      sortBy: activeSortBy,
+      status: 'OPEN' // Explicitly request OPEN jobs only
     };
     
     if (zip && zip.length === 5) {

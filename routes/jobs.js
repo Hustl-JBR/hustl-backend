@@ -618,29 +618,35 @@ router.get('/', optionalAuth, [
 
     // Build where clause
     const where = {};
-    if (status) where.status = status;
+    
+    // Handle status filter - default to OPEN for Browse Jobs if not specified
+    if (status) {
+      if (status === 'EXPIRED') {
+        where.status = 'EXPIRED';
+      } else {
+        where.status = status; // Use provided status (e.g., 'OPEN')
+      }
+    } else {
+      // Default to OPEN status for Browse Jobs when no status specified
+      where.status = 'OPEN';
+    }
+    
     if (category) where.category = category;
     
     // Exclude expired jobs from browse (unless specifically requesting expired status)
     // Also exclude jobs where expiresAt has passed (even if status is still OPEN)
-    if (!status || status !== 'EXPIRED') {
+    if (status !== 'EXPIRED') {
       const now = new Date();
-      // Exclude EXPIRED status
-      where.status = {
-        not: 'EXPIRED'
-      };
       // Also check expiresAt field - exclude jobs that have expired
-      where.AND = [
-        {
-          OR: [
-            { expiresAt: null }, // Jobs without expiration
-            { expiresAt: { gt: now } } // Jobs that haven't expired yet
-          ]
-        }
-      ];
-    } else if (status === 'EXPIRED') {
-      // If explicitly requesting EXPIRED, show all expired jobs
-      where.status = 'EXPIRED';
+      if (!where.AND) {
+        where.AND = [];
+      }
+      where.AND.push({
+        OR: [
+          { expiresAt: null }, // Jobs without expiration
+          { expiresAt: { gt: now } } // Jobs that haven't expired yet
+        ]
+      });
     }
     
     // Filter by ZIP code if provided (searches in address field)
