@@ -24104,8 +24104,45 @@ meta.textContent =
     }
     
     async function verifyCompletionCode(jobId, code) {
+      const token = localStorage.getItem('hustl_token');
+      
+      // Helper function to check if job is completed and show success modal
+      const checkAndShowSuccess = async () => {
+        try {
+          const jobCheckResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (jobCheckResponse.ok) {
+            const jobData = await jobCheckResponse.json();
+            console.log('🔍 Checking job status:', {
+              completionCodeVerified: jobData.completionCodeVerified,
+              status: jobData.status,
+              customerId: jobData.customerId,
+              hustlerId: jobData.hustlerId
+            });
+            
+            if (jobData.completionCodeVerified && (jobData.status === 'PAID' || jobData.status === 'COMPLETED_BY_HUSTLER' || jobData.status === 'IN_PROGRESS')) {
+              // Job is actually completed, show success
+              console.log('✅ Job is completed! Showing success modal');
+              showCompletionSuccessModal(jobId, {
+                customerId: jobData.customerId,
+                hustlerId: jobData.hustlerId,
+                actualJobAmount: jobData.payment?.amount || jobData.amount || 0,
+                hustlerPayout: jobData.payment?.amount ? jobData.payment.amount * 0.88 : (jobData.amount ? jobData.amount * 0.88 : 0),
+                actualHours: jobData.requirements?.actualHours || null
+              });
+              if (typeof loadActiveJobs === 'function') loadActiveJobs();
+              if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
+              return true;
+            }
+          }
+        } catch (checkError) {
+          console.warn('Could not check job status:', checkError);
+        }
+        return false;
+      };
+      
       try {
-        const token = localStorage.getItem('hustl_token');
         const response = await fetch(`${API_BASE}/verification/job/${jobId}/verify-completion`, {
           method: 'POST',
           headers: {
@@ -24115,89 +24152,49 @@ meta.textContent =
           body: JSON.stringify({ code })
         });
         
+        // If we get a 500 error, immediately check if job is completed
+        if (response.status === 500) {
+          console.log('⚠️ Got 500 error, checking if job is actually completed...');
+          const isCompleted = await checkAndShowSuccess();
+          if (isCompleted) {
+            return true; // Job is completed, modal shown
+          }
+        }
+        
         let data;
         try {
           data = await response.json();
         } catch (parseError) {
           // If response is not JSON, check if job is actually completed
-          if (response.status === 500) {
-            // Check if job is actually completed despite the error
-            const jobCheckResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (jobCheckResponse.ok) {
-              const jobData = await jobCheckResponse.json();
-              if (jobData.completionCodeVerified && (jobData.status === 'PAID' || jobData.status === 'COMPLETED_BY_HUSTLER')) {
-                // Job is actually completed, show success
-                showCompletionSuccessModal(jobId, {
-                  customerId: jobData.customerId,
-                  hustlerId: jobData.hustlerId,
-                  actualJobAmount: jobData.payment?.amount || 0,
-                  hustlerPayout: jobData.payment?.amount ? jobData.payment.amount * 0.88 : 0
-                });
-                if (typeof loadActiveJobs === 'function') loadActiveJobs();
-                if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
-                return true;
-              }
-            }
+          console.log('⚠️ Could not parse JSON response, checking job status...');
+          const isCompleted = await checkAndShowSuccess();
+          if (isCompleted) {
+            return true;
           }
           throw new Error('Failed to verify completion code');
         }
         
         if (!response.ok) {
           // Check if job is actually completed despite the error
-          if (response.status === 500) {
-            const jobCheckResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (jobCheckResponse.ok) {
-              const jobData = await jobCheckResponse.json();
-              if (jobData.completionCodeVerified && (jobData.status === 'PAID' || jobData.status === 'COMPLETED_BY_HUSTLER')) {
-                // Job is actually completed, show success
-                showCompletionSuccessModal(jobId, {
-                  customerId: jobData.customerId,
-                  hustlerId: jobData.hustlerId,
-                  actualJobAmount: jobData.payment?.amount || 0,
-                  hustlerPayout: jobData.payment?.amount ? jobData.payment.amount * 0.88 : 0
-                });
-                if (typeof loadActiveJobs === 'function') loadActiveJobs();
-                if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
-                return true;
-              }
-            }
+          console.log('⚠️ Response not OK, checking if job is actually completed...');
+          const isCompleted = await checkAndShowSuccess();
+          if (isCompleted) {
+            return true;
           }
           throw new Error(data.error || 'Failed to verify completion code');
         }
         
-        // Show congratulations modal with review prompt
+        // Success! Show congratulations modal
+        console.log('✅ Completion verified successfully!');
         showCompletionSuccessModal(jobId, data);
         
         return true;
       } catch (error) {
         console.error("Error verifying completion code:", error);
-        // Only show error if job is not actually completed
-        const token = localStorage.getItem('hustl_token');
-        try {
-          const jobCheckResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (jobCheckResponse.ok) {
-            const jobData = await jobCheckResponse.json();
-            if (jobData.completionCodeVerified && (jobData.status === 'PAID' || jobData.status === 'COMPLETED_BY_HUSTLER')) {
-              // Job is actually completed, show success instead of error
-              showCompletionSuccessModal(jobId, {
-                customerId: jobData.customerId,
-                hustlerId: jobData.hustlerId,
-                actualJobAmount: jobData.payment?.amount || 0,
-                hustlerPayout: jobData.payment?.amount ? jobData.payment.amount * 0.88 : 0
-              });
-              if (typeof loadActiveJobs === 'function') loadActiveJobs();
-              if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
-              return true;
-            }
-          }
-        } catch (checkError) {
-          console.warn('Could not check job status:', checkError);
+        // Final check - maybe job completed but we got an error
+        const isCompleted = await checkAndShowSuccess();
+        if (isCompleted) {
+          return true;
         }
         
         showToast(error.message || "Error verifying completion code. Please check the code and try again.");
