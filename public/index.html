@@ -10822,10 +10822,88 @@ async function renderJobs(reset = false) {
         
         console.log("Apply area check - user:", user, "isHustler:", isHustler, "isOwner:", isOwner, "token:", token ? "present" : "missing");
         
+        // Check if viewing from Applied section (has stored offer)
+        const viewingOffer = window._currentViewingOffer;
+        const isViewingApplied = viewingOffer && viewingOffer.jobId === job.id;
+        
         // Show apply area for hustlers OR if not logged in (show login prompt)
         // Always show apply area unless user is the owner
         // Check both user object and token to ensure user is logged in
-        if (!isOwner && (user || token)) {
+        // BUT if viewing from Applied section, show their offer instead
+        if (isViewingApplied) {
+          // Show their application/offer instead of apply form
+          const offerSection = document.createElement("div");
+          offerSection.style.cssText = "padding: 1rem; background: #f0f9ff; border-radius: 12px; border: 1px solid #bae6fd;";
+          
+          const offerTitle = document.createElement("div");
+          offerTitle.style.cssText = "font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.75rem;";
+          offerTitle.textContent = "Your Application";
+          offerSection.appendChild(offerTitle);
+          
+          // Show their "why you're a good fit" response
+          if (viewingOffer.note) {
+            const whyFitSection = document.createElement("div");
+            whyFitSection.style.cssText = "margin-bottom: 1rem;";
+            const whyFitLabel = document.createElement("div");
+            whyFitLabel.style.cssText = "font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;";
+            whyFitLabel.textContent = "Why you're a good fit:";
+            whyFitSection.appendChild(whyFitLabel);
+            const whyFitText = document.createElement("div");
+            whyFitText.style.cssText = "font-size: 0.95rem; color: var(--text-main); line-height: 1.5; padding: 0.75rem; background: white; border-radius: 8px; border: 1px solid #e5e7eb;";
+            whyFitText.textContent = viewingOffer.note;
+            whyFitSection.appendChild(whyFitText);
+            offerSection.appendChild(whyFitSection);
+          }
+          
+          // Show their proposed price if they suggested one
+          if (viewingOffer.proposedAmount) {
+            const priceSection = document.createElement("div");
+            priceSection.style.cssText = "margin-bottom: 1rem;";
+            const priceLabel = document.createElement("div");
+            priceLabel.style.cssText = "font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;";
+            priceLabel.textContent = "Your proposed price:";
+            priceSection.appendChild(priceLabel);
+            const priceText = document.createElement("div");
+            priceText.style.cssText = "font-size: 1.1rem; font-weight: 700; color: var(--primary);";
+            if (job.payType === 'hourly') {
+              priceText.textContent = `$${Number(viewingOffer.proposedAmount).toFixed(0)}/hr`;
+            } else {
+              priceText.textContent = `$${Number(viewingOffer.proposedAmount).toFixed(0)} flat`;
+            }
+            priceSection.appendChild(priceText);
+            offerSection.appendChild(priceSection);
+          }
+          
+          // Show status
+          const statusSection = document.createElement("div");
+          statusSection.style.cssText = "padding: 0.75rem; background: white; border-radius: 8px; border: 1px solid #e5e7eb;";
+          const statusLabel = document.createElement("div");
+          statusLabel.style.cssText = "font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem;";
+          statusLabel.textContent = "Status:";
+          statusSection.appendChild(statusLabel);
+          const statusText = document.createElement("div");
+          let statusColor = '#6b7280';
+          let statusDisplay = viewingOffer.status || 'Pending';
+          if (viewingOffer.status === 'ACCEPTED') {
+            statusColor = '#10b981';
+            statusDisplay = '✅ Accepted';
+          } else if (viewingOffer.status === 'PENDING') {
+            statusColor = '#f59e0b';
+            statusDisplay = '⏳ Pending Review';
+          } else if (viewingOffer.status === 'DECLINED') {
+            statusColor = '#ef4444';
+            statusDisplay = '❌ Declined';
+          }
+          statusText.style.cssText = `font-size: 0.95rem; font-weight: 600; color: ${statusColor};`;
+          statusText.textContent = statusDisplay;
+          statusSection.appendChild(statusText);
+          offerSection.appendChild(statusSection);
+          
+          actionsSection.appendChild(offerSection);
+          
+          // Clear the stored offer after using it
+          window._currentViewingOffer = null;
+        } else if (!isOwner && (user || token)) {
           // Why you're a good fit textarea
           const whyFitLabel = document.createElement("label");
           whyFitLabel.style.cssText = "display: block; font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;";
@@ -21001,57 +21079,83 @@ meta.textContent =
             }
           }
           
-          // Format location
-          const pickupCity = requirements.pickup_city || requirements.pickupCity;
-          const pickupZip = requirements.pickup_zip;
-          let locationDisplay = job.address || 'Location TBD';
-          if (pickupCity) {
-            locationDisplay = pickupCity;
-            if (pickupZip) locationDisplay += ` ${pickupZip}`;
+          // Get category display
+          const categoryIcons = {
+            'moving': '🚚', 'yard-work': '🌿', 'dump-run': '🗑️', 'cleaning': '🧹',
+            'power-washing': '💦', 'furniture-assembly': '🔧', 'painting': '🎨',
+            'handyman': '🔨', 'landscaping': '🌳', 'pet-care': '🐕', 'delivery': '📦',
+            'car-cleaning': '🚿', 'event-setup': '🎪', 'snow-removal': '❄️', 'other': '⭐'
+          };
+          const categoryNames = {
+            'moving': 'Moving', 'yard-work': 'Yard Work', 'dump-run': 'Dump Run',
+            'cleaning': 'Cleaning', 'power-washing': 'Power Wash', 'furniture-assembly': 'Assembly',
+            'painting': 'Painting', 'handyman': 'Handyman', 'landscaping': 'Landscaping',
+            'pet-care': 'Pet Care', 'delivery': 'Delivery', 'car-cleaning': 'Car Clean',
+            'event-setup': 'Event Setup', 'snow-removal': 'Snow Removal', 'other': 'Other'
+          };
+          const jobCategory = (job.category || 'other').toLowerCase();
+          const catIcon = categoryIcons[jobCategory] || '⭐';
+          const catName = categoryNames[jobCategory] || job.category || 'Other';
+          
+          // Get team size
+          const teamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
+          let workersDisplay = '';
+          if (teamSize === 0) {
+            workersDisplay = 'Company/crew';
+          } else if (teamSize === 1) {
+            workersDisplay = '1 person';
+          } else {
+            workersDisplay = `${teamSize} people`;
+          }
+          
+          // Get applicant count
+          const offersCount = job._count?.offers || job.offersCount || 0;
+          const applicantCountText = offersCount > 0 ? `${offersCount} ${offersCount === 1 ? 'applicant' : 'applicants'}` : 'No applicants yet';
+          
+          // Format price for top right
+          let priceDisplay = '';
+          if (pricingOption === 'hustlers_quote') {
+            priceDisplay = 'You suggest price';
+          } else if (job.payType === 'hourly' && job.hourlyRate && job.estHours) {
+            const hr = Number(job.hourlyRate);
+            const maxHrs = job.estHours;
+            priceDisplay = `$${hr.toFixed(0)}/hr`;
+          } else {
+            priceDisplay = `$${Number(job.amount || 0).toFixed(0)}`;
           }
           
           const jobCard = document.createElement('div');
           jobCard.className = 'job-card';
           jobCard.style.cssText = `
             background: white;
-            border: 2px solid var(--border);
-            border-radius: 16px;
-            padding: 1.5rem;
-            cursor: pointer;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
             transition: all 0.2s;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
           `;
           
-          // Check if there's a new counter-offer from customer
-          const currentProposed = offer.proposedAmount ? parseFloat(offer.proposedAmount) : null;
-          const jobAmount = parseFloat(job.amount || 0);
-          const hasNewOffer = currentProposed !== null && Math.abs(currentProposed - jobAmount) > 0.01 && offer.status === 'PENDING';
-          
           jobCard.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
               <div style="flex: 1;">
-                <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
-              </div>
-              ${hasNewOffer ? `
-              <div style="position: relative;">
-                <div style="padding: 0.5rem 1rem; background: #3b82f6; color: white; border-radius: 8px; font-weight: 700; font-size: 0.85rem; white-space: nowrap;">
-                  💰 New Offer
+                <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0 0 0.5rem 0; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
+                <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">
+                  <span>${catIcon} ${catName}</span>
+                  <span>•</span>
+                  <span>👥 ${workersDisplay}</span>
+                  <span>•</span>
+                  <span>📋 ${applicantCountText}</span>
                 </div>
-                <div style="position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background: #ef4444; border-radius: 50%; border: 2px solid white;"></div>
               </div>
-              ` : `
-              <div style="padding: 0.5rem 1rem; background: ${statusColor}20; color: ${statusColor}; border-radius: 8px; font-weight: 700; font-size: 0.85rem; border: 2px solid ${statusColor}40; white-space: nowrap;">
-                ${statusBadge}
+              <div style="text-align: right; flex-shrink: 0; margin-left: 1rem;">
+                <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary);">${priceDisplay}</div>
               </div>
-              `}
             </div>
             
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 120px; padding: 0.75rem; font-weight: 600; border-radius: 10px; font-size: 0.9rem;">View Job →</button>
-              ${offer.status === 'PENDING' ? `
-              <button class="btn btn-ghost cancelApplicationBtn" data-offer-id="${offer.id}" style="padding: 0.75rem 1rem; font-weight: 600; border-radius: 10px; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">Cancel</button>
-              ` : offer.status === 'ACCEPTED' && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified ? `
-              <button class="btn btn-ghost cancelApplicationBtn" data-job-id="${job.id}" style="padding: 0.75rem 1rem; font-weight: 600; border-radius: 10px; color: #dc2626; border-color: #fecaca; font-size: 0.9rem;">Cancel</button>
+            <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+              <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" data-offer-id="${offer.id}" style="flex: 1; padding: 0.75rem; font-weight: 600; border-radius: 8px; font-size: 0.95rem;">View Job</button>
+              ${offer.status === 'PENDING' || (offer.status === 'ACCEPTED' && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified) ? `
+              <button class="btn btn-ghost cancelApplicationBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="padding: 0.75rem 1.25rem; font-weight: 600; border-radius: 8px; color: #dc2626; border-color: #fecaca; font-size: 0.95rem;">Cancel</button>
               ` : ''}
             </div>
           `;
@@ -21059,7 +21163,13 @@ meta.textContent =
           // Add click handlers
           jobCard.querySelector('.viewJobBtn')?.addEventListener('click', (e) => {
             e.stopPropagation();
-            showViewJobModal(job.id, 'hustler');
+            const jobId = e.target.dataset.jobId;
+            const offerId = e.target.dataset.offerId;
+            // Store offer data for openJobDetails to use
+            if (typeof window.openJobDetails === 'function') {
+              window._currentViewingOffer = offer;
+              window.openJobDetails(jobId);
+            }
           });
           
           jobCard.querySelector('.cancelApplicationBtn')?.addEventListener('click', async (e) => {
@@ -21143,7 +21253,13 @@ meta.textContent =
           // Make card clickable
           jobCard.addEventListener('click', (e) => {
             if (!e.target.closest('button') && !e.target.closest('.btn')) {
-              showViewJobModal(job.id, 'hustler');
+              const jobId = job.id;
+              const offerId = offer.id;
+              // Store offer data for openJobDetails to use
+              if (typeof window.openJobDetails === 'function') {
+                window._currentViewingOffer = offer;
+                window.openJobDetails(jobId);
+              }
             }
           });
           
