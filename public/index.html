@@ -2058,10 +2058,11 @@
         border-bottom: 1px solid #e5e7eb !important;
         border-radius: 0 !important;
         margin-bottom: 0 !important;
+        min-height: 72px;
       }
       
       .conversation-item:active {
-        background: var(--bg-light) !important;
+        background: #f3f4f6 !important;
       }
       
       /* Profile picture in conversation items */
@@ -2076,6 +2077,53 @@
         height: 100% !important;
         border-radius: 50% !important;
         object-fit: cover !important;
+      }
+      
+      /* Better message bubbles on mobile */
+      .chat-msg-wrapper {
+        margin-bottom: 1rem !important;
+      }
+      
+      .chat-msg {
+        max-width: 85% !important;
+        padding: 0.75rem 1rem !important;
+        font-size: 0.95rem !important;
+        line-height: 1.5 !important;
+        word-wrap: break-word !important;
+      }
+      
+      .chat-msg.me {
+        background: var(--primary) !important;
+        color: white !important;
+        border-radius: 18px 18px 4px 18px !important;
+      }
+      
+      .chat-msg.them {
+        background: #e5e7eb !important;
+        color: var(--text-main) !important;
+        border-radius: 18px 18px 18px 4px !important;
+      }
+      
+      .chat-messages-container {
+        padding: 1rem 0.75rem !important;
+        gap: 0.75rem !important;
+      }
+      
+      .chat-input-area {
+        padding: 1rem !important;
+        border-top: 1px solid #e5e7eb !important;
+      }
+      
+      .chat-input {
+        padding: 0.875rem 1.25rem !important;
+        font-size: 1rem !important;
+        border-radius: 24px !important;
+      }
+      
+      .chat-send-btn {
+        padding: 0.875rem 1.5rem !important;
+        border-radius: 24px !important;
+        font-weight: 600 !important;
       }
     }
 
@@ -4345,7 +4393,7 @@
               <option value="5">5 people</option>
               <option value="6">6 people</option>
               <option value="custom">Custom number</option>
-              <option value="company">Company / Insured crew</option>
+              <option value="company">Company</option>
             </select>
           
           <!-- Custom workers input (shown when "Custom" is selected) -->
@@ -5015,8 +5063,8 @@
         <!-- About Hustl -->
         <div class="card" style="margin-bottom: 2rem;">
           <div class="card-header">
-            <div class="card-title">About Hustl</div>
-            <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">Built in Brentwood, TN</div>
+            <div class="card-title" style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">Hustl – About Us</div>
+            <div style="font-size: 0.9rem; color: var(--text-muted);">Founded in Brentwood, TN</div>
           </div>
           <div style="padding: 1.5rem; line-height: 1.7;">
             <p style="margin-bottom: 1.5rem; font-size: 1.05rem;">
