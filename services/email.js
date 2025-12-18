@@ -722,7 +722,7 @@ async function sendFeedbackEmail(feedbackName, feedbackEmail, feedbackMessage) {
 async function sendJobExpiringEmail(email, name, jobTitle, jobId) {
   if (!isEmailConfigured()) return;
   try {
-    const manageJobsUrl = `${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'https://hustljobs.com'}`;
+    const manageJobsUrl = `${process.env.APP_BASE_URL || 'https://hustljobs.com'}`;
     const jobUrl = `${manageJobsUrl}/jobs/${jobId}`;
     
     await resend.emails.send({
