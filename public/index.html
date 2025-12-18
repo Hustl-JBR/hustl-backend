@@ -4153,7 +4153,7 @@
             </div>
           </div>
 
-              <div id="approximateLocationMap" style="width: 100%; height: 300px; min-height: 300px; border: 2px solid var(--border); border-radius: 8px; position: relative; background: #f3f4f6; cursor: crosshair; touch-action: pan-x pan-y pinch-zoom;"></div>
+              <div id="approximateLocationMap" style="width: 100%; height: 300px; min-height: 300px; border: 2px solid var(--border); border-radius: 8px; position: relative; background: #f3f4f6; cursor: crosshair; touch-action: pan-x pan-y pinch-zoom; pointer-events: auto !important; z-index: 1;"></div>
               <input type="hidden" id="approximateLat" />
               <input type="hidden" id="approximateLng" />
               <div id="locationStatus" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
@@ -6832,31 +6832,35 @@ function showChangePasswordModal() {
         mapboxgl.accessToken = MAPBOX_TOKEN;
         
         // Initialize map centered on Tennessee (Nashville area)
+        // CRITICAL: Ensure map is always interactive
         approximateLocationMap = new mapboxgl.Map({
           container: 'approximateLocationMap',
           style: 'mapbox://styles/mapbox/streets-v12',
           center: [-86.7816, 36.1627], // Nashville center
-          zoom: 11
+          zoom: 11,
+          interactive: true, // Explicitly enable interactivity
+          boxZoom: true,
+          doubleClickZoom: true,
+          dragRotate: false,
+          dragPan: true,
+          keyboard: true,
+          scrollZoom: true,
+          touchZoomRotate: true,
+          touchPitch: true
         });
         
-        // Handle map errors
-        approximateLocationMap.on('error', (e) => {
-          console.error('Map error:', e);
-          mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #dc2626; padding: 1rem; text-align: center;">Map failed to load. Please refresh the page.</div>';
-        });
-        
-        // Wait for map to load
-        approximateLocationMap.on('load', () => {
-          console.log('Map loaded successfully');
+        // CRITICAL: Add click handler immediately (don't wait for load event)
+        // This ensures clicks work even if load event has issues
+        let clickHandlerAttached = false;
+        const attachClickHandler = () => {
+          if (clickHandlerAttached || !approximateLocationMap) return;
           
-          // Initialize address search (for navigation only, not stored)
-          initApproximateLocationSearch();
-          
-          // Initialize current location button
-          initCurrentLocationButton();
+          // Remove any existing click handlers first
+          approximateLocationMap.off('click');
           
           // Add click handler
           approximateLocationMap.on('click', (e) => {
+            console.log('Map clicked:', e.lngLat);
             const { lng, lat } = e.lngLat;
             
             // Store coordinates
@@ -6917,7 +6921,49 @@ function showChangePasswordModal() {
             // Add 0.25 mile radius circle (0.25 miles = ~402 meters)
             updateApproximateCircle(lng, lat);
           });
+          
+          clickHandlerAttached = true;
+          console.log('✅ Map click handler attached');
+        };
+        
+        // Attach click handler immediately
+        attachClickHandler();
+        
+        // Also attach on load event (backup)
+        approximateLocationMap.once('load', () => {
+          console.log('Map loaded successfully');
+          attachClickHandler(); // Re-attach to ensure it's there
+          
+          // Initialize address search (for navigation only, not stored)
+          initApproximateLocationSearch();
+          
+          // Initialize current location button
+          initCurrentLocationButton();
         });
+        
+        // Also attach on style.load (another backup)
+        approximateLocationMap.once('style.load', () => {
+          attachClickHandler();
+        });
+        
+        // Handle map errors
+        approximateLocationMap.on('error', (e) => {
+          console.error('Map error:', e);
+          mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #dc2626; padding: 1rem; text-align: center;">Map failed to load. Please refresh the page.</div>';
+        });
+        
+        // Ensure map container is always clickable
+        if (mapContainer) {
+          mapContainer.style.pointerEvents = 'auto';
+          mapContainer.style.cursor = 'crosshair';
+          mapContainer.style.touchAction = 'pan-x pan-y pinch-zoom';
+          
+          // Remove any overlays that might block clicks
+          const overlays = mapContainer.querySelectorAll('[style*="pointer-events: none"]');
+          overlays.forEach(overlay => {
+            overlay.style.pointerEvents = 'none';
+          });
+        }
       } catch (error) {
         console.error('Error initializing map:', error);
         mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #dc2626; padding: 1rem; text-align: center;">Error loading map. Please refresh the page.</div>';
