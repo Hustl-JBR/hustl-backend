@@ -24203,21 +24203,41 @@ meta.textContent =
     }
     
     // Show completion success modal with confetti and review prompt
+    // Track if modal is already showing to prevent infinite loops
+    let completionModalShowing = false;
+    
     function showCompletionSuccessModal(jobId, completionData) {
+      // Prevent infinite recursion and duplicate modals
+      if (completionModalShowing) {
+        console.log('⚠️ Completion modal already showing, skipping...');
+        return;
+      }
+      
+      // Check if modal already exists
+      if (document.getElementById('completionSuccessModal')) {
+        console.log('⚠️ Completion modal already exists, skipping...');
+        return;
+      }
+      
       console.log('🎉 showCompletionSuccessModal called with:', { jobId, completionData });
+      completionModalShowing = true;
+      
       const user = getCurrentUser();
       if (!user) {
         console.warn('⚠️ No user found, trying to get user from API...');
-        // Try to get user from API if getCurrentUser fails
+        // Try to get user from API if getCurrentUser fails (only once)
         window.hustlAPI.auth.getCurrentUser().then(userData => {
-          if (userData) {
+          if (userData && !document.getElementById('completionSuccessModal')) {
             console.log('✅ Got user from API, showing modal');
+            completionModalShowing = false; // Reset flag before recursive call
             showCompletionSuccessModal(jobId, completionData);
           } else {
-            console.error('❌ Could not get user, modal will not show');
+            console.error('❌ Could not get user or modal already exists, modal will not show');
+            completionModalShowing = false;
           }
         }).catch(err => {
           console.error('❌ Error getting user:', err);
+          completionModalShowing = false;
         });
         return;
       }
@@ -24458,8 +24478,11 @@ meta.textContent =
       
       // Close button
       modal.querySelector('#closeCompletionModalBtn')?.addEventListener('click', () => {
-        document.body.removeChild(modal);
+        if (modal.parentNode) {
+          document.body.removeChild(modal);
+        }
         document.body.style.overflow = '';
+        completionModalShowing = false; // Reset flag
         
         // Refresh jobs to show completed status
         if (typeof loadActiveJobs === 'function') loadActiveJobs();
@@ -24469,14 +24492,25 @@ meta.textContent =
       // Close on background click
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
-          document.body.removeChild(modal);
+          if (modal.parentNode) {
+            document.body.removeChild(modal);
+          }
           document.body.style.overflow = '';
+          completionModalShowing = false; // Reset flag
           
           // Refresh jobs to show completed status
           if (typeof loadActiveJobs === 'function') loadActiveJobs();
           if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
         }
       });
+      
+      // Reset flag when modal is removed
+      const observer = new MutationObserver(() => {
+        if (!document.getElementById('completionSuccessModal')) {
+          completionModalShowing = false;
+        }
+      });
+      observer.observe(document.body, { childList: true });
     }
     
     // Show review modal with star rating
