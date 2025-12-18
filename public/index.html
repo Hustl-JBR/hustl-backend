@@ -10234,29 +10234,39 @@ async function renderJobs(reset = false) {
         toolsTitle.textContent = "🔧 Tools / Equipment Needed";
         toolsSection.appendChild(toolsTitle);
         
-        const equipmentNeeded = requirements.equipmentNeeded || [];
-        const customEquipment = requirements.customEquipment || '';
+        // Check both camelCase and snake_case field names
+        const equipmentNeeded = requirements.equipmentNeeded || requirements.equipment_needed || [];
+        const customEquipment = requirements.customEquipment || requirements.custom_equipment || '';
         
-        if (equipmentNeeded.length > 0) {
+        // Ensure equipmentNeeded is an array
+        const equipmentArray = Array.isArray(equipmentNeeded) ? equipmentNeeded : (equipmentNeeded ? [equipmentNeeded] : []);
+        
+        if (equipmentArray.length > 0) {
           const toolsList = document.createElement("div");
           toolsList.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;";
-          equipmentNeeded.forEach(tool => {
-            const toolChip = document.createElement("span");
-            toolChip.style.cssText = "padding: 0.5rem 0.75rem; background: #f3f4f6; border-radius: 8px; font-size: 0.9rem; color: var(--text-main); font-weight: 500;";
-            toolChip.textContent = tool;
-            toolsList.appendChild(toolChip);
+          equipmentArray.forEach(tool => {
+            if (tool && tool.trim()) { // Only show non-empty tools
+              const toolChip = document.createElement("span");
+              toolChip.style.cssText = "padding: 0.5rem 0.75rem; background: #f3f4f6; border-radius: 8px; font-size: 0.9rem; color: var(--text-main); font-weight: 500;";
+              toolChip.textContent = tool;
+              toolsList.appendChild(toolChip);
+            }
           });
-          toolsSection.appendChild(toolsList);
+          if (toolsList.children.length > 0) {
+            toolsSection.appendChild(toolsList);
+          }
         }
         
-        if (customEquipment) {
+        if (customEquipment && customEquipment.trim()) {
           const customTool = document.createElement("div");
-          customTool.style.cssText = "font-size: 0.95rem; color: var(--text-main); line-height: 1.5; margin-bottom: 0.75rem;";
+          customTool.style.cssText = "font-size: 0.95rem; color: var(--text-main); line-height: 1.5; margin-bottom: 0.75rem; padding: 0.5rem; background: #f9fafb; border-radius: 6px;";
           customTool.textContent = customEquipment;
           toolsSection.appendChild(customTool);
         }
         
-        if (equipmentNeeded.length === 0 && !customEquipment) {
+        // Show "no tools" message only if both are empty
+        const hasEquipment = (equipmentArray.length > 0 && equipmentArray.some(t => t && t.trim())) || (customEquipment && customEquipment.trim());
+        if (!hasEquipment) {
           const noTools = document.createElement("div");
           noTools.style.cssText = "font-size: 0.95rem; color: var(--text-muted); font-style: italic;";
           noTools.textContent = "No specific tools or equipment required.";
