@@ -2300,8 +2300,31 @@
     .profile-tab.active {
       background: var(--primary-soft);
       color: var(--primary);
-      border-bottom: 3px solid var(--primary);
+      border-bottom: 4px solid var(--primary);
       margin-bottom: -2px;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+    
+    /* Stronger active indicator for manage tabs */
+    .manage-tab.active {
+      background: var(--primary-soft) !important;
+      color: var(--primary) !important;
+      border-bottom: 4px solid var(--primary) !important;
+      font-weight: 700 !important;
+      font-size: 0.95rem !important;
+    }
+    
+    /* Mute inactive manage tabs */
+    .manage-tab:not(.active) {
+      color: #9ca3af !important;
+      font-weight: 500 !important;
+      opacity: 0.7;
+    }
+    
+    .manage-tab:not(.active):hover {
+      opacity: 1;
+      color: var(--text-main) !important;
     }
     
     .profile-tab-content {
