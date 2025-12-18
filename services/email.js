@@ -1001,6 +1001,7 @@ module.exports = {
   sendSignupEmail,
   sendEmailVerificationEmail,
   sendPasswordResetEmail,
+  sendPasswordChangedEmail,
   sendOfferReceivedEmail,
   sendJobAssignedEmail,
   sendJobCompleteEmail,
