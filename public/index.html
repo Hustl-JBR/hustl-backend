@@ -24354,9 +24354,19 @@ meta.textContent =
       modal.querySelector('#viewCompletedJobBtn')?.addEventListener('click', () => {
         document.body.removeChild(modal);
         document.body.style.overflow = '';
+        
+        // Refresh jobs to show completed status
+        if (typeof loadActiveJobs === 'function') loadActiveJobs();
+        if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
+        
         setView('manage-jobs');
         setTimeout(() => {
           loadCompletedJobs();
+          setTimeout(() => {
+            if (typeof showViewJobModal === 'function') {
+              showViewJobModal(jobId, isCustomer ? 'customer' : 'hustler');
+            }
+          }, 500);
         }, 100);
       });
       
@@ -24364,6 +24374,10 @@ meta.textContent =
       modal.querySelector('#closeCompletionModalBtn')?.addEventListener('click', () => {
         document.body.removeChild(modal);
         document.body.style.overflow = '';
+        
+        // Refresh jobs to show completed status
+        if (typeof loadActiveJobs === 'function') loadActiveJobs();
+        if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
       });
       
       // Close on background click
@@ -24371,6 +24385,10 @@ meta.textContent =
         if (e.target === modal) {
           document.body.removeChild(modal);
           document.body.style.overflow = '';
+          
+          // Refresh jobs to show completed status
+          if (typeof loadActiveJobs === 'function') loadActiveJobs();
+          if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
         }
       });
     }
