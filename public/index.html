@@ -2759,15 +2759,45 @@
     /* About view styling - better fonts and design */
     #view-about {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      color: #1f2937;
+      line-height: 1.7;
     }
     
     #view-about .card {
       transition: transform 0.2s, box-shadow 0.2s;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     
     #view-about .card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    
+    #view-about .card-header {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 1.75rem 2rem;
+    }
+    
+    #view-about .card-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #111827;
+      letter-spacing: -0.01em;
+    }
+    
+    #view-about h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.01em;
+    }
+    
+    #view-about p {
+      color: #374151;
+      font-size: 1rem;
+      line-height: 1.75;
     }
     
     #view-about a[href^="mailto:"]:hover,
@@ -5059,70 +5089,70 @@
       </section>
 
           <!-- ABOUT / LEGAL VIEW -->
-      <section id="view-about" style="display:none; max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem;">
+      <section id="view-about" style="display:none; max-width: 900px; margin: 0 auto; padding: 3rem 1.5rem;">
         <!-- About Hustl -->
-        <div class="card" style="margin-bottom: 2rem;">
-          <div class="card-header" style="text-align: center;">
-            <div class="card-title" style="font-size: 3rem; font-weight: 700; margin-bottom: 0.75rem; text-align: center;">Hustl – About Us</div>
-            <div style="font-size: 1.5rem; color: var(--text-muted); text-align: center; font-weight: 500;">Founded in Brentwood, TN</div>
+        <div class="card" style="margin-bottom: 2.5rem;">
+          <div class="card-header" style="text-align: center; padding: 3rem 2rem 2rem;">
+            <div class="card-title" style="font-size: 2.5rem; font-weight: 700; margin-bottom: 0.75rem; text-align: center; color: #111827; letter-spacing: -0.02em;">Hustl – About Us</div>
+            <div style="font-size: 1.125rem; color: #6b7280; text-align: center; font-weight: 500; letter-spacing: 0.01em;">Founded in Brentwood, TN</div>
           </div>
-          <div style="padding: 1.5rem; line-height: 1.7;">
-            <p style="margin-bottom: 1.5rem; font-size: 1.05rem;">
-              Hustl was built with a simple goal: <strong style="color: var(--primary);">make it easier for people to help each other and make real money on the side.</strong>
+          <div style="padding: 2rem 2.5rem;">
+            <p style="margin-bottom: 2rem; font-size: 1.125rem; line-height: 1.8; color: #374151;">
+              Hustl was built with a simple goal: <strong style="color: #2563eb; font-weight: 600;">make it easier for people to help each other and make real money on the side.</strong>
             </p>
             
-            <div style="margin-bottom: 1.5rem;">
-              <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">For Customers</h3>
-              <p style="margin: 0; font-size: 0.95rem; line-height: 1.6;">
+            <div style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid #e5e7eb;">
+              <h3 style="font-size: 1.25rem; font-weight: 600; color: #111827; margin-bottom: 1rem; letter-spacing: -0.01em;">For Customers</h3>
+              <p style="margin: 0; font-size: 1rem; line-height: 1.75; color: #374151;">
                 If you need help – moving a couch, doing a dump run, cleaning out a garage, tackling yard work, or knocking out random errands – you shouldn't have to blast group chats or scroll through sketchy posts. You should be able to describe the job, set a fair price, and connect with someone local who's ready to work.
               </p>
             </div>
             
-            <div style="margin-bottom: 1.5rem;">
-              <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">For Hustlers</h3>
-              <p style="margin: 0; font-size: 0.95rem; line-height: 1.6;">
+            <div style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid #e5e7eb;">
+              <h3 style="font-size: 1.25rem; font-weight: 600; color: #111827; margin-bottom: 1rem; letter-spacing: -0.01em;">For Hustlers</h3>
+              <p style="margin: 0; font-size: 1rem; line-height: 1.75; color: #374151;">
                 If you're a Hustler, Hustl is a way to turn your time, truck, or muscle into extra cash on your own schedule. No long-term commitments, no complicated contracts – just clear jobs, clear payouts, and a straightforward platform fee.
               </p>
             </div>
             
-            <div style="margin-bottom: 1.5rem;">
-              <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">Our Mission</h3>
-              <p style="margin: 0; font-size: 0.95rem; line-height: 1.6;">
+            <div style="margin-bottom: 2rem;">
+              <h3 style="font-size: 1.25rem; font-weight: 600; color: #111827; margin-bottom: 1rem; letter-spacing: -0.01em;">Our Mission</h3>
+              <p style="margin: 0; font-size: 1rem; line-height: 1.75; color: #374151;">
                 Hustl is also about supporting small, local businesses and solo operators. As the platform grows, the same tools that help with one-time jobs can help people build regular clients, repeat work, and real side-income here in the community.
               </p>
             </div>
             
-            <div style="background: var(--primary-soft); padding: 1.25rem; border-radius: 8px; border-left: 3px solid var(--primary); margin: 1.5rem 0;">
-              <p style="margin: 0; font-weight: 600; color: var(--primary); font-size: 1rem; line-height: 1.5; text-align: center;">
+            <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); padding: 1.75rem; border-radius: 12px; border-left: 4px solid #2563eb; margin: 2.5rem 0;">
+              <p style="margin: 0; font-weight: 600; color: #1e40af; font-size: 1.125rem; line-height: 1.6; text-align: center;">
                 Post a job, apply to one, show up, do solid work, and get paid – that's the heart of Hustl.
               </p>
             </div>
             
-            <p style="margin-top: 1.5rem; text-align: center; font-size: 1.25rem; font-weight: 700; color: var(--primary);">
+            <p style="margin-top: 2rem; text-align: center; font-size: 1.25rem; font-weight: 600; color: #2563eb; letter-spacing: 0.01em;">
               Just keep hustling. 💪
             </p>
           </div>
         </div>
         
         <!-- Contact & Social -->
-        <div class="card" style="margin-bottom: 2rem;">
-          <div class="card-header">
-            <div class="card-title">📧 Get in Touch</div>
+        <div class="card" style="margin-bottom: 2.5rem;">
+          <div class="card-header" style="padding: 1.75rem 2rem;">
+            <div class="card-title" style="font-size: 1.5rem; font-weight: 700; color: #111827;">Get in Touch</div>
           </div>
-          <div style="padding: 1.5rem;">
+          <div style="padding: 2rem 2.5rem;">
             <div style="display: flex; flex-direction: column; gap: 1rem;">
-              <a href="mailto:team.hustlapp@outlook.com" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--bg-light); border-radius: 8px; text-decoration: none; color: var(--text-main); border: 1px solid var(--border);">
-                <div style="font-size: 1.5rem;">📧</div>
+              <a href="mailto:team.hustlapp@outlook.com" style="display: flex; align-items: center; gap: 1.25rem; padding: 1.25rem; background: #f9fafb; border-radius: 10px; text-decoration: none; color: #111827; border: 1px solid #e5e7eb; transition: all 0.2s;">
+                <div style="font-size: 1.75rem;">📧</div>
                 <div style="flex: 1;">
-                  <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem; color: var(--text-main);">Email Us</div>
-                  <div style="color: var(--primary); font-size: 0.9rem;">team.hustlapp@outlook.com</div>
+                  <div style="font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem; color: #111827;">Email Us</div>
+                  <div style="color: #2563eb; font-size: 0.95rem; font-weight: 500;">team.hustlapp@outlook.com</div>
                 </div>
               </a>
-              <a href="https://instagram.com/team.hustlapp" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--bg-light); border-radius: 8px; text-decoration: none; color: var(--text-main); border: 1px solid var(--border);">
-                <div style="font-size: 1.5rem;">📷</div>
+              <a href="https://instagram.com/team.hustlapp" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 1.25rem; padding: 1.25rem; background: #f9fafb; border-radius: 10px; text-decoration: none; color: #111827; border: 1px solid #e5e7eb; transition: all 0.2s;">
+                <div style="font-size: 1.75rem;">📷</div>
                 <div style="flex: 1;">
-                  <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem; color: var(--text-main);">Follow Us</div>
-                  <div style="color: var(--primary); font-size: 0.9rem;">@team.hustlapp</div>
+                  <div style="font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem; color: #111827;">Follow Us</div>
+                  <div style="color: #2563eb; font-size: 0.95rem; font-weight: 500;">@team.hustlapp</div>
                 </div>
               </a>
             </div>
@@ -5130,39 +5160,39 @@
         </div>
         
         <!-- Feedback Form -->
-        <div class="card" style="margin-bottom: 2rem;">
-          <div class="card-header">
-            <div class="card-title">📝 Send Feedback</div>
+        <div class="card" style="margin-bottom: 2.5rem;">
+          <div class="card-header" style="padding: 1.75rem 2rem;">
+            <div class="card-title" style="font-size: 1.5rem; font-weight: 700; color: #111827;">Send Feedback</div>
           </div>
-          <div style="padding: 1.5rem;">
+          <div style="padding: 2rem 2.5rem;">
             <form id="feedbackForm">
-              <div class="field" style="margin-bottom: 1rem;">
-                <label for="feedbackEmail" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-main);">Your Email <span style="font-weight: 400; color: var(--text-muted);">(optional)</span></label>
-                <input type="email" id="feedbackEmail" placeholder="your@email.com" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem;" />
+              <div class="field" style="margin-bottom: 1.5rem;">
+                <label for="feedbackEmail" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #111827; font-size: 0.95rem;">Your Email <span style="font-weight: 400; color: #6b7280;">(optional)</span></label>
+                <input type="email" id="feedbackEmail" placeholder="your@email.com" style="width: 100%; padding: 0.875rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; font-family: inherit; transition: border-color 0.2s;" />
               </div>
-              <div class="field" style="margin-bottom: 1rem;">
-                <label for="feedbackMessage" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-main);">Your Feedback</label>
-                <textarea id="feedbackMessage" rows="5" placeholder="Tell us what you think, report a bug, or suggest a feature..." required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; font-family: inherit; resize: vertical;"></textarea>
+              <div class="field" style="margin-bottom: 1.5rem;">
+                <label for="feedbackMessage" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #111827; font-size: 0.95rem;">Your Feedback</label>
+                <textarea id="feedbackMessage" rows="5" placeholder="Tell us what you think, report a bug, or suggest a feature..." required style="width: 100%; padding: 0.875rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; font-family: inherit; resize: vertical; transition: border-color 0.2s; line-height: 1.6;"></textarea>
               </div>
-              <button type="submit" class="btn btn-primary" style="width: 100%;">Send Feedback</button>
+              <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.875rem; font-size: 1rem; font-weight: 600;">Send Feedback</button>
             </form>
           </div>
         </div>
         
         <!-- Terms and Conditions -->
-        <div class="card" style="margin-bottom: 2rem;">
-          <div class="card-header">
-            <div class="card-title">📄 Terms and Conditions</div>
+        <div class="card" style="margin-bottom: 2.5rem;">
+          <div class="card-header" style="padding: 1.75rem 2rem;">
+            <div class="card-title" style="font-size: 1.5rem; font-weight: 700; color: #111827;">Terms and Conditions</div>
           </div>
-          <div style="padding: 1.5rem; line-height: 1.7;">
-            <p style="margin-bottom: 1.5rem;">
-              By using Hustl, you agree to our <strong>Terms and Conditions</strong>. Please read them carefully.
+          <div style="padding: 2rem 2.5rem;">
+            <p style="margin-bottom: 2rem; font-size: 1rem; line-height: 1.75; color: #374151;">
+              By using Hustl, you agree to our <strong style="color: #111827; font-weight: 600;">Terms and Conditions</strong>. Please read them carefully.
             </p>
-            <div style="background: var(--bg-light); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 3px solid var(--primary);">
-              <p style="margin-bottom: 0.75rem; font-weight: 600; color: var(--text-main);">
-                <strong>User Responsibilities</strong>
+            <div style="background: #f9fafb; padding: 1.5rem; border-radius: 10px; margin-bottom: 1.25rem; border-left: 4px solid #2563eb;">
+              <p style="margin-bottom: 0.75rem; font-weight: 600; color: #111827; font-size: 1rem;">
+                User Responsibilities
               </p>
-              <p style="margin: 0; color: var(--text-main); font-size: 0.9rem; line-height: 1.6;">
+              <p style="margin: 0; color: #374151; font-size: 0.95rem; line-height: 1.7;">
                 You are responsible for all content you post, all jobs you accept, and all payments you make or receive through the platform.
               </p>
             </div>
