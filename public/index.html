@@ -6407,7 +6407,7 @@ window.startExploring = function() {
 };
 
 // Change Password Modal
-function showChangePasswordModal() {
+window.showChangePasswordModal = function showChangePasswordModal() {
   const modal = document.createElement('div');
   modal.id = 'changePasswordModal';
   modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem;';
@@ -7018,7 +7018,10 @@ function showChangePasswordModal() {
           keepActiveFor,
           requirements: {
             teamSize: workersNeeded || 1, // Also include in requirements
-            equipment_needed: equipmentNeeded.length > 0 ? equipmentNeeded : null,
+            equipmentNeeded: equipmentNeeded.length > 0 ? equipmentNeeded : null, // Use camelCase
+            equipment_needed: equipmentNeeded.length > 0 ? equipmentNeeded : null, // Also include snake_case for compatibility
+            customEquipment: customEquipment || null, // Use camelCase
+            custom_equipment: customEquipment || null, // Also include snake_case for compatibility
             notes: notes || null,
             pricing_option: pricingOption,
             deadline_preference: deadlinePreference || jobWhen,
@@ -12959,6 +12962,53 @@ async function renderJobs(reset = false) {
         // IN_PROGRESS = Start code entered, job is actively being worked on
         statusText = "In Progress";
         statusColor = "#7c3aed";
+        
+        // Add count-up timer for IN_PROGRESS jobs
+        if (job.startCodeVerified && job.updatedAt) {
+          const startTime = new Date(job.updatedAt);
+          const now = new Date();
+          const elapsed = Math.floor((now - startTime) / 1000); // seconds
+          
+          const hours = Math.floor(elapsed / 3600);
+          const minutes = Math.floor((elapsed % 3600) / 60);
+          const seconds = elapsed % 60;
+          
+          let timerText = '';
+          if (hours > 0) {
+            timerText = `${hours}h ${minutes}m ${seconds}s`;
+          } else if (minutes > 0) {
+            timerText = `${minutes}m ${seconds}s`;
+          } else {
+            timerText = `${seconds}s`;
+          }
+          
+          statusText = `In Progress ⏱️ ${timerText}`;
+          
+          // Update timer every second
+          const timerInterval = setInterval(() => {
+            const now = new Date();
+            const elapsed = Math.floor((now - startTime) / 1000);
+            const hours = Math.floor(elapsed / 3600);
+            const minutes = Math.floor((elapsed % 3600) / 60);
+            const seconds = elapsed % 60;
+            
+            let timerText = '';
+            if (hours > 0) {
+              timerText = `${hours}h ${minutes}m ${seconds}s`;
+            } else if (minutes > 0) {
+              timerText = `${minutes}m ${seconds}s`;
+            } else {
+              timerText = `${seconds}s`;
+            }
+            
+            const statusSpan = statusRow.querySelector('span:last-child');
+            if (statusSpan) {
+              statusSpan.textContent = `In Progress ⏱️ ${timerText}`;
+            } else {
+              clearInterval(timerInterval);
+            }
+          }, 1000);
+        }
       } else if (job.status === "PAID" || job.status === "paid") {
         statusText = "Completed";
         statusColor = "#9333ea";
@@ -18469,6 +18519,8 @@ async function renderJobs(reset = false) {
               
               ${user.tools && user.tools.trim() ? `<div style="color: var(--text-main); line-height: 1.6; margin-top: 0.75rem; font-size: 0.95rem;"><strong>🔧 Tools / Equipment:</strong> ${user.tools.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
               
+              ${user.tools && user.tools.trim() ? `<div style="color: var(--text-main); line-height: 1.6; margin-top: 0.75rem; font-size: 0.95rem;"><strong>🔧 Tools / Equipment:</strong> ${user.tools.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+              
               ${user.hometown ? `<div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.75rem;">${user.hometown.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
             </div>
           </div>
@@ -19351,6 +19403,11 @@ async function renderJobs(reset = false) {
     const changePasswordBtn = document.getElementById("changePasswordBtn");
     if (changePasswordBtn) {
       changePasswordBtn.addEventListener("click", () => {
+        if (typeof window.showChangePasswordModal === 'function') {
+          window.showChangePasswordModal();
+        } else {
+          showToast('Change password feature is loading...');
+        }
         showChangePasswordModal();
       });
     }
@@ -25705,14 +25762,37 @@ meta.textContent =
             localStorage.setItem(dismissedKey, 'true');
           }
           
-          showToast('✅ Review submitted successfully!');
-          document.body.removeChild(modal);
-          document.body.style.overflow = '';
+          // Show thank you modal
+          const thankYouModal = document.createElement('div');
+          thankYouModal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 1rem;';
+          thankYouModal.innerHTML = `
+            <div style="background: white; border-radius: 16px; padding: 2rem; max-width: 400px; width: 100%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
+              <div style="font-size: 4rem; margin-bottom: 1rem;">🎉</div>
+              <h2 style="margin: 0 0 1rem 0; font-size: 1.75rem; color: var(--text-main);">Thank You!</h2>
+              <p style="color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.6;">
+                Your review has been submitted successfully. We appreciate your feedback!
+              </p>
+              <p style="color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.6; font-weight: 600;">
+                Post or do your next job.
+              </p>
+              <button class="btn btn-primary" id="thankYouCloseBtn" style="width: 100%; padding: 0.9rem; font-size: 1rem;">
+                Continue
+              </button>
+            </div>
+          `;
+          document.body.appendChild(thankYouModal);
+          document.body.style.overflow = 'hidden';
           
-          // Refresh completed jobs to show the review
-          if (typeof loadCompletedJobs === 'function') {
-            loadCompletedJobs();
-          }
+          thankYouModal.querySelector('#thankYouCloseBtn').addEventListener('click', () => {
+            document.body.removeChild(thankYouModal);
+            document.body.style.overflow = '';
+            document.body.removeChild(modal);
+            
+            // Refresh completed jobs to show the review
+            if (typeof loadCompletedJobs === 'function') {
+              loadCompletedJobs();
+            }
+          });
         } catch (error) {
           console.error('❌ Error submitting review:', error);
           showToast(error.message || 'Error submitting review. Please try again.');
