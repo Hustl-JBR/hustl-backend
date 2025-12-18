@@ -7025,14 +7025,37 @@ function showChangePasswordModal() {
     function updateApproximateCircle(lng, lat) {
       if (!approximateLocationMap) return;
       
-      // Remove existing circle
-      if (approximateLocationCircle) {
+      // Wait for map to be loaded before adding sources/layers
+      if (!approximateLocationMap.loaded()) {
+        approximateLocationMap.once('load', () => {
+          updateApproximateCircle(lng, lat);
+        });
+        return;
+      }
+      
+      // Always remove existing circle layers and source (regardless of flag)
+      try {
+        if (approximateLocationMap.getLayer('approximate-circle-outline')) {
+          approximateLocationMap.removeLayer('approximate-circle-outline');
+        }
+      } catch (e) {
+        // Layer might not exist, ignore
+      }
+      
+      try {
         if (approximateLocationMap.getLayer('approximate-circle')) {
           approximateLocationMap.removeLayer('approximate-circle');
         }
+      } catch (e) {
+        // Layer might not exist, ignore
+      }
+      
+      try {
         if (approximateLocationMap.getSource('approximate-circle')) {
           approximateLocationMap.removeSource('approximate-circle');
         }
+      } catch (e) {
+        // Source might not exist, ignore
       }
       
       // 0.25 miles = 402.336 meters
@@ -7041,33 +7064,47 @@ function showChangePasswordModal() {
       // Create circle using Turf.js (if available) or manual calculation
       const circle = createCircle([lng, lat], radiusMeters);
       
-      approximateLocationMap.addSource('approximate-circle', {
-        type: 'geojson',
-        data: circle
-      });
-      
-      approximateLocationMap.addLayer({
-        id: 'approximate-circle',
-        type: 'fill',
-        source: 'approximate-circle',
-        paint: {
-          'fill-color': '#2563eb',
-          'fill-opacity': 0.1
+      try {
+        approximateLocationMap.addSource('approximate-circle', {
+          type: 'geojson',
+          data: circle
+        });
+        
+        approximateLocationMap.addLayer({
+          id: 'approximate-circle',
+          type: 'fill',
+          source: 'approximate-circle',
+          paint: {
+            'fill-color': '#2563eb',
+            'fill-opacity': 0.1
+          }
+        });
+        
+        approximateLocationMap.addLayer({
+          id: 'approximate-circle-outline',
+          type: 'line',
+          source: 'approximate-circle',
+          paint: {
+            'line-color': '#2563eb',
+            'line-width': 2,
+            'line-opacity': 0.5
+          }
+        });
+        
+        approximateLocationCircle = true;
+      } catch (e) {
+        console.error('Error adding circle to map:', e);
+        // If source already exists, try to update it instead
+        try {
+          const source = approximateLocationMap.getSource('approximate-circle');
+          if (source && source.setData) {
+            source.setData(circle);
+            approximateLocationCircle = true;
+          }
+        } catch (e2) {
+          console.error('Error updating circle source:', e2);
         }
-      });
-      
-      approximateLocationMap.addLayer({
-        id: 'approximate-circle-outline',
-        type: 'line',
-        source: 'approximate-circle',
-        paint: {
-          'line-color': '#2563eb',
-          'line-width': 2,
-          'line-opacity': 0.5
-        }
-      });
-      
-      approximateLocationCircle = true;
+      }
     }
     
     // Initialize address search for map navigation (address not stored)
