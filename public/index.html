@@ -20136,20 +20136,14 @@ meta.textContent =
                 </div>
               ` : '';
               
-              // Completion code display and input for customer (if job is IN_PROGRESS)
+              // Completion code display for customer (if job is IN_PROGRESS) - Customer just needs to see their code to give to hustler
               const completionCodeSection = job.status === 'IN_PROGRESS' && job.startCodeVerified && job.completionCode && !job.completionCodeVerified ? `
                 <div style="padding: 1rem; background: #dcfce7; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #16a34a;">
                   <div style="font-weight: 700; font-size: 0.95rem; color: #166534; margin-bottom: 0.5rem;">✅ Your Completion Code</div>
                   <div style="font-size: 1.75rem; font-weight: 700; letter-spacing: 0.3em; color: #166534; text-align: center; padding: 0.75rem; background: white; border-radius: 6px; font-family: 'Courier New', monospace; margin-bottom: 0.5rem;">${job.completionCode}</div>
-                  <div style="font-size: 0.85rem; color: #166534; line-height: 1.4; margin-bottom: 0.75rem;">
+                  <div style="font-size: 0.85rem; color: #166534; line-height: 1.4;">
                     <div style="font-weight: 600; margin-bottom: 0.25rem;">⚠️ Give this code to your hustler only after the job is fully done and you're satisfied.</div>
                     <div style="font-size: 0.8rem;">This will release payment to the hustler.</div>
-                  </div>
-                  <div style="padding: 0.875rem; background: #dbeafe; border-radius: 6px; border: 2px solid #3b82f6; margin-top: 0.75rem;">
-                    <div style="font-weight: 700; font-size: 0.9rem; color: #1e40af; margin-bottom: 0.375rem;">🔐 Enter Finished Code (if hustler gave you one)</div>
-                    <div style="font-size: 0.8rem; color: #1e40af; margin-bottom: 0.625rem; line-height: 1.3;">If your hustler gave you a finished code, enter it here to complete the job.</div>
-                    <input type="text" id="finishedCodeInput_${job.id}" placeholder="Enter 6-digit finished code" maxlength="6" style="width: 100%; padding: 0.625rem; font-size: 1.1rem; text-align: center; letter-spacing: 0.2em; border: 2px solid #3b82f6; border-radius: 6px; font-family: 'Courier New', monospace; font-weight: 600; margin-bottom: 0.625rem; box-sizing: border-box;" />
-                    <button class="btn btn-primary verifyFinishedCodeBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.625rem; font-weight: 600; font-size: 0.95rem;">Verify Finished Code</button>
                   </div>
                 </div>
               ` : '';
@@ -20226,6 +20220,14 @@ meta.textContent =
                   <div style="font-size: 0.8rem; color: #1e40af; margin-bottom: 0.625rem; line-height: 1.3;">Ask the customer for the 6-digit start code to begin the job.</div>
                   <input type="text" id="startCodeInput_${job.id}" placeholder="Enter 6-digit code" maxlength="6" style="width: 100%; padding: 0.625rem; font-size: 1.1rem; text-align: center; letter-spacing: 0.2em; border: 2px solid #3b82f6; border-radius: 6px; font-family: 'Courier New', monospace; font-weight: 600; margin-bottom: 0.625rem; box-sizing: border-box;" />
                   <button class="btn btn-primary verifyStartCodeBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.625rem; font-weight: 600; font-size: 0.95rem;">Verify & Start Job</button>
+                </div>
+                ` : ''}
+                ${job.status === 'IN_PROGRESS' && job.startCodeVerified && job.completionCode && !job.completionCodeVerified ? `
+                <div style="padding: 0.875rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
+                  <div style="font-weight: 700; font-size: 0.9rem; color: #1e40af; margin-bottom: 0.375rem;">✅ Enter Completion Code</div>
+                  <div style="font-size: 0.8rem; color: #1e40af; margin-bottom: 0.625rem; line-height: 1.3;">Ask the customer for the 6-digit completion code to finish the job and release payment.</div>
+                  <input type="text" id="completionCodeInput_${job.id}" placeholder="Enter 6-digit completion code" maxlength="6" style="width: 100%; padding: 0.625rem; font-size: 1.1rem; text-align: center; letter-spacing: 0.2em; border: 2px solid #3b82f6; border-radius: 6px; font-family: 'Courier New', monospace; font-weight: 600; margin-bottom: 0.625rem; box-sizing: border-box;" />
+                  <button class="btn btn-primary verifyCompletionCodeBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.625rem; font-weight: 600; font-size: 0.95rem;">Verify & Complete Job</button>
                 </div>
                 ` : ''}
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
@@ -20358,21 +20360,6 @@ meta.textContent =
               });
             }
             
-            // Handle finished code input (only allow numbers) - for customer
-            const finishedCodeInput = card.querySelector(`#finishedCodeInput_${job.id}`);
-            if (finishedCodeInput) {
-              finishedCodeInput.addEventListener('click', (e) => {
-                e.stopPropagation();
-              });
-              finishedCodeInput.addEventListener('focus', (e) => {
-                e.stopPropagation();
-              });
-              finishedCodeInput.addEventListener('input', (e) => {
-                e.stopPropagation();
-                e.target.value = e.target.value.replace(/\D/g, ""); // Only numbers
-              });
-            }
-            
             // Handle verify completion code button
             card.querySelector('.verifyCompletionCodeBtn')?.addEventListener('click', async (e) => {
               e.stopPropagation();
@@ -20388,29 +20375,6 @@ meta.textContent =
                 input.focus();
                 return;
               }
-              const success = await verifyCompletionCode(job.id, code);
-              if (success) {
-                loadActiveJobs();
-                loadCompletedJobs();
-              }
-            });
-            
-            // Handle verify finished code button (for customer)
-            card.querySelector('.verifyFinishedCodeBtn')?.addEventListener('click', async (e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              const input = card.querySelector(`#finishedCodeInput_${job.id}`);
-              if (!input) {
-                showToast('❌ Error: Finished code input not found');
-                return;
-              }
-              const code = input.value.trim();
-              if (!code || code.length !== 6) {
-                showToast('❌ Please enter a valid 6-digit finished code');
-                input.focus();
-                return;
-              }
-              // Use the same verifyCompletionCode function
               const success = await verifyCompletionCode(job.id, code);
               if (success) {
                 loadActiveJobs();
