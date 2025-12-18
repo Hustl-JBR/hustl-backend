@@ -5330,7 +5330,7 @@ heart of Hustl.
       }
     };
 
-    function showToast(msg) {
+    function showToast(msg, duration = 3000) {
       const el = document.getElementById("toast");
       if (!el) return;
       el.textContent = msg;
@@ -5338,7 +5338,7 @@ heart of Hustl.
       if (toastTimeout) clearTimeout(toastTimeout);
       toastTimeout = setTimeout(() => {
         el.classList.remove("show");
-      }, 3000); // 3 seconds
+      }, duration);
     }
 
     // ⏱ Auto-complete checker: if Hustler marked finished and no dispute + no response in time
@@ -6059,7 +6059,7 @@ function showChangePasswordModal() {
 
       try {
         const result = await window.hustlAPI.auth.signIn(email, password);
-        showToast("✅ Logged in successfully!");
+        showToast("✅ Logged in successfully!", 1750); // Auto-dismiss after 1.75 seconds
         
         // Update header immediately
         await updateHeaderAuth();
