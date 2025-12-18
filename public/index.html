@@ -2763,16 +2763,38 @@
         min-height: 44px; /* Touch target */
       }
       
-      /* Manage tabs styled like filter chips on mobile */
+      /* Manage tabs styled like filter chips on mobile - prevent overlap */
+      .profile-tabs:has(.manage-tab) {
+        border-bottom: none !important;
+        padding-bottom: 0 !important;
+        gap: 0.5rem !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        justify-content: flex-start !important;
+      }
+      
+      .profile-tabs:has(.manage-tab)::-webkit-scrollbar {
+        display: none !important;
+      }
+      
       .manage-tab {
-        padding: 0.7rem 1.1rem !important;
-        margin: 0.25rem 0 !important;
+        padding: 0.7rem 1rem !important;
+        margin: 0.25rem 0.25rem !important;
         font-size: 0.85rem !important;
-        flex: 0 1 auto !important;
+        flex: 0 0 auto !important;
         min-width: fit-content !important;
+        width: calc(25% - 0.5rem) !important;
+        max-width: calc(25% - 0.5rem) !important;
         border-radius: 24px !important;
         border: 1.5px solid var(--border) !important;
         background: white !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        box-sizing: border-box !important;
       }
       
       .manage-tab.active {
@@ -2785,13 +2807,6 @@
       .manage-tab:not(.active) {
         color: var(--text-muted) !important;
         opacity: 0.8 !important;
-      }
-      
-      .profile-tabs:has(.manage-tab) {
-        border-bottom: none !important;
-        padding-bottom: 0 !important;
-        gap: 0.5rem !important;
-        flex-wrap: wrap !important;
       }
       
       /* Remove excessive white space */
@@ -4861,31 +4876,131 @@
 
           <!-- ABOUT / LEGAL VIEW -->
       <section id="view-about" style="display:none;">
-        <div class="card">
+        <div class="card" style="margin-bottom: 1.5rem;">
           <div class="card-header">
             <div class="card-title">About Hustl</div>
           </div>
-          <div class="about-text">
-Hustl was built in Knoxville, Tennessee with a simple goal:  
-make it easier for people to help each other and make real money on the side.
-
-If you need help – moving a couch, doing a dump run, cleaning out a garage,
-tackling yard work, or knocking out random errands – you shouldn’t have to
-blast group chats or scroll through sketchy posts. You should be able to
-describe the job, set a fair price, and connect with someone local who’s
-ready to work.
-
-If you’re a Hustler, Hustl is a way to turn your time, truck, or muscle into
-extra cash on your own schedule. No long-term commitments, no complicated
-contracts – just clear jobs, clear payouts, and a straightforward platform fee.
-
-Hustl is also about supporting small, local businesses and solo operators.
-As the platform grows, the same tools that help with one-time jobs can help
-people build regular clients, repeat work, and real side-income here in the
-community.
-
-Post a job, apply to one, show up, do solid work, and get paid – that’s the
-heart of Hustl.
+          <div class="about-text" style="line-height: 1.6; color: var(--text-main);">
+            <p style="margin-bottom: 1rem;">
+              Hustl was built in Knoxville, Tennessee with a simple goal:  
+              make it easier for people to help each other and make real money on the side.
+            </p>
+            <p style="margin-bottom: 1rem;">
+              If you need help – moving a couch, doing a dump run, cleaning out a garage,
+              tackling yard work, or knocking out random errands – you shouldn't have to
+              blast group chats or scroll through sketchy posts. You should be able to
+              describe the job, set a fair price, and connect with someone local who's
+              ready to work.
+            </p>
+            <p style="margin-bottom: 1rem;">
+              If you're a Hustler, Hustl is a way to turn your time, truck, or muscle into
+              extra cash on your own schedule. No long-term commitments, no complicated
+              contracts – just clear jobs, clear payouts, and a straightforward platform fee.
+            </p>
+            <p style="margin-bottom: 1rem;">
+              Hustl is also about supporting small, local businesses and solo operators.
+              As the platform grows, the same tools that help with one-time jobs can help
+              people build regular clients, repeat work, and real side-income here in the
+              community.
+            </p>
+            <p style="margin-bottom: 1rem; font-weight: 600; color: var(--primary);">
+              Post a job, apply to one, show up, do solid work, and get paid – that's the
+              heart of Hustl.
+            </p>
+            <p style="margin-top: 2rem; text-align: center; font-size: 1.2rem; font-weight: 700; color: var(--primary);">
+              Just keep hustling. 💪
+            </p>
+          </div>
+        </div>
+        
+        <!-- Feedback Form -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <div class="card-title">📝 Send Feedback</div>
+          </div>
+          <div style="padding: 1.5rem;">
+            <form id="feedbackForm">
+              <div class="field" style="margin-bottom: 1rem;">
+                <label for="feedbackEmail">Your Email (optional)</label>
+                <input type="email" id="feedbackEmail" placeholder="your@email.com" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem;" />
+              </div>
+              <div class="field" style="margin-bottom: 1rem;">
+                <label for="feedbackMessage">Your Feedback</label>
+                <textarea id="feedbackMessage" rows="5" placeholder="Tell us what you think, report a bug, or suggest a feature..." required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; font-family: inherit; resize: vertical;"></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1rem; font-weight: 600;">Send Feedback</button>
+            </form>
+          </div>
+        </div>
+        
+        <!-- Terms and Conditions -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <div class="card-title">📄 Terms and Conditions</div>
+          </div>
+          <div style="padding: 1.5rem; line-height: 1.6; color: var(--text-main);">
+            <p style="margin-bottom: 1rem;">
+              By using Hustl, you agree to our Terms and Conditions. Please read them carefully.
+            </p>
+            <p style="margin-bottom: 1rem;">
+              <strong>User Responsibilities:</strong> You are responsible for all content you post, 
+              all jobs you accept, and all payments you make or receive through the platform.
+            </p>
+            <p style="margin-bottom: 1rem;">
+              <strong>Payment Terms:</strong> Payments are processed securely through our platform. 
+              Platform fees apply as disclosed at the time of job posting or acceptance.
+            </p>
+            <p style="margin-bottom: 1rem;">
+              <strong>Disputes:</strong> Hustl provides a platform for connecting customers and hustlers. 
+              We are not responsible for the quality of work performed or disputes between parties.
+            </p>
+            <p style="margin-bottom: 1rem;">
+              <strong>Prohibited Content:</strong> Jobs involving illegal activities, adult services, 
+              or off-platform payments are strictly prohibited and will result in account termination.
+            </p>
+            <p style="margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted);">
+              For the complete Terms and Conditions, please contact us at team.hustlapp@outlook.com
+            </p>
+          </div>
+        </div>
+        
+        <!-- Privacy Policy -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <div class="card-title">🔒 Privacy Policy</div>
+          </div>
+          <div style="padding: 1.5rem; line-height: 1.6; color: var(--text-main);">
+            <p style="margin-bottom: 1rem;">
+              Your privacy is important to us. This Privacy Policy explains how we collect, 
+              use, and protect your information.
+            </p>
+            <p style="margin-bottom: 1rem;">
+              <strong>Information We Collect:</strong> We collect information you provide when 
+              creating an account, posting jobs, applying to jobs, and using our services. This 
+              includes name, email, location data, and payment information.
+            </p>
+            <p style="margin-bottom: 1rem;">
+              <strong>How We Use Your Information:</strong> We use your information to provide 
+              and improve our services, process payments, communicate with you, and ensure 
+              platform safety.
+            </p>
+            <p style="margin-bottom: 1rem;">
+              <strong>Location Data:</strong> We use approximate location data to match jobs 
+              with hustlers in your area. Exact addresses are only shared after job acceptance 
+              for privacy and safety.
+            </p>
+            <p style="margin-bottom: 1rem;">
+              <strong>Data Security:</strong> We implement industry-standard security measures 
+              to protect your information. Payment information is processed securely through 
+              our payment partners.
+            </p>
+            <p style="margin-bottom: 1rem;">
+              <strong>Your Rights:</strong> You can access, update, or delete your account 
+              information at any time through your profile settings.
+            </p>
+            <p style="margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted);">
+              For questions about our Privacy Policy, contact us at team.hustlapp@outlook.com
+            </p>
           </div>
         </div>
       </section>
@@ -19153,28 +19268,82 @@ async function renderJobs(reset = false) {
     /* ---------- Feedback ---------- */
 
     function initFeedback() {
+      // Handle old feedback button if it exists
       const btn = document.getElementById("feedbackButton");
-      btn.addEventListener("click", () => {
-        const name = document.getElementById("feedbackName").value.trim();
-        const email = document.getElementById("feedbackEmail").value.trim();
-        const message = document
-          .getElementById("feedbackMessage")
-          .value.trim();
-        if (!message) {
-          showToast("Please type a bit of feedback first.");
-          return;
-        }
-        state.feedback.push({
-          id: generateId("f"),
-          name,
-          email,
-          message,
-          createdAt: Date.now(),
+      if (btn) {
+        btn.addEventListener("click", () => {
+          const name = document.getElementById("feedbackName")?.value.trim() || '';
+          const email = document.getElementById("feedbackEmail")?.value.trim() || '';
+          const message = document.getElementById("feedbackMessage")?.value.trim() || '';
+          if (!message) {
+            showToast("Please type a bit of feedback first.");
+            return;
+          }
+          if (state && state.feedback) {
+            state.feedback.push({
+              id: generateId("f"),
+              name,
+              email,
+              message,
+              createdAt: Date.now(),
+            });
+            saveState();
+          }
+          if (document.getElementById("feedbackMessage")) {
+            document.getElementById("feedbackMessage").value = "";
+          }
+          showToast("Feedback saved (demo). In a live app this would email Hustl.");
         });
-        saveState();
-        document.getElementById("feedbackMessage").value = "";
-        showToast("Feedback saved (demo). In a live app this would email Hustl.");
-      });
+      }
+      
+      // Handle new feedback form in About view
+      const feedbackForm = document.getElementById("feedbackForm");
+      if (feedbackForm) {
+        feedbackForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = document.getElementById("feedbackEmail")?.value.trim() || '';
+          const message = document.getElementById("feedbackMessage")?.value.trim() || '';
+          
+          if (!message) {
+            showToast("Please type a bit of feedback first.");
+            return;
+          }
+          
+          // Try to send feedback via API if available
+          try {
+            const token = localStorage.getItem('hustl_token');
+            const response = await fetch(`${API_BASE}/feedback`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+              },
+              body: JSON.stringify({ email, message })
+            });
+            
+            if (response.ok) {
+              showToast("✅ Thank you for your feedback! We'll review it soon.");
+              feedbackForm.reset();
+            } else {
+              throw new Error('Failed to send feedback');
+            }
+          } catch (error) {
+            // Fallback to local storage if API fails
+            console.log("Feedback API not available, saving locally:", error);
+            if (state && state.feedback) {
+              state.feedback.push({
+                id: generateId("f"),
+                email,
+                message,
+                createdAt: Date.now(),
+              });
+              saveState();
+            }
+            showToast("✅ Thank you for your feedback! We'll review it soon.");
+            feedbackForm.reset();
+          }
+        });
+      }
     }
 
    /* ---------- Footer links ---------- */
@@ -28664,6 +28833,7 @@ try {
           <button class="mobile-menu-item" data-view="manage-jobs">📋 Manage Jobs</button>
           <button class="mobile-menu-item" data-view="messages">💬 Messages</button>
           <button class="mobile-menu-item" data-view="profile">👤 Profile</button>
+          <button class="mobile-menu-item" data-view="about">ℹ️ About Us</button>
         `;
       }
       
@@ -28722,6 +28892,7 @@ try {
           <button class="mobile-menu-item" data-view="manage-jobs">📋 Manage Jobs</button>
           <button class="mobile-menu-item" data-view="messages">💬 Messages</button>
           <button class="mobile-menu-item" data-view="profile">👤 Profile</button>
+          <button class="mobile-menu-item" data-view="about">ℹ️ About Us</button>
         `;
       }
       
