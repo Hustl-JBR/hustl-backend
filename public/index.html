@@ -13688,10 +13688,8 @@ async function renderJobs(reset = false) {
             name.addEventListener("click", () => {
               document.body.removeChild(modalOverlay);
               document.body.style.overflow = "";
-              if (typeof openUserProfile === 'function') {
-                if (typeof window.showHustlerProfilePopup === 'function') {
-                  window.showHustlerProfilePopup(hustler.id);
-                }
+              if (typeof window.showHustlerProfilePopup === 'function') {
+                window.showHustlerProfilePopup(hustler.id);
               }
             });
             nameRating.appendChild(name);
