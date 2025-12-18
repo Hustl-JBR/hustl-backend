@@ -2306,25 +2306,59 @@
       font-size: 0.95rem;
     }
     
-    /* Stronger active indicator for manage tabs */
-    .manage-tab.active {
-      background: var(--primary-soft) !important;
-      color: var(--primary) !important;
-      border-bottom: 4px solid var(--primary) !important;
-      font-weight: 700 !important;
-      font-size: 0.95rem !important;
+    /* Manage tabs styled like filter chips - desktop */
+    .manage-tab {
+      padding: 0.65rem 1.25rem !important;
+      border: 1.5px solid var(--border) !important;
+      border-radius: 24px !important;
+      font-size: 0.9rem !important;
+      background: white !important;
+      color: var(--text-main) !important;
+      cursor: pointer !important;
+      white-space: nowrap !important;
+      transition: all 0.2s !important;
+      font-weight: 500 !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 0.4rem !important;
+      border-bottom: 1.5px solid var(--border) !important;
+      margin-bottom: 0 !important;
     }
     
-    /* Mute inactive manage tabs */
+    /* Active manage tab - filter chip style */
+    .manage-tab.active {
+      background: var(--primary) !important;
+      color: white !important;
+      border: 1.5px solid var(--primary) !important;
+      font-weight: 600 !important;
+      box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2) !important;
+    }
+    
+    /* Inactive manage tabs - muted filter chip style */
     .manage-tab:not(.active) {
-      color: #9ca3af !important;
+      color: var(--text-muted) !important;
       font-weight: 500 !important;
-      opacity: 0.7;
+      opacity: 0.8 !important;
+      background: white !important;
     }
     
     .manage-tab:not(.active):hover {
-      opacity: 1;
+      opacity: 1 !important;
       color: var(--text-main) !important;
+      background: var(--bg-light) !important;
+      border-color: var(--primary) !important;
+    }
+    
+    /* Remove the tab indicator for manage tabs (using filter chip style instead) */
+    .manage-tab .tab-indicator {
+      display: none !important;
+    }
+    
+    /* Profile tabs container for manage tabs - remove border bottom */
+    .profile-tabs:has(.manage-tab) {
+      border-bottom: none !important;
+      padding-bottom: 0 !important;
+      margin-bottom: 1rem !important;
     }
     
     .profile-tab-content {
