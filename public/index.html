@@ -24204,8 +24204,23 @@ meta.textContent =
     
     // Show completion success modal with confetti and review prompt
     function showCompletionSuccessModal(jobId, completionData) {
+      console.log('🎉 showCompletionSuccessModal called with:', { jobId, completionData });
       const user = getCurrentUser();
-      if (!user) return;
+      if (!user) {
+        console.warn('⚠️ No user found, trying to get user from API...');
+        // Try to get user from API if getCurrentUser fails
+        window.hustlAPI.auth.getCurrentUser().then(userData => {
+          if (userData) {
+            console.log('✅ Got user from API, showing modal');
+            showCompletionSuccessModal(jobId, completionData);
+          } else {
+            console.error('❌ Could not get user, modal will not show');
+          }
+        }).catch(err => {
+          console.error('❌ Error getting user:', err);
+        });
+        return;
+      }
       
       // Determine if user is customer or hustler
       const isCustomer = completionData.customerId === user.id;
