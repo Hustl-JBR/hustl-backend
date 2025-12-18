@@ -17490,6 +17490,7 @@ async function renderJobs(reset = false) {
               src="${finalPhotoUrl}" 
               alt="${user.name || 'User'}" 
               ${dataUserIdAttr}
+              onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent('${(user.name || user.email || 'User').replace(/'/g, "\\'")}') + '&background=6366f1&color=fff&size=${size}';"
               style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: cover; object-position: center; border-radius: 50%; display: block; ${(finalOnClick || shouldShowProfile) ? 'cursor: pointer;' : ''}"
               onerror="this.onerror=null; this.style.display='none'; const fallback=this.parentElement.querySelector('.avatar-fallback') || document.createElement('div'); fallback.className='avatar-fallback'; fallback.style.cssText='width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: ${fontSize}; font-weight: 700; color: var(--primary); background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%); border-radius: 50%;'; fallback.textContent='${initial}'; if(!this.parentElement.querySelector('.avatar-fallback')) this.parentElement.appendChild(fallback);"
             />
