@@ -2763,6 +2763,37 @@
         min-height: 44px; /* Touch target */
       }
       
+      /* Manage tabs styled like filter chips on mobile */
+      .manage-tab {
+        padding: 0.7rem 1.1rem !important;
+        margin: 0.25rem 0 !important;
+        font-size: 0.85rem !important;
+        flex: 0 1 auto !important;
+        min-width: fit-content !important;
+        border-radius: 24px !important;
+        border: 1.5px solid var(--border) !important;
+        background: white !important;
+      }
+      
+      .manage-tab.active {
+        background: var(--primary) !important;
+        color: white !important;
+        border-color: var(--primary) !important;
+        box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3) !important;
+      }
+      
+      .manage-tab:not(.active) {
+        color: var(--text-muted) !important;
+        opacity: 0.8 !important;
+      }
+      
+      .profile-tabs:has(.manage-tab) {
+        border-bottom: none !important;
+        padding-bottom: 0 !important;
+        gap: 0.5rem !important;
+        flex-wrap: wrap !important;
+      }
+      
       /* Remove excessive white space */
       #view-profile {
         padding-top: 0 !important;
