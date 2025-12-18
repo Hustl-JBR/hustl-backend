@@ -378,8 +378,40 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         data: { 
           completionCodeVerified: true,
           status: 'PAID' // Job is completed and paid, ready for reviews
+        },
+        include: {
+          customer: { select: { id: true, name: true, email: true } },
+          hustler: { select: { id: true, name: true, email: true } }
         }
       });
+
+      // Send congratulations emails to both customer and hustler
+      try {
+        const { sendJobCompletionCongratsEmail } = require('../services/email');
+        
+        // Send to customer
+        if (updatedJob.customer && updatedJob.customer.email) {
+          await sendJobCompletionCongratsEmail(
+            updatedJob.customer.email,
+            updatedJob.customer.name,
+            updatedJob.title,
+            updatedJob.hustler?.name || 'your hustler'
+          );
+        }
+        
+        // Send to hustler
+        if (updatedJob.hustler && updatedJob.hustler.email) {
+          await sendJobCompletionCongratsEmail(
+            updatedJob.hustler.email,
+            updatedJob.hustler.name,
+            updatedJob.title,
+            updatedJob.customer?.name || 'your customer'
+          );
+        }
+      } catch (emailError) {
+        console.error('Error sending completion congrats emails:', emailError);
+        // Don't fail the request if emails fail
+      }
 
       res.json({
         success: true,

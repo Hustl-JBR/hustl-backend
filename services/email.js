@@ -342,6 +342,56 @@ async function sendJobCompleteEmail(email, name, jobTitle, verificationCode) {
   }
 }
 
+async function sendJobCompletionCongratsEmail(email, name, jobTitle, otherPersonName) {
+  if (!isEmailConfigured()) return;
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `🎉 Congrats on completing "${jobTitle}"!`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #ffffff; padding: 0;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">🎉 Job Completed!</h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hey <strong>${name}</strong>! 👋
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              Congrats on completing your job! We hope everything went great.
+            </p>
+            
+            <div style="background: white; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; border: 1px solid #e2e8f0;">
+              <h3 style="color: #1e293b; margin: 0 0 1rem 0; font-size: 1rem;">⭐ What's next?</h3>
+              <p style="color: #475569; margin: 0; line-height: 1.6;">
+                Please take a moment to rate ${otherPersonName || 'your partner'}, and feel free to work together again on Hustl.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 2rem 0;">
+              <a href="${process.env.APP_BASE_URL || 'https://hustljobs.com'}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                Leave a Review →
+              </a>
+            </div>
+            
+            <p style="color: #64748b; font-size: 0.9rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0; text-align: center;">
+              Thanks for using Hustl! 💪
+            </p>
+          </div>
+        </div>
+      `,
+    });
+    console.log('[Email] Job completion congrats email sent successfully to:', email);
+  } catch (error) {
+    console.error('[Email] Send job completion congrats email error:', error);
+  }
+}
+
 async function sendPaymentReceiptEmail(email, name, payment, receiptUrl) {
   if (!isEmailConfigured()) return;
   try {
@@ -889,6 +939,7 @@ module.exports = {
   sendOfferReceivedEmail,
   sendJobAssignedEmail,
   sendJobCompleteEmail,
+  sendJobCompletionCongratsEmail,
   sendJobPostedEmail,
   sendPaymentReceiptEmail,
   sendPayoutSentEmail,

@@ -5062,9 +5062,9 @@
       <section id="view-about" style="display:none; max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem;">
         <!-- About Hustl -->
         <div class="card" style="margin-bottom: 2rem;">
-          <div class="card-header">
-            <div class="card-title" style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">Hustl – About Us</div>
-            <div style="font-size: 0.9rem; color: var(--text-muted);">Founded in Brentwood, TN</div>
+          <div class="card-header" style="text-align: center;">
+            <div class="card-title" style="font-size: 3rem; font-weight: 700; margin-bottom: 0.75rem; text-align: center;">Hustl – About Us</div>
+            <div style="font-size: 1.5rem; color: var(--text-muted); text-align: center; font-weight: 500;">Founded in Brentwood, TN</div>
           </div>
           <div style="padding: 1.5rem; line-height: 1.7;">
             <p style="margin-bottom: 1.5rem; font-size: 1.05rem;">
@@ -19119,10 +19119,12 @@ async function renderJobs(reset = false) {
                   reviewerInfo.appendChild(reviewStars);
                   reviewItem.appendChild(reviewerInfo);
                   
-                  if (review.comment) {
+                  // Show review text (comment) - check both 'text' and 'comment' fields
+                  const reviewTextContent = review.text || review.comment;
+                  if (reviewTextContent) {
                     const reviewText = document.createElement("p");
-                    reviewText.style.cssText = "margin: 0; font-size: 0.9rem; color: var(--text-main); line-height: 1.5;";
-                    reviewText.textContent = review.comment;
+                    reviewText.style.cssText = "margin: 0.5rem 0 0 0; font-size: 0.9rem; color: var(--text-main); line-height: 1.5; padding-top: 0.5rem; border-top: 1px solid #e5e7eb;";
+                    reviewText.textContent = reviewTextContent;
                     reviewItem.appendChild(reviewText);
                   }
                   
@@ -25079,6 +25081,22 @@ meta.textContent =
         return;
       }
       
+      // Check if this modal was already dismissed for this job/user
+      const dismissedKey = `completionModalDismissed_${jobId}_${user.id}`;
+      if (localStorage.getItem(dismissedKey) === 'true') {
+        console.log('⚠️ Completion modal already dismissed for this job, skipping...');
+        completionModalShowing = false;
+        return;
+      }
+      
+      // Check if user already submitted a review for this job
+      const reviewSubmittedKey = `reviewSubmitted_${jobId}_${user.id}`;
+      if (localStorage.getItem(reviewSubmittedKey) === 'true') {
+        console.log('⚠️ Review already submitted for this job, skipping modal...');
+        completionModalShowing = false;
+        return;
+      }
+      
       // Set flag to prevent duplicates
       completionModalShowing = true;
       
@@ -25201,8 +25219,11 @@ meta.textContent =
           </div>
           
           <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; padding: 2rem; margin-bottom: 2rem; border: 3px solid #f59e0b; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
-            <div style="font-weight: 700; color: #92400e; margin-bottom: 1rem; font-size: 1.25rem; text-align: center;">⭐ Rate ${isCustomer ? 'Your Hustler' : 'Your Customer'}</div>
-            <p style="color: #92400e; margin: 0 0 1.5rem 0; line-height: 1.6; text-align: center; font-size: 1.05rem;">
+            <div style="font-weight: 700; color: #92400e; margin-bottom: 1rem; font-size: 1.5rem; text-align: center;">🎉 Job Completed</div>
+            <p style="color: #92400e; margin: 0 0 1rem 0; line-height: 1.6; text-align: center; font-size: 1.1rem; font-weight: 600;">
+              Please rate your experience
+            </p>
+            <p style="color: #92400e; margin: 0 0 1.5rem 0; line-height: 1.6; text-align: center; font-size: 0.95rem;">
               Help build trust in the community! Rate ${isCustomer ? 'your hustler' : 'your customer'} and share your experience.
             </p>
             <button class="btn btn-primary" id="reviewNowBtn" style="width: 100%; padding: 1rem; font-weight: 700; font-size: 1.1rem; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4); transition: transform 0.2s;">
@@ -25252,6 +25273,10 @@ meta.textContent =
       
       // Review now button
       modal.querySelector('#reviewNowBtn')?.addEventListener('click', async () => {
+        // Mark modal as dismissed (user is going to review)
+        const dismissedKey = `completionModalDismissed_${jobId}_${user.id}`;
+        localStorage.setItem(dismissedKey, 'true');
+        
         // Fetch the other user's name
         let revieweeName = isCustomer ? 'Hustler' : 'Customer';
         try {
@@ -25269,6 +25294,7 @@ meta.textContent =
         
         document.body.removeChild(modal);
         document.body.style.overflow = '';
+        completionModalShowing = false;
         
         // Refresh jobs to show completed status
         if (typeof loadActiveJobs === 'function') loadActiveJobs();
@@ -25316,13 +25342,20 @@ meta.textContent =
         }, 100);
       });
       
+      // Helper function to mark modal as dismissed
+      const markModalDismissed = () => {
+        const dismissedKey = `completionModalDismissed_${jobId}_${user.id}`;
+        localStorage.setItem(dismissedKey, 'true');
+        completionModalShowing = false;
+      };
+      
       // Close button
       modal.querySelector('#closeCompletionModalBtn')?.addEventListener('click', () => {
+        markModalDismissed();
         if (modal.parentNode) {
           document.body.removeChild(modal);
         }
         document.body.style.overflow = '';
-        completionModalShowing = false; // Reset flag
         
         // Refresh jobs to show completed status
         if (typeof loadActiveJobs === 'function') loadActiveJobs();
@@ -25332,11 +25365,11 @@ meta.textContent =
       // Close on background click
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
+          markModalDismissed();
           if (modal.parentNode) {
             document.body.removeChild(modal);
           }
           document.body.style.overflow = '';
-          completionModalShowing = false; // Reset flag
           
           // Refresh jobs to show completed status
           if (typeof loadActiveJobs === 'function') loadActiveJobs();
@@ -25591,6 +25624,16 @@ meta.textContent =
           
           const result = await response.json();
           console.log('✅ Review submitted successfully:', result);
+          
+          // Mark review as submitted for this job (prevents completion modal from showing again)
+          const user = getCurrentUser();
+          if (user) {
+            const reviewSubmittedKey = `reviewSubmitted_${jobId}_${user.id}`;
+            localStorage.setItem(reviewSubmittedKey, 'true');
+            // Also mark completion modal as dismissed since review was submitted
+            const dismissedKey = `completionModalDismissed_${jobId}_${user.id}`;
+            localStorage.setItem(dismissedKey, 'true');
+          }
           
           showToast('✅ Review submitted successfully!');
           document.body.removeChild(modal);
