@@ -9952,7 +9952,20 @@ async function renderJobs(reset = false) {
         
         const job = await response.json();
         console.log("Job details loaded:", job);
+        console.log("Job requirements (raw):", JSON.stringify(job.requirements, null, 2));
         const requirements = job.requirements || {};
+        
+        // Handle requirements if it's a string (JSON.parse if needed)
+        let parsedRequirements = requirements;
+        if (typeof requirements === 'string') {
+          try {
+            parsedRequirements = JSON.parse(requirements);
+          } catch (e) {
+            console.warn("Could not parse requirements as JSON:", e);
+            parsedRequirements = {};
+          }
+        }
+        console.log("Parsed requirements:", parsedRequirements);
         
         // Create modal overlay - full screen on mobile
         const modalOverlay = document.createElement("div");
@@ -10235,8 +10248,11 @@ async function renderJobs(reset = false) {
         toolsSection.appendChild(toolsTitle);
         
         // Check both camelCase and snake_case field names
-        const equipmentNeeded = requirements.equipmentNeeded || requirements.equipment_needed || [];
-        const customEquipment = requirements.customEquipment || requirements.custom_equipment || '';
+        const equipmentNeeded = parsedRequirements.equipmentNeeded || parsedRequirements.equipment_needed || [];
+        const customEquipment = parsedRequirements.customEquipment || parsedRequirements.custom_equipment || '';
+        
+        console.log("Equipment needed found:", equipmentNeeded);
+        console.log("Custom equipment found:", customEquipment);
         
         // Ensure equipmentNeeded is an array
         const equipmentArray = Array.isArray(equipmentNeeded) ? equipmentNeeded : (equipmentNeeded ? [equipmentNeeded] : []);
