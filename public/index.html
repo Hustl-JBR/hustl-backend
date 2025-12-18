@@ -5695,7 +5695,21 @@ function showEmailVerification(email) {
     }
     
     try {
-      const result = await window.hustlAPI.auth.verifyEmail(email, code);
+      // Clean the code - remove any spaces or non-digits
+      const cleanCode = code.replace(/\D/g, '').trim();
+      if (cleanCode.length !== 6) {
+        showToast("Please enter a valid 6-digit code.");
+        return;
+      }
+      
+      const result = await window.hustlAPI.auth.verifyEmail(email, cleanCode);
+      
+      if (result && result.error) {
+        // Show specific error message from backend
+        showToast(result.message || result.error || "Invalid code. Please try again.");
+        return;
+      }
+      
       showToast("✅ Email verified successfully!");
       
       // Update header immediately
@@ -5718,7 +5732,9 @@ function showEmailVerification(email) {
       }
       await renderAll();
     } catch (error) {
-      showToast("Invalid code. Please try again.");
+      console.error("Verification error:", error);
+      const errorMessage = error.message || error.error || "Invalid code. Please try again.";
+      showToast(errorMessage);
     }
   });
   
@@ -8167,9 +8183,22 @@ async function fetchWithRetry(url, options = {}, maxRetries = 2, timeout = 10000
         // Retry on server errors
         await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
         continue;
+      } else if (response.status === 401) {
+        // Don't retry on 401 - return error response
+        try {
+          const errorData = await response.json();
+          return errorData;
+        } catch (e) {
+          return { error: 'Unauthorized', status: 401 };
+        }
       }
       
-      return await response.json();
+      // For other errors, try to parse JSON but don't throw
+      try {
+        return await response.json();
+      } catch (e) {
+        return { error: `Request failed with status ${response.status}`, status: response.status };
+      }
     } catch (error) {
       if (error.name === 'AbortError') {
         if (attempt < maxRetries) {
@@ -9073,6 +9102,7 @@ async function renderJobs(reset = false) {
     try {
       if (window.hustlAPI && window.hustlAPI.jobs && typeof window.hustlAPI.jobs.list === 'function') {
         response = await window.hustlAPI.jobs.list(filters);
+        console.log('[renderJobs] API response from hustlAPI.jobs.list:', response);
       } else {
         // Fallback: Try direct API call
         const params = new URLSearchParams();
@@ -9081,20 +9111,29 @@ async function renderJobs(reset = false) {
         if (filters.zip) params.append('zip', filters.zip);
         if (filters.category) params.append('category', filters.category);
         
-        response = await safeFetch(`${BACKEND_URL}/api/jobs?${params.toString()}`, {
+        const apiUrl = `${BACKEND_URL}/api/jobs?${params.toString()}`;
+        console.log('[renderJobs] Fetching from:', apiUrl);
+        
+        response = await safeFetch(apiUrl, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json'
           }
         });
         
+        console.log('[renderJobs] Direct API response:', response);
+        
         if (!response) {
+          console.warn('[renderJobs] No response from API, using empty response');
           // If fetch fails, use empty response instead of crashing
+          response = { jobs: [], pagination: { hasMore: false, total: 0 } };
+        } else if (response.error) {
+          console.error('[renderJobs] API returned error:', response.error);
           response = { jobs: [], pagination: { hasMore: false, total: 0 } };
         }
       }
     } catch (apiError) {
-      console.warn("API call failed, using empty response:", apiError);
+      console.error("[renderJobs] API call failed:", apiError);
       // If API fails, use empty response instead of crashing
       response = { jobs: [], pagination: { hasMore: false, total: 0 } };
     }
@@ -9127,6 +9166,10 @@ async function renderJobs(reset = false) {
     
     console.log('[renderJobs] newJobs is array:', Array.isArray(newJobs), 'length:', newJobs.length);
     
+    if (newJobs.length > 0) {
+      console.log('[renderJobs] Sample job:', newJobs[0]);
+    }
+    
     const pagination = (response && response.pagination) || jobsPagination || { hasMore: false };
     
     // Ensure allLoadedJobs is always an array
@@ -9141,9 +9184,11 @@ async function renderJobs(reset = false) {
       newJobs = [];
     }
     
-    // Append new jobs to existing list
-    allLoadedJobs = [...allLoadedJobs, ...newJobs];
-    console.log('[renderJobs] allLoadedJobs after append, length:', allLoadedJobs.length, 'is array:', Array.isArray(allLoadedJobs));
+    // Append new jobs to existing list (deduplicate by ID)
+    const existingIds = new Set(allLoadedJobs.map(j => j.id).filter(Boolean));
+    const uniqueNewJobs = newJobs.filter(j => j && j.id && !existingIds.has(j.id));
+    allLoadedJobs = [...allLoadedJobs, ...uniqueNewJobs];
+    console.log('[renderJobs] allLoadedJobs after append, length:', allLoadedJobs.length, 'is array:', Array.isArray(allLoadedJobs), 'unique new jobs added:', uniqueNewJobs.length);
     jobsPagination = pagination;
 
     // Filter by status (client-side) - ensure filteredJobs is always an array
@@ -9153,36 +9198,57 @@ async function renderJobs(reset = false) {
       allLoadedJobs = [];
     }
     
-    // Browse Jobs only shows OPEN jobs that the user hasn't applied to and haven't expired
+    // Browse Jobs only shows OPEN jobs that haven't expired
+    // Be more lenient with status checking - accept both uppercase and lowercase
     let filteredJobs = Array.isArray(allLoadedJobs) ? allLoadedJobs.filter((j) => {
-      // Filter out EXPIRED status jobs
-      if (j.status === "EXPIRED" || j.status === "expired") return false;
+      if (!j || !j.id) {
+        console.warn('[renderJobs] Skipping invalid job:', j);
+        return false; // Skip invalid jobs
+      }
       
-      // Only show OPEN jobs
-      if (j.status !== "OPEN" && j.status !== "open") return false;
+      // Filter out EXPIRED status jobs
+      const status = (j.status || '').toUpperCase();
+      if (status === "EXPIRED") return false;
+      
+      // Only show OPEN jobs (case-insensitive)
+      if (status !== "OPEN") {
+        // Log non-OPEN jobs for debugging (but don't show them)
+        if (status && status !== 'SCHEDULED' && status !== 'ASSIGNED' && status !== 'IN_PROGRESS' && status !== 'PAID' && status !== 'COMPLETED') {
+          console.log('[renderJobs] Filtering out job with status:', status, 'job ID:', j.id);
+        }
+        return false;
+      }
       
       // Filter out expired jobs (check both expiresAt field and requirements.expiresAt)
       const now = new Date();
       if (j.expiresAt) {
-        const expirationDate = new Date(j.expiresAt);
-        if (expirationDate <= now) return false; // Expired
+        try {
+          const expirationDate = new Date(j.expiresAt);
+          if (!isNaN(expirationDate.getTime()) && expirationDate <= now) {
+            console.log('[renderJobs] Filtering out expired job:', j.id, 'expired at:', j.expiresAt);
+            return false; // Expired
+          }
+        } catch (e) {
+          // Invalid date, continue
+        }
       } else if (j.requirements?.expiresAt) {
         // Fallback to requirements.expiresAt for backward compatibility
         try {
           const expirationDate = new Date(j.requirements.expiresAt);
-          if (expirationDate <= now) return false; // Expired
+          if (!isNaN(expirationDate.getTime()) && expirationDate <= now) {
+            console.log('[renderJobs] Filtering out expired job (from requirements):', j.id);
+            return false; // Expired
+          }
         } catch (e) {
           // Invalid date, continue
         }
       }
       
       // Don't filter out applied jobs - show them with "Applied" badge instead
-      // if (userAppliedJobIds && userAppliedJobIds.has(j.id)) {
-      //   return false;
-      // }
-      
       return true;
     }) : [];
+    
+    console.log('[renderJobs] Filtered jobs count:', filteredJobs.length, 'out of', allLoadedJobs.length, 'total loaded jobs');
     
     // Apply category filters
     if (activeCategoryFilters.size > 0) {
