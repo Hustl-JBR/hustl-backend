@@ -1976,16 +1976,106 @@
     @media (max-width: 768px) {
       .messages-layout {
         grid-template-columns: 1fr;
-        height: auto;
-        max-height: none;
+        height: calc(100vh - 120px);
+        max-height: calc(100vh - 120px);
+        position: relative;
       }
       
+      /* Mobile: Show conversation list OR chat area, not both */
       .conversations-sidebar {
-        max-height: 250px;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: white;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        max-height: none;
+        height: 100%;
+        border-radius: 0;
+      }
+      
+      .conversations-sidebar.hidden {
+        display: none;
       }
       
       .chat-area {
-        min-height: 400px;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: white;
+        z-index: 2;
+        display: none;
+        flex-direction: column;
+        min-height: 100%;
+        height: 100%;
+        border-left: none;
+      }
+      
+      .chat-area.active {
+        display: flex;
+      }
+      
+      /* Back button in chat header on mobile */
+      .chat-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+      }
+      
+      .chat-back-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: transparent;
+        border: none;
+        font-size: 1.25rem;
+        cursor: pointer;
+        color: var(--text-main);
+        flex-shrink: 0;
+      }
+      
+      .chat-back-btn:hover {
+        background: var(--bg-light);
+      }
+      
+      .chat-header-content {
+        flex: 1;
+        min-width: 0;
+      }
+      
+      /* Conversation list items - better mobile styling */
+      .conversation-item {
+        padding: 1rem !important;
+        border-bottom: 1px solid #e5e7eb !important;
+        border-radius: 0 !important;
+        margin-bottom: 0 !important;
+      }
+      
+      .conversation-item:active {
+        background: var(--bg-light) !important;
+      }
+      
+      /* Profile picture in conversation items */
+      .conversation-avatar {
+        width: 48px !important;
+        height: 48px !important;
+        flex-shrink: 0 !important;
+      }
+      
+      .conversation-avatar img {
+        width: 100% !important;
+        height: 100% !important;
+        border-radius: 50% !important;
+        object-fit: cover !important;
       }
     }
 
@@ -4598,8 +4688,11 @@
           <!-- Chat Area -->
           <div class="chat-area">
             <div class="chat-header">
-              <div id="conversationTitle" style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem;">Select a conversation</div>
-              <div id="conversationJobSummary" style="font-size: 0.8rem; color: var(--text-muted);"></div>
+              <button class="chat-back-btn" id="chatBackBtn" style="display: none;">←</button>
+              <div class="chat-header-content">
+                <div id="conversationTitle" style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem;">Select a conversation</div>
+                <div id="conversationJobSummary" style="font-size: 0.8rem; color: var(--text-muted);"></div>
+              </div>
             </div>
             <div class="chat-messages-container" id="conversationMessages">
               <div class="empty-chat" style="text-align: center; padding: 3rem; color: var(--text-muted);">
@@ -16147,6 +16240,15 @@ async function renderJobs(reset = false) {
           activeConversationThreadId = thread.id;
           // Reset message tracking for new conversation
           resetMessageTracking();
+          
+          // On mobile: hide conversation list and show chat area
+          if (window.innerWidth <= 768) {
+            const sidebar = document.querySelector('.conversations-sidebar');
+            const chatArea = document.querySelector('.chat-area');
+            if (sidebar) sidebar.classList.add('hidden');
+            if (chatArea) chatArea.classList.add('active');
+          }
+          
           // Re-render list (to update highlight) + right-hand chat
           renderMessagesView();
         });
@@ -16258,26 +16360,77 @@ async function renderJobs(reset = false) {
           return;
         }
 
+        // Fetch sender info for profile pictures
+        const senderIds = [...new Set(messages.map(m => m.senderId))];
+        const senderMap = new Map();
+        
+        // Fetch all unique senders
+        for (const senderId of senderIds) {
+          try {
+            const senderResponse = await fetch(`${API_BASE}/users/${senderId}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (senderResponse.ok) {
+              const sender = await senderResponse.json();
+              senderMap.set(senderId, sender);
+            }
+          } catch (e) {
+            console.warn('Could not fetch sender info:', e);
+          }
+        }
+        
         messages.forEach((m) => {
           const isMe = m.senderId === user.id;
+          const sender = senderMap.get(m.senderId);
           
           // Create wrapper for message bubble and timestamp
           const wrapper = document.createElement("div");
           wrapper.className = "chat-msg-wrapper " + (isMe ? "me" : "them");
-          wrapper.dataset.messageId = m.id; // Track message ID for lightweight refresh
-          wrapper.dataset.senderId = m.senderId; // Track sender for isMe detection
+          wrapper.style.cssText = "display: flex; align-items: flex-end; gap: 0.5rem; margin-bottom: 0.75rem; " + (isMe ? "flex-direction: row-reverse;" : "flex-direction: row;");
+          wrapper.dataset.messageId = m.id;
+          wrapper.dataset.senderId = m.senderId;
+          
+          // Profile picture (only show for received messages)
+          if (!isMe && sender) {
+            const avatar = document.createElement("div");
+            avatar.style.cssText = "width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; overflow: hidden;";
+            avatar.innerHTML = renderUserAvatar(sender, 32, { showBorder: false });
+            wrapper.appendChild(avatar);
+          } else if (!isMe) {
+            // Placeholder for spacing
+            const spacer = document.createElement("div");
+            spacer.style.cssText = "width: 32px; height: 32px; flex-shrink: 0;";
+            wrapper.appendChild(spacer);
+          }
+          
+          // Message content container
+          const contentContainer = document.createElement("div");
+          contentContainer.style.cssText = "display: flex; flex-direction: column; gap: 0.25rem; max-width: 75%;";
           
           // Create message bubble
           const bubble = document.createElement("div");
           bubble.className = "chat-msg " + (isMe ? "me" : "them");
+          bubble.style.cssText = isMe 
+            ? "background: var(--primary); color: white; padding: 0.625rem 0.875rem; border-radius: 18px; word-wrap: break-word; font-size: 0.95rem; line-height: 1.4;"
+            : "background: #e5e7eb; color: var(--text-main); padding: 0.625rem 0.875rem; border-radius: 18px; word-wrap: break-word; font-size: 0.95rem; line-height: 1.4;";
           bubble.textContent = m.body;
-          wrapper.appendChild(bubble);
+          contentContainer.appendChild(bubble);
           
           // Create timestamp
           const timestamp = document.createElement("div");
           timestamp.className = "chat-msg-timestamp";
+          timestamp.style.cssText = "font-size: 0.7rem; color: var(--text-muted); padding: 0 0.5rem; " + (isMe ? "text-align: right;" : "text-align: left;");
           timestamp.textContent = timeAgo(m.createdAt);
-          wrapper.appendChild(timestamp);
+          contentContainer.appendChild(timestamp);
+          
+          wrapper.appendChild(contentContainer);
+          
+          // Spacer for sent messages (to align right)
+          if (isMe) {
+            const spacer = document.createElement("div");
+            spacer.style.cssText = "width: 32px; height: 32px; flex-shrink: 0;";
+            wrapper.appendChild(spacer);
+          }
           
           convMessages.appendChild(wrapper);
         });
@@ -16327,6 +16480,27 @@ async function renderJobs(reset = false) {
       // Set default tab if not set
       if (!window.activeConversationTab) {
         window.activeConversationTab = 'active';
+      }
+    }
+    
+    // Initialize back button for mobile chat
+    function initChatBackButton() {
+      const backBtn = document.getElementById("chatBackBtn");
+      if (backBtn) {
+        backBtn.addEventListener("click", () => {
+          // On mobile: hide chat area and show conversation list
+          if (window.innerWidth <= 768) {
+            const sidebar = document.querySelector('.conversations-sidebar');
+            const chatArea = document.querySelector('.chat-area');
+            if (sidebar) sidebar.classList.remove('hidden');
+            if (chatArea) chatArea.classList.remove('active');
+          }
+        });
+        
+        // Show back button on mobile
+        if (window.innerWidth <= 768) {
+          backBtn.style.display = "flex";
+        }
       }
     }
     
@@ -29077,6 +29251,7 @@ try {
       initJobsForm();
       initConversationInput();
       initConversationTabs();
+      initChatBackButton();
       initFeedback();
       initFooterLinks();
       checkAgeGate();
