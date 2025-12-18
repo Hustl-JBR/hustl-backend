@@ -4995,7 +4995,7 @@
         <div class="card" style="margin-bottom: 3rem; border: none; box-shadow: 0 8px 16px rgba(0,0,0,0.12); overflow: hidden;">
           <div class="card-header" style="background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%); color: white; padding: 3rem 2.5rem; text-align: center;">
             <div class="card-title" style="font-size: 2.5rem; font-weight: 800; margin: 0 0 0.75rem 0; color: white; letter-spacing: -0.5px;">About Hustl</div>
-            <div style="font-size: 1.15rem; margin-top: 0.5rem; opacity: 0.95; font-weight: 500;">Built in Knoxville, Tennessee</div>
+            <div style="font-size: 1.15rem; margin-top: 0.5rem; opacity: 0.95; font-weight: 500;">Built in Brentwood, TN</div>
           </div>
           <div style="padding: 3rem 2.5rem; line-height: 1.9; font-size: 1.1rem; color: var(--text-main);">
             <p style="margin-bottom: 2rem; font-size: 1.25rem; font-weight: 700; color: var(--text-main); line-height: 1.6;">
@@ -17707,227 +17707,14 @@ async function renderJobs(reset = false) {
     
     // Unified Profile Card Component - Shows user profile with completed jobs, bio, and reviews
     // Make it globally accessible
+    // showUserProfileCard removed - all profiles now use showHustlerProfilePopup (the Browse Jobs popup)
+    // This ensures consistency across the entire app
     window.showUserProfileCard = async function showUserProfileCard(userId) {
-      try {
-        const token = localStorage.getItem('hustl_token') || sessionStorage.getItem('hustl_token');
-        
-        // Fetch user profile with retry
-        const userData = await safeFetch(`${API_BASE}/users/${userId}`, {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        });
-        
-        if (!userData) {
-          showToast("Could not load profile. Please try again.");
-          return;
-        }
-        
-        const user = userData;
-        const completedJobsCount = user.completedJobsCount || 0;
-        
-        // Fetch reviews with retry
-        let reviews = [];
-        try {
-          const reviewsData = await safeFetch(`${API_BASE}/reviews?userId=${userId}`, {
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-          });
-          if (reviewsData) {
-            // Handle different response formats
-            if (Array.isArray(reviewsData)) {
-              reviews = reviewsData;
-            } else if (reviewsData.reviews && Array.isArray(reviewsData.reviews)) {
-              reviews = reviewsData.reviews;
-            }
-          }
-        } catch (error) {
-          console.warn('Failed to load reviews:', error);
-          reviews = []; // Continue with empty reviews
-        }
-        
-        // Sort reviews by date (newest first)
-        const sortedReviews = reviews
-          .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-        
-        // Show only 3 reviews initially
-        const initialReviews = sortedReviews.slice(0, 3);
-        const remainingReviews = sortedReviews.slice(3);
-        const hasMoreReviews = remainingReviews.length > 0;
-        
-        // Create modal overlay
-        const overlay = document.createElement('div');
-        overlay.id = 'userProfileCardModal';
-        overlay.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0,0,0,0.5);
-          z-index: 10000;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 1rem;
-        `;
-        
-        // Create modal content
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-          background: white;
-          border-radius: 16px;
-          max-width: 500px;
-          width: 100%;
-          max-height: 90vh;
-          overflow-y: auto;
-          position: relative;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        `;
-        
-        // Build reviews HTML - only show first 3
-        let reviewsHTML = '';
-        if (initialReviews.length === 0) {
-          reviewsHTML = '<div style="padding: 1rem; text-align: center; color: var(--text-muted);">No reviews yet.</div>';
-        } else {
-          reviewsHTML = initialReviews.map(review => `
-            <div style="padding: 1rem; border-bottom: 1px solid var(--border);">
-              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                <span style="font-size: 1.1rem;">${'⭐'.repeat(review.stars || 5)}</span>
-                <span style="font-weight: 600; color: var(--text-main);">${review.stars || 5}/5</span>
-                ${review.reviewer ? `<span style="font-size: 0.85rem; color: var(--text-muted);">by ${review.reviewer.name || 'Anonymous'}</span>` : ''}
-              </div>
-              ${review.text ? `<div style="color: var(--text-main); margin-bottom: 0.5rem; line-height: 1.5;">${review.text}</div>` : ''}
-              ${review.job ? `<div style="font-size: 0.8rem; color: var(--text-muted);">${review.job.title || 'Untitled Job'}</div>` : ''}
-            </div>
-          `).join('');
-          
-          // Add hidden section for remaining reviews
-          if (hasMoreReviews) {
-            reviewsHTML += `<div id="remainingReviews_${userId}" style="display: none;">${remainingReviews.map(review => `
-              <div style="padding: 1rem; border-bottom: 1px solid var(--border);">
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                  <span style="font-size: 1.1rem;">${'⭐'.repeat(review.stars || 5)}</span>
-                  <span style="font-weight: 600; color: var(--text-main);">${review.stars || 5}/5</span>
-                  ${review.reviewer ? `<span style="font-size: 0.85rem; color: var(--text-muted);">by ${review.reviewer.name || 'Anonymous'}</span>` : ''}
-                </div>
-                ${review.text ? `<div style="color: var(--text-main); margin-bottom: 0.5rem; line-height: 1.5;">${review.text}</div>` : ''}
-                ${review.job ? `<div style="font-size: 0.8rem; color: var(--text-muted);">${review.job.title || 'Untitled Job'}</div>` : ''}
-              </div>
-            `).join('')}</div>`;
-          }
-        }
-        
-        modal.innerHTML = `
-          <button class="closeProfileCardBtn" style="
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: #f3f4f6;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-          " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">×</button>
-          
-          <div style="padding: 2rem;">
-            <!-- Header -->
-            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 2px solid var(--border);">
-              ${renderUserAvatar(user, 80, { enableLightbox: true })}
-              <div style="flex: 1;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 0.25rem 0; color: var(--text-main);">${user.name || 'User'}</h2>
-                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text-muted);">
-                  ${user.ratingAvg ? `<span>⭐ ${user.ratingAvg.toFixed(1)}</span>` : ''}
-                  ${user.ratingCount ? `<span>(${user.ratingCount} reviews)</span>` : '<span>No reviews yet</span>'}
-                </div>
-              </div>
-            </div>
-            
-            <!-- Completed Jobs -->
-            <div style="margin-bottom: 2rem; padding: 1rem; background: #f9fafb; border-radius: 8px;">
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">📋 Completed Jobs</div>
-              <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-main);">${completedJobsCount}</div>
-            </div>
-            
-            <!-- About this person -->
-            <div style="margin-bottom: 2rem;">
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; font-weight: 600;">About this person</div>
-              <div style="color: var(--text-main); line-height: 1.6; padding: 1rem; background: #f9fafb; border-radius: 8px; min-height: 60px;">
-                ${user.bio && user.bio.trim() ? user.bio : '<span style="color: var(--text-muted);">This person hasn\'t added anything about themselves yet.</span>'}
-              </div>
-            </div>
-            
-            <!-- Reviews Section -->
-            <div style="margin-bottom: 1rem;">
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; font-weight: 600;">Reviews</div>
-              <div style="
-                border: 1px solid var(--border);
-                border-radius: 8px;
-                overflow: hidden;
-                max-height: 500px;
-                overflow-y: auto;
-              ">
-                ${reviewsHTML}
-              </div>
-              ${hasMoreReviews ? `
-                <button id="loadMoreReviewsBtn_${userId}" style="
-                  width: 100%;
-                  margin-top: 0.75rem;
-                  padding: 0.75rem 1rem;
-                  background: var(--primary);
-                  color: white;
-                  border: none;
-                  border-radius: 8px;
-                  font-weight: 600;
-                  cursor: pointer;
-                  font-size: 0.9rem;
-                  transition: all 0.2s;
-                " onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                  Load More (${remainingReviews.length} more)
-                </button>
-              ` : ''}
-            </div>
-          </div>
-        `;
-        
-        overlay.appendChild(modal);
-        document.body.appendChild(overlay);
-        document.body.style.overflow = 'hidden';
-        
-        // Close button handler
-        overlay.querySelector('.closeProfileCardBtn').addEventListener('click', () => {
-          overlay.remove();
-          document.body.style.overflow = '';
-        });
-        
-        // Overlay click to close
-        overlay.addEventListener('click', (e) => {
-          if (e.target === overlay) {
-            overlay.remove();
-            document.body.style.overflow = '';
-          }
-        });
-        
-        // Load more reviews button handler
-        const loadMoreBtn = document.getElementById(`loadMoreReviewsBtn_${userId}`);
-        const remainingReviewsDiv = document.getElementById(`remainingReviews_${userId}`);
-        
-        if (loadMoreBtn && remainingReviewsDiv) {
-          loadMoreBtn.addEventListener('click', () => {
-            // Show remaining reviews
-            remainingReviewsDiv.style.display = 'block';
-            // Hide the load more button
-            loadMoreBtn.style.display = 'none';
-          });
-        }
-        
-      } catch (error) {
-        console.error("Error showing user profile card:", error);
-        showToast("Error loading profile. Please try again.");
+      // Redirect to the standardized Browse Jobs profile popup
+      if (typeof window.showHustlerProfilePopup === 'function') {
+        await window.showHustlerProfilePopup(userId);
+      } else {
+        showToast("Profile view not available.");
       }
     };
     
@@ -21003,7 +20790,9 @@ meta.textContent =
                 e.stopPropagation();
                 const userId = btn.dataset.userId || btn.closest('[data-user-id]')?.dataset.userId;
                 if (userId) {
-                  await showUserProfileCard(userId);
+                  if (typeof window.showHustlerProfilePopup === 'function') {
+                    window.showHustlerProfilePopup(userId);
+                  }
                 }
               });
             });
@@ -24046,12 +23835,12 @@ meta.textContent =
               e.stopPropagation();
               e.preventDefault();
               const clickedUserId = btn.dataset.userId || btn.getAttribute('data-user-id');
-              console.log('🔵 Profile button clicked, userId:', clickedUserId, 'Button:', btn, 'showUserProfileCard available:', typeof window.showUserProfileCard);
-              if (clickedUserId && typeof window.showUserProfileCard === 'function') {
-                console.log('🔵 Calling showUserProfileCard with userId:', clickedUserId);
-                await window.showUserProfileCard(clickedUserId);
+              console.log('🔵 Profile button clicked, userId:', clickedUserId, 'Button:', btn, 'showHustlerProfilePopup available:', typeof window.showHustlerProfilePopup);
+              if (clickedUserId && typeof window.showHustlerProfilePopup === 'function') {
+                console.log('🔵 Calling showHustlerProfilePopup with userId:', clickedUserId);
+                await window.showHustlerProfilePopup(clickedUserId);
               } else {
-                console.error('❌ showUserProfileCard not available or userId missing. userId:', clickedUserId, 'showUserProfileCard type:', typeof window.showUserProfileCard);
+                console.error('❌ showHustlerProfilePopup not available or userId missing. userId:', clickedUserId, 'showHustlerProfilePopup type:', typeof window.showHustlerProfilePopup);
                 showToast('Error: Could not load profile');
               }
             });
@@ -24066,11 +23855,11 @@ meta.textContent =
             if (userId) {
               e.stopPropagation();
               e.preventDefault();
-              console.log('🔵 Profile button clicked (delegation), userId:', userId, 'showUserProfileCard available:', typeof window.showUserProfileCard);
-              if (typeof window.showUserProfileCard === 'function') {
-                await window.showUserProfileCard(userId);
+              console.log('🔵 Profile button clicked (delegation), userId:', userId, 'showHustlerProfilePopup available:', typeof window.showHustlerProfilePopup);
+              if (typeof window.showHustlerProfilePopup === 'function') {
+                await window.showHustlerProfilePopup(userId);
               } else {
-                console.error('❌ showUserProfileCard not available');
+                console.error('❌ showHustlerProfilePopup not available');
                 showToast('Error: Could not load profile');
               }
             }
@@ -29093,7 +28882,9 @@ try {
       const profileBtn = e.target.closest('.viewCustomerProfileBtn, .viewHustlerProfileBtn, .viewApplicantProfileBtn, .viewCustomerProfile, .viewHustlerProfile, .viewApplicantProfile');
       if (profileBtn && profileBtn.dataset.userId) {
         e.stopPropagation();
-        await showUserProfileCard(profileBtn.dataset.userId);
+        if (typeof window.showHustlerProfilePopup === 'function') {
+          await window.showHustlerProfilePopup(profileBtn.dataset.userId);
+        }
       }
     });
     
