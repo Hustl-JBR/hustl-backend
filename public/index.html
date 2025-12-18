@@ -11234,17 +11234,21 @@ async function renderJobs(reset = false) {
     // Function is already assigned to window.openJobDetails above
 
     // Show Hustler Profile Popup - lightweight quick-view
-    window.showHustlerProfilePopup = async function showHustlerProfilePopup(hustlerId) {
-      if (!hustlerId) {
-        console.error("No hustler ID provided");
+    // Standardized profile popup - works for all users (hustlers, customers, etc.)
+    window.showHustlerProfilePopup = async function showHustlerProfilePopup(userId) {
+      if (!userId) {
+        console.error("No user ID provided");
         return;
       }
+      
+      // Also support being called with "hustlerId" parameter name for backward compatibility
+      const targetUserId = userId;
 
       try {
         const token = localStorage.getItem("hustl_token");
         
         // Fetch user profile
-        const profileResponse = await fetch(`${API_BASE}/users/${hustlerId}`, {
+        const profileResponse = await fetch(`${API_BASE}/users/${targetUserId}`, {
           headers: token ? { "Authorization": `Bearer ${token}` } : {}
         });
         
@@ -11256,7 +11260,7 @@ async function renderJobs(reset = false) {
         const profile = await profileResponse.json();
         
         // Fetch latest 3 reviews
-        const reviewsResponse = await fetch(`${API_BASE}/reviews?userId=${hustlerId}&limit=3&offset=0`, {
+        const reviewsResponse = await fetch(`${API_BASE}/reviews?userId=${targetUserId}&limit=3&offset=0`, {
           headers: token ? { "Authorization": `Bearer ${token}` } : {}
         });
         
@@ -11308,7 +11312,7 @@ async function renderJobs(reset = false) {
         // Name
         const name = document.createElement("h2");
         name.style.cssText = "margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main);";
-        name.textContent = profile.name || "Hustler";
+        name.textContent = profile.name || "User";
         profileSection.appendChild(name);
         
         // Average Rating
@@ -19625,326 +19629,18 @@ function initFooterLinks() {
 }
 
    /* ---------- Public profile popup ---------- */
+// Standardized profile function - redirects to showHustlerProfilePopup
+// This ensures all profile views use the same standardized popup from Browse Jobs
 async function openUserProfile(userId) {
-  // Try to find user in state first
-  let user = state.users.find((u) => u.id === userId);
-  
-  // If not found, try to fetch from API
-  if (!user) {
-    try {
-      const token = localStorage.getItem("hustl_token");
-      const response = await fetch(`${API_BASE}/users/${userId}`, {
-        headers: token ? { "Authorization": `Bearer ${token}` } : {}
-      });
-      if (response.ok) {
-        user = await response.json();
-        // Add to state for future use
-        if (user && !state.users.find(u => u.id === userId)) {
-          state.users.push(user);
-        }
-      } else {
-        showToast("User not found.");
-        return;
-      }
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      showToast("Error loading user profile.");
-      return;
-    }
-  }
-  
-  if (!user) {
-    showToast("User not found.");
+  // Use the standardized profile popup (same one used in Browse Jobs)
+  if (typeof window.showHustlerProfilePopup === 'function') {
+    window.showHustlerProfilePopup(userId);
     return;
   }
-
-  // remove any existing popup
-  const existing = document.getElementById("profilePopupOverlay");
-  if (existing) existing.remove();
-
-  const overlay = document.createElement("div");
-  overlay.id = "profilePopupOverlay";
-  overlay.style.position = "fixed";
-  overlay.style.inset = "0";
-  overlay.style.background = "rgba(15,23,42,0.55)";
-  overlay.style.display = "flex";
-  overlay.style.alignItems = "center";
-  overlay.style.justifyContent = "center";
-  overlay.style.zIndex = "80";
-
-  const card = document.createElement("div");
-  card.className = "card";
-  card.style.maxWidth = "500px";
-  card.style.width = "100%";
-  card.style.maxHeight = "90vh";
-  card.style.overflowY = "auto";
-  card.style.position = "relative";
-  card.style.background = "white";
-  card.style.borderRadius = "16px";
-  card.style.boxShadow = "0 20px 25px -5px rgba(0, 0, 0, 0.3)";
   
-  // Prevent click from closing when clicking inside card
-  card.addEventListener("click", (e) => {
-    e.stopPropagation();
-  });
-
-  // Close button
-  const closeBtn = document.createElement("button");
-  closeBtn.innerHTML = "×";
-  closeBtn.style.cssText = "position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px; border-radius: 50%; background: #f3f4f6; border: none; font-size: 1.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6b7280; z-index: 10;";
-  closeBtn.addEventListener("click", () => {
-    overlay.remove();
-    document.body.style.overflow = "";
-  });
-  card.appendChild(closeBtn);
-
-  // 1. Name
-  const nameSection = document.createElement("div");
-  nameSection.style.cssText = "padding: 1.5rem 1.5rem 1rem; border-bottom: 1px solid var(--border);";
-  const name = document.createElement("div");
-  name.style.cssText = "font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;";
-  name.textContent = user.name || "User";
-  nameSection.appendChild(name);
-  
-  // Rating display (if available)
-  const ratingDisplay = window.getUserRatingDisplay ? window.getUserRatingDisplay(user) : '';
-  if (ratingDisplay) {
-    const ratingDiv = document.createElement("div");
-    ratingDiv.style.cssText = "font-size: 0.9rem; color: var(--text-muted);";
-    ratingDiv.innerHTML = ratingDisplay;
-    nameSection.appendChild(ratingDiv);
-  } else {
-    const noReviews = document.createElement("div");
-    noReviews.style.cssText = "font-size: 0.9rem; color: var(--text-muted);";
-    noReviews.textContent = "No reviews yet";
-    nameSection.appendChild(noReviews);
-  }
-  
-  card.appendChild(nameSection);
-
-  // 2. Profile Photo
-  const photoSection = document.createElement("div");
-  photoSection.style.cssText = "padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: center;";
-  
-  const avatarHtml = renderUserAvatar(user, 120, {
-    showBorder: true,
-    borderWidth: '3px',
-    style: 'box-shadow: 0 4px 12px rgba(0,0,0,0.15);'
-  });
-  
-  const avatar = document.createElement("div");
-  avatar.innerHTML = avatarHtml;
-  photoSection.appendChild(avatar);
-  
-  card.appendChild(photoSection);
-
-  // 3. Completed Jobs
-  const jobsCount = document.createElement("div");
-  jobsCount.className = "field";
-  jobsCount.style.cssText = "padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);";
-  
-  const jobsLabel = document.createElement("div");
-  jobsLabel.className = "stat-label";
-  jobsLabel.textContent = "📋 Completed Jobs";
-  jobsCount.appendChild(jobsLabel);
-  
-  const jobsText = document.createElement("div");
-  jobsText.style.cssText = "font-size: 2rem; font-weight: 700; color: var(--text-main); margin-top: 0.5rem;";
-  jobsText.textContent = user.completedJobsCount || "0";
-  jobsCount.appendChild(jobsText);
-  
-  card.appendChild(jobsCount);
-
-  // 4. Last 5 Reviews (with ratings) - Load from API
-  const reviewsWrap = document.createElement("div");
-  reviewsWrap.className = "field";
-  reviewsWrap.style.cssText = "padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);";
-
-  const reviewLabel = document.createElement("div");
-  reviewLabel.className = "stat-label";
-  reviewLabel.textContent = "Reviews";
-  reviewsWrap.appendChild(reviewLabel);
-
-  // Loading state
-  const reviewsLoading = document.createElement("div");
-  reviewsLoading.style.cssText = "margin-top: 0.5rem; color: var(--text-muted); font-size: 0.9rem;";
-  reviewsLoading.textContent = "Loading reviews...";
-  reviewsWrap.appendChild(reviewsLoading);
-  
-  card.appendChild(reviewsWrap);
-
-  // Load reviews from API
-  (async () => {
-    try {
-      const reviewsResult = await window.loadUserReviews(userId, 5, 0);
-      const reviews = reviewsResult.reviews || [];
-      
-      // Remove loading state
-      reviewsLoading.remove();
-      
-      if (reviews.length === 0) {
-        const empty = document.createElement("div");
-        empty.className = "muted";
-        empty.style.cssText = "margin-top: 0.5rem;";
-        empty.textContent = "No reviews yet.";
-        reviewsWrap.appendChild(empty);
-      } else {
-        // Show last 5 reviews (most recent first)
-        reviews.forEach((r) => {
-          const rCard = document.createElement("div");
-          rCard.style.cssText = "margin-top: 0.75rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px;";
-
-          const top = document.createElement("div");
-          top.style.cssText = "display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;";
-          
-          // Rating stars (API uses 'stars' field)
-          const rating = r.stars || r.rating || 5;
-          if (rating) {
-            const stars = document.createElement("div");
-            stars.style.cssText = "color: #fbbf24; font-size: 1rem;";
-            stars.textContent = "★".repeat(rating) + "☆".repeat(5 - rating);
-            top.appendChild(stars);
-          }
-          
-          // Reviewer name (API uses reviewer.name or fromName)
-          const reviewerName = document.createElement("div");
-          reviewerName.style.cssText = "font-weight: 600; color: var(--text-main); font-size: 0.9rem;";
-          reviewerName.textContent = r.reviewer?.name || r.fromName || "Someone on Hustl";
-          top.appendChild(reviewerName);
-          
-          rCard.appendChild(top);
-
-          // Review text (API uses 'text' field)
-          if (r.text) {
-            const body = document.createElement("div");
-            body.style.cssText = "color: var(--text-main); line-height: 1.5; font-size: 0.9rem;";
-            body.textContent = r.text;
-            rCard.appendChild(body);
-          }
-
-          reviewsWrap.appendChild(rCard);
-        });
-        
-        // Add "Load More" button if there are more reviews
-        if (reviewsResult.hasMore && reviewsResult.total > 5) {
-          const loadMoreBtn = document.createElement("button");
-          loadMoreBtn.className = "btn btn-ghost";
-          loadMoreBtn.style.cssText = "width: 100%; padding: 0.75rem; margin-top: 1rem;";
-          loadMoreBtn.textContent = `Load More Reviews (${reviewsResult.total - reviews.length} remaining)`;
-          
-          let currentOffset = reviews.length;
-          let allLoadedReviews = [...reviews];
-          
-          loadMoreBtn.addEventListener('click', async () => {
-            loadMoreBtn.disabled = true;
-            loadMoreBtn.textContent = 'Loading...';
-            
-            const result = await window.loadUserReviews(userId, 5, currentOffset);
-            const newReviews = result.reviews || [];
-            
-            if (newReviews.length > 0) {
-              newReviews.forEach((r) => {
-                const rCard = document.createElement("div");
-                rCard.style.cssText = "margin-top: 0.75rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px;";
-
-                const top = document.createElement("div");
-                top.style.cssText = "display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;";
-                
-                const rating = r.stars || r.rating || 5;
-                if (rating) {
-                  const stars = document.createElement("div");
-                  stars.style.cssText = "color: #fbbf24; font-size: 1rem;";
-                  stars.textContent = "★".repeat(rating) + "☆".repeat(5 - rating);
-                  top.appendChild(stars);
-                }
-                
-                const reviewerName = document.createElement("div");
-                reviewerName.style.cssText = "font-weight: 600; color: var(--text-main); font-size: 0.9rem;";
-                reviewerName.textContent = r.reviewer?.name || r.fromName || "Someone on Hustl";
-                top.appendChild(reviewerName);
-                
-                rCard.appendChild(top);
-
-                if (r.text) {
-                  const body = document.createElement("div");
-                  body.style.cssText = "color: var(--text-main); line-height: 1.5; font-size: 0.9rem;";
-                  body.textContent = r.text;
-                  rCard.appendChild(body);
-                }
-
-                loadMoreBtn.parentNode.insertBefore(rCard, loadMoreBtn);
-              });
-              
-              allLoadedReviews = [...allLoadedReviews, ...newReviews];
-              currentOffset = allLoadedReviews.length;
-              
-              if (result.hasMore && currentOffset < reviewsResult.total) {
-                loadMoreBtn.disabled = false;
-                loadMoreBtn.textContent = `Load More Reviews (${reviewsResult.total - currentOffset} remaining)`;
-              } else {
-                loadMoreBtn.remove();
-              }
-            } else {
-              loadMoreBtn.remove();
-            }
-          });
-          
-          reviewsWrap.appendChild(loadMoreBtn);
-        }
-      }
-    } catch (error) {
-      console.error("Error loading reviews:", error);
-      reviewsLoading.remove();
-      const errorMsg = document.createElement("div");
-      errorMsg.className = "muted";
-      errorMsg.style.cssText = "margin-top: 0.5rem; color: var(--danger);";
-      errorMsg.textContent = "Error loading reviews.";
-      reviewsWrap.appendChild(errorMsg);
-    }
-  })();
-
-  // 5. Bio / About this person
-  const bioWrap = document.createElement("div");
-  bioWrap.className = "field";
-  bioWrap.style.cssText = "padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);";
-
-  const bioLabel = document.createElement("div");
-  bioLabel.className = "stat-label";
-  bioLabel.textContent = "About this person";
-  bioWrap.appendChild(bioLabel);
-
-  const bioText = document.createElement("div");
-  bioText.style.cssText = "color: var(--text-main); line-height: 1.6; white-space: pre-wrap; margin-top: 0.5rem; font-size: 0.95rem;";
-  bioText.textContent = user.bio || "This person hasn't added anything about themselves yet.";
-  bioWrap.appendChild(bioText);
-  
-  card.appendChild(bioWrap);
-  
-  // 6. Tools/Equipment (if available)
-  if (user.tools && user.tools.trim()) {
-    const toolsWrap = document.createElement("div");
-    toolsWrap.className = "field";
-    toolsWrap.style.cssText = "padding: 1rem 1.5rem;";
-    
-    const toolsLabel = document.createElement("div");
-    toolsLabel.className = "stat-label";
-    toolsLabel.textContent = "🔧 Tools & Equipment";
-    toolsWrap.appendChild(toolsLabel);
-    
-    const toolsText = document.createElement("div");
-    toolsText.style.cssText = "color: var(--text-main); line-height: 1.6; white-space: pre-wrap; margin-top: 0.5rem; font-size: 0.95rem;";
-    toolsText.textContent = user.tools;
-    toolsWrap.appendChild(toolsText);
-    
-    card.appendChild(toolsWrap);
-  }
-
-  overlay.appendChild(card);
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) overlay.remove();
-  });
-
-  document.body.appendChild(overlay);
+  // Fallback if showHustlerProfilePopup doesn't exist
+  showToast("Profile view not available.");
+  return;
 }
 
 
