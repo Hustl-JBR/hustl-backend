@@ -8539,7 +8539,34 @@ function addUserLocationMarker(lat, lng) {
 
 // Render jobs on map - SIMPLIFIED and STABLE
 async function renderJobsOnMap(jobs) {
-  if (!jobsMap) return;
+  if (!jobsMap) {
+    console.warn('[renderJobsOnMap] Map not initialized');
+    return;
+  }
+  
+  console.log(`[renderJobsOnMap] Rendering ${jobs ? jobs.length : 0} jobs on map`);
+  
+  // Fetch user's applied jobs if not already available
+  let userAppliedJobIds = new Set();
+  try {
+    const token = localStorage.getItem('hustl_token');
+    const user = await window.hustlAPI?.auth?.getCurrentUser();
+    if (token && user) {
+      const offers = await safeFetch(`${API_BASE}/offers/user/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (offers && Array.isArray(offers)) {
+        const relevantOffers = offers.filter(offer => 
+          offer.status === 'PENDING' || 
+          (offer.status === 'ACCEPTED' && offer.job && (offer.job.status === 'SCHEDULED' || offer.job.status === 'ASSIGNED') && !offer.job.startCodeVerified)
+        );
+        userAppliedJobIds = new Set(relevantOffers.map(offer => offer.jobId).filter(Boolean));
+        console.log(`[renderJobsOnMap] User has applied to ${userAppliedJobIds.size} jobs`);
+      }
+    }
+  } catch (e) {
+    console.warn("[renderJobsOnMap] Could not fetch user's applied jobs:", e);
+  }
   
   // Wait for map to be fully loaded
   if (!jobsMap.loaded()) {
