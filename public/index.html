@@ -10386,6 +10386,9 @@ async function renderJobs(reset = false) {
         closeBtn.addEventListener("click", () => {
           document.body.removeChild(modalOverlay);
           document.body.style.overflow = "";
+          // Clear flags when closing
+          window._viewingFromPostedTab = false;
+          window._currentViewingOffer = null;
         });
         modalContent.appendChild(closeBtn); // Add to content so it's positioned relative to the modal
         
@@ -10826,11 +10829,160 @@ async function renderJobs(reset = false) {
         const viewingOffer = window._currentViewingOffer;
         const isViewingApplied = viewingOffer && viewingOffer.jobId === job.id;
         
+        // Check if viewing from Posted tab (job owner viewing their own job)
+        const isViewingFromPosted = window._viewingFromPostedTab && isOwner;
+        
         // Show apply area for hustlers OR if not logged in (show login prompt)
         // Always show apply area unless user is the owner
         // Check both user object and token to ensure user is logged in
         // BUT if viewing from Applied section, show their offer instead
-        if (isViewingApplied) {
+        // BUT if viewing from Posted tab, show applicants instead
+        if (isViewingFromPosted) {
+          // Show applicants section for job owner
+          const applicantsSection = document.createElement("div");
+          applicantsSection.style.cssText = "padding: 1rem; background: #f8f9fa; border-radius: 12px; border: 1px solid #e5e7eb;";
+          
+          const applicantsTitle = document.createElement("div");
+          applicantsTitle.style.cssText = "font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 1rem;";
+          applicantsTitle.textContent = "👥 Applicants";
+          applicantsSection.appendChild(applicantsTitle);
+          
+          // Fetch applicants/offers for this job
+          try {
+            const offersResponse = await fetch(`${API_BASE}/offers/${job.id}`, {
+              headers: token ? { "Authorization": `Bearer ${token}` } : {}
+            });
+            
+            if (offersResponse.ok) {
+              const offers = await offersResponse.json();
+              const pendingOffers = Array.isArray(offers) ? offers.filter(o => o.status === 'PENDING') : [];
+              
+              if (pendingOffers.length === 0) {
+                const noApplicants = document.createElement("div");
+                noApplicants.style.cssText = "text-align: center; padding: 2rem; color: var(--text-muted);";
+                noApplicants.textContent = "No applicants yet";
+                applicantsSection.appendChild(noApplicants);
+              } else {
+                // Show each applicant
+                for (const offer of pendingOffers) {
+                  const applicantCard = document.createElement("div");
+                  applicantCard.style.cssText = "padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 0.75rem;";
+                  
+                  // Applicant info
+                  const applicantInfo = document.createElement("div");
+                  applicantInfo.style.cssText = "display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;";
+                  
+                  // Profile picture
+                  const profilePic = document.createElement("img");
+                  profilePic.style.cssText = "width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); flex-shrink: 0; cursor: pointer;";
+                  const hustler = offer.hustler || {};
+                  profilePic.src = hustler.photoUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(hustler.name || "User") + "&background=6366f1&color=fff&size=128";
+                  profilePic.alt = hustler.name || "Applicant";
+                  profilePic.onerror = function() {
+                    this.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(hustler.name || "User") + "&background=6366f1&color=fff&size=128";
+                  };
+                  profilePic.addEventListener("click", () => {
+                    if (hustler.id) {
+                      window.showHustlerProfilePopup(hustler.id);
+                    }
+                  });
+                  
+                  const applicantDetails = document.createElement("div");
+                  applicantDetails.style.cssText = "flex: 1;";
+                  
+                  const applicantName = document.createElement("div");
+                  applicantName.style.cssText = "font-size: 1rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem; cursor: pointer;";
+                  applicantName.textContent = hustler.name || "Unknown";
+                  applicantName.addEventListener("click", () => {
+                    if (hustler.id) {
+                      window.showHustlerProfilePopup(hustler.id);
+                    }
+                  });
+                  
+                  const applicantRating = document.createElement("div");
+                  applicantRating.style.cssText = "font-size: 0.85rem; color: var(--text-muted);";
+                  if (hustler.ratingAvg) {
+                    applicantRating.textContent = `⭐ ${hustler.ratingAvg.toFixed(1)} (${hustler.ratingCount || 0} reviews)`;
+                  } else {
+                    applicantRating.textContent = "No reviews yet";
+                  }
+                  
+                  applicantDetails.appendChild(applicantName);
+                  applicantDetails.appendChild(applicantRating);
+                  
+                  applicantInfo.appendChild(profilePic);
+                  applicantInfo.appendChild(applicantDetails);
+                  
+                  // View Profile button
+                  const viewProfileBtn = document.createElement("button");
+                  viewProfileBtn.className = "btn btn-secondary";
+                  viewProfileBtn.textContent = "View Profile";
+                  viewProfileBtn.style.cssText = "padding: 0.5rem 1rem; font-size: 0.9rem; white-space: nowrap; flex-shrink: 0;";
+                  viewProfileBtn.addEventListener("click", () => {
+                    if (hustler.id) {
+                      window.showHustlerProfilePopup(hustler.id);
+                    }
+                  });
+                  
+                  applicantInfo.appendChild(viewProfileBtn);
+                  applicantCard.appendChild(applicantInfo);
+                  
+                  // Why they're a good fit
+                  if (offer.note) {
+                    const whyFitSection = document.createElement("div");
+                    whyFitSection.style.cssText = "margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;";
+                    const whyFitLabel = document.createElement("div");
+                    whyFitLabel.style.cssText = "font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;";
+                    whyFitLabel.textContent = "Why they're a good fit:";
+                    whyFitSection.appendChild(whyFitLabel);
+                    const whyFitText = document.createElement("div");
+                    whyFitText.style.cssText = "font-size: 0.9rem; color: var(--text-main); line-height: 1.5;";
+                    whyFitText.textContent = offer.note;
+                    whyFitSection.appendChild(whyFitText);
+                    applicantCard.appendChild(whyFitSection);
+                  }
+                  
+                  // Proposed price if they suggested one
+                  if (offer.proposedAmount) {
+                    const priceSection = document.createElement("div");
+                    priceSection.style.cssText = "margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;";
+                    const priceLabel = document.createElement("div");
+                    priceLabel.style.cssText = "font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem;";
+                    priceLabel.textContent = "Proposed price:";
+                    priceSection.appendChild(priceLabel);
+                    const priceText = document.createElement("div");
+                    priceText.style.cssText = "font-size: 1rem; font-weight: 700; color: var(--primary);";
+                    if (job.payType === 'hourly') {
+                      priceText.textContent = `$${Number(offer.proposedAmount).toFixed(0)}/hr`;
+                    } else {
+                      priceText.textContent = `$${Number(offer.proposedAmount).toFixed(0)} flat`;
+                    }
+                    priceSection.appendChild(priceText);
+                    applicantCard.appendChild(priceSection);
+                  }
+                  
+                  applicantsSection.appendChild(applicantCard);
+                }
+              }
+            } else {
+              const errorMsg = document.createElement("div");
+              errorMsg.style.cssText = "text-align: center; padding: 1rem; color: var(--text-muted);";
+              errorMsg.textContent = "Unable to load applicants";
+              applicantsSection.appendChild(errorMsg);
+            }
+          } catch (error) {
+            console.error("Error fetching applicants:", error);
+            const errorMsg = document.createElement("div");
+            errorMsg.style.cssText = "text-align: center; padding: 1rem; color: var(--text-muted);";
+            errorMsg.textContent = "Error loading applicants";
+            applicantsSection.appendChild(errorMsg);
+          }
+          
+          actionsSection.appendChild(applicantsSection);
+          
+          // Clear the flag after using it
+          window._viewingFromPostedTab = false;
+        } else if (isViewingApplied) {
           // Show their application/offer instead of apply form
           const offerSection = document.createElement("div");
           offerSection.style.cssText = "padding: 1rem; background: #f0f9ff; border-radius: 12px; border: 1px solid #bae6fd;";
@@ -11556,6 +11708,9 @@ async function renderJobs(reset = false) {
           if (e.target === modalOverlay) {
             document.body.removeChild(modalOverlay);
             document.body.style.overflow = "";
+            // Clear flags when closing
+            window._viewingFromPostedTab = false;
+            window._currentViewingOffer = null;
           }
         });
         
@@ -20361,7 +20516,11 @@ meta.textContent =
             // Add click handlers
             jobCard.querySelector('.viewJobBtn')?.addEventListener('click', (e) => {
               e.stopPropagation();
-              showViewJobModal(job.id, 'customer');
+              // Mark that we're viewing from Posted tab so openJobDetails shows applicants
+              window._viewingFromPostedTab = true;
+              if (typeof window.openJobDetails === 'function') {
+                window.openJobDetails(job.id);
+              }
             });
             
             jobCard.querySelector('.cancelJobBtn')?.addEventListener('click', async (e) => {
@@ -20377,7 +20536,11 @@ meta.textContent =
             // Make card clickable (but not buttons)
             jobCard.addEventListener('click', (e) => {
               if (!e.target.closest('button') && !e.target.closest('.btn')) {
-                showViewJobModal(job.id, 'customer');
+                // Mark that we're viewing from Posted tab so openJobDetails shows applicants
+                window._viewingFromPostedTab = true;
+                if (typeof window.openJobDetails === 'function') {
+                  window.openJobDetails(job.id);
+                }
               }
             });
             
