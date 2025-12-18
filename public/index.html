@@ -24131,7 +24131,7 @@ meta.textContent =
       }
     }
     
-    // Show completion success modal with review prompt
+    // Show completion success modal with confetti and review prompt
     function showCompletionSuccessModal(jobId, completionData) {
       const user = getCurrentUser();
       if (!user) return;
@@ -24141,81 +24141,206 @@ meta.textContent =
       const isHustler = completionData.hustlerId === user.id;
       const otherUserId = isCustomer ? completionData.hustlerId : completionData.customerId;
       
+      // Create confetti container
+      const confettiContainer = document.createElement('div');
+      confettiContainer.id = 'confettiContainer';
+      confettiContainer.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 10001;
+      `;
+      document.body.appendChild(confettiContainer);
+      
+      // Create confetti particles
+      const colors = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#ef4444'];
+      const confettiCount = 150;
+      
+      for (let i = 0; i < confettiCount; i++) {
+        const confetti = document.createElement('div');
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const size = Math.random() * 10 + 5;
+        const startX = Math.random() * 100;
+        const duration = Math.random() * 3 + 2;
+        const delay = Math.random() * 0.5;
+        
+        confetti.style.cssText = `
+          position: absolute;
+          width: ${size}px;
+          height: ${size}px;
+          background: ${color};
+          left: ${startX}%;
+          top: -10px;
+          border-radius: ${Math.random() > 0.5 ? '50%' : '0'};
+          animation: confettiFall ${duration}s ${delay}s linear forwards;
+        `;
+        
+        confettiContainer.appendChild(confetti);
+      }
+      
+      // Add confetti animation
+      if (!document.getElementById('confettiStyles')) {
+        const style = document.createElement('style');
+        style.id = 'confettiStyles';
+        style.textContent = `
+          @keyframes confettiFall {
+            0% {
+              transform: translateY(0) rotate(0deg);
+              opacity: 1;
+            }
+            100% {
+              transform: translateY(100vh) rotate(720deg);
+              opacity: 0;
+            }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      // Remove confetti after animation
+      setTimeout(() => {
+        if (confettiContainer.parentNode) {
+          confettiContainer.parentNode.removeChild(confettiContainer);
+        }
+      }, 5000);
+      
       const modal = document.createElement('div');
+      modal.id = 'completionSuccessModal';
       modal.style.cssText = `
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(0, 0, 0, 0.8);
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 10000;
         padding: 1rem;
+        animation: fadeIn 0.3s ease;
       `;
       
+      // Add fade in animation
+      if (!document.getElementById('modalFadeStyles')) {
+        const style = document.createElement('style');
+        style.id = 'modalFadeStyles';
+        style.textContent = `
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
       modal.innerHTML = `
-        <div style="background: white; border-radius: 16px; padding: 2rem; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-          <div style="text-align: center; margin-bottom: 2rem;">
-            <div style="font-size: 4rem; margin-bottom: 1rem;">🎉</div>
-            <h2 style="font-size: 1.75rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.5rem 0;">Congratulations!</h2>
-            <p style="font-size: 1.1rem; color: var(--text-muted); margin: 0;">Job completed successfully!</p>
+        <div style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-radius: 24px; padding: 3rem 2rem; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px rgba(0,0,0,0.5); position: relative; animation: slideUp 0.4s ease;">
+          <div style="text-align: center; margin-bottom: 2.5rem;">
+            <div style="font-size: 6rem; margin-bottom: 1rem; animation: bounce 1s ease infinite;">🎉</div>
+            <h2 style="font-size: 2.5rem; font-weight: 800; color: #1a1a1a; margin: 0 0 0.75rem 0; letter-spacing: -0.02em;">CONGRATULATIONS!</h2>
+            <p style="font-size: 1.25rem; color: #4a4a4a; margin: 0; font-weight: 600;">Job Completed Successfully! 🎊</p>
           </div>
           
-          <div style="background: #f0fdf4; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; border: 2px solid #16a34a;">
-            <div style="font-weight: 600; color: #166534; margin-bottom: 0.75rem; font-size: 1.1rem;">💰 Payment Released</div>
-            <div style="color: #166534;">
-              ${completionData.actualJobAmount ? `$${parseFloat(completionData.actualJobAmount).toFixed(2)} has been released.` : 'Payment has been processed.'}
-              ${completionData.actualHours ? `<div style="margin-top: 0.5rem; font-size: 0.9rem;">Hours worked: ${completionData.actualHours.toFixed(1)}</div>` : ''}
+          <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-radius: 16px; padding: 2rem; margin-bottom: 2rem; border: 3px solid #16a34a; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);">
+            <div style="font-weight: 700; color: #166534; margin-bottom: 1rem; font-size: 1.25rem; text-align: center;">💰 Payment Released</div>
+            <div style="color: #166534; text-align: center; font-size: 1.1rem;">
+              ${completionData.actualJobAmount ? `<div style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">$${parseFloat(completionData.actualJobAmount).toFixed(2)}</div><div style="font-size: 0.95rem; opacity: 0.9;">has been released to ${isHustler ? 'you' : 'the hustler'}</div>` : '<div style="font-size: 1.5rem; font-weight: 700;">Payment has been processed.</div>'}
+              ${completionData.actualHours ? `<div style="margin-top: 1rem; font-size: 1rem; font-weight: 600; padding-top: 1rem; border-top: 2px solid rgba(22, 163, 74, 0.3);">⏱️ Hours worked: ${completionData.actualHours.toFixed(1)}</div>` : ''}
+              ${completionData.hustlerPayout ? `<div style="margin-top: 0.5rem; font-size: 0.9rem; opacity: 0.8;">After platform fee: $${parseFloat(completionData.hustlerPayout).toFixed(2)}</div>` : ''}
             </div>
           </div>
           
-          <div style="background: #fef3c7; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; border: 2px solid #f59e0b;">
-            <div style="font-weight: 600; color: #92400e; margin-bottom: 0.75rem; font-size: 1.1rem;">⭐ Leave a Review</div>
-            <p style="color: #92400e; margin: 0 0 1rem 0; line-height: 1.5;">
+          <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; padding: 2rem; margin-bottom: 2rem; border: 3px solid #f59e0b; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
+            <div style="font-weight: 700; color: #92400e; margin-bottom: 1rem; font-size: 1.25rem; text-align: center;">⭐ Rate ${isCustomer ? 'Your Hustler' : 'Your Customer'}</div>
+            <p style="color: #92400e; margin: 0 0 1.5rem 0; line-height: 1.6; text-align: center; font-size: 1.05rem;">
               Help build trust in the community! Rate ${isCustomer ? 'your hustler' : 'your customer'} and share your experience.
             </p>
-            <button class="btn btn-primary" id="reviewNowBtn" style="width: 100%; padding: 0.75rem; font-weight: 600; background: #f59e0b; border: none;">
-              Write Review Now
+            <button class="btn btn-primary" id="reviewNowBtn" style="width: 100%; padding: 1rem; font-weight: 700; font-size: 1.1rem; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4); transition: transform 0.2s;">
+              ⭐ Write Review Now
             </button>
-            <button class="btn btn-ghost" id="reviewLaterBtn" style="width: 100%; padding: 0.75rem; margin-top: 0.5rem; color: #92400e;">
+            <button class="btn btn-ghost" id="reviewLaterBtn" style="width: 100%; padding: 0.75rem; margin-top: 0.75rem; color: #92400e; font-weight: 600;">
               I'll Review Later
             </button>
           </div>
           
           <div style="display: flex; gap: 0.75rem;">
-            <button class="btn btn-primary" id="viewCompletedJobBtn" style="flex: 1; padding: 0.75rem; font-weight: 600;">
+            <button class="btn btn-primary" id="viewCompletedJobBtn" style="flex: 1; padding: 0.875rem; font-weight: 700; font-size: 1rem; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: none; border-radius: 12px;">
               View Completed Job
             </button>
-            <button class="btn btn-ghost" id="closeCompletionModalBtn" style="flex: 1; padding: 0.75rem;">
+            <button class="btn btn-ghost" id="closeCompletionModalBtn" style="flex: 1; padding: 0.875rem; font-weight: 600; border-radius: 12px;">
               Close
             </button>
           </div>
         </div>
       `;
       
+      // Add slide up animation
+      if (!document.getElementById('slideUpStyles')) {
+        const style = document.createElement('style');
+        style.id = 'slideUpStyles';
+        style.textContent = `
+          @keyframes slideUp {
+            from {
+              transform: translateY(50px);
+              opacity: 0;
+            }
+            to {
+              transform: translateY(0);
+              opacity: 1;
+            }
+          }
+          @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
       document.body.appendChild(modal);
       document.body.style.overflow = 'hidden';
       
       // Review now button
-      modal.querySelector('#reviewNowBtn')?.addEventListener('click', () => {
+      modal.querySelector('#reviewNowBtn')?.addEventListener('click', async () => {
+        // Fetch the other user's name
+        let revieweeName = isCustomer ? 'Hustler' : 'Customer';
+        try {
+          const token = localStorage.getItem('hustl_token');
+          const userResponse = await fetch(`${API_BASE}/users/${otherUserId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            revieweeName = userData.name || revieweeName;
+          }
+        } catch (e) {
+          console.warn('Could not fetch user name:', e);
+        }
+        
         document.body.removeChild(modal);
         document.body.style.overflow = '';
-        // Navigate to completed jobs and open review modal
-        setView('manage-jobs');
-        setTimeout(() => {
-          loadCompletedJobs();
+        
+        // Refresh jobs to show completed status
+        if (typeof loadActiveJobs === 'function') loadActiveJobs();
+        if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
+        
+        // Open review modal immediately
+        if (typeof showReviewModal === 'function') {
           setTimeout(() => {
-            // Open review modal for this job
-            if (typeof showReviewModal === 'function') {
-              showReviewModal(jobId, otherUserId);
-            } else {
-              showToast('Please go to Completed Jobs to write your review');
-            }
-          }, 500);
-        }, 100);
+            showReviewModal(jobId, otherUserId, revieweeName);
+          }, 300);
+        } else {
+          // Navigate to completed jobs if modal function not available
+          setView('manage-jobs');
+          setTimeout(() => {
+            loadCompletedJobs();
+            showToast('Please write your review from the Completed Jobs section');
+          }, 100);
+        }
       });
       
       // Review later button
