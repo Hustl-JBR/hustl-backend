@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const prisma = require('../db');
-const { sendSignupEmail, sendEmailVerificationEmail, sendPasswordResetEmail } = require('../services/email');
+const { sendSignupEmail, sendEmailVerificationEmail, sendPasswordResetEmail, sendPasswordChangedEmail } = require('../services/email');
 const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
@@ -368,6 +368,44 @@ router.post('/verify-email', [
       : true;
 
     if (!storedCode || storedCode !== providedCode) {
+      // Check if code has expired - if so, delete account
+      const codeExpired = user.emailVerificationExpiry 
+        ? new Date(user.emailVerificationExpiry) < new Date()
+        : true;
+      
+      if (codeExpired) {
+        // Delete unverified account if code expired
+        try {
+          const userId = user.id;
+          await prisma.message.deleteMany({ where: { senderId: userId } });
+          await prisma.thread.deleteMany({ 
+            where: { OR: [{ userAId: userId }, { userBId: userId }] } 
+          });
+          await prisma.offer.deleteMany({ where: { hustlerId: userId } });
+          await prisma.review.deleteMany({ 
+            where: { OR: [{ reviewerId: userId }, { revieweeId: userId }] } 
+          });
+          await prisma.payment.deleteMany({ 
+            where: { OR: [{ customerId: userId }, { hustlerId: userId }] } 
+          });
+          await prisma.job.deleteMany({ 
+            where: { OR: [{ customerId: userId }, { hustlerId: userId }] } 
+          });
+          await prisma.user.delete({ where: { id: userId } });
+          console.log(`[verify-email] Deleted unverified account: ${user.email} (code expired on invalid attempt)`);
+        } catch (deleteError) {
+          console.error('[verify-email] Error deleting expired account:', deleteError);
+        }
+        
+        return res.status(400).json({ 
+          error: 'Verification code has expired',
+          message: 'Your verification code has expired. Your account has been deleted. Please sign up again.',
+          canResend: false,
+          expired: true,
+          accountDeleted: true
+        });
+      }
+      
       return res.status(400).json({ 
         error: 'Invalid verification code',
         message: 'The verification code you entered is incorrect. Please check your email and try again, or request a new code.',
@@ -376,11 +414,38 @@ router.post('/verify-email', [
     }
 
     if (codeExpired) {
+      // Delete unverified account if code expired (user didn't verify in time)
+      try {
+        // Delete related data first
+        const userId = user.id;
+        await prisma.message.deleteMany({ where: { senderId: userId } });
+        await prisma.thread.deleteMany({ 
+          where: { OR: [{ userAId: userId }, { userBId: userId }] } 
+        });
+        await prisma.offer.deleteMany({ where: { hustlerId: userId } });
+        await prisma.review.deleteMany({ 
+          where: { OR: [{ reviewerId: userId }, { revieweeId: userId }] } 
+        });
+        await prisma.payment.deleteMany({ 
+          where: { OR: [{ customerId: userId }, { hustlerId: userId }] } 
+        });
+        await prisma.job.deleteMany({ 
+          where: { OR: [{ customerId: userId }, { hustlerId: userId }] } 
+        });
+        
+        // Delete the user
+        await prisma.user.delete({ where: { id: userId } });
+        console.log(`[verify-email] Deleted unverified account: ${user.email} (code expired)`);
+      } catch (deleteError) {
+        console.error('[verify-email] Error deleting expired account:', deleteError);
+      }
+      
       return res.status(400).json({ 
         error: 'Verification code has expired',
-        message: 'Your verification code has expired (codes are valid for 5 minutes). You can request a new code - your account is still active and you don\'t need to sign up again.',
-        canResend: true,
-        expired: true
+        message: 'Your verification code has expired. Your account has been deleted. Please sign up again.',
+        canResend: false,
+        expired: true,
+        accountDeleted: true
       });
     }
 

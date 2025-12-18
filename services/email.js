@@ -228,17 +228,82 @@ async function sendPasswordResetEmail(email, name, resetUrl) {
       to: email,
       subject: 'Reset your Hustl password',
       html: `
-        <h1>Password Reset Request</h1>
-        <p>Hi ${name},</p>
-        <p>You requested to reset your password. Click the link below to reset it:</p>
-        <p><a href="${resetUrl}">Reset Password</a></p>
-        <p>This link will expire in 1 hour.</p>
-        <p>If you didn't request this, please ignore this email.</p>
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #ffffff; padding: 0;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">Reset Your Password</h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hi <strong>${name}</strong>! 👋
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              You requested to reset your password. Click the button below to reset it:
+            </p>
+            
+            <div style="text-align: center; margin: 2rem 0;">
+              <a href="${resetUrl}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+                Reset Password →
+              </a>
+            </div>
+            
+            <p style="color: #64748b; font-size: 0.9rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+              This link will expire in 1 hour. If you didn't request this, please ignore this email.
+            </p>
+          </div>
+        </div>
       `,
     });
+    console.log('[Email] Password reset email sent successfully to:', email);
   } catch (error) {
-    console.error('Send password reset email error:', error);
+    console.error('[Email] Send password reset email error:', error);
     throw error; // This is important, so we should know if it fails
+  }
+}
+
+async function sendPasswordChangedEmail(email, name, newPassword) {
+  if (!isEmailConfigured()) return;
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: 'Your Hustl password has been changed',
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #ffffff; padding: 0;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">Password Changed ✅</h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hi <strong>${name}</strong>! 👋
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              Your password has been successfully changed. Here's your new password:
+            </p>
+            
+            <div style="background: #f0fdf4; border: 2px solid #10b981; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; text-align: center;">
+              <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: #065f46; font-size: 0.9rem;">Your New Password:</p>
+              <p style="margin: 0; font-size: 1.5rem; font-weight: 700; color: #047857; font-family: monospace; letter-spacing: 0.1em;">${newPassword}</p>
+            </div>
+            
+            <p style="color: #64748b; font-size: 0.9rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+              Please save this password in a secure location. If you didn't make this change, please contact support immediately.
+            </p>
+          </div>
+        </div>
+      `,
+    });
+    console.log('[Email] Password changed email sent successfully to:', email);
+  } catch (error) {
+    console.error('[Email] Send password changed email error:', error);
+    throw error;
   }
 }
 
