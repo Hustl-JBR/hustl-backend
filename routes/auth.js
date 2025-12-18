@@ -693,5 +693,74 @@ router.delete('/delete-account', [
   }
 });
 
+// DELETE /auth/delete-my-account - Delete the current user's account completely
+router.delete('/delete-my-account', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    console.log(`[auth] User ${req.user.email} requesting account deletion`);
+    
+    // Delete related data first (in order of dependencies)
+    // Delete messages in threads where user is involved
+    await prisma.message.deleteMany({
+      where: { senderId: userId },
+    });
+    
+    // Delete threads
+    await prisma.thread.deleteMany({
+      where: { OR: [{ userAId: userId }, { userBId: userId }] },
+    });
+    
+    // Delete offers
+    await prisma.offer.deleteMany({
+      where: { hustlerId: userId },
+    });
+    
+    // Delete reviews
+    await prisma.review.deleteMany({
+      where: { OR: [{ reviewerId: userId }, { revieweeId: userId }] },
+    });
+    
+    // Delete payments
+    await prisma.payment.deleteMany({
+      where: { OR: [{ customerId: userId }, { hustlerId: userId }] },
+    });
+    
+    // Delete jobs
+    await prisma.job.deleteMany({
+      where: { OR: [{ customerId: userId }, { hustlerId: userId }] },
+    });
+    
+    // Delete location updates if table exists
+    try {
+      await prisma.locationUpdate.deleteMany({
+        where: { hustlerId: userId },
+      });
+    } catch (e) {
+      // Table might not exist, ignore
+    }
+    
+    // Delete referrals if table exists
+    try {
+      await prisma.referral.deleteMany({
+        where: { OR: [{ referrerId: userId }, { referredUserId: userId }] },
+      });
+    } catch (e) {
+      // Table might not exist, ignore
+    }
+    
+    // Finally delete the user
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+
+    console.log(`[auth] ✅ Deleted user account: ${req.user.email}`);
+    res.json({ message: 'Account and all related data deleted successfully' });
+  } catch (error) {
+    console.error('[auth] Delete account error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
 module.exports = router;
 

@@ -2318,8 +2318,8 @@
     /* Quick Stats Bar */
     .profile-quick-stats {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 0.75rem;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
       margin: 0 0 0.75rem 0;
     }
     
@@ -2332,8 +2332,8 @@
     
     .quick-stat-card {
       background: white;
-      border-radius: 12px;
-      padding: 0.75rem;
+      border-radius: 8px;
+      padding: 0.5rem;
       text-align: center;
       border: 1px solid var(--border);
       transition: all 0.2s;
@@ -2345,18 +2345,18 @@
     }
     
     .quick-stat-icon {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       margin-bottom: 0.25rem;
     }
     
     .quick-stat-value {
-      font-size: 1.5rem;
+      font-size: 1.1rem;
       font-weight: 700;
       color: var(--text-main);
     }
     
     .quick-stat-label {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       color: var(--text-muted);
       font-weight: 500;
     }
@@ -2542,7 +2542,25 @@
     
     @media (max-width: 768px) {
       .profile-quick-stats {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.4rem;
+      }
+      
+      .quick-stat-card {
+        padding: 0.4rem;
+      }
+      
+      .quick-stat-icon {
+        font-size: 1rem;
+        margin-bottom: 0.15rem;
+      }
+      
+      .quick-stat-value {
+        font-size: 0.95rem;
+      }
+      
+      .quick-stat-label {
+        font-size: 0.65rem;
       }
       
       .profile-section-grid {
@@ -4873,6 +4891,9 @@
                   </button>
                   <button class="btn btn-ghost" id="profileSignOutBtn" data-action="signout" style="width: 100%; justify-content: flex-start; gap: 0.5rem; color: #dc2626; border-color: #fecaca;">
                     🚪 Sign Out
+                  </button>
+                  <button class="btn btn-ghost" id="deleteAccountBtn" style="width: 100%; justify-content: flex-start; gap: 0.5rem; color: #dc2626; border-color: #dc2626; margin-top: 0.5rem;">
+                    🗑️ Delete Account
                   </button>
                 </div>
               </div>
@@ -10832,11 +10853,35 @@ async function renderJobs(reset = false) {
         // Check if viewing from Posted tab (job owner viewing their own job)
         const isViewingFromPosted = window._viewingFromPostedTab && isOwner;
         
+        // Check if user has already applied to this job
+        let userHasApplied = false;
+        let userOffer = null;
+        if (user && token) {
+          try {
+            const offersResponse = await fetch(`${API_BASE}/offers/${job.id}`, {
+              headers: { "Authorization": `Bearer ${token}` }
+            });
+            if (offersResponse.ok) {
+              const offers = await offersResponse.json();
+              if (Array.isArray(offers)) {
+                userOffer = offers.find(o => o.hustlerId === user.id);
+                if (userOffer && (userOffer.status === 'PENDING' || userOffer.status === 'ACCEPTED')) {
+                  userHasApplied = true;
+                }
+                // If denied, allow re-apply (userHasApplied stays false)
+              }
+            }
+          } catch (e) {
+            console.warn("Error checking if user applied:", e);
+          }
+        }
+        
         // Show apply area for hustlers OR if not logged in (show login prompt)
         // Always show apply area unless user is the owner
         // Check both user object and token to ensure user is logged in
         // BUT if viewing from Applied section, show their offer instead
         // BUT if viewing from Posted tab, show applicants instead
+        // BUT if user already applied (and not denied), show "Already Applied"
         if (isViewingFromPosted) {
           // Show applicants section for job owner
           const applicantsSection = document.createElement("div");
@@ -10927,6 +10972,97 @@ async function renderJobs(reset = false) {
                   applicantInfo.appendChild(viewProfileBtn);
                   applicantCard.appendChild(applicantInfo);
                   
+                  // Accept and Deny buttons
+                  const actionButtons = document.createElement("div");
+                  actionButtons.style.cssText = "display: flex; gap: 0.75rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;";
+                  
+                  const acceptBtn = document.createElement("button");
+                  acceptBtn.className = "btn btn-primary";
+                  acceptBtn.textContent = "✅ Accept";
+                  acceptBtn.style.cssText = "flex: 1; padding: 0.75rem; font-weight: 600; border-radius: 8px;";
+                  acceptBtn.dataset.offerId = offer.id;
+                  acceptBtn.addEventListener("click", async (e) => {
+                    e.stopPropagation();
+                    const offerId = e.target.dataset.offerId;
+                    if (confirm(`Accept ${hustler.name || 'this applicant'} for this job?`)) {
+                      try {
+                        acceptBtn.disabled = true;
+                        acceptBtn.textContent = "Accepting...";
+                        const response = await fetch(`${API_BASE}/offers/${offerId}/accept`, {
+                          method: 'POST',
+                          headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                          }
+                        });
+                        
+                        if (!response.ok) {
+                          const error = await response.json();
+                          throw new Error(error.error || 'Failed to accept applicant');
+                        }
+                        
+                        showToast('✅ Applicant accepted!');
+                        // Close modal and refresh
+                        document.body.removeChild(modalOverlay);
+                        document.body.style.overflow = "";
+                        window._viewingFromPostedTab = false;
+                        // Refresh posted jobs
+                        if (typeof loadPostedJobs === 'function') {
+                          loadPostedJobs();
+                        }
+                      } catch (error) {
+                        console.error('Error accepting applicant:', error);
+                        showToast(error.message || 'Failed to accept applicant');
+                        acceptBtn.disabled = false;
+                        acceptBtn.textContent = "✅ Accept";
+                      }
+                    }
+                  });
+                  
+                  const denyBtn = document.createElement("button");
+                  denyBtn.className = "btn btn-ghost";
+                  denyBtn.textContent = "❌ Deny";
+                  denyBtn.style.cssText = "flex: 1; padding: 0.75rem; font-weight: 600; border-radius: 8px; color: #dc2626; border-color: #fecaca;";
+                  denyBtn.dataset.offerId = offer.id;
+                  denyBtn.addEventListener("click", async (e) => {
+                    e.stopPropagation();
+                    const offerId = e.target.dataset.offerId;
+                    if (confirm(`Deny ${hustler.name || 'this applicant'}? They will be notified.`)) {
+                      try {
+                        denyBtn.disabled = true;
+                        denyBtn.textContent = "Denying...";
+                        const response = await fetch(`${API_BASE}/offers/${offerId}/decline`, {
+                          method: 'POST',
+                          headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                          }
+                        });
+                        
+                        if (!response.ok) {
+                          const error = await response.json();
+                          throw new Error(error.error || 'Failed to deny applicant');
+                        }
+                        
+                        showToast('❌ Applicant denied');
+                        // Refresh the applicants list
+                        document.body.removeChild(modalOverlay);
+                        document.body.style.overflow = "";
+                        window._viewingFromPostedTab = true;
+                        window.openJobDetails(job.id);
+                      } catch (error) {
+                        console.error('Error denying applicant:', error);
+                        showToast(error.message || 'Failed to deny applicant');
+                        denyBtn.disabled = false;
+                        denyBtn.textContent = "❌ Deny";
+                      }
+                    }
+                  });
+                  
+                  actionButtons.appendChild(acceptBtn);
+                  actionButtons.appendChild(denyBtn);
+                  applicantCard.appendChild(actionButtons);
+                  
                   // Why they're a good fit
                   if (offer.note) {
                     const whyFitSection = document.createElement("div");
@@ -10982,6 +11118,26 @@ async function renderJobs(reset = false) {
           
           // Clear the flag after using it
           window._viewingFromPostedTab = false;
+        } else if (userHasApplied && !isViewingApplied) {
+          // User has already applied - show "Already Applied" message
+          const appliedSection = document.createElement("div");
+          appliedSection.style.cssText = "padding: 1rem; background: #f0f9ff; border-radius: 12px; border: 1px solid #bae6fd;";
+          
+          const appliedTitle = document.createElement("div");
+          appliedTitle.style.cssText = "font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;";
+          appliedTitle.textContent = "✅ Already Applied";
+          appliedSection.appendChild(appliedTitle);
+          
+          const appliedMessage = document.createElement("div");
+          appliedMessage.style.cssText = "font-size: 0.9rem; color: var(--text-muted);";
+          if (userOffer && userOffer.status === 'ACCEPTED') {
+            appliedMessage.textContent = "Your application has been accepted! Check your Active Jobs tab.";
+          } else {
+            appliedMessage.textContent = "You've already applied to this job. The customer will review your application.";
+          }
+          appliedSection.appendChild(appliedMessage);
+          
+          actionsSection.appendChild(appliedSection);
         } else if (isViewingApplied) {
           // Show their application/offer instead of apply form
           const offerSection = document.createElement("div");
@@ -19196,6 +19352,66 @@ async function renderJobs(reset = false) {
           window.handleSignOut();
         } else {
           console.error('handleSignOut not available');
+        }
+      });
+    }
+    
+    // Delete account button
+    const deleteAccountBtn = document.getElementById("deleteAccountBtn");
+    if (deleteAccountBtn) {
+      deleteAccountBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const user = await window.hustlAPI?.auth?.getCurrentUser();
+        if (!user) {
+          showToast("Please log in to delete your account");
+          return;
+        }
+        
+        // Double confirmation
+        const confirm1 = confirm(`⚠️ WARNING: This will PERMANENTLY delete your account and ALL associated data:\n\n- All your jobs\n- All your applications\n- All your messages\n- All your reviews\n- All your payment history\n\nThis action CANNOT be undone. You will need to create a new account if you want to use Hustl again.\n\nAre you sure you want to proceed?`);
+        if (!confirm1) return;
+        
+        const confirm2 = prompt(`Type "DELETE MY ACCOUNT" to confirm permanent deletion:`);
+        if (confirm2 !== "DELETE MY ACCOUNT") {
+          showToast("Account deletion cancelled");
+          return;
+        }
+        
+        try {
+          const token = localStorage.getItem('hustl_token');
+          if (!token) {
+            showToast("Please log in to delete your account");
+            return;
+          }
+          
+          // Call delete account endpoint
+          const response = await fetch(`${API_BASE}/auth/delete-my-account`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to delete account');
+          }
+          
+          showToast("✅ Account deleted successfully");
+          
+          // Clear local storage and sign out
+          localStorage.clear();
+          if (window.handleSignOut) {
+            window.handleSignOut();
+          } else {
+            setView('login');
+          }
+        } catch (error) {
+          console.error('Error deleting account:', error);
+          showToast(error.message || 'Failed to delete account. Please try again.');
         }
       });
     }
