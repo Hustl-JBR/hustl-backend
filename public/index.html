@@ -8900,29 +8900,76 @@ function toggleJobsView(view) {
     // Initialize map if not already done, then render jobs
     if (!jobsMap) {
       console.log('Initializing map...');
-      initJobsMap().then(() => {
+      initJobsMap().then(async () => {
         console.log('Map initialized, rendering jobs...');
-        // Get current filtered jobs and render them
+        // Get current filtered jobs and render them directly on map
         if (allLoadedJobs && allLoadedJobs.length > 0) {
           // Re-apply filters to get current filtered jobs
-          // We'll trigger a re-render by calling renderJobs
-          setTimeout(() => {
-            if (typeof renderJobs === 'function') {
-              renderJobs(false); // Don't reset, just re-render
+          const filtered = allLoadedJobs.filter((j) => {
+            if (!j || !j.id) return false;
+            const status = (j.status || '').toUpperCase();
+            if (status === "EXPIRED") return false;
+            if (status !== "OPEN") return false;
+            
+            const now = new Date();
+            if (j.expiresAt) {
+              try {
+                const expirationDate = new Date(j.expiresAt);
+                if (!isNaN(expirationDate.getTime()) && expirationDate <= now) return false;
+              } catch (e) {}
             }
-          }, 300);
+            return true;
+          });
+          
+          // Apply category filters if set
+          let finalFiltered = filtered;
+          if (activeCategoryFilters.size > 0) {
+            finalFiltered = filtered.filter((j) => {
+              const jobCategory = (j.category || 'other').toLowerCase();
+              return activeCategoryFilters.has(jobCategory);
+            });
+          }
+          
+          console.log(`[toggleJobsView] Rendering ${finalFiltered.length} jobs on map`);
+          if (finalFiltered.length > 0 && typeof renderJobsOnMap === 'function') {
+            await renderJobsOnMap(finalFiltered);
+          }
         }
       });
     } else {
-      // Map already initialized, just render jobs
+      // Map already initialized, just render jobs directly
       console.log('Map already initialized, rendering jobs...');
       if (allLoadedJobs && allLoadedJobs.length > 0) {
-        // Re-apply filters and render
-        setTimeout(() => {
-          if (typeof renderJobs === 'function') {
-            renderJobs(false); // Don't reset, just re-render
+        // Re-apply filters and render directly on map
+        const filtered = allLoadedJobs.filter((j) => {
+          if (!j || !j.id) return false;
+          const status = (j.status || '').toUpperCase();
+          if (status === "EXPIRED") return false;
+          if (status !== "OPEN") return false;
+          
+          const now = new Date();
+          if (j.expiresAt) {
+            try {
+              const expirationDate = new Date(j.expiresAt);
+              if (!isNaN(expirationDate.getTime()) && expirationDate <= now) return false;
+            } catch (e) {}
           }
-        }, 100);
+          return true;
+        });
+        
+        // Apply category filters if set
+        let finalFiltered = filtered;
+        if (activeCategoryFilters.size > 0) {
+          finalFiltered = filtered.filter((j) => {
+            const jobCategory = (j.category || 'other').toLowerCase();
+            return activeCategoryFilters.has(jobCategory);
+          });
+        }
+        
+        console.log(`[toggleJobsView] Rendering ${finalFiltered.length} jobs on map (map already exists)`);
+        if (finalFiltered.length > 0 && typeof renderJobsOnMap === 'function') {
+          await renderJobsOnMap(finalFiltered);
+        }
       }
     }
   }
