@@ -10301,28 +10301,17 @@ async function renderJobs(reset = false) {
           if (mapElement && mapElement._mapboxglMap) {
             const map = mapElement._mapboxglMap;
             
-            // Get job location
-            const jobLat = parseFloat(job.approximateLat || job.lat);
-            const jobLng = parseFloat(job.approximateLng || job.lng);
-            
-            // Get user location (from currentUserLocation passed to initJobDetailMap)
-            let userLat = null;
-            let userLng = null;
-            if (currentUserLocation && currentUserLocation.lat && currentUserLocation.lng) {
-              userLat = currentUserLocation.lat;
-              userLng = currentUserLocation.lng;
-            } else if (userLocation && userLocation.lat && userLocation.lng) {
-              userLat = userLocation.lat;
-              userLng = userLocation.lng;
-            }
+            // Get job location from stored reference
+            const jobLoc = mapElement._jobLocation;
+            const userLoc = mapElement._userLocation;
             
             // If both locations are available, fit bounds to show both
-            if (jobLat && jobLng && !isNaN(jobLat) && !isNaN(jobLng) && 
-                userLat && userLng && !isNaN(userLat) && !isNaN(userLng)) {
+            if (jobLoc && jobLoc.lat && jobLoc.lng && !isNaN(jobLoc.lat) && !isNaN(jobLoc.lng) &&
+                userLoc && userLoc.lat && userLoc.lng && !isNaN(userLoc.lat) && !isNaN(userLoc.lng)) {
               // Calculate bounds to include both points
               const bounds = [
-                [Math.min(jobLng, userLng), Math.min(jobLat, userLat)], // Southwest
-                [Math.max(jobLng, userLng), Math.max(jobLat, userLat)]  // Northeast
+                [Math.min(jobLoc.lng, userLoc.lng), Math.min(jobLoc.lat, userLoc.lat)], // Southwest
+                [Math.max(jobLoc.lng, userLoc.lng), Math.max(jobLoc.lat, userLoc.lat)]  // Northeast
               ];
               
               map.fitBounds(bounds, {
@@ -10330,7 +10319,7 @@ async function renderJobs(reset = false) {
                 maxZoom: 14,
                 duration: 1000
               });
-            } else {
+            } else if (jobLoc && jobLoc.lat && jobLoc.lng && !isNaN(jobLoc.lat) && !isNaN(jobLoc.lng)) {
               // If only job location, just zoom out
               const currentZoom = map.getZoom();
               map.zoomTo(Math.max(10, currentZoom - 2), { duration: 500 });
@@ -10736,10 +10725,12 @@ async function renderJobs(reset = false) {
           interactive: true
         });
         
-        // Store map reference on container element for zoom out button
+        // Store map reference and locations on container element for zoom out button
         const containerElement = document.getElementById(containerId);
         if (containerElement) {
           containerElement._mapboxglMap = map;
+          containerElement._jobLocation = { lat, lng };
+          containerElement._userLocation = userLoc;
         }
         
         // Add job location marker (blue)
