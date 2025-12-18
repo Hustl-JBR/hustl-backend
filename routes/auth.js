@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const prisma = require('../db');
 const { sendSignupEmail, sendEmailVerificationEmail, sendPasswordResetEmail } = require('../services/email');
+const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
