@@ -8890,7 +8890,7 @@ async function renderJobsOnMap(jobs) {
 }
 
 // Toggle between List and Map view
-function toggleJobsView(view) {
+async function toggleJobsView(view) {
   currentJobsView = view;
   const listBtn = document.getElementById('jobsViewListBtn');
   const mapBtn = document.getElementById('jobsViewMapBtn');
