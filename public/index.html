@@ -4873,6 +4873,58 @@ heart of Hustl.
       setTimeout(async () => {
         if (typeof initApproximateLocationMap === 'function') {
           await initApproximateLocationMap();
+          
+          // CRITICAL: Ensure map is clickable after initialization - add backup handler
+          setTimeout(() => {
+            const mapContainer = document.getElementById('approximateLocationMap');
+            if (mapContainer && typeof approximateLocationMap !== 'undefined' && approximateLocationMap) {
+              mapContainer.style.pointerEvents = 'auto';
+              mapContainer.style.cursor = 'crosshair';
+              
+              // Force re-attach click handler as backup
+              try {
+                approximateLocationMap.off('click'); // Remove any existing
+                approximateLocationMap.on('click', (e) => {
+                  console.log('Backup map click handler triggered:', e.lngLat);
+                  const { lng, lat } = e.lngLat;
+                  const latInput = document.getElementById('approximateLat');
+                  const lngInput = document.getElementById('approximateLng');
+                  if (latInput) latInput.value = lat;
+                  if (lngInput) lngInput.value = lng;
+                  
+                  const statusDiv = document.getElementById('locationStatus');
+                  if (statusDiv) {
+                    statusDiv.textContent = `Location set: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                    statusDiv.style.color = 'var(--primary)';
+                  }
+                  
+                  // Update or create marker
+                  if (typeof approximateLocationMarker !== 'undefined' && approximateLocationMarker) {
+                    approximateLocationMarker.setLngLat([lng, lat]);
+                    if (typeof updateApproximateCircle === 'function') {
+                      updateApproximateCircle(lng, lat);
+                    }
+                  } else {
+                    // Create marker if it doesn't exist
+                    if (typeof mapboxgl !== 'undefined') {
+                      approximateLocationMarker = new mapboxgl.Marker({
+                        color: '#2563eb',
+                        draggable: true
+                      })
+                        .setLngLat([lng, lat])
+                        .addTo(approximateLocationMap);
+                      if (typeof updateApproximateCircle === 'function') {
+                        updateApproximateCircle(lng, lat);
+                      }
+                    }
+                  }
+                });
+                console.log('✅ Backup click handler attached to map');
+              } catch (err) {
+                console.warn('Could not attach backup click handler:', err);
+              }
+            }
+          }, 500);
         }
       }, 300);
     }
