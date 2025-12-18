@@ -2745,7 +2745,7 @@
     }
 
     .footer-links a {
-      color: inherit;
+      color: #ffffff !important;
       text-decoration: none;
       cursor: pointer;
       transition: color 0.2s;
@@ -2753,7 +2753,7 @@
     
     .footer-links a:hover {
       text-decoration: underline;
-      color: #60a5fa;
+      color: #93c5fd !important;
     }
     
     /* About view styling - better fonts and design */
@@ -3925,6 +3925,12 @@
             Log In →
           </button>
           
+          <div style="text-align: center; margin-top: 0.75rem;">
+            <button class="btn btn-ghost" id="forgotPasswordLoginBtn" style="font-size: 0.85rem; color: var(--primary); padding: 0.5rem; text-decoration: underline; background: none; border: none; cursor: pointer;">
+              Forgot password?
+            </button>
+          </div>
+          
           <p class="muted" style="text-align: center; margin-top: 0.75rem; font-size: 0.8rem;">
             Don't have an account? <span class="linkish" data-auth-mode="create" onclick="if(typeof window.openAuthModal === 'function') window.openAuthModal('create'); else if(typeof setMode === 'function') setMode('create');" style="cursor: pointer; text-decoration: underline;">Sign up free</span>
           </p>
@@ -4930,7 +4936,7 @@
                       <div class="preference-desc">Get notified about new jobs and messages</div>
                     </div>
                     <label class="toggle-switch">
-                      <input type="checkbox" id="prefEmailNotif" checked>
+                      <input type="checkbox" id="prefEmailNotif">
                       <span class="toggle-slider"></span>
                     </label>
                   </div>
@@ -4940,7 +4946,7 @@
                       <div class="preference-desc">Get alerts for jobs near you</div>
                     </div>
                     <label class="toggle-switch">
-                      <input type="checkbox" id="prefJobAlerts" checked>
+                      <input type="checkbox" id="prefJobAlerts">
                       <span class="toggle-slider"></span>
                     </label>
                   </div>
@@ -5820,7 +5826,7 @@
       }
     };
 
-    function showToast(msg, duration = 3000) {
+    function showToast(msg, duration = 2000) {
       const el = document.getElementById("toast");
       if (!el) return;
       el.textContent = msg;
@@ -6574,6 +6580,38 @@ function showChangePasswordModal() {
         showToast("Login error: " + (error.message || "Unknown error"));
       }
     });
+    
+    // Forgot password button handler
+    const forgotPasswordBtn = document.getElementById('forgotPasswordLoginBtn');
+    if (forgotPasswordBtn) {
+      forgotPasswordBtn.addEventListener('click', async () => {
+        const email = document.getElementById("loginEmail").value.trim();
+        if (!email) {
+          showToast("Please enter your email address first.");
+          return;
+        }
+        
+        try {
+          const response = await fetch('/auth/forgot-password', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email })
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+            showToast("✅ Password reset email sent! Check your inbox.");
+          } else {
+            showToast(data.error || "Could not send reset email. Please try again.");
+          }
+        } catch (error) {
+          showToast("Error sending reset email. Please try again later.");
+        }
+      });
+    }
 }
 
     /* ---------- Jobs ---------- */
@@ -29313,6 +29351,31 @@ try {
         }
       });
     });
+    
+    // Initialize notification preferences
+    const prefEmailNotif = document.getElementById('prefEmailNotif');
+    const prefJobAlerts = document.getElementById('prefJobAlerts');
+    
+    // Load saved preferences from localStorage
+    if (prefEmailNotif) {
+      const savedEmailNotif = localStorage.getItem('prefEmailNotif');
+      prefEmailNotif.checked = savedEmailNotif !== 'false'; // Default to true if not set
+      
+      prefEmailNotif.addEventListener('change', (e) => {
+        localStorage.setItem('prefEmailNotif', e.target.checked.toString());
+        showToast(e.target.checked ? '✅ Email notifications enabled' : '🔕 Email notifications disabled', 2000);
+      });
+    }
+    
+    if (prefJobAlerts) {
+      const savedJobAlerts = localStorage.getItem('prefJobAlerts');
+      prefJobAlerts.checked = savedJobAlerts !== 'false'; // Default to true if not set
+      
+      prefJobAlerts.addEventListener('change', (e) => {
+        localStorage.setItem('prefJobAlerts', e.target.checked.toString());
+        showToast(e.target.checked ? '✅ Job alerts enabled' : '🔕 Job alerts disabled', 2000);
+      });
+    }
   }
 
   // Functions are already exposed globally at their definition points:

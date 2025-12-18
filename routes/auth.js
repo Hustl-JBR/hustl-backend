@@ -328,7 +328,7 @@ router.post('/forgot-password', [
         { expiresIn: '1h' }
       );
 
-      const resetUrl = `${process.env.APP_BASE_URL || 'http://localhost:8080'}/reset-password?token=${resetToken}`;
+      const resetUrl = `${process.env.APP_BASE_URL || 'https://hustljobs.com'}/reset-password?token=${resetToken}`;
       await sendPasswordResetEmail(user.email, user.name, resetUrl);
     }
 

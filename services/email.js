@@ -319,7 +319,7 @@ async function sendOfferReceivedEmail(email, name, jobTitle, offerNote) {
         <p>Hi ${name},</p>
         <p>You received a new offer on your job: <strong>${jobTitle}</strong></p>
         ${offerNote ? `<p>Message: ${offerNote}</p>` : ''}
-        <p><a href="${process.env.APP_BASE_URL}/jobs/${jobTitle}">View Offer</a></p>
+        <p><a href="${process.env.APP_BASE_URL || 'https://hustljobs.com'}/jobs/${jobTitle}">View Offer</a></p>
       `,
     });
   } catch (error) {
@@ -330,7 +330,7 @@ async function sendOfferReceivedEmail(email, name, jobTitle, offerNote) {
 async function sendJobAssignedEmail(email, name, jobTitle, jobId, customerName) {
   if (!isEmailConfigured()) return;
   try {
-    const jobUrl = `${process.env.APP_BASE_URL || 'http://localhost:8080'}/jobs/${jobId}`;
+    const jobUrl = `${process.env.APP_BASE_URL || 'https://hustljobs.com'}/jobs/${jobId}`;
     
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -399,7 +399,7 @@ async function sendJobCompleteEmail(email, name, jobTitle, verificationCode) {
         <p>Please enter this code when confirming completion. This ensures you're both on the same page.</p>
         ` : ''}
         <p>Please confirm completion and complete payment.</p>
-        <p><a href="${process.env.APP_BASE_URL}/jobs">Confirm & Pay</a></p>
+        <p><a href="${process.env.APP_BASE_URL || 'https://hustljobs.com'}/jobs">Confirm & Pay</a></p>
       `,
     });
   } catch (error) {
@@ -519,7 +519,7 @@ async function sendPaymentCompleteEmail(email, name, jobTitle, amount) {
         <p>Great news! The customer has confirmed completion of the job <strong>${jobTitle}</strong>.</p>
         <p>Your payment of $${amount.toFixed(2)} has been released and will be processed.</p>
         <p>Thank you for your hard work!</p>
-        <p><a href="${process.env.APP_BASE_URL}/jobs">View Jobs</a></p>
+        <p><a href="${process.env.APP_BASE_URL || 'https://hustljobs.com'}/jobs">View Jobs</a></p>
       `,
     });
   } catch (error) {
@@ -539,7 +539,7 @@ async function sendAutoCompleteEmail(email, name, jobTitle) {
         <p>Hi ${name},</p>
         <p>The job <strong>${jobTitle}</strong> has been automatically marked as complete since the job date has passed.</p>
         <p>Payment has been processed and released to the hustler.</p>
-        <p><a href="${process.env.APP_BASE_URL}/jobs">View Jobs</a></p>
+        <p><a href="${process.env.APP_BASE_URL || 'https://hustljobs.com'}/jobs">View Jobs</a></p>
       `,
     });
   } catch (error) {
@@ -559,7 +559,7 @@ async function sendRefundEmail(email, name, jobTitle, amount) {
         <p>Hi ${name},</p>
         <p>Your job <strong>${jobTitle}</strong> has been cancelled.</p>
         <p>A refund of $${amount.toFixed(2)} has been processed and will appear in your account within 5-10 business days.</p>
-        <p><a href="${process.env.APP_BASE_URL}/jobs">View Jobs</a></p>
+        <p><a href="${process.env.APP_BASE_URL || 'https://hustljobs.com'}/jobs">View Jobs</a></p>
       `,
     });
   } catch (error) {
@@ -595,7 +595,7 @@ async function sendAdminRefundNotification(payment, refundAmount, reason, adminN
         <p><strong>Hustler:</strong> ${payment.hustler?.name || 'N/A'} (${payment.hustler?.email || 'N/A'})</p>
         <p><strong>Job Title:</strong> ${payment.job?.title || 'N/A'}</p>
         <hr>
-        <p><a href="${process.env.APP_BASE_URL}/admin/refunds">View All Refunds</a></p>
+        <p><a href="${process.env.APP_BASE_URL || 'https://hustljobs.com'}/admin/refunds">View All Refunds</a></p>
       `,
     });
   } catch (error) {
@@ -631,7 +631,7 @@ async function sendAdminPayoutNotification(payout, hustler) {
         <p><strong>Job ID:</strong> ${payout.jobId}</p>
         <p><strong>Provider ID:</strong> ${payout.payoutProviderId || 'N/A'}</p>
         <hr>
-        <p><a href="${process.env.APP_BASE_URL}/admin/payouts">View All Payouts</a></p>
+        <p><a href="${process.env.APP_BASE_URL || 'https://hustljobs.com'}/admin/payouts">View All Payouts</a></p>
       `,
     });
   } catch (error) {
@@ -652,7 +652,7 @@ async function sendStripeRequiredEmail(email, name, jobTitle) {
         <p>Great news! A customer wants to accept your offer for the job: <strong>${jobTitle}</strong></p>
         <p><strong>However, you must connect your Stripe account first before you can be accepted.</strong></p>
         <p>Stripe is required because it's the only way you can receive payments on Hustl. It's quick and secure.</p>
-        <p><a href="${process.env.APP_BASE_URL || 'http://localhost:8080'}/profile">Connect Stripe Account Now</a></p>
+        <p><a href="${process.env.APP_BASE_URL || 'https://hustljobs.com'}/profile">Connect Stripe Account Now</a></p>
         <p>Once you connect your Stripe account, the customer can accept your offer and you'll be assigned to the job.</p>
         <p>Don't miss out on this opportunity - connect your account now!</p>
       `,
@@ -666,7 +666,7 @@ async function sendStripeRequiredEmail(email, name, jobTitle) {
 async function sendNewMessageEmail(recipientEmail, recipientName, senderName, jobTitle, messagePreview, threadId) {
   if (!isEmailConfigured()) return;
   try {
-    const messageUrl = `${process.env.APP_BASE_URL || 'http://localhost:8080'}/messages/${threadId}`;
+    const messageUrl = `${process.env.APP_BASE_URL || 'https://hustljobs.com'}/messages/${threadId}`;
     
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -775,7 +775,7 @@ async function sendJobExpiringEmail(email, name, jobTitle, jobId) {
 async function sendJobUnacceptedEmail(email, name, jobTitle, jobId, customerName) {
   if (!isEmailConfigured()) return;
   try {
-    const jobUrl = `${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'https://hustljobs.com'}/jobs/${jobId}`;
+    const jobUrl = `${process.env.APP_BASE_URL || 'https://hustljobs.com'}/jobs/${jobId}`;
     
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -816,7 +816,7 @@ async function sendJobUnacceptedEmail(email, name, jobTitle, jobId, customerName
 async function sendHustlerCancelledEmail(email, name, jobTitle, hustlerName, jobId) {
   if (!isEmailConfigured()) return;
   try {
-    const jobUrl = `${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'https://hustljobs.com'}/jobs/${jobId}`;
+    const jobUrl = `${process.env.APP_BASE_URL || 'https://hustljobs.com'}/jobs/${jobId}`;
     
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -1029,7 +1029,7 @@ module.exports = {
 async function sendJobPostedEmail(email, name, jobTitle, jobId, jobDate, amount, payType, hourlyRate, estHours) {
   if (!isEmailConfigured()) return;
   try {
-    const jobUrl = `${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'https://hustljobs.com'}/jobs/${jobId}`;
+    const jobUrl = `${process.env.APP_BASE_URL || 'https://hustljobs.com'}/jobs/${jobId}`;
     const manageJobsUrl = `${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'https://hustljobs.com'}`;
     
     // Format price display
