@@ -21365,7 +21365,9 @@ meta.textContent =
               btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const userId = btn.dataset.userId;
-                showApplicantProfileModal(userId);
+                if (typeof window.showHustlerProfilePopup === 'function') {
+                  window.showHustlerProfilePopup(userId);
+                }
               });
             });
             
