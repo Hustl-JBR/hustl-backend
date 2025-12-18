@@ -5493,7 +5493,7 @@
                       <div style="font-weight: 600; color: var(--text-main);">${review.reviewer?.name || 'Anonymous'}</div>
                       <div style="font-size: 0.85rem; color: var(--text-muted);">${new Date(review.createdAt).toLocaleDateString()}</div>
                     </div>
-                    <div style="font-size: 1.25rem;">${'★'.repeat(review.stars || 5)}</div>
+                    <div style="font-size: 1.25rem; color: #fbbf24;">${'★'.repeat(review.stars || 5)}</div>
                   </div>
                   ${review.text ? `<div style="color: var(--text-main); line-height: 1.5; margin-bottom: 0.5rem;">${review.text}</div>` : ''}
                   ${review.job ? `<div style="font-size: 0.8rem; color: var(--text-muted);">${review.job.title || 'Untitled Job'}</div>` : ''}
@@ -10972,9 +10972,54 @@ async function renderJobs(reset = false) {
                   applicantInfo.appendChild(viewProfileBtn);
                   applicantCard.appendChild(applicantInfo);
                   
-                  // Accept and Deny buttons
+                  // Proposed price if they suggested one (show first)
+                  if (offer.proposedAmount) {
+                    const priceSection = document.createElement("div");
+                    priceSection.style.cssText = "margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;";
+                    const priceLabel = document.createElement("div");
+                    priceLabel.style.cssText = "font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem;";
+                    priceLabel.textContent = "Proposed price:";
+                    priceSection.appendChild(priceLabel);
+                    const priceText = document.createElement("div");
+                    priceText.style.cssText = "font-size: 1rem; font-weight: 700; color: var(--primary);";
+                    if (job.payType === 'hourly') {
+                      priceText.textContent = `$${Number(offer.proposedAmount).toFixed(0)}/hr`;
+                    } else {
+                      priceText.textContent = `$${Number(offer.proposedAmount).toFixed(0)} flat`;
+                    }
+                    priceSection.appendChild(priceText);
+                    applicantCard.appendChild(priceSection);
+                  }
+                  
+                  // Why they're a good fit (show second)
+                  if (offer.note) {
+                    const whyFitSection = document.createElement("div");
+                    whyFitSection.style.cssText = "margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;";
+                    const whyFitLabel = document.createElement("div");
+                    whyFitLabel.style.cssText = "font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;";
+                    whyFitLabel.textContent = "Why they're a good fit:";
+                    whyFitSection.appendChild(whyFitLabel);
+                    const whyFitText = document.createElement("div");
+                    whyFitText.style.cssText = "font-size: 0.9rem; color: var(--text-main); line-height: 1.5;";
+                    whyFitText.textContent = offer.note;
+                    whyFitSection.appendChild(whyFitText);
+                    applicantCard.appendChild(whyFitSection);
+                  }
+                  
+                  // Accept and Deny buttons (show last at bottom)
                   const actionButtons = document.createElement("div");
-                  actionButtons.style.cssText = "display: flex; gap: 0.75rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;";
+                  actionButtons.style.cssText = "display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 2px solid #e5e7eb;";
+                  
+                  // Price acceptance message
+                  if (offer.proposedAmount) {
+                    const priceAcceptanceMsg = document.createElement("div");
+                    priceAcceptanceMsg.style.cssText = "font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 0.5rem; background: #fef3c7; border-radius: 6px; margin-bottom: 0.5rem;";
+                    priceAcceptanceMsg.textContent = "If you accept this hustler, you accept the price.";
+                    actionButtons.appendChild(priceAcceptanceMsg);
+                  }
+                  
+                  const buttonRow = document.createElement("div");
+                  buttonRow.style.cssText = "display: flex; gap: 0.75rem;";
                   
                   const acceptBtn = document.createElement("button");
                   acceptBtn.className = "btn btn-primary";
@@ -11059,43 +11104,10 @@ async function renderJobs(reset = false) {
                     }
                   });
                   
-                  actionButtons.appendChild(acceptBtn);
-                  actionButtons.appendChild(denyBtn);
+                  buttonRow.appendChild(acceptBtn);
+                  buttonRow.appendChild(denyBtn);
+                  actionButtons.appendChild(buttonRow);
                   applicantCard.appendChild(actionButtons);
-                  
-                  // Why they're a good fit
-                  if (offer.note) {
-                    const whyFitSection = document.createElement("div");
-                    whyFitSection.style.cssText = "margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;";
-                    const whyFitLabel = document.createElement("div");
-                    whyFitLabel.style.cssText = "font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;";
-                    whyFitLabel.textContent = "Why they're a good fit:";
-                    whyFitSection.appendChild(whyFitLabel);
-                    const whyFitText = document.createElement("div");
-                    whyFitText.style.cssText = "font-size: 0.9rem; color: var(--text-main); line-height: 1.5;";
-                    whyFitText.textContent = offer.note;
-                    whyFitSection.appendChild(whyFitText);
-                    applicantCard.appendChild(whyFitSection);
-                  }
-                  
-                  // Proposed price if they suggested one
-                  if (offer.proposedAmount) {
-                    const priceSection = document.createElement("div");
-                    priceSection.style.cssText = "margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;";
-                    const priceLabel = document.createElement("div");
-                    priceLabel.style.cssText = "font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem;";
-                    priceLabel.textContent = "Proposed price:";
-                    priceSection.appendChild(priceLabel);
-                    const priceText = document.createElement("div");
-                    priceText.style.cssText = "font-size: 1rem; font-weight: 700; color: var(--primary);";
-                    if (job.payType === 'hourly') {
-                      priceText.textContent = `$${Number(offer.proposedAmount).toFixed(0)}/hr`;
-                    } else {
-                      priceText.textContent = `$${Number(offer.proposedAmount).toFixed(0)} flat`;
-                    }
-                    priceSection.appendChild(priceText);
-                    applicantCard.appendChild(priceSection);
-                  }
                   
                   applicantsSection.appendChild(applicantCard);
                 }
@@ -11709,8 +11721,8 @@ async function renderJobs(reset = false) {
         if (profile.ratingAvg && profile.ratingCount > 0) {
           const rating = document.createElement("div");
           rating.style.cssText = "display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem;";
-          const stars = "⭐".repeat(Math.round(profile.ratingAvg));
-          rating.innerHTML = `<span style="font-size: 1.1rem;">${stars}</span> <span style="font-size: 1rem; font-weight: 600; color: var(--text-main);">${profile.ratingAvg.toFixed(1)}</span> <span style="font-size: 0.9rem; color: var(--text-muted);">(${profile.ratingCount})</span>`;
+          const stars = "★".repeat(Math.round(profile.ratingAvg));
+          rating.innerHTML = `<span style="font-size: 1.1rem; color: #fbbf24;">${stars}</span> <span style="font-size: 1rem; font-weight: 600; color: var(--text-main);">${profile.ratingAvg.toFixed(1)}</span> <span style="font-size: 0.9rem; color: var(--text-muted);">(${profile.ratingCount})</span>`;
           profileSection.appendChild(rating);
         }
         
@@ -11802,8 +11814,8 @@ async function renderJobs(reset = false) {
             reviewerName.textContent = review.reviewer?.name || "Anonymous";
             
             const reviewStars = document.createElement("span");
-            reviewStars.style.cssText = "margin-left: auto; font-size: 0.9rem;";
-            reviewStars.textContent = "⭐".repeat(review.rating || 5);
+            reviewStars.style.cssText = "margin-left: auto; font-size: 0.9rem; color: #fbbf24;";
+            reviewStars.textContent = "★".repeat(review.rating || 5);
             
             reviewerInfo.appendChild(reviewerPic);
             reviewerInfo.appendChild(reviewerName);
@@ -11818,11 +11830,78 @@ async function renderJobs(reset = false) {
               reviewItem.appendChild(reviewText);
             }
             
-            // Job info
+            // Job info with tools/equipment
             if (review.job) {
               const jobInfo = document.createElement("div");
-              jobInfo.style.cssText = "margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);";
-              jobInfo.textContent = review.job.title || "Job";
+              jobInfo.style.cssText = "margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #e5e7eb;";
+              
+              const jobTitle = document.createElement("div");
+              jobTitle.style.cssText = "font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;";
+              jobTitle.textContent = review.job.title || "Job";
+              jobInfo.appendChild(jobTitle);
+              
+              // Show tools/equipment if available
+              const jobRequirements = review.job.requirements || {};
+              let parsedReq = jobRequirements;
+              if (typeof jobRequirements === 'string') {
+                try {
+                  parsedReq = JSON.parse(jobRequirements);
+                } catch (e) {
+                  parsedReq = {};
+                }
+              }
+              
+              let equipmentNeeded = parsedReq.equipmentNeeded || parsedReq.equipment_needed || [];
+              let customEquipment = parsedReq.customEquipment || parsedReq.custom_equipment || '';
+              
+              // Ensure equipmentNeeded is an array
+              let equipmentArray = [];
+              if (Array.isArray(equipmentNeeded)) {
+                equipmentArray = equipmentNeeded;
+              } else if (equipmentNeeded && typeof equipmentNeeded === 'string') {
+                try {
+                  const parsed = JSON.parse(equipmentNeeded);
+                  equipmentArray = Array.isArray(parsed) ? parsed : [parsed];
+                } catch (e) {
+                  equipmentArray = [equipmentNeeded];
+                }
+              } else if (equipmentNeeded) {
+                equipmentArray = [equipmentNeeded];
+              }
+              
+              equipmentArray = equipmentArray.filter(tool => tool && String(tool).trim());
+              
+              if (equipmentArray.length > 0 || (customEquipment && String(customEquipment).trim())) {
+                const toolsLabel = document.createElement("div");
+                toolsLabel.style.cssText = "font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem; font-weight: 600;";
+                toolsLabel.textContent = "🔧 Tools/Equipment:";
+                jobInfo.appendChild(toolsLabel);
+                
+                const toolsList = document.createElement("div");
+                toolsList.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.375rem;";
+                
+                equipmentArray.forEach(tool => {
+                  const toolStr = String(tool).trim();
+                  if (toolStr) {
+                    const toolChip = document.createElement("span");
+                    toolChip.style.cssText = "padding: 0.25rem 0.5rem; background: #f3f4f6; border-radius: 6px; font-size: 0.75rem; color: var(--text-main);";
+                    toolChip.textContent = toolStr;
+                    toolsList.appendChild(toolChip);
+                  }
+                });
+                
+                if (customEquipment && String(customEquipment).trim()) {
+                  const customChip = document.createElement("span");
+                  customChip.style.cssText = "padding: 0.25rem 0.5rem; background: #f3f4f6; border-radius: 6px; font-size: 0.75rem; color: var(--text-main);";
+                  customChip.textContent = String(customEquipment).trim();
+                  toolsList.appendChild(customChip);
+                }
+                
+                if (toolsList.children.length > 0) {
+                  jobInfo.appendChild(toolsList);
+                }
+              }
+              
               reviewItem.appendChild(jobInfo);
             }
             
@@ -18956,9 +19035,65 @@ async function renderJobs(reset = false) {
                 : `Based on ${count} ${count === 1 ? 'review' : 'reviews'}`;
             }
             
-            // Use centralized render function with pagination support
+            // Render reviews with limit of 3 initially, then "View more"
             if (reviewsList) {
-              window.renderReviewsList(reviews, 'profileReviewsList', user.id, 0, result.total, result.hasMore);
+              const displayLimit = 3;
+              const reviewsToShow = reviews.slice(0, displayLimit);
+              const hasMore = reviews.length > displayLimit;
+              
+              reviewsList.innerHTML = '';
+              
+              if (reviewsToShow.length === 0) {
+                reviewsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">No reviews yet</div>';
+              } else {
+                reviewsToShow.forEach(review => {
+                  const reviewItem = document.createElement("div");
+                  reviewItem.style.cssText = "padding: 1rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 0.75rem;";
+                  
+                  const reviewerInfo = document.createElement("div");
+                  reviewerInfo.style.cssText = "display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;";
+                  
+                  const reviewerPic = document.createElement("img");
+                  reviewerPic.style.cssText = "width: 32px; height: 32px; border-radius: 50%; object-fit: cover;";
+                  reviewerPic.src = review.reviewer?.photoUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(review.reviewer?.name || "User") + "&background=6366f1&color=fff&size=128";
+                  reviewerPic.alt = review.reviewer?.name || "Reviewer";
+                  
+                  const reviewerName = document.createElement("span");
+                  reviewerName.style.cssText = "font-size: 0.9rem; font-weight: 600; color: var(--text-main);";
+                  reviewerName.textContent = review.reviewer?.name || "Anonymous";
+                  
+                  const reviewStars = document.createElement("span");
+                  reviewStars.style.cssText = "margin-left: auto; font-size: 0.9rem; color: #fbbf24;";
+                  reviewStars.textContent = "★".repeat(review.rating || 5);
+                  
+                  reviewerInfo.appendChild(reviewerPic);
+                  reviewerInfo.appendChild(reviewerName);
+                  reviewerInfo.appendChild(reviewStars);
+                  reviewItem.appendChild(reviewerInfo);
+                  
+                  if (review.comment) {
+                    const reviewText = document.createElement("p");
+                    reviewText.style.cssText = "margin: 0; font-size: 0.9rem; color: var(--text-main); line-height: 1.5;";
+                    reviewText.textContent = review.comment;
+                    reviewItem.appendChild(reviewText);
+                  }
+                  
+                  reviewsList.appendChild(reviewItem);
+                });
+                
+                if (hasMore || result.hasMore) {
+                  const viewMoreBtn = document.createElement("button");
+                  viewMoreBtn.className = "btn btn-secondary";
+                  viewMoreBtn.textContent = `View more (${result.total - displayLimit} more)`;
+                  viewMoreBtn.style.cssText = "width: 100%; padding: 0.75rem; font-size: 0.95rem; margin-top: 0.5rem;";
+                  viewMoreBtn.addEventListener("click", async () => {
+                    // Load all reviews
+                    const allResult = await window.loadUserReviews(user.id, 100, 0);
+                    window.renderReviewsList(allResult.reviews, 'profileReviewsList', user.id, 0, allResult.total, false);
+                  });
+                  reviewsList.appendChild(viewMoreBtn);
+                }
+              }
             }
           } catch (error) {
             console.error("[REVIEWS] Error loading ratings:", error);
@@ -19013,313 +19148,73 @@ async function renderJobs(reset = false) {
             });
             const activeJobs = jobs.filter(j => j.hustlerId === user.id && j.status !== 'PAID' && j.status !== 'CANCELLED');
             
-            // Render Posted Jobs
-            if (postedJobs.length === 0) {
+            // Get all completed jobs (both posted and active)
+            const allCompletedJobs = [...postedJobs, ...activeJobs].filter(j => 
+              j.status === 'PAID' || j.status === 'COMPLETED_BY_HUSTLER' || j.status === 'AWAITING_CUSTOMER_CONFIRM'
+            ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            
+            // Render simple job list - just title and who completed
+            if (allCompletedJobs.length === 0) {
               postedJobsList.innerHTML = `
                 <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
                   <div style="font-size: 2rem; margin-bottom: 0.5rem;">📋</div>
-                  <div>You haven't posted any jobs yet.</div>
-                  <button class="btn btn-primary" onclick="setView('post')" style="margin-top: 1rem; padding: 0.75rem 1.5rem;">Post Your First Job</button>
+                  <div>No completed jobs yet.</div>
                 </div>
               `;
+              activeJobsList.innerHTML = '';
             } else {
               postedJobsList.innerHTML = "";
-              for (const job of postedJobs) {
-                // Fetch offer count for this job
-                let offerCount = 0;
-                try {
-                  const offersResponse = await fetch(`${API_BASE}/offers/${job.id}`, {
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-                  });
-                  if (offersResponse.ok) {
-                    const offers = await offersResponse.json();
-                    offerCount = offers.filter(o => o.status === 'PENDING').length;
-                  }
-                } catch (e) {
-                  console.error("Error fetching offers:", e);
-                }
-                
-                const statusColors = {
-                  'OPEN': '#10b981',
-                  'SCHEDULED': '#f59e0b', // Orange for scheduled (waiting for start)
-                  'ASSIGNED': '#3b82f6', // Blue for assigned (backwards compatibility)
-                  'IN_PROGRESS': '#3b82f6', // Blue for in progress
-                  'COMPLETED_BY_HUSTLER': '#10b981', // Green for completed
-                  'AWAITING_CUSTOMER_CONFIRM': '#f59e0b',
-                  'PAID': '#10b981', // Green for completed
-                  'CANCELLED': '#ef4444'
-                };
-                
-                const statusLabels = {
-                  'OPEN': 'Open',
-                  'SCHEDULED': 'Scheduled', // Hustler accepted, waiting for start code
-                  'ASSIGNED': 'Assigned', // Backwards compatibility - same as Scheduled
-                  'IN_PROGRESS': 'In Progress', // Start code entered, job actively being worked on
-                  'COMPLETED_BY_HUSTLER': 'Awaiting Confirmation',
-                  'AWAITING_CUSTOMER_CONFIRM': 'Awaiting Confirmation',
-                  'PAID': 'Completed',
-                  'CANCELLED': 'Cancelled'
-                };
-                
-                const jobStatus = (job.status || 'OPEN').toUpperCase();
-                const statusColor = statusColors[jobStatus] || '#6b7280';
-                const statusLabel = statusLabels[jobStatus] || jobStatus;
-                
-                // Get requirements for formatting
-                const requirements = job.requirements || {};
-                const teamSize = job.teamSize || requirements.teamSize || requirements.team_size || 1;
-                const payType = job.payType || 'flat';
-                
-                // Format pay display
-                let payDisplay = '';
-                if (payType === 'hourly') {
-                  const hourlyRate = parseFloat(job.hourlyRate || 0);
-                  const estHours = job.estHours || '?';
-                  if (teamSize > 1) {
-                    const perPersonRate = hourlyRate / teamSize;
-                    payDisplay = `$${hourlyRate.toFixed(0)}/hr total (Max ${estHours} hrs) · ${teamSize} workers → $${perPersonRate.toFixed(0)}/hr each`;
-                  } else {
-                    payDisplay = `$${hourlyRate.toFixed(0)}/hr total (Max ${estHours} hrs)`;
-                  }
-                } else {
-                  payDisplay = `$${parseFloat(job.amount || 0).toFixed(2)} flat`;
-                }
-                
-                // Format workers
-                let workersDisplay = '';
-                if (teamSize === 0) {
-                  workersDisplay = 'Company/crew';
-                } else if (teamSize === 1) {
-                  workersDisplay = '1 worker';
-                } else {
-                  workersDisplay = `${teamSize} workers`;
-                }
-                
-                // Format date
-                const jobDate = new Date(job.date || job.startTime || job.createdAt);
-                const dateStr = jobDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                
-                // Format location
-                let locationDisplay = job.address || 'Location not specified';
-                const pickupArea = requirements.pickup_area || requirements.pickupArea;
-                const pickupCity = requirements.pickup_city || requirements.pickupCity;
-                const pickupZip = requirements.pickup_zip;
-                const dropoffArea = requirements.dropoff_area || requirements.dropoffArea;
-                const dropoffCity = requirements.dropoff_city || requirements.dropoffCity;
-                const dropoffZip = requirements.dropoff_zip;
-                const onSiteOnly = requirements.on_site_only || requirements.onSiteOnly;
-                
-                if (pickupArea || pickupCity) {
-                  const pickupParts = [];
-                  if (pickupArea) pickupParts.push(pickupArea);
-                  if (pickupCity) pickupParts.push(pickupCity);
-                  if (pickupZip) pickupParts.push(pickupZip);
-                  locationDisplay = pickupParts.join(', ');
-                  
-                  if (!onSiteOnly && (dropoffArea || dropoffCity)) {
-                    // Use formatDropoffLocation for dropoff display
-                    const hideDropoffAddressUntilAssigned = requirements.hide_dropoff_address_until_assigned || requirements.hideDropoffAddressUntilAssigned;
-                    let showExactDropoffAddress = false;
-                    
-                    if (hideDropoffAddressUntilAssigned) {
-                      try {
-                        const user = window.hustlAPI?.auth?.getCurrentUserSync?.() || (window.currentUser || null);
-                        if (user) {
-                          const isAssignedHustler = job.hustlerId && job.hustlerId === user.id && 
-                                                    (job.status === 'SCHEDULED' || job.status === 'ASSIGNED' || job.status === 'IN_PROGRESS');
-                          showExactDropoffAddress = isAssignedHustler;
-                        }
-                      } catch (e) {
-                        showExactDropoffAddress = false;
-                      }
-                    }
-                    
-                    const dropoffLocationText = formatDropoffLocation(job, requirements, showExactDropoffAddress);
-                    const dropoffParts = [];
-                    if (dropoffLocationText && dropoffLocationText !== 'Location TBD') {
-                      dropoffParts.push(dropoffLocationText);
-                    }
-                    if (dropoffZip) dropoffParts.push(dropoffZip);
-                    locationDisplay += ` → ${dropoffParts.join(', ')}`;
-                  } else if (onSiteOnly) {
-                    locationDisplay += ' (Single location)';
-                  }
-                }
-                
-                // Format expiration
-                const expiresAt = requirements.expiresAt ? new Date(requirements.expiresAt) : null;
-                let expirationDisplay = '';
-                if (expiresAt && expiresAt > new Date()) {
-                  const daysLeft = Math.ceil((expiresAt - new Date()) / (1000 * 60 * 60 * 24));
-                  expirationDisplay = `Expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
-                }
-                
-                // Format time ago
-                const postedDate = new Date(job.createdAt);
-                const hoursAgo = Math.floor((Date.now() - postedDate.getTime()) / (1000 * 60 * 60));
-                const minutesAgo = Math.floor((Date.now() - postedDate.getTime()) / (1000 * 60));
-                let timeAgo = '';
-                if (minutesAgo < 60) {
-                  timeAgo = minutesAgo < 1 ? 'Just now' : `${minutesAgo} ${minutesAgo === 1 ? 'minute' : 'minutes'} ago`;
-                } else if (hoursAgo < 24) {
-                  timeAgo = `${hoursAgo} ${hoursAgo === 1 ? 'hour' : 'hours'} ago`;
-                } else {
-                  const daysAgo = Math.floor((Date.now() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
-                  timeAgo = daysAgo === 1 ? '1 day ago' : `${daysAgo} days ago`;
-                }
-                
-                // Get category icon
-                const categoryMap = {
-                  'Moving / Hauling': '🚚',
-                  'moving': '🚚',
-                  'Yard work / Outdoor': '🌿',
-                  'yard-work': '🌿',
-                  'yard': '🌿',
-                  'Cleaning / Organizing': '🧹',
-                  'cleaning': '🧹',
-                  'Furniture / Assembly': '🛠',
-                  'furniture-assembly': '🛠',
-                  'furniture': '🛠',
-                  'Other': '⭐',
-                  'other': '⭐'
-                };
-                const categoryIcon = categoryMap[job.category] || '📋';
-                
-                // Normalize category name
-                const categoryDisplayNames = {
-                  'moving': 'Moving / Hauling',
-                  'yard-work': 'Yard work / Outdoor',
-                  'yard': 'Yard work / Outdoor',
-                  'cleaning': 'Cleaning / Organizing',
-                  'furniture-assembly': 'Furniture / Assembly',
-                  'furniture': 'Furniture / Assembly',
-                  'other': 'Other'
-                };
-                const categoryDisplay = categoryDisplayNames[job.category] || job.category || 'General';
-                
-                const jobCard = document.createElement("div");
-                jobCard.style.cssText = "padding: 0; border: 2px solid var(--border); border-radius: 16px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.08); transition: all 0.3s; overflow: hidden; margin-bottom: 1.5rem;";
-                jobCard.onmouseenter = () => { 
-                  jobCard.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-                  jobCard.style.transform = 'translateY(-2px)';
-                  jobCard.style.borderColor = 'var(--primary)';
-                };
-                jobCard.onmouseleave = () => { 
-                  jobCard.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
-                  jobCard.style.transform = 'translateY(0)';
-                  jobCard.style.borderColor = 'var(--border)';
-                };
-                jobCard.innerHTML = `
-                  <div style="padding: 1.5rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border-bottom: 2px solid var(--border);">
-                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                      <span style="font-size: 2rem;">${categoryIcon}</span>
-                      <div style="flex: 1;">
-                        <h3 style="margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main); line-height: 1.2;">${job.title || 'Untitled Job'}</h3>
-                        <div style="margin-top: 0.25rem; font-size: 0.9rem; color: var(--text-muted);">${categoryDisplay}</div>
-                      </div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.9rem;">
-                      <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span style="font-weight: 700; color: var(--text-main);">💰</span>
-                        <span style="font-weight: 700; color: var(--text-main); font-size: 1.1rem;">${payDisplay}</span>
-                      </div>
-                      <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span>⏰</span>
-                        <span style="color: var(--text-muted);">${dateStr}</span>
-                      </div>
-                      <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span>👥</span>
-                        <span style="color: var(--text-muted);">${workersDisplay}</span>
-                      </div>
-                      <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span>📍</span>
-                        <span style="color: var(--text-muted);">${locationDisplay}</span>
-                      </div>
-                      ${expirationDisplay ? `
-                      <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span>⏳</span>
-                        <span style="color: #d97706; font-weight: 600;">${expirationDisplay}</span>
-                      </div>
-                      ` : ''}
-                      <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span>📅</span>
-                        <span style="color: var(--text-muted);">${timeAgo}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div style="padding: 1.5rem;">
-                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                      <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 200px; padding: 1rem; font-size: 1rem; font-weight: 700; border-radius: 10px;">
-                        ${offerCount > 0 ? '👥 View Applicants & Manage' : '🔍 View Job Details'}
-                      </button>
-                      ${jobStatus === 'OPEN' ? `
-                        <button class="btn btn-ghost deleteJobBtn" data-job-id="${job.id}" style="padding: 1rem 1.5rem; font-weight: 600; border-radius: 10px; color: #dc2626; border-color: #fecaca;">🗑️ Delete</button>
-                      ` : ''}
-                    </div>
-                  </div>
-                `;
-                
-                // Add event listeners
-                jobCard.querySelector('.viewJobBtn')?.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  setView('jobs');
-                  setTimeout(() => {
-                    if (typeof openJobDetails === 'function') {
-                      openJobDetails(job.id);
-                    } else if (typeof renderJobDetail === 'function') {
-                      renderJobDetail(job.id);
-                    }
-                  }, 100);
-                });
-                
-                jobCard.querySelector('.manageApplicantsBtn')?.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  showApplicantsModal(job.id);
-                });
-                
-                jobCard.querySelector('.deleteJobBtn')?.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  deleteJob(job.id, job.title);
-                });
-                
-                postedJobsList.appendChild(jobCard);
-              }
-            }
-            
-            // Render Active Jobs (as Hustler)
-            if (activeJobs.length === 0) {
-              activeJobsList.innerHTML = `
-                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                  <div style="font-size: 2rem; margin-bottom: 0.5rem;">💼</div>
-                  <div>No active jobs as a Hustler.</div>
-                </div>
-              `;
-            } else {
               activeJobsList.innerHTML = "";
-              activeJobs.forEach(job => {
-                const card = document.createElement("div");
-                card.className = "job-card";
-                card.dataset.jobId = job.id;
-                card.innerHTML = `
-                  <div class="job-card-top">
-                    <div class="job-title">${job.title || 'Untitled'}</div>
-                    <span class="badge">${(job.status || 'open').toLowerCase()}</span>
-                  </div>
-                  <div class="job-meta">${timeAgo(new Date(job.createdAt).getTime())}</div>
+              
+              const displayLimit = 3;
+              const jobsToShow = allCompletedJobs.slice(0, displayLimit);
+              const hasMore = allCompletedJobs.length > displayLimit;
+              
+              for (const job of jobsToShow) {
+                // Get who completed the job
+                let completedWith = 'Unknown';
+                if (job.customerId === user.id && job.hustler) {
+                  completedWith = job.hustler.name || 'Unknown hustler';
+                } else if (job.hustlerId === user.id && job.customer) {
+                  completedWith = job.customer.name || 'Unknown customer';
+                }
+                
+                const jobItem = document.createElement("div");
+                jobItem.style.cssText = "padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 0.75rem;";
+                jobItem.innerHTML = `
+                  <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem;">${job.title || 'Untitled Job'}</div>
+                  <div style="font-size: 0.85rem; color: var(--text-muted);">Completed with ${completedWith}</div>
                 `;
-                card.addEventListener("click", () => {
-                  setView("jobs");
-                  setTimeout(() => {
-                    if (typeof openJobDetails === 'function') {
-                      openJobDetails(job.id);
-                    } else if (typeof renderJobDetail === 'function') {
-                      renderJobDetail(job.id);
+                postedJobsList.appendChild(jobItem);
+              }
+              
+              if (hasMore) {
+                const loadMoreBtn = document.createElement("button");
+                loadMoreBtn.className = "btn btn-secondary";
+                loadMoreBtn.textContent = `Load more (${allCompletedJobs.length - displayLimit} more)`;
+                loadMoreBtn.style.cssText = "width: 100%; padding: 0.75rem; font-size: 0.95rem; margin-top: 0.5rem;";
+                loadMoreBtn.addEventListener("click", () => {
+                  // Show all jobs
+                  postedJobsList.innerHTML = "";
+                  for (const job of allCompletedJobs) {
+                    let completedWith = 'Unknown';
+                    if (job.customerId === user.id && job.hustler) {
+                      completedWith = job.hustler.name || 'Unknown hustler';
+                    } else if (job.hustlerId === user.id && job.customer) {
+                      completedWith = job.customer.name || 'Unknown customer';
                     }
-                  }, 100);
+                    
+                    const jobItem = document.createElement("div");
+                    jobItem.style.cssText = "padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 0.75rem;";
+                    jobItem.innerHTML = `
+                      <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem;">${job.title || 'Untitled Job'}</div>
+                      <div style="font-size: 0.85rem; color: var(--text-muted);">Completed with ${completedWith}</div>
+                    `;
+                    postedJobsList.appendChild(jobItem);
+                  }
                 });
-                activeJobsList.appendChild(card);
-              });
+                postedJobsList.appendChild(loadMoreBtn);
+              }
             }
           } catch (error) {
             console.error("Error loading jobs:", error);
