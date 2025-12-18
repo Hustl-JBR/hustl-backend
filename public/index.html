@@ -6930,23 +6930,40 @@ function showChangePasswordModal() {
             
             // Remove existing marker and circle
             if (approximateLocationMarker) {
-              approximateLocationMarker.remove();
-            }
-            if (approximateLocationCircle) {
               try {
-                if (approximateLocationMap.getLayer('approximate-circle')) {
-                  approximateLocationMap.removeLayer('approximate-circle');
-                }
-                if (approximateLocationMap.getLayer('approximate-circle-outline')) {
-                  approximateLocationMap.removeLayer('approximate-circle-outline');
-                }
-                if (approximateLocationMap.getSource('approximate-circle')) {
-                  approximateLocationMap.removeSource('approximate-circle');
-                }
+                approximateLocationMarker.remove();
               } catch (e) {
-                console.warn('Error removing circle:', e);
+                console.warn('Error removing marker:', e);
               }
+              approximateLocationMarker = null;
             }
+            
+            // Always try to remove circle layers and source (regardless of flag)
+            try {
+              if (approximateLocationMap.getLayer('approximate-circle-outline')) {
+                approximateLocationMap.removeLayer('approximate-circle-outline');
+              }
+            } catch (e) {
+              // Layer might not exist, ignore
+            }
+            
+            try {
+              if (approximateLocationMap.getLayer('approximate-circle')) {
+                approximateLocationMap.removeLayer('approximate-circle');
+              }
+            } catch (e) {
+              // Layer might not exist, ignore
+            }
+            
+            try {
+              if (approximateLocationMap.getSource('approximate-circle')) {
+                approximateLocationMap.removeSource('approximate-circle');
+              }
+            } catch (e) {
+              // Source might not exist, ignore
+            }
+            
+            approximateLocationCircle = null;
             
             // Add marker
             approximateLocationMarker = new mapboxgl.Marker({
