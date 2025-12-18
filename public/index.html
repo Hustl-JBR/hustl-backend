@@ -27643,7 +27643,10 @@ meta.textContent =
             const params = new URLSearchParams();
             params.append('page', '1');
             params.append('limit', '100');
+            params.append('status', 'OPEN'); // Explicitly request OPEN jobs
             if (filters.category) params.append('category', filters.category);
+            if (filters.zip) params.append('zip', filters.zip);
+            if (filters.radius) params.append('radius', filters.radius);
             const apiResponse = await fetch(`${API_BASE}/jobs?${params.toString()}`, {
               method: 'GET',
               headers: { 'Content-Type': 'application/json' }
