@@ -27578,14 +27578,17 @@ meta.textContent =
           lastPollTime = now;
           
           try {
+            // CRITICAL: Only use silent update functions that preserve state
+            // NEVER call renderJobs(true) or renderAll() from polling
             if (view === 'jobs') {
-              await silentUpdateBrowseJobs();
+              await silentUpdateBrowseJobs(); // This preserves scroll, filters, state
             } else if (view === 'manage-jobs') {
-              await silentUpdateManageJobs();
+              await silentUpdateManageJobs(); // This preserves tab, scroll, state
             } else if (view === 'messages') {
               // Messages already has its own polling, skip
             }
           } catch (error) {
+            // Silently ignore errors - don't disrupt user experience
             console.debug('[POLLING] Silent update error (ignored):', error);
           }
         }, POLL_INTERVAL);
@@ -27600,16 +27603,36 @@ meta.textContent =
       }
       
       // Silent update for Browse Jobs - only updates data, preserves UI state
+      // CRITICAL: This function MUST NOT reset any state, scroll position, filters, or UI
       async function silentUpdateBrowseJobs() {
         const jobsList = document.getElementById("jobsList");
         if (!jobsList) return;
         
+        // Preserve scroll position
+        const scrollPosition = jobsList.scrollTop || window.scrollY || 0;
+        
+        // Preserve current filters and pagination
+        const savedPage = currentJobsPage;
+        const savedFilters = {
+          category: activeCategoryFilter,
+          priceType: activePriceTypeFilter,
+          workers: activeWorkersFilter,
+          sortBy: activeSortBy
+        };
+        const savedView = currentJobsView; // 'list' or 'map'
+        
         try {
+          // Use current filters, not hardcoded ones
           const filters = {
-            page: 1,
+            page: 1, // Always fetch first page for updates
             limit: 100, // Get enough to update existing
             status: 'OPEN'
           };
+          
+          // Preserve category filter if set
+          if (activeCategoryFilter && activeCategoryFilter !== 'all') {
+            filters.category = activeCategoryFilter;
+          }
           
           let response;
           if (window.hustlAPI && window.hustlAPI.jobs && typeof window.hustlAPI.jobs.list === 'function') {
@@ -27618,6 +27641,7 @@ meta.textContent =
             const params = new URLSearchParams();
             params.append('page', '1');
             params.append('limit', '100');
+            if (filters.category) params.append('category', filters.category);
             const apiResponse = await fetch(`${API_BASE}/jobs?${params.toString()}`, {
               method: 'GET',
               headers: { 'Content-Type': 'application/json' }
@@ -27629,14 +27653,14 @@ meta.textContent =
           const newJobs = response?.jobs || response || [];
           if (!Array.isArray(newJobs)) return;
           
-          // Update existing job cards or add new ones
+          // Update existing job cards or add new ones WITHOUT clearing the list
           const existingJobIds = new Set();
           jobsList.querySelectorAll('[data-job-id]').forEach(card => {
             const jobId = card.dataset.jobId;
             if (jobId) existingJobIds.add(jobId);
           });
           
-          // Update existing cards with new data
+          // Update existing cards with new data (silent update)
           newJobs.forEach(job => {
             const existingCard = jobsList.querySelector(`[data-job-id="${job.id}"]`);
             if (existingCard) {
@@ -27645,15 +27669,66 @@ meta.textContent =
             }
           });
           
-          // Update allLoadedJobs cache
+          // Update allLoadedJobs cache WITHOUT resetting it
+          if (!Array.isArray(allLoadedJobs)) {
+            allLoadedJobs = [];
+          }
           const jobMap = new Map(allLoadedJobs.map(j => [j.id, j]));
           newJobs.forEach(job => {
             jobMap.set(job.id, job);
           });
           allLoadedJobs = Array.from(jobMap.values());
           
+          // Restore scroll position
+          if (scrollPosition > 0) {
+            requestAnimationFrame(() => {
+              if (jobsList) jobsList.scrollTop = scrollPosition;
+              if (window.scrollY !== scrollPosition) {
+                window.scrollTo(0, scrollPosition);
+              }
+            });
+          }
+          
+          // Restore filters and pagination (they shouldn't have changed, but be safe)
+          currentJobsPage = savedPage;
+          activeCategoryFilter = savedFilters.category;
+          activePriceTypeFilter = savedFilters.priceType;
+          activeWorkersFilter = savedFilters.workers;
+          activeSortBy = savedFilters.sortBy;
+          
+          // Restore map/list view
+          if (savedView && currentJobsView !== savedView) {
+            currentJobsView = savedView;
+          }
+          
+          // If map view is active, update map markers silently (preserve zoom/pan)
+          if (currentJobsView === 'map' && jobsMap && jobsMap.loaded()) {
+            try {
+              // Save current map state
+              const mapCenter = jobsMap.getCenter();
+              const mapZoom = jobsMap.getZoom();
+              const mapBearing = jobsMap.getBearing();
+              const mapPitch = jobsMap.getPitch();
+              
+              // Update map with new jobs (this updates markers but doesn't reset view)
+              await renderJobsOnMap(Array.from(jobMap.values()));
+              
+              // Restore map view exactly as it was
+              if (mapCenter && mapZoom) {
+                jobsMap.setCenter(mapCenter);
+                jobsMap.setZoom(mapZoom);
+                if (mapBearing !== undefined) jobsMap.setBearing(mapBearing);
+                if (mapPitch !== undefined) jobsMap.setPitch(mapPitch);
+              }
+            } catch (mapError) {
+              console.debug('[POLLING] Map update error (ignored):', mapError);
+            }
+          }
+          
         } catch (error) {
-          console.debug('[POLLING] Browse Jobs update error (silent):', error);
+          console.debug('[POLLING] Browse Jobs update error (silent, ignored):', error);
+          // On error, restore state anyway
+          currentJobsPage = savedPage;
         }
       }
       
