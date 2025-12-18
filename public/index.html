@@ -3770,18 +3770,7 @@
 
       <!-- POST JOB VIEW (separate page) -->
       <section id="view-post" style="display:none;">
-        <!-- Job Stats Section (shown after job is posted) -->
-        <div id="jobStatsCard" class="card" style="display: none; margin-bottom: 1.5rem; padding: 2rem;">
-          <div class="card-header">
-            <div class="card-title">📊 Job Stats</div>
-          </div>
-          <div id="jobStatsContent" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
-            <!-- Stats will be populated here -->
-          </div>
-          <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
-            <button class="btn btn-primary" onclick="setView('manage-jobs')" style="width: 100%; padding: 0.75rem; font-weight: 600;">📋 Manage This Job</button>
-          </div>
-        </div>
+        <!-- Job Stats Section removed - user requested removal -->
         
         <div class="card" id="jobFormCard" style="padding: 2.5rem;">
           <div class="card-header">
@@ -8030,19 +8019,29 @@ function showChangePasswordModal() {
             
             showToast(successMessage);
             
-            // Show job stats on the post page
-            if (result && result.id) {
-              await showJobStats(result.id);
+            // Hide job stats card if it's visible
+            const statsCard = document.getElementById('jobStatsCard');
+            if (statsCard) {
+              statsCard.style.display = 'none';
+            }
+            
+            // Clear the form after posting
+            const jobForm = document.getElementById('jobForm');
+            if (jobForm) {
+              jobForm.reset();
+              // Also clear any custom fields
+              const titleInput = document.getElementById('jobTitle');
+              const descriptionInput = document.getElementById('jobDescription');
+              const amountInput = document.getElementById('jobAmount');
+              if (titleInput) titleInput.value = '';
+              if (descriptionInput) descriptionInput.value = '';
+              if (amountInput) amountInput.value = '';
             }
             
             // Refresh the Manage Jobs view if it's loaded
             if (activeView === 'manage-jobs') {
               loadPostedJobs();
             }
-            
-            // Don't clear form or navigate - keep user on post page to see stats
-            // clearJobForm();
-            // setView("manage-jobs");
             
             // Also refresh jobs list
             renderJobs(true);
@@ -19338,6 +19337,25 @@ meta.textContent =
         console.log("🔵 Rendering post view");
         stopMessagePolling();
         stopBackgroundPolling(); // Don't poll on post job form
+        
+        // Clear form when entering post view (refresh form)
+        const jobForm = document.getElementById('jobForm');
+        if (jobForm) {
+          jobForm.reset();
+          // Also clear any custom fields
+          const titleInput = document.getElementById('jobTitle');
+          const descriptionInput = document.getElementById('jobDescription');
+          const amountInput = document.getElementById('jobAmount');
+          if (titleInput) titleInput.value = '';
+          if (descriptionInput) descriptionInput.value = '';
+          if (amountInput) amountInput.value = '';
+        }
+        
+        // Hide job stats card when entering post view
+        const statsCard = document.getElementById('jobStatsCard');
+        if (statsCard) {
+          statsCard.style.display = 'none';
+        }
       } else {
         console.log("⚠️ renderAll - unknown view:", currentView);
         stopMessagePolling(); // Stop polling when leaving messages view
