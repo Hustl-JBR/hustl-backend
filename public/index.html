@@ -10822,17 +10822,31 @@ async function renderJobs(reset = false) {
               const currentHours = elapsedMs / (1000 * 60 * 60);
               const maxHours = job.estHours || 0;
               const hoursRemaining = maxHours - currentHours;
+              const minutesRemaining = hoursRemaining * 60;
               
-              // Show extension button if within 0.5 hours of max and user is customer
-              if (hoursRemaining <= 0.5 && isOwner && !document.getElementById(`extendHoursBtn-${job.id}`)) {
+              // Show extension button if within 30 minutes of max and user is customer
+              if (minutesRemaining <= 30 && minutesRemaining > 0 && isOwner && !document.getElementById(`extendHoursBtn-${job.id}`)) {
                 const hourlyRate = Number(job.hourlyRate) || 0;
+                
+                // Remove any existing warnings first
+                const existingWarning = document.getElementById(`timerWarning-${job.id}`);
+                if (existingWarning) existingWarning.remove();
+                
+                // Show warning message
+                const warning = document.createElement("div");
+                warning.id = `timerWarning-${job.id}`;
+                warning.style.cssText = "font-size: 0.9rem; color: #dc2626; font-weight: 700; margin-top: 0.75rem; margin-bottom: 0.75rem; padding: 0.75rem; background: #fee2e2; border-radius: 6px; border: 2px solid #dc2626;";
+                const minsLeft = Math.ceil(minutesRemaining);
+                warning.innerHTML = `⚠️ <strong>You have ${minsLeft} minute${minsLeft === 1 ? '' : 's'} left!</strong><br>Add more hours to continue. You will be charged for the full hour.`;
+                timerSection.appendChild(warning);
+                
                 const extendBtn = document.createElement("button");
                 extendBtn.id = `extendHoursBtn-${job.id}`;
                 extendBtn.className = "btn btn-primary";
                 extendBtn.textContent = `Extend by 1 hour (+$${hourlyRate.toFixed(0)})`;
-                extendBtn.style.cssText = "width: 100%; padding: 0.75rem; font-weight: 600; margin-top: 0.5rem; background: #f59e0b; border: none;";
+                extendBtn.style.cssText = "width: 100%; padding: 0.875rem; font-weight: 700; margin-top: 0.5rem; background: #f59e0b; border: none; border-radius: 8px; font-size: 1rem; color: white; cursor: pointer;";
                 extendBtn.addEventListener("click", async () => {
-                  if (confirm(`Extend job by 1 hour? This will authorize an additional $${hourlyRate.toFixed(2)}.`)) {
+                  if (confirm(`Extend job by 1 hour? This will authorize an additional $${hourlyRate.toFixed(2)}. You will be charged for the full hour even if you finish early.`)) {
                     extendBtn.disabled = true;
                     extendBtn.textContent = "Processing...";
                     try {
@@ -10869,16 +10883,8 @@ async function renderJobs(reset = false) {
                 timerSection.appendChild(extendBtn);
               }
               
-              // Show warning if approaching max
-              if (hoursRemaining <= 0.5 && hoursRemaining > 0) {
-                const warning = document.createElement("div");
-                warning.id = `timerWarning-${job.id}`;
-                warning.style.cssText = "font-size: 0.85rem; color: #dc2626; font-weight: 600; margin-top: 0.5rem; padding: 0.5rem; background: #fee2e2; border-radius: 6px;";
-                warning.textContent = `⚠️ Approaching max hours (${hoursRemaining.toFixed(2)}h remaining). Extend hours to continue.`;
-                if (!document.getElementById(`timerWarning-${job.id}`)) {
-                  timerSection.appendChild(warning);
-                }
-              } else if (hoursRemaining <= 0) {
+              // Show error if max hours exceeded
+              if (hoursRemaining <= 0) {
                 const errorMsg = document.createElement("div");
                 errorMsg.id = `timerError-${job.id}`;
                 errorMsg.style.cssText = "font-size: 0.85rem; color: #dc2626; font-weight: 700; margin-top: 0.5rem; padding: 0.5rem; background: #fee2e2; border-radius: 6px; border: 2px solid #dc2626;";
@@ -12049,7 +12055,7 @@ async function renderJobs(reset = false) {
         
         // Reviews Section
         const reviewsSection = document.createElement("div");
-        reviewsSection.style.cssText = "padding: 1.5rem;";
+        reviewsSection.style.cssText = "padding: 1.5rem; max-height: 400px; overflow-y: auto;";
         const reviewsTitle = document.createElement("h3");
         reviewsTitle.style.cssText = "margin: 0 0 1rem 0; font-size: 1rem; font-weight: 600; color: var(--text-main);";
         reviewsTitle.textContent = `Reviews (${totalReviews})`;
