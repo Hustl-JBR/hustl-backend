@@ -1174,6 +1174,9 @@ module.exports = {
   sendJobDeletedConfirmationEmail,
   sendHustlerUnassignedConfirmationEmail,
   sendHustlerLeftConfirmationEmail,
+  sendPriceChangeProposalEmail,
+  sendPriceChangeAcceptedEmail,
+  sendPriceChangeDeclinedEmail,
 };
 
 async function sendJobPostedEmail(email, name, jobTitle, jobId, jobDate, amount, payType, hourlyRate, estHours) {
