@@ -11204,7 +11204,16 @@ async function renderJobs(reset = false) {
                   
                   if (response.ok) {
                     showToast('✅ Price change accepted! Payment authorization updated.');
-                    window.openJobDetails(job.id);
+                    // Close existing modal first
+                    const existingModal = document.getElementById('jobDetailModal');
+                    if (existingModal) {
+                      document.body.removeChild(existingModal);
+                      document.body.style.overflow = '';
+                    }
+                    // Small delay to ensure modal is closed, then reopen with fresh data
+                    setTimeout(() => {
+                      window.openJobDetails(job.id);
+                    }, 100);
                   } else {
                     const error = await response.json();
                     showToast(error.error || 'Failed to accept price change');
@@ -11239,7 +11248,16 @@ async function renderJobs(reset = false) {
                   
                   if (response.ok) {
                     showToast('Price change declined. Job remains at original price.');
-                    window.openJobDetails(job.id);
+                    // Close existing modal first
+                    const existingModal = document.getElementById('jobDetailModal');
+                    if (existingModal) {
+                      document.body.removeChild(existingModal);
+                      document.body.style.overflow = '';
+                    }
+                    // Small delay to ensure modal is closed, then reopen with fresh data
+                    setTimeout(() => {
+                      window.openJobDetails(job.id);
+                    }, 100);
                   } else {
                     const error = await response.json();
                     showToast(error.error || 'Failed to decline price change');
