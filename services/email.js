@@ -1062,11 +1062,11 @@ async function sendPriceChangeAcceptedEmail(email, name, jobTitle, jobId, newAmo
     await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
-      subject: `✅ Price Change Accepted for "${jobTitle}"`,
+      subject: `✅ Hustler Accepted Price Change for "${jobTitle}"`,
       html: `
         <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
           <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 1.75rem;">✅ Price Change Accepted</h1>
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">✅ Hustler Accepted Price Change</h1>
           </div>
           
           <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
