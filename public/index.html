@@ -12200,13 +12200,18 @@ async function renderJobs(reset = false) {
           loadMoreBtn.className = "btn btn-secondary";
           loadMoreBtn.id = "profileLoadMoreReviewsBtn";
           loadMoreBtn.textContent = `Load more reviews (${totalReviews - currentOffset} more)`;
-          loadMoreBtn.style.cssText = "width: 100%; padding: 0.75rem; font-size: 0.95rem;";
-          loadMoreBtn.addEventListener("click", async () => {
+          loadMoreBtn.style.cssText = "width: 100%; padding: 0.75rem; font-size: 0.95rem; margin-top: 1rem; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;";
+          loadMoreBtn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[PROFILE REVIEWS] Load More button clicked! currentOffset:', currentOffset);
             loadMoreBtn.disabled = true;
             loadMoreBtn.textContent = "Loading...";
             
             try {
+              console.log('[PROFILE REVIEWS] Calling loadUserReviews with:', targetUserId, 6, currentOffset);
               const result = await window.loadUserReviews(targetUserId, 6, currentOffset);
+              console.log('[PROFILE REVIEWS] Got result:', result);
               
               if (result.reviews && result.reviews.length > 0) {
                 const reviewsList = document.getElementById("profileReviewsList");
