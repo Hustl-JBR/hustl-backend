@@ -406,13 +406,16 @@ router.post('/change-password', authenticate, [
   body('newPassword').isLength({ min: 8 }),
 ], async (req, res) => {
   try {
+    console.log('[AUTH] Change password request received');
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.error('[AUTH] Validation errors:', errors.array());
       return res.status(400).json({ errors: errors.array() });
     }
 
     const { currentPassword, newPassword } = req.body;
     const userId = req.user.id;
+    console.log('[AUTH] Changing password for user:', userId);
 
     // Get user with password hash
     const user = await prisma.user.findUnique({
@@ -421,29 +424,41 @@ router.post('/change-password', authenticate, [
     });
 
     if (!user) {
+      console.error('[AUTH] User not found:', userId);
       return res.status(404).json({ error: 'User not found' });
     }
 
+    if (!user.passwordHash) {
+      console.error('[AUTH] User has no password hash:', userId);
+      return res.status(400).json({ error: 'Password cannot be changed for this account' });
+    }
+
     // Verify current password
+    console.log('[AUTH] Verifying current password');
     const passwordValid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!passwordValid) {
+      console.error('[AUTH] Current password is incorrect for user:', userId);
       return res.status(400).json({ error: 'Current password is incorrect' });
     }
 
     // Check if new password is different
     const samePassword = await bcrypt.compare(newPassword, user.passwordHash);
     if (samePassword) {
+      console.error('[AUTH] New password is same as current password');
       return res.status(400).json({ error: 'New password must be different from current password' });
     }
 
     // Hash new password
+    console.log('[AUTH] Hashing new password');
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
     // Update password
+    console.log('[AUTH] Updating password in database');
     await prisma.user.update({
       where: { id: userId },
       data: { passwordHash },
     });
+    console.log('[AUTH] Password updated successfully in database');
 
     // Send email notification (without sending password in plain text for security)
     try {
