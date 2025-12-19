@@ -12248,12 +12248,17 @@ async function renderJobs(reset = false) {
                     }
                   });
                   
-                  // Scroll to the first newly loaded review
-                  if (firstNewReview) {
-                    setTimeout(() => {
+                  // Scroll to show newly loaded reviews
+                  setTimeout(() => {
+                    if (firstNewReview) {
                       firstNewReview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }, 100);
-                  }
+                    }
+                    // Also scroll the reviews section to show new content
+                    const reviewsSection = reviewsList.closest('div[style*="padding: 1.5rem"]');
+                    if (reviewsSection) {
+                      reviewsSection.scrollTop = reviewsSection.scrollHeight;
+                    }
+                  }, 150);
                 }
                 
                 currentOffset += result.reviews.length;
