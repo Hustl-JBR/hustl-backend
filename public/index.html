@@ -12239,10 +12239,14 @@ async function renderJobs(reset = false) {
               console.log('[PROFILE REVIEWS] Got result:', result);
               
               if (result.reviews && result.reviews.length > 0) {
-                const reviewsList = document.getElementById("profileReviewsList");
-                console.log('[PROFILE REVIEWS] reviewsList element:', reviewsList ? 'found' : 'NOT FOUND');
+                // Find the reviewsList - make sure we're getting the right one
+                const modal = document.getElementById("hustlerProfileModal");
+                const reviewsList = modal ? modal.querySelector("#profileReviewsList") : document.getElementById("profileReviewsList");
+                console.log('[PROFILE REVIEWS] reviewsList element:', reviewsList ? 'found' : 'NOT FOUND', 'modal:', modal ? 'found' : 'NOT FOUND');
                 if (reviewsList) {
                   console.log('[PROFILE REVIEWS] Current list has', reviewsList.children.length, 'children before adding new reviews');
+                  // Log all current children to see what's there
+                  console.log('[PROFILE REVIEWS] Current children:', Array.from(reviewsList.children).map(c => c.tagName + (c.textContent ? ' - ' + c.textContent.substring(0, 50) : '')));
                   // Remove "No reviews yet" message if it exists
                   const noReviewsMsg = reviewsList.querySelector('div[style*="No reviews yet"]');
                   if (noReviewsMsg) {
