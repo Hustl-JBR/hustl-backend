@@ -1452,45 +1452,54 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
 
     // Update Stripe payment intent if payment exists
     if (job.payment && job.payment.providerId) {
-      const Stripe = require('stripe');
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-      
       try {
-        // Retrieve existing payment intent to get current metadata
-        const existingIntent = await stripe.paymentIntents.retrieve(job.payment.providerId);
-        const existingMetadata = existingIntent.metadata || {};
-        
-        // Calculate new total with fees
-        const tipPercent = Math.min(parseFloat(job.tipPercent || 0), 25);
-        const tipAmount = Math.min(newJobAmount * (tipPercent / 100), 50);
-        const customerFee = Math.min(Math.max(newJobAmount * 0.03, 1), 10);
-        const newTotal = newJobAmount + tipAmount + customerFee;
+        if (!process.env.STRIPE_SECRET_KEY) {
+          console.warn('[PRICE CHANGE] Stripe secret key not configured, skipping payment intent update');
+        } else {
+          const Stripe = require('stripe');
+          const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+          
+          // Retrieve existing payment intent to get current metadata
+          const existingIntent = await stripe.paymentIntents.retrieve(job.payment.providerId);
+          const existingMetadata = existingIntent.metadata || {};
+          
+          // Calculate new total with fees
+          const tipPercent = Math.min(parseFloat(job.tipPercent || 0), 25);
+          const tipAmount = Math.min(newJobAmount * (tipPercent / 100), 50);
+          const customerFee = Math.min(Math.max(newJobAmount * 0.03, 1), 10);
+          const newTotal = newJobAmount + tipAmount + customerFee;
 
-        // Update payment intent amount
-        await stripe.paymentIntents.update(job.payment.providerId, {
-          amount: Math.round(newTotal * 100), // Convert to cents
-          metadata: {
-            ...existingMetadata,
-            amount: newJobAmount.toString(),
-            tip: tipAmount.toString(),
-            customerFee: customerFee.toString(),
-            priceUpdatedAt: new Date().toISOString()
+          // Only update if payment intent is in a state that allows updates
+          if (existingIntent.status === 'requires_capture' || existingIntent.status === 'requires_payment_method') {
+            // Update payment intent amount
+            await stripe.paymentIntents.update(job.payment.providerId, {
+              amount: Math.round(newTotal * 100), // Convert to cents
+              metadata: {
+                ...existingMetadata,
+                amount: newJobAmount.toString(),
+                tip: tipAmount.toString(),
+                customerFee: customerFee.toString(),
+                priceUpdatedAt: new Date().toISOString()
+              }
+            });
+
+            console.log(`[PRICE CHANGE] Updated Stripe payment intent ${job.payment.providerId} to $${newTotal}`);
+          } else {
+            console.warn(`[PRICE CHANGE] Payment intent ${job.payment.providerId} is in status ${existingIntent.status}, cannot update. Continuing with job update.`);
           }
-        });
-
-        console.log(`[PRICE CHANGE] Updated Stripe payment intent ${job.payment.providerId} to $${newTotal}`);
+        }
       } catch (stripeError) {
         console.error('[PRICE CHANGE] Stripe update error:', stripeError);
         console.error('[PRICE CHANGE] Stripe error details:', {
           type: stripeError.type,
           code: stripeError.code,
           message: stripeError.message,
-          paymentIntentId: job.payment.providerId
+          paymentIntentId: job.payment.providerId,
+          stack: stripeError.stack
         });
-        return res.status(500).json({ 
-          error: 'Failed to update payment authorization',
-          message: stripeError.message 
-        });
+        // Don't fail the entire request if Stripe update fails - log and continue
+        // The payment record will still be updated in the database
+        console.warn('[PRICE CHANGE] Continuing with job update despite Stripe error');
       }
     }
 
