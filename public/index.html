@@ -11264,7 +11264,6 @@ async function renderJobs(reset = false) {
                   acceptBtn.textContent = '✓ Accept Updated Price';
                 }
               });
-            }
             
             declineBtn.addEventListener('click', async (e) => {
               e.preventDefault();
@@ -11316,8 +11315,7 @@ async function renderJobs(reset = false) {
                   declineBtn.textContent = '✗ Decline';
                 }
               });
-            }
-          }, 100);
+          }
           
           modalContent.appendChild(priceChangeSectionHustler);
         }
