@@ -265,7 +265,10 @@ async function sendPasswordResetEmail(email, name, resetUrl) {
 }
 
 async function sendPasswordChangedEmail(email, name) {
-  if (!isEmailConfigured()) return;
+  if (!isEmailConfigured()) {
+    console.log('[Email] Email not configured, skipping password changed email');
+    return;
+  }
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -302,7 +305,11 @@ async function sendPasswordChangedEmail(email, name) {
     console.log('[Email] Password changed email sent successfully to:', email);
   } catch (error) {
     console.error('[Email] Send password changed email error:', error);
-    throw error;
+    // Don't throw - just log the error so it doesn't break the password change
+    console.error('[Email] Email error details:', {
+      message: error.message,
+      stack: error.stack
+    });
   }
 }
 
