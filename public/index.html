@@ -10854,8 +10854,10 @@ async function renderJobs(reset = false) {
               
               // Show extension button if within 30 minutes of max OR even after max reached (within 6 minutes)
               // Allow extension even closer to/at the end of the job
-              const canExtend = (minutesRemaining <= 30 && minutesRemaining > -6) && isOwner && !document.getElementById(`extendHoursBtn-${job.id}`);
-              console.log('[TIMER] canExtend:', canExtend, 'button exists:', !!document.getElementById(`extendHoursBtn-${job.id}`));
+              const buttonExists = !!document.getElementById(`extendHoursBtn-${job.id}`);
+              const shouldShowExtension = (minutesRemaining <= 30 && minutesRemaining > -6) && isOwner;
+              const canExtend = shouldShowExtension && !buttonExists;
+              console.log('[TIMER] canExtend:', canExtend, 'button exists:', buttonExists, 'shouldShowExtension:', shouldShowExtension);
               if (canExtend) {
                 console.log('[TIMER] Showing extension button');
                 const hourlyRate = Number(job.hourlyRate) || 0;
@@ -10886,7 +10888,9 @@ async function renderJobs(reset = false) {
                 extendBtn.className = "btn btn-primary";
                 extendBtn.textContent = `Extend by 1 hour (+$${hourlyRate.toFixed(0)})`;
                 extendBtn.style.cssText = "width: 100%; padding: 0.875rem; font-weight: 700; margin-top: 0.5rem; background: #f59e0b; border: none; border-radius: 8px; font-size: 1rem; color: white; cursor: pointer;";
-                extendBtn.addEventListener("click", async () => {
+                extendBtn.addEventListener("click", async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   if (confirm(`Extend job by 1 hour? This will authorize an additional $${hourlyRate.toFixed(2)}. You will be charged for the full hour even if you finish early.`)) {
                     extendBtn.disabled = true;
                     extendBtn.textContent = "Processing...";
@@ -10903,10 +10907,37 @@ async function renderJobs(reset = false) {
                       
                       if (response.ok) {
                         const data = await response.json();
-                        showToast(`✅ Hours extended! New max: ${data.newMaxHours} hours.`);
+                        // Update job.estHours in current scope
+                        job.estHours = data.newMaxHours;
+                        
+                        // Update max hours display
+                        if (maxHoursInfo) {
+                          maxHoursInfo.textContent = `Max hours: ${data.newMaxHours} hours`;
+                        }
+                        
+                        // Calculate new time remaining
+                        const newMaxHours = data.newMaxHours;
+                        const newHoursRemaining = newMaxHours - currentHours;
+                        const newMinutesRemaining = newHoursRemaining * 60;
+                        const newHours = Math.floor(newMinutesRemaining / 60);
+                        const newMins = Math.floor(newMinutesRemaining % 60);
+                        
+                        // Show success message with new time
+                        let successMsg = `✅ Hours extended! You now have `;
+                        if (newHours > 0) {
+                          successMsg += `${newHours} hour${newHours === 1 ? '' : 's'}`;
+                          if (newMins > 0) {
+                            successMsg += ` and ${newMins} minute${newMins === 1 ? '' : 's'}`;
+                          }
+                        } else {
+                          successMsg += `${newMins} minute${newMins === 1 ? '' : 's'}`;
+                        }
+                        successMsg += ` remaining.`;
+                        showToast(successMsg);
+                        
+                        // Remove button and warning
                         extendBtn.remove();
-                        // Refresh job details
-                        window.openJobDetails(job.id);
+                        if (warning) warning.remove();
                       } else {
                         const error = await response.json();
                         showToast(error.error || "Failed to extend hours");
