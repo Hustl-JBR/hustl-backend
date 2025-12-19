@@ -5515,30 +5515,54 @@
         return;
       }
       
-      let html = reviews.map(review => `
-        <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; border: 1px solid var(--border);">
-          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
-            <div>
-              <div style="font-weight: 600; color: var(--text-main);">${review.reviewer?.name || 'Anonymous'}</div>
-              <div style="font-size: 0.85rem; color: var(--text-muted);">${new Date(review.createdAt).toLocaleDateString()}</div>
-            </div>
-            <div style="font-size: 1.25rem;">${'★'.repeat(review.stars || 5)}</div>
-          </div>
-          ${review.text ? `<div style="color: var(--text-main); line-height: 1.5; margin-bottom: 0.5rem;">${review.text}</div>` : ''}
-          ${review.job ? `<div style="font-size: 0.8rem; color: var(--text-muted);">${review.job.title || 'Untitled Job'}</div>` : ''}
-        </div>
-      `).join('');
+      // Clear container and render reviews with consistent styling
+      container.innerHTML = '';
+      
+      reviews.forEach(review => {
+        const reviewItem = document.createElement("div");
+        reviewItem.style.cssText = "padding: 1rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 0.75rem;";
+        
+        const reviewerInfo = document.createElement("div");
+        reviewerInfo.style.cssText = "display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;";
+        
+        const reviewerPic = document.createElement("img");
+        reviewerPic.style.cssText = "width: 32px; height: 32px; border-radius: 50%; object-fit: cover;";
+        reviewerPic.src = review.reviewer?.photoUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(review.reviewer?.name || "User") + "&background=6366f1&color=fff&size=128";
+        reviewerPic.alt = review.reviewer?.name || "Reviewer";
+        
+        const reviewerName = document.createElement("span");
+        reviewerName.style.cssText = "font-size: 0.9rem; font-weight: 600; color: var(--text-main);";
+        reviewerName.textContent = review.reviewer?.name || "Anonymous";
+        
+        const reviewStars = document.createElement("span");
+        reviewStars.style.cssText = "margin-left: auto; font-size: 0.9rem; color: #fbbf24;";
+        reviewStars.textContent = "★".repeat(review.rating || review.stars || 5);
+        
+        reviewerInfo.appendChild(reviewerPic);
+        reviewerInfo.appendChild(reviewerName);
+        reviewerInfo.appendChild(reviewStars);
+        reviewItem.appendChild(reviewerInfo);
+        
+        const reviewTextContent = review.text || review.comment;
+        if (reviewTextContent) {
+          const reviewText = document.createElement("p");
+          reviewText.style.cssText = "margin: 0.5rem 0 0 0; font-size: 0.9rem; color: var(--text-main); line-height: 1.5; padding-top: 0.5rem; border-top: 1px solid #e5e7eb;";
+          reviewText.textContent = reviewTextContent;
+          reviewItem.appendChild(reviewText);
+        }
+        
+        container.appendChild(reviewItem);
+      });
       
       // Add "Load more" button if there are more reviews
       if (hasMore) {
-        html += `
-          <button id="loadMoreReviewsBtn" class="btn btn-ghost" style="width: 100%; padding: 0.75rem; margin-top: 1rem;">
-            Load More Reviews (${total - currentOffset - reviews.length} remaining)
-          </button>
-        `;
+        const loadMoreBtn = document.createElement("button");
+        loadMoreBtn.id = 'loadMoreReviewsBtn';
+        loadMoreBtn.className = "btn btn-ghost";
+        loadMoreBtn.style.cssText = "width: 100%; padding: 0.75rem; margin-top: 1rem;";
+        loadMoreBtn.textContent = `Load More Reviews (${total - currentOffset - reviews.length} remaining)`;
+        container.appendChild(loadMoreBtn);
       }
-      
-      container.innerHTML = html;
       
       // Attach "Load more" handler
       if (hasMore) {
@@ -10910,9 +10934,31 @@ async function renderJobs(reset = false) {
                         // Update job.estHours in current scope
                         job.estHours = data.newMaxHours;
                         
+                        // Update parsedRequirements to include new extension
+                        if (!parsedRequirements.extensionPaymentIntents) {
+                          parsedRequirements.extensionPaymentIntents = [];
+                        }
+                        parsedRequirements.extensionPaymentIntents.push({
+                          hours: 1,
+                          paymentIntentId: data.paymentIntentId,
+                          createdAt: new Date().toISOString()
+                        });
+                        
                         // Update max hours display
                         if (maxHoursInfo) {
                           maxHoursInfo.textContent = `Max hours: ${data.newMaxHours} hours`;
+                        }
+                        
+                        // Update extension indicator
+                        const extensionIndicator = document.getElementById(`extensionIndicator-${job.id}`);
+                        if (extensionIndicator) {
+                          const totalHoursAdded = parsedRequirements.extensionPaymentIntents.reduce((sum, ext) => sum + (Number(ext.hours) || 0), 0);
+                          if (totalHoursAdded === 1) {
+                            extensionIndicator.textContent = `✅ You added 1 hour`;
+                          } else {
+                            extensionIndicator.textContent = `✅ You've added ${totalHoursAdded} hours`;
+                          }
+                          extensionIndicator.style.display = 'block';
                         }
                         
                         // Calculate new time remaining
