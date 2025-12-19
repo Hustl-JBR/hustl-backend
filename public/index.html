@@ -10824,10 +10824,14 @@ async function renderJobs(reset = false) {
               const hoursRemaining = maxHours - currentHours;
               const minutesRemaining = hoursRemaining * 60;
               
+              console.log('[TIMER] Extension check - currentHours:', currentHours.toFixed(2), 'maxHours:', maxHours, 'minutesRemaining:', minutesRemaining.toFixed(1), 'isOwner:', isOwner);
+              
               // Show extension button if within 30 minutes of max OR even after max reached (within 6 minutes)
               // Allow extension even closer to/at the end of the job
               const canExtend = (minutesRemaining <= 30 && minutesRemaining > -6) && isOwner && !document.getElementById(`extendHoursBtn-${job.id}`);
+              console.log('[TIMER] canExtend:', canExtend, 'button exists:', !!document.getElementById(`extendHoursBtn-${job.id}`));
               if (canExtend) {
+                console.log('[TIMER] Showing extension button');
                 const hourlyRate = Number(job.hourlyRate) || 0;
                 
                 // Remove any existing warnings/errors first
@@ -12238,6 +12242,7 @@ async function renderJobs(reset = false) {
                 const reviewsList = document.getElementById("profileReviewsList");
                 console.log('[PROFILE REVIEWS] reviewsList element:', reviewsList ? 'found' : 'NOT FOUND');
                 if (reviewsList) {
+                  console.log('[PROFILE REVIEWS] Current list has', reviewsList.children.length, 'children before adding new reviews');
                   // Remove "No reviews yet" message if it exists
                   const noReviewsMsg = reviewsList.querySelector('div[style*="No reviews yet"]');
                   if (noReviewsMsg) {
@@ -12257,11 +12262,12 @@ async function renderJobs(reset = false) {
                     const reviewItem = window.createProfileReviewItem(review);
                     console.log('[PROFILE REVIEWS] Review item created:', reviewItem ? 'yes' : 'no');
                     reviewsList.appendChild(reviewItem);
-                    console.log('[PROFILE REVIEWS] Review item appended to list. List now has', reviewsList.children.length, 'children');
+                    console.log('[PROFILE REVIEWS] Review item appended. List now has', reviewsList.children.length, 'children');
                     if (!firstNewReview) {
                       firstNewReview = reviewItem;
                     }
                   });
+                  console.log('[PROFILE REVIEWS] Final list has', reviewsList.children.length, 'children after all appends');
                   
                   // Scroll to show newly loaded reviews
                   setTimeout(() => {
