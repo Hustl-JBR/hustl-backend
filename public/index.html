@@ -10500,6 +10500,20 @@ async function renderJobs(reset = false) {
         }
         console.log("Parsed requirements:", parsedRequirements);
         
+        // Get current user early (needed for timer extension button)
+        let user = null;
+        let isOwner = false;
+        try {
+          if (window.hustlAPI && window.hustlAPI.auth) {
+            user = await window.hustlAPI.auth.getCurrentUser();
+            if (user) {
+              isOwner = job.customerId === user.id;
+            }
+          }
+        } catch (e) {
+          console.warn("Error getting current user for timer:", e);
+        }
+        
         // Create modal overlay - full screen on mobile
         const modalOverlay = document.createElement("div");
         modalOverlay.id = "jobDetailModal";
@@ -11115,25 +11129,16 @@ async function renderJobs(reset = false) {
         const actionsSection = document.createElement("div");
         actionsSection.style.cssText = "padding: 1rem; background: #f8f9fa; border-radius: 12px; border: 1px solid #e5e7eb;";
         
-        // Get current user from API (async)
+        // Get current user from API (async) - user and isOwner already defined above for timer
         // Note: token is already declared at line 9701 in this function
-        let user = null;
         let isHustler = false;
-        let isOwner = false;
         
-        try {
-          if (window.hustlAPI && window.hustlAPI.auth) {
-            user = await window.hustlAPI.auth.getCurrentUser();
-            if (user) {
-              // Check for hustler role in multiple ways
-              isHustler = (user.roles && Array.isArray(user.roles) && user.roles.some(r => r.toUpperCase() === 'HUSTLER')) || 
-                         (user.role && user.role.toUpperCase() === 'HUSTLER') ||
-                         (user.isHustler === true);
-              isOwner = job.customerId === user.id;
-            }
-          }
-        } catch (e) {
-          console.warn("Error getting current user:", e);
+        if (user) {
+          // Check for hustler role in multiple ways
+          isHustler = (user.roles && Array.isArray(user.roles) && user.roles.some(r => r.toUpperCase() === 'HUSTLER')) || 
+                     (user.role && user.role.toUpperCase() === 'HUSTLER') ||
+                     (user.isHustler === true);
+          // isOwner already set above
         }
         
         console.log("Apply area check - user:", user, "isHustler:", isHustler, "isOwner:", isOwner, "token:", token ? "present" : "missing");
