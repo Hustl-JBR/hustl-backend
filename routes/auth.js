@@ -447,28 +447,30 @@ router.post('/change-password', authenticate, [
 
     // Send email notification (without sending password in plain text for security)
     try {
-      const { sendPasswordChangedEmail } = require('../services/email');
       await sendPasswordChangedEmail(user.email, user.name);
+      console.log('[AUTH] Password changed email sent successfully to:', user.email);
     } catch (emailError) {
-      console.error('Failed to send password changed email:', emailError);
-      console.error('Email error details:', {
+      console.error('[AUTH] Failed to send password changed email:', emailError);
+      console.error('[AUTH] Email error details:', {
         message: emailError.message,
         stack: emailError.stack
       });
-      // Don't fail the request if email fails
+      // Don't fail the request if email fails - password change was successful
     }
 
+    console.log('[AUTH] Password changed successfully for user:', userId);
     res.json({ message: 'Password changed successfully. Check your email for confirmation.' });
   } catch (error) {
-    console.error('Change password error:', error);
-    console.error('Error details:', {
+    console.error('[AUTH] Change password error:', error);
+    console.error('[AUTH] Error details:', {
       message: error.message,
       stack: error.stack,
-      name: error.name
+      name: error.name,
+      code: error.code
     });
     res.status(500).json({ 
       error: 'Internal server error',
-      message: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: process.env.NODE_ENV === 'development' ? error.message : 'Failed to change password. Please try again.'
     });
   }
 });
