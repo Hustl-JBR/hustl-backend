@@ -452,19 +452,15 @@ router.post('/change-password', authenticate, [
     console.log('[AUTH] Hashing new password');
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    // Update password - only update passwordHash field
+    // Update password using raw SQL to avoid schema mismatch issues
     console.log('[AUTH] Updating password in database');
     try {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { 
-          passwordHash: passwordHash
-        },
-        select: {
-          id: true,
-          email: true
-        }
-      });
+      // Use raw SQL to update only password_hash column, bypassing Prisma schema validation
+      await prisma.$executeRaw`
+        UPDATE users 
+        SET password_hash = ${passwordHash}, updated_at = NOW()
+        WHERE id = ${userId}
+      `;
       console.log('[AUTH] Password updated successfully in database');
     } catch (updateError) {
       console.error('[AUTH] Database update error:', updateError);
