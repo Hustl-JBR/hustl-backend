@@ -15224,6 +15224,135 @@ async function renderJobs(reset = false) {
             pricingSection.appendChild(customerOffer);
           }
 
+          // PRICE CHANGE PROPOSAL UI (for hustler to accept/decline)
+          const requirements = job.requirements || {};
+          const proposedPriceChange = requirements.proposedPriceChange;
+          if (proposedPriceChange && proposedPriceChange.status === 'PENDING' && isHustler && job.hustlerId === user?.id) {
+            const priceChangeBox = document.createElement("div");
+            priceChangeBox.style.cssText = `
+              background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+              border: 2px solid #f59e0b;
+              border-radius: 12px;
+              padding: 1.25rem;
+              margin-bottom: 1rem;
+            `;
+            
+            const currentPrice = job.payType === 'hourly' 
+              ? (Number(job.hourlyRate || 0) * Number(job.estHours || 0))
+              : Number(job.amount || 0);
+            
+            let proposedPriceText = '';
+            let newPrice = currentPrice;
+            if (job.payType === 'hourly') {
+              const newRate = proposedPriceChange.hourlyRate !== null ? proposedPriceChange.hourlyRate : job.hourlyRate;
+              const newHours = proposedPriceChange.estHours !== null ? proposedPriceChange.estHours : job.estHours;
+              newPrice = newRate * newHours;
+              proposedPriceText = `$${newRate.toFixed(2)}/hr × ${newHours} hours = $${newPrice.toFixed(2)}`;
+            } else {
+              newPrice = proposedPriceChange.amount !== null ? proposedPriceChange.amount : job.amount;
+              proposedPriceText = `$${newPrice.toFixed(2)}`;
+            }
+            
+            priceChangeBox.innerHTML = `
+              <div style="font-size: 0.9rem; color: #92400e; margin-bottom: 0.75rem; font-weight: 700;">💰 Price Change Proposal</div>
+              <div style="margin-bottom: 0.75rem;">
+                <div style="font-size: 0.85rem; color: #78350f; margin-bottom: 0.25rem;">Current Price:</div>
+                <div style="font-size: 1.25rem; font-weight: 700; color: #78350f;">$${currentPrice.toFixed(2)}</div>
+              </div>
+              <div style="margin-bottom: 1rem; padding: 0.75rem; background: white; border-radius: 8px; border: 2px solid #fbbf24;">
+                <div style="font-size: 0.85rem; color: #92400e; margin-bottom: 0.25rem; font-weight: 600;">Proposed New Price:</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #78350f;">${proposedPriceText}</div>
+              </div>
+              <div style="display: flex; gap: 0.75rem;">
+                <button id="acceptPriceChangeBtn" class="btn btn-primary" style="flex: 1; padding: 0.875rem; font-weight: 700; background: #10b981; border: none; border-radius: 8px; color: white; cursor: pointer;">
+                  ✓ Accept Updated Price
+                </button>
+                <button id="declinePriceChangeBtn" class="btn btn-ghost" style="flex: 1; padding: 0.875rem; font-weight: 700; background: #fee2e2; border: 2px solid #dc2626; border-radius: 8px; color: #dc2626; cursor: pointer;">
+                  ✗ Decline
+                </button>
+              </div>
+              <div style="font-size: 0.75rem; color: #92400e; margin-top: 0.75rem; text-align: center;">
+                ⚠️ If you decline, the customer may unassign you and select another hustler.
+              </div>
+            `;
+            pricingSection.appendChild(priceChangeBox);
+            
+            // Add event listeners after appending
+            setTimeout(() => {
+              const acceptBtn = priceChangeBox.querySelector('#acceptPriceChangeBtn');
+              const declineBtn = priceChangeBox.querySelector('#declinePriceChangeBtn');
+              
+              if (acceptBtn) {
+                acceptBtn.addEventListener('click', async () => {
+                  acceptBtn.disabled = true;
+                  acceptBtn.textContent = 'Processing...';
+                  try {
+                    const token = localStorage.getItem('hustl_token');
+                    const response = await fetch(`${API_BASE}/jobs/${job.id}/accept-price-change`, {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                      }
+                    });
+                    
+                    if (response.ok) {
+                      showToast('✅ Price change accepted! Payment authorization updated.');
+                      // Refresh job details
+                      window.openJobDetails(job.id);
+                    } else {
+                      const error = await response.json();
+                      showToast(error.error || 'Failed to accept price change');
+                      acceptBtn.disabled = false;
+                      acceptBtn.textContent = '✓ Accept Updated Price';
+                    }
+                  } catch (error) {
+                    console.error('Error accepting price change:', error);
+                    showToast('Error accepting price change. Please try again.');
+                    acceptBtn.disabled = false;
+                    acceptBtn.textContent = '✓ Accept Updated Price';
+                  }
+                });
+              }
+              
+              if (declineBtn) {
+                declineBtn.addEventListener('click', async () => {
+                  if (!confirm('Are you sure you want to decline this price change? The customer may unassign you.')) {
+                    return;
+                  }
+                  declineBtn.disabled = true;
+                  declineBtn.textContent = 'Processing...';
+                  try {
+                    const token = localStorage.getItem('hustl_token');
+                    const response = await fetch(`${API_BASE}/jobs/${job.id}/decline-price-change`, {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                      }
+                    });
+                    
+                    if (response.ok) {
+                      showToast('Price change declined. Job remains at original price.');
+                      // Refresh job details
+                      window.openJobDetails(job.id);
+                    } else {
+                      const error = await response.json();
+                      showToast(error.error || 'Failed to decline price change');
+                      declineBtn.disabled = false;
+                      declineBtn.textContent = '✗ Decline';
+                    }
+                  } catch (error) {
+                    console.error('Error declining price change:', error);
+                    showToast('Error declining price change. Please try again.');
+                    declineBtn.disabled = false;
+                    declineBtn.textContent = '✗ Decline';
+                  }
+                });
+              }
+            }, 100);
+          }
+
           // Your Price section
           const yourPrice = document.createElement("div");
           
@@ -23309,43 +23438,45 @@ meta.textContent =
             adjustModal.querySelector('.savePriceBtn')?.addEventListener('click', async () => {
               try {
                 const token = localStorage.getItem('hustl_token');
-                const updateData = {};
+                const proposalData = {};
                 if (payType === 'hourly') {
                   const newRate = parseFloat(document.getElementById('newHourlyRate')?.value);
                   const newHours = parseInt(document.getElementById('newMaxHours')?.value);
-                  if (newRate && newRate > 0) updateData.hourlyRate = newRate;
-                  if (newHours && newHours > 0) updateData.estHours = newHours;
+                  if (newRate && newRate > 0) proposalData.hourlyRate = newRate;
+                  if (newHours && newHours > 0) proposalData.estHours = newHours;
                 } else {
                   const newAmount = parseFloat(document.getElementById('newAmount')?.value);
-                  if (newAmount && newAmount > 0) updateData.amount = newAmount;
+                  if (newAmount && newAmount > 0) proposalData.amount = newAmount;
                 }
                 
-                if (Object.keys(updateData).length === 0) {
+                if (Object.keys(proposalData).length === 0) {
                   showToast('Please enter a valid price');
                   return;
                 }
                 
-                const response = await fetch(`${API_BASE}/jobs/${job.id}`, {
-                  method: 'PATCH',
+                // Use new proposal endpoint
+                const response = await fetch(`${API_BASE}/jobs/${job.id}/propose-price-change`, {
+                  method: 'POST',
                   headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                   },
-                  body: JSON.stringify(updateData)
+                  body: JSON.stringify(proposalData)
                 });
                 
                 if (response.ok) {
-                  showToast('Price updated successfully');
+                  showToast('Price change proposal sent! The hustler must accept it before the price changes.');
                   document.body.removeChild(adjustModal);
                   document.body.removeChild(modalOverlay);
                   loadActiveJobs();
                   setTimeout(() => showActiveJobModal(job.id, 'customer'), 300);
                 } else {
-                  throw new Error('Failed to update price');
+                  const error = await response.json();
+                  showToast(error.error || 'Failed to propose price change');
                 }
               } catch (error) {
-                console.error('Error updating price:', error);
-                showToast('Error updating price. Please try again.');
+                console.error('Error proposing price change:', error);
+                showToast('Error proposing price change. Please try again.');
               }
             });
           });
