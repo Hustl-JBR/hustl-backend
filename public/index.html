@@ -5008,24 +5008,36 @@
         
         <!-- Jobs Tab -->
         <div id="profileTabJobs" class="profile-tab-content" style="display: none;">
-          <!-- Posted Jobs Section (Customer) -->
-          <div class="card" style="margin-bottom: 1.5rem;">
-            <div class="card-header">
-              <div class="card-title">📋 Posted</div>
-              <div style="font-size: 0.85rem; color: var(--text-muted);">Manage jobs you've posted</div>
-            </div>
-            <div id="postedJobsList" style="padding: 1rem;">
+          <!-- Jobs Tabs (like manage jobs) -->
+          <div class="profile-tabs" style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border);">
+            <button class="profile-tab manage-tab active" data-profile-job-tab="posted" id="profileJobTabPosted" style="position: relative;">
+              📋 Posted
+            </button>
+            <button class="profile-tab manage-tab" data-profile-job-tab="active" id="profileJobTabActive" style="position: relative;">
+              💼 Active
+            </button>
+            <button class="profile-tab manage-tab" data-profile-job-tab="completed" id="profileJobTabCompleted" style="position: relative;">
+              ✅ Completed
+            </button>
+          </div>
+          
+          <!-- Posted Jobs Tab Content -->
+          <div id="profileJobTabPostedContent" class="profile-job-tab-content" style="display: block;">
+            <div id="profilePostedJobsList" style="padding: 0;">
               <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
             </div>
           </div>
           
-          <!-- Active Jobs Section (Hustler) -->
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">💼 Active</div>
-              <div style="font-size: 0.85rem; color: var(--text-muted);">Jobs you're working on</div>
+          <!-- Active Jobs Tab Content -->
+          <div id="profileJobTabActiveContent" class="profile-job-tab-content" style="display: none;">
+            <div id="profileActiveJobsList" style="padding: 0;">
+              <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
             </div>
-            <div id="activeJobsList" style="padding: 1rem;">
+          </div>
+          
+          <!-- Completed Jobs Tab Content -->
+          <div id="profileJobTabCompletedContent" class="profile-job-tab-content" style="display: none;">
+            <div id="profileCompletedJobsList" style="padding: 0;">
               <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
             </div>
           </div>
