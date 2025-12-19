@@ -6527,7 +6527,10 @@ window.showChangePasswordModal = function showChangePasswordModal() {
     
     try {
       const token = localStorage.getItem('hustl_token');
-      const response = await fetch('/auth/change-password', {
+      const apiBase = window.API_BASE || API_BASE || 'https://hustl-production.up.railway.app';
+      console.log('[CHANGE PASSWORD] Calling API:', `${apiBase}/auth/change-password`);
+      
+      const response = await fetch(`${apiBase}/auth/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -6539,7 +6542,10 @@ window.showChangePasswordModal = function showChangePasswordModal() {
         })
       });
       
+      console.log('[CHANGE PASSWORD] Response status:', response.status);
+      
       const data = await response.json();
+      console.log('[CHANGE PASSWORD] Response data:', data);
       
       if (!response.ok) {
         throw new Error(data.error || data.message || 'Failed to change password');
@@ -6548,6 +6554,7 @@ window.showChangePasswordModal = function showChangePasswordModal() {
       showToast("✅ Password changed successfully!");
       closeModal();
     } catch (error) {
+      console.error('[CHANGE PASSWORD] Error:', error);
       showToast("Error: " + (error.message || "Could not change password. Please try again."));
     }
   });
