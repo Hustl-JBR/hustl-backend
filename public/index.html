@@ -10824,13 +10824,17 @@ async function renderJobs(reset = false) {
               const hoursRemaining = maxHours - currentHours;
               const minutesRemaining = hoursRemaining * 60;
               
-              // Show extension button if within 30 minutes of max and user is customer
-              if (minutesRemaining <= 30 && minutesRemaining > 0 && isOwner && !document.getElementById(`extendHoursBtn-${job.id}`)) {
+              // Show extension button if within 30 minutes of max OR even after max reached (within 6 minutes)
+              // Allow extension even closer to/at the end of the job
+              const canExtend = (minutesRemaining <= 30 && minutesRemaining > -6) && isOwner && !document.getElementById(`extendHoursBtn-${job.id}`);
+              if (canExtend) {
                 const hourlyRate = Number(job.hourlyRate) || 0;
                 
-                // Remove any existing warnings first
+                // Remove any existing warnings/errors first
                 const existingWarning = document.getElementById(`timerWarning-${job.id}`);
                 if (existingWarning) existingWarning.remove();
+                const existingError = document.getElementById(`timerError-${job.id}`);
+                if (existingError) existingError.remove();
                 
                 // Show warning message
                 const warning = document.createElement("div");
@@ -10841,7 +10845,8 @@ async function renderJobs(reset = false) {
                   const minsLeft = Math.ceil(minutesRemaining);
                   warningText = `⚠️ <strong>You have ${minsLeft} minute${minsLeft === 1 ? '' : 's'} left!</strong><br>Add more hours to continue. You will be charged for the full hour.`;
                 } else {
-                  warningText = `⚠️ <strong>Max hours reached!</strong><br>Add more hours immediately to continue. You will be charged for the full hour.`;
+                  const minsOver = Math.ceil(Math.abs(minutesRemaining));
+                  warningText = `⚠️ <strong>Max hours reached (${minsOver} minute${minsOver === 1 ? '' : 's'} over)!</strong><br>Add more hours immediately to continue. You will be charged for the full hour.`;
                 }
                 warning.innerHTML = warningText;
                 timerSection.appendChild(warning);
@@ -10889,12 +10894,13 @@ async function renderJobs(reset = false) {
                 timerSection.appendChild(extendBtn);
               }
               
-              // Show error if max hours exceeded
-              if (hoursRemaining <= 0) {
+              // Show error if max hours exceeded significantly (more than 6 minutes past)
+              // Only show if extension button isn't already showing
+              if (hoursRemaining < -0.1 && !document.getElementById(`extendHoursBtn-${job.id}`)) {
                 const errorMsg = document.createElement("div");
                 errorMsg.id = `timerError-${job.id}`;
                 errorMsg.style.cssText = "font-size: 0.85rem; color: #dc2626; font-weight: 700; margin-top: 0.5rem; padding: 0.5rem; background: #fee2e2; border-radius: 6px; border: 2px solid #dc2626;";
-                errorMsg.textContent = `❌ Max hours reached! Job must be completed or hours extended.`;
+                errorMsg.textContent = `❌ Max hours exceeded! Job must be completed or hours extended immediately.`;
                 if (!document.getElementById(`timerError-${job.id}`)) {
                   timerSection.appendChild(errorMsg);
                 }
