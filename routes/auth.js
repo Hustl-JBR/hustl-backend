@@ -452,13 +452,29 @@ router.post('/change-password', authenticate, [
     console.log('[AUTH] Hashing new password');
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    // Update password
+    // Update password - only update passwordHash field
     console.log('[AUTH] Updating password in database');
-    await prisma.user.update({
-      where: { id: userId },
-      data: { passwordHash },
-    });
-    console.log('[AUTH] Password updated successfully in database');
+    try {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { 
+          passwordHash: passwordHash
+        },
+        select: {
+          id: true,
+          email: true
+        }
+      });
+      console.log('[AUTH] Password updated successfully in database');
+    } catch (updateError) {
+      console.error('[AUTH] Database update error:', updateError);
+      console.error('[AUTH] Update error details:', {
+        message: updateError.message,
+        code: updateError.code,
+        meta: updateError.meta
+      });
+      throw updateError;
+    }
 
     // Send email notification (without sending password in plain text for security)
     // This is non-blocking - password change succeeds even if email fails
