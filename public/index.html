@@ -10776,8 +10776,12 @@ async function renderJobs(reset = false) {
         
         // 5.5. HOURLY JOB TIMER & EXTENSION (for hourly jobs in progress)
         // Check status in multiple formats (IN_PROGRESS, in_progress, etc.)
+        console.log('[TIMER DEBUG] Job check - payType:', job.payType, 'status:', job.status, 'startCodeVerified:', job.startCodeVerified, 'hasStartedAt:', !!parsedRequirements.startedAt);
         const isInProgress = (job.status === 'IN_PROGRESS' || job.status === 'in_progress' || (job.status && job.status.toUpperCase() === 'IN_PROGRESS'));
-        if (job.payType === 'hourly' && isInProgress && job.startCodeVerified) {
+        const shouldShowTimer = job.payType === 'hourly' && isInProgress && job.startCodeVerified;
+        console.log('[TIMER DEBUG] shouldShowTimer:', shouldShowTimer, 'isInProgress:', isInProgress);
+        
+        if (shouldShowTimer) {
           console.log('[TIMER] Showing timer for hourly job:', job.id, 'status:', job.status, 'startCodeVerified:', job.startCodeVerified);
           const timerSection = document.createElement("div");
           timerSection.style.cssText = "margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; background: #fef3c7; padding: 1rem; border-radius: 8px; border: 2px solid #fbbf24;";
@@ -12189,7 +12193,9 @@ async function renderJobs(reset = false) {
         reviewsSection.appendChild(reviewsList);
         
         // Load more reviews button (if more than 3)
+        console.log('[PROFILE REVIEWS] Checking if button should show - hasMoreReviews:', hasMoreReviews, 'totalReviews:', totalReviews, 'currentOffset:', currentOffset);
         if (hasMoreReviews) {
+          console.log('[PROFILE REVIEWS] Creating Load More button');
           const loadMoreBtn = document.createElement("button");
           loadMoreBtn.className = "btn btn-secondary";
           loadMoreBtn.id = "profileLoadMoreReviewsBtn";
