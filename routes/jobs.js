@@ -1456,6 +1456,10 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
       
       try {
+        // Retrieve existing payment intent to get current metadata
+        const existingIntent = await stripe.paymentIntents.retrieve(job.payment.providerId);
+        const existingMetadata = existingIntent.metadata || {};
+        
         // Calculate new total with fees
         const tipPercent = Math.min(parseFloat(job.tipPercent || 0), 25);
         const tipAmount = Math.min(newJobAmount * (tipPercent / 100), 50);
@@ -1466,7 +1470,7 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
         await stripe.paymentIntents.update(job.payment.providerId, {
           amount: Math.round(newTotal * 100), // Convert to cents
           metadata: {
-            ...(await stripe.paymentIntents.retrieve(job.payment.providerId)).metadata,
+            ...existingMetadata,
             amount: newJobAmount.toString(),
             tip: tipAmount.toString(),
             customerFee: customerFee.toString(),
@@ -1477,6 +1481,12 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
         console.log(`[PRICE CHANGE] Updated Stripe payment intent ${job.payment.providerId} to $${newTotal}`);
       } catch (stripeError) {
         console.error('[PRICE CHANGE] Stripe update error:', stripeError);
+        console.error('[PRICE CHANGE] Stripe error details:', {
+          type: stripeError.type,
+          code: stripeError.code,
+          message: stripeError.message,
+          paymentIntentId: job.payment.providerId
+        });
         return res.status(500).json({ 
           error: 'Failed to update payment authorization',
           message: stripeError.message 
@@ -1499,7 +1509,17 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
     }
 
     // Mark price change as accepted
-    const existingRequirements = job.requirements || {};
+    // Ensure requirements is an object (not a string)
+    let existingRequirements = job.requirements || {};
+    if (typeof existingRequirements === 'string') {
+      try {
+        existingRequirements = JSON.parse(existingRequirements);
+      } catch (e) {
+        console.error('[PRICE CHANGE] Error parsing existing requirements:', e);
+        existingRequirements = {};
+      }
+    }
+    
     const updatedJob = await prisma.job.update({
       where: { id: req.params.id },
       data: {
