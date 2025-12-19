@@ -10836,8 +10836,14 @@ async function renderJobs(reset = false) {
                 const warning = document.createElement("div");
                 warning.id = `timerWarning-${job.id}`;
                 warning.style.cssText = "font-size: 0.9rem; color: #dc2626; font-weight: 700; margin-top: 0.75rem; margin-bottom: 0.75rem; padding: 0.75rem; background: #fee2e2; border-radius: 6px; border: 2px solid #dc2626;";
-                const minsLeft = Math.ceil(minutesRemaining);
-                warning.innerHTML = `⚠️ <strong>You have ${minsLeft} minute${minsLeft === 1 ? '' : 's'} left!</strong><br>Add more hours to continue. You will be charged for the full hour.`;
+                let warningText = '';
+                if (minutesRemaining > 0) {
+                  const minsLeft = Math.ceil(minutesRemaining);
+                  warningText = `⚠️ <strong>You have ${minsLeft} minute${minsLeft === 1 ? '' : 's'} left!</strong><br>Add more hours to continue. You will be charged for the full hour.`;
+                } else {
+                  warningText = `⚠️ <strong>Max hours reached!</strong><br>Add more hours immediately to continue. You will be charged for the full hour.`;
+                }
+                warning.innerHTML = warningText;
                 timerSection.appendChild(warning);
                 
                 const extendBtn = document.createElement("button");
@@ -12215,8 +12221,11 @@ async function renderJobs(reset = false) {
             loadMoreBtn.textContent = "Loading...";
             
             try {
-              console.log('[PROFILE REVIEWS] Calling loadUserReviews with:', targetUserId, 6, currentOffset);
-              const result = await window.loadUserReviews(targetUserId, 6, currentOffset);
+              // Calculate how many reviews are remaining
+              const remaining = totalReviews - currentOffset;
+              const limitToLoad = Math.min(remaining, 6); // Load up to 6, or remaining if less
+              console.log('[PROFILE REVIEWS] Calling loadUserReviews with:', targetUserId, limitToLoad, currentOffset, 'remaining:', remaining);
+              const result = await window.loadUserReviews(targetUserId, limitToLoad, currentOffset);
               console.log('[PROFILE REVIEWS] Got result:', result);
               
               if (result.reviews && result.reviews.length > 0) {
