@@ -1609,17 +1609,38 @@ router.post('/:id/decline-price-change', authenticate, requireRole('HUSTLER'), a
       });
     }
 
-    const requirements = job.requirements || {};
+    // Parse requirements if it's a string
+    let requirements = job.requirements || {};
+    if (typeof requirements === 'string') {
+      try {
+        requirements = JSON.parse(requirements);
+      } catch (e) {
+        console.error('[PRICE CHANGE] Error parsing requirements:', e);
+        requirements = {};
+      }
+    }
+    
     const proposedPrice = requirements.proposedPriceChange;
 
     if (!proposedPrice || proposedPrice.status !== 'PENDING') {
+      console.error('[PRICE CHANGE] No pending proposal found. Requirements:', JSON.stringify(requirements));
       return res.status(400).json({ 
         error: 'No pending price change proposal found' 
       });
     }
 
     // Mark price change as declined
-    const existingRequirements = job.requirements || {};
+    // Ensure requirements is an object (not a string)
+    let existingRequirements = job.requirements || {};
+    if (typeof existingRequirements === 'string') {
+      try {
+        existingRequirements = JSON.parse(existingRequirements);
+      } catch (e) {
+        console.error('[PRICE CHANGE] Error parsing existing requirements:', e);
+        existingRequirements = {};
+      }
+    }
+    
     const updatedJob = await prisma.job.update({
       where: { id: req.params.id },
       data: {
