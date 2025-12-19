@@ -11188,13 +11188,18 @@ async function renderJobs(reset = false) {
             const acceptBtn = document.getElementById(`acceptPriceChangeBtn-${job.id}`);
             const declineBtn = document.getElementById(`declinePriceChangeBtn-${job.id}`);
             
+            console.log('[PRICE CHANGE] Looking for buttons:', `acceptPriceChangeBtn-${job.id}`, acceptBtn, declineBtn);
+            
             if (acceptBtn) {
               acceptBtn.addEventListener('click', async () => {
+                console.log('[PRICE CHANGE] Accept button clicked for job:', job.id);
                 acceptBtn.disabled = true;
                 acceptBtn.textContent = 'Processing...';
                 try {
                   const token = localStorage.getItem('hustl_token');
-                  const response = await fetch(`${API_BASE}/jobs/${job.id}/accept-price-change`, {
+                  const apiBase = window.API_BASE || API_BASE || 'https://hustl-production.up.railway.app';
+                  console.log('[PRICE CHANGE] Calling API:', `${apiBase}/jobs/${job.id}/accept-price-change`);
+                  const response = await fetch(`${apiBase}/jobs/${job.id}/accept-price-change`, {
                     method: 'POST',
                     headers: {
                       'Authorization': `Bearer ${token}`,
@@ -11234,11 +11239,14 @@ async function renderJobs(reset = false) {
                 if (!confirm('Are you sure you want to decline this price change? The customer may unassign you.')) {
                   return;
                 }
+                console.log('[PRICE CHANGE] Decline button clicked for job:', job.id);
                 declineBtn.disabled = true;
                 declineBtn.textContent = 'Processing...';
                 try {
                   const token = localStorage.getItem('hustl_token');
-                  const response = await fetch(`${API_BASE}/jobs/${job.id}/decline-price-change`, {
+                  const apiBase = window.API_BASE || API_BASE || 'https://hustl-production.up.railway.app';
+                  console.log('[PRICE CHANGE] Calling API:', `${apiBase}/jobs/${job.id}/decline-price-change`);
+                  const response = await fetch(`${apiBase}/jobs/${job.id}/decline-price-change`, {
                     method: 'POST',
                     headers: {
                       'Authorization': `Bearer ${token}`,
@@ -11246,7 +11254,10 @@ async function renderJobs(reset = false) {
                     }
                   });
                   
+                  console.log('[PRICE CHANGE] Response status:', response.status);
                   if (response.ok) {
+                    const result = await response.json();
+                    console.log('[PRICE CHANGE] Decline success:', result);
                     showToast('Price change declined. Job remains at original price.');
                     // Close existing modal first
                     const existingModal = document.getElementById('jobDetailModal');
@@ -11260,12 +11271,13 @@ async function renderJobs(reset = false) {
                     }, 100);
                   } else {
                     const error = await response.json();
+                    console.error('[PRICE CHANGE] Decline error:', error);
                     showToast(error.error || 'Failed to decline price change');
                     declineBtn.disabled = false;
                     declineBtn.textContent = '✗ Decline';
                   }
                 } catch (error) {
-                  console.error('Error declining price change:', error);
+                  console.error('[PRICE CHANGE] Error declining price change:', error);
                   showToast('Error declining price change. Please try again.');
                   declineBtn.disabled = false;
                   declineBtn.textContent = '✗ Decline';
