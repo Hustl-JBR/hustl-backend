@@ -494,12 +494,22 @@ router.post('/change-password', authenticate, [
       message: error.message,
       stack: error.stack,
       name: error.name,
-      code: error.code
+      code: error.code,
+      userId: req.user?.id
     });
-    res.status(500).json({ 
+    
+    // Send detailed error in response for debugging
+    const errorResponse = {
       error: 'Internal server error',
-      message: process.env.NODE_ENV === 'development' ? error.message : 'Failed to change password. Please try again.'
-    });
+      message: error.message || 'Failed to change password. Please try again.',
+      details: process.env.NODE_ENV === 'development' ? {
+        name: error.name,
+        code: error.code,
+        stack: error.stack
+      } : undefined
+    };
+    
+    res.status(500).json(errorResponse);
   }
 });
 
