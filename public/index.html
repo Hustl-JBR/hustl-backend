@@ -10837,9 +10837,25 @@ async function renderJobs(reset = false) {
           timerSection.style.cssText = "margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; background: #fef3c7; padding: 1rem; border-radius: 8px; border: 2px solid #fbbf24;";
           
           const timerTitle = document.createElement("h2");
-          timerTitle.style.cssText = "margin: 0 0 0.75rem 0; font-size: 0.95rem; font-weight: 700; color: #92400e;";
+          timerTitle.style.cssText = "margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 700; color: #92400e;";
           timerTitle.textContent = "⏱️ Job Timer";
           timerSection.appendChild(timerTitle);
+          
+          // Show extension indicator (how many hours have been added) - right after title
+          const extensionIndicator = document.createElement("div");
+          extensionIndicator.id = `extensionIndicator-${job.id}`;
+          extensionIndicator.style.cssText = "font-size: 0.8rem; color: #059669; font-weight: 600; margin-bottom: 0.75rem; padding: 0.375rem 0.625rem; background: #d1fae5; border-radius: 6px; border: 1px solid #10b981; display: none;";
+          
+          // Check if extensions exist
+          const extensionPaymentIntents = parsedRequirements.extensionPaymentIntents || [];
+          const totalHoursAdded = extensionPaymentIntents.reduce((sum, ext) => sum + (Number(ext.hours) || 0), 0);
+          if (totalHoursAdded > 0) {
+            extensionIndicator.textContent = totalHoursAdded === 1 
+              ? `✅ Added 1 hour` 
+              : `✅ Added ${totalHoursAdded} hours`;
+            extensionIndicator.style.display = 'block';
+          }
+          timerSection.appendChild(extensionIndicator);
           
           // Get startedAt from requirements
           const startedAtStr = parsedRequirements.startedAt;
@@ -10954,9 +10970,9 @@ async function renderJobs(reset = false) {
                         if (extensionIndicator) {
                           const totalHoursAdded = parsedRequirements.extensionPaymentIntents.reduce((sum, ext) => sum + (Number(ext.hours) || 0), 0);
                           if (totalHoursAdded === 1) {
-                            extensionIndicator.textContent = `✅ You added 1 hour`;
+                            extensionIndicator.textContent = `✅ Added 1 hour`;
                           } else {
-                            extensionIndicator.textContent = `✅ You've added ${totalHoursAdded} hours`;
+                            extensionIndicator.textContent = `✅ Added ${totalHoursAdded} hours`;
                           }
                           extensionIndicator.style.display = 'block';
                         }
