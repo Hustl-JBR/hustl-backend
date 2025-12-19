@@ -264,7 +264,7 @@ async function sendPasswordResetEmail(email, name, resetUrl) {
   }
 }
 
-async function sendPasswordChangedEmail(email, name, newPassword) {
+async function sendPasswordChangedEmail(email, name) {
   if (!isEmailConfigured()) return;
   try {
     await resend.emails.send({
@@ -285,16 +285,15 @@ async function sendPasswordChangedEmail(email, name, newPassword) {
             </p>
             
             <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
-              Your password has been successfully changed. Here's your new password:
+              Your password has been successfully changed. You can now use your new password to log in.
             </p>
             
             <div style="background: #f0fdf4; border: 2px solid #10b981; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; text-align: center;">
-              <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: #065f46; font-size: 0.9rem;">Your New Password:</p>
-              <p style="margin: 0; font-size: 1.5rem; font-weight: 700; color: #047857; font-family: monospace; letter-spacing: 0.1em;">${newPassword}</p>
+              <p style="margin: 0; font-weight: 600; color: #065f46; font-size: 1rem;">✅ Password Successfully Changed</p>
             </div>
             
             <p style="color: #64748b; font-size: 0.9rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
-              Please save this password in a secure location. If you didn't make this change, please contact support immediately.
+              If you didn't make this change, please contact support immediately to secure your account.
             </p>
           </div>
         </div>
