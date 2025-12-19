@@ -12252,14 +12252,18 @@ async function renderJobs(reset = false) {
                 
                 currentOffset += result.reviews.length;
                 hasMoreReviews = result.hasMore && (currentOffset < result.total);
+                console.log('[PROFILE REVIEWS] Updated - currentOffset:', currentOffset, 'hasMoreReviews:', hasMoreReviews, 'result.total:', result.total);
                 
                 if (hasMoreReviews) {
                   loadMoreBtn.disabled = false;
                   loadMoreBtn.textContent = `Load more reviews (${result.total - currentOffset} more)`;
+                  console.log('[PROFILE REVIEWS] Button updated, remaining:', result.total - currentOffset);
                 } else {
+                  console.log('[PROFILE REVIEWS] No more reviews, removing button');
                   loadMoreBtn.remove();
                 }
               } else {
+                console.log('[PROFILE REVIEWS] No reviews in result, removing button');
                 loadMoreBtn.remove();
               }
             } catch (error) {
