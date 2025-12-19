@@ -10925,6 +10925,29 @@ async function renderJobs(reset = false) {
               }
             };
             
+            // Show max hours info
+            const maxHoursInfo = document.createElement("div");
+            maxHoursInfo.style.cssText = "font-size: 0.85rem; color: #92400e; margin-top: 0.5rem;";
+            maxHoursInfo.textContent = `Max hours: ${job.estHours || 0} hours`;
+            timerSection.appendChild(maxHoursInfo);
+            
+            // Show informational message about extending hours (calculate once outside updateTimer)
+            const startedAt = new Date(startedAtStr);
+            const now = new Date();
+            const elapsedMs = now.getTime() - startedAt.getTime();
+            const currentHours = elapsedMs / (1000 * 60 * 60);
+            const maxHours = job.estHours || 0;
+            const hoursRemaining = maxHours - currentHours;
+            const minutesRemaining = hoursRemaining * 60;
+            
+            if (minutesRemaining > 30 && isOwner) {
+              const infoMsg = document.createElement("div");
+              infoMsg.id = `timerInfo-${job.id}`;
+              infoMsg.style.cssText = "font-size: 0.8rem; color: #78350f; margin-top: 0.75rem; padding: 0.625rem; background: #fef3c7; border-radius: 6px; border: 1px solid #fbbf24; line-height: 1.4;";
+              infoMsg.innerHTML = `ℹ️ <strong>Tip:</strong> You can add more hours within the last 30 minutes if needed.`;
+              timerSection.appendChild(infoMsg);
+            }
+            
             updateTimer();
             const timerInterval = setInterval(updateTimer, 1000);
             
@@ -10939,21 +10962,6 @@ async function renderJobs(reset = false) {
             });
             
             timerSection.appendChild(timerDisplay);
-            
-            // Show max hours info
-            const maxHoursInfo = document.createElement("div");
-            maxHoursInfo.style.cssText = "font-size: 0.85rem; color: #92400e; margin-top: 0.5rem;";
-            maxHoursInfo.textContent = `Max hours: ${job.estHours || 0} hours`;
-            timerSection.appendChild(maxHoursInfo);
-            
-            // Show informational message about extending hours
-            if (minutesRemaining > 30 && isOwner) {
-              const infoMsg = document.createElement("div");
-              infoMsg.id = `timerInfo-${job.id}`;
-              infoMsg.style.cssText = "font-size: 0.8rem; color: #78350f; margin-top: 0.75rem; padding: 0.625rem; background: #fef3c7; border-radius: 6px; border: 1px solid #fbbf24; line-height: 1.4;";
-              infoMsg.innerHTML = `ℹ️ <strong>Tip:</strong> You can add more hours within the last 30 minutes if needed.`;
-              timerSection.appendChild(infoMsg);
-            }
           }
           
           jobDetailsBox.appendChild(timerSection);
