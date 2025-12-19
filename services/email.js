@@ -1153,6 +1153,57 @@ async function sendPriceChangeDeclinedEmail(email, name, jobTitle, jobId) {
   }
 }
 
+async function sendHoursExtendedEmail(email, name, jobTitle, jobId, hoursAdded, newMaxHours, customerName) {
+  if (!isEmailConfigured()) return;
+  try {
+    const manageJobsUrl = `https://hustljobs.com?view=manage-jobs&jobId=${jobId}`;
+    
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `⏱️ Hours Extended for "${jobTitle}"`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #ffffff; padding: 0;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">⏱️ Hours Extended</h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hey <strong>${name}</strong>! 👋
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              <strong>${customerName}</strong> has added ${hoursAdded} ${hoursAdded === 1 ? 'hour' : 'hours'} to the job <strong>"${jobTitle}"</strong>.
+            </p>
+            
+            <div style="background: #fef3c7; border: 2px solid #fbbf24; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; text-align: center;">
+              <p style="margin: 0; font-weight: 600; color: #92400e; font-size: 1rem;">
+                New Max Hours: <strong>${newMaxHours} ${newMaxHours === 1 ? 'hour' : 'hours'}</strong>
+              </p>
+            </div>
+            
+            <p style="color: #64748b; line-height: 1.6; margin-bottom: 1.5rem;">
+              You can continue working on the job. The customer will be charged for the additional time authorized.
+            </p>
+            
+            <div style="text-align: center; margin: 2rem 0;">
+              <a href="${manageJobsUrl}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+                View Job →
+              </a>
+            </div>
+          </div>
+        </div>
+      `,
+    });
+    console.log('[Email] Hours extended email sent successfully to:', email);
+  } catch (error) {
+    console.error('[Email] Send hours extended email error:', error);
+  }
+}
+
 module.exports = {
   sendSignupEmail,
   sendEmailVerificationEmail,
@@ -1183,6 +1234,7 @@ module.exports = {
   sendPriceChangeProposalEmail,
   sendPriceChangeAcceptedEmail,
   sendPriceChangeDeclinedEmail,
+  sendHoursExtendedEmail,
 };
 
 async function sendJobPostedEmail(email, name, jobTitle, jobId, jobDate, amount, payType, hourlyRate, estHours) {

@@ -774,6 +774,23 @@ router.post('/job/:jobId/extend-hours', authenticate, async (req, res) => {
         }
       });
 
+      // Send email notification to hustler
+      if (job.hustler && job.hustler.email && job.hustler.name && job.customer && job.customer.name) {
+        const { sendHoursExtendedEmail } = require('../services/email');
+        sendHoursExtendedEmail(
+          job.hustler.email,
+          job.hustler.name,
+          job.title,
+          job.id,
+          hoursToAdd,
+          newMaxHours,
+          job.customer.name
+        ).catch((emailError) => {
+          console.error('[HOURLY EXTENSION] Error sending email notification:', emailError);
+          // Don't fail the request if email fails
+        });
+      }
+
       res.json({
         success: true,
         message: `Hours extended by ${hoursToAdd}. New max: ${newMaxHours} hours.`,
