@@ -10775,7 +10775,10 @@ async function renderJobs(reset = false) {
         jobDetailsBox.appendChild(pricingSection);
         
         // 5.5. HOURLY JOB TIMER & EXTENSION (for hourly jobs in progress)
-        if (job.payType === 'hourly' && job.status === 'IN_PROGRESS' && job.startCodeVerified) {
+        // Check status in multiple formats (IN_PROGRESS, in_progress, etc.)
+        const isInProgress = (job.status === 'IN_PROGRESS' || job.status === 'in_progress' || (job.status && job.status.toUpperCase() === 'IN_PROGRESS'));
+        if (job.payType === 'hourly' && isInProgress && job.startCodeVerified) {
+          console.log('[TIMER] Showing timer for hourly job:', job.id, 'status:', job.status, 'startCodeVerified:', job.startCodeVerified);
           const timerSection = document.createElement("div");
           timerSection.style.cssText = "margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; background: #fef3c7; padding: 1rem; border-radius: 8px; border: 2px solid #fbbf24;";
           
@@ -10786,6 +10789,7 @@ async function renderJobs(reset = false) {
           
           // Get startedAt from requirements
           const startedAtStr = parsedRequirements.startedAt;
+          console.log('[TIMER] startedAtStr:', startedAtStr, 'parsedRequirements:', parsedRequirements);
           if (startedAtStr) {
             const timerDisplay = document.createElement("div");
             timerDisplay.id = `jobTimer-${job.id}`;
@@ -12050,9 +12054,10 @@ async function renderJobs(reset = false) {
         // Track current offset for pagination
         let currentOffset = reviews.length;
         let hasMoreReviews = totalReviews > reviews.length;
+        console.log('[PROFILE REVIEWS] Initial load - reviews:', reviews.length, 'totalReviews:', totalReviews, 'currentOffset:', currentOffset, 'hasMoreReviews:', hasMoreReviews);
         
-        // Helper function to create a review item element
-        const createReviewItem = (review) => {
+        // Helper function to create a review item element (must be accessible to click handler)
+        window.createProfileReviewItem = function(review) {
           const reviewItem = document.createElement("div");
           reviewItem.style.cssText = "padding: 1rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;";
           
@@ -12171,7 +12176,7 @@ async function renderJobs(reset = false) {
         
         if (reviews.length > 0) {
           reviews.forEach(review => {
-            const reviewItem = createReviewItem(review);
+            const reviewItem = window.createProfileReviewItem(review);
             reviewsList.appendChild(reviewItem);
           });
         } else {
@@ -12208,7 +12213,7 @@ async function renderJobs(reset = false) {
                   
                   let firstNewReview = null;
                   result.reviews.forEach(review => {
-                    const reviewItem = createReviewItem(review);
+                    const reviewItem = window.createProfileReviewItem(review);
                     reviewsList.appendChild(reviewItem);
                     if (!firstNewReview) {
                       firstNewReview = reviewItem;
