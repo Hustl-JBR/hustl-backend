@@ -20118,123 +20118,178 @@ async function renderJobs(reset = false) {
       });
     }
     
-    // Populate Jobs tab when clicked - Simple list (full management moved to Manage Jobs view)
+    // Populate Jobs tab when clicked - Tab switching like manage jobs
     const jobsTab = document.querySelector('.profile-tab[data-tab="jobs"]');
     if (jobsTab && !jobsTab.dataset.listenerAttached) {
       jobsTab.dataset.listenerAttached = 'true';
       jobsTab.addEventListener('click', async () => {
-        const postedJobsList = document.getElementById("postedJobsList");
-        const activeJobsList = document.getElementById("activeJobsList");
-        
-        if (postedJobsList && postedJobsList.innerHTML.includes("Loading")) {
-          try {
-            // Fetch user's jobs
-            const token = localStorage.getItem('hustl_token');
-            const response = await fetch(`${API_BASE}/jobs/my-jobs`, {
-              headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-            });
-            
-            if (!response.ok) throw new Error('Failed to fetch jobs');
-            const jobs = await response.json();
-            
-            // Separate posted jobs (as customer) from active jobs (as hustler)
-            // Filter out expired jobs from posted jobs
-            const now = new Date();
-            const postedJobs = jobs.filter(j => {
-              if (j.customerId !== user.id) return false;
-              // Filter out expired jobs
-              if (j.status === 'EXPIRED') return false;
-              // Also check if expiresAt has passed
-              if (j.expiresAt) {
-                const expirationDate = new Date(j.expiresAt);
-                if (expirationDate <= now) return false;
-              } else if (j.requirements?.expiresAt) {
-                try {
-                  const expirationDate = new Date(j.requirements.expiresAt);
-                  if (expirationDate <= now) return false;
-                } catch (e) {
-                  // Invalid date, continue
-                }
-              }
-              return true;
-            });
-            const activeJobs = jobs.filter(j => j.hustlerId === user.id && j.status !== 'PAID' && j.status !== 'CANCELLED');
-            
-            // Get all completed jobs (both posted and active)
-            const allCompletedJobs = [...postedJobs, ...activeJobs].filter(j => 
-              j.status === 'PAID' || j.status === 'COMPLETED_BY_HUSTLER' || j.status === 'AWAITING_CUSTOMER_CONFIRM'
-            ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            
-            // Render simple job list - just title and who completed
-            if (allCompletedJobs.length === 0) {
-              postedJobsList.innerHTML = `
-                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                  <div style="font-size: 2rem; margin-bottom: 0.5rem;">📋</div>
-                  <div>No completed jobs yet.</div>
-                </div>
-              `;
-              activeJobsList.innerHTML = '';
-            } else {
-              postedJobsList.innerHTML = "";
-              activeJobsList.innerHTML = "";
+        // Initialize profile job tabs switching
+        const profileJobTabs = document.querySelectorAll('.profile-tab[data-profile-job-tab]');
+        profileJobTabs.forEach(tab => {
+          if (!tab.dataset.listenerAttached) {
+            tab.dataset.listenerAttached = 'true';
+            tab.addEventListener('click', () => {
+              // Remove active class from all tabs
+              profileJobTabs.forEach(t => t.classList.remove('active'));
+              // Add active class to clicked tab
+              tab.classList.add('active');
               
-              const displayLimit = 3;
-              const jobsToShow = allCompletedJobs.slice(0, displayLimit);
-              const hasMore = allCompletedJobs.length > displayLimit;
+              // Hide all tab content
+              document.querySelectorAll('.profile-job-tab-content').forEach(content => {
+                content.style.display = 'none';
+              });
               
-              for (const job of jobsToShow) {
-                // Get who completed the job
-                let completedWith = 'Unknown';
-                if (job.customerId === user.id && job.hustler) {
-                  completedWith = job.hustler.name || 'Unknown hustler';
-                } else if (job.hustlerId === user.id && job.customer) {
-                  completedWith = job.customer.name || 'Unknown customer';
-                }
+              // Show selected tab content
+              const tabName = tab.dataset.profileJobTab;
+              const tabContentId = `profileJobTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}Content`;
+              const tabContent = document.getElementById(tabContentId);
+              if (tabContent) {
+                tabContent.style.display = 'block';
                 
-                const jobItem = document.createElement("div");
-                jobItem.style.cssText = "padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 0.75rem;";
-                jobItem.innerHTML = `
-                  <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem;">${job.title || 'Untitled Job'}</div>
-                  <div style="font-size: 0.85rem; color: var(--text-muted);">Completed with ${completedWith}</div>
-                `;
-                postedJobsList.appendChild(jobItem);
+                // Load jobs for that tab
+                loadProfileJobs(tabName, user);
               }
-              
-              if (hasMore) {
-                const loadMoreBtn = document.createElement("button");
-                loadMoreBtn.className = "btn btn-secondary";
-                loadMoreBtn.textContent = `Load more (${allCompletedJobs.length - displayLimit} more)`;
-                loadMoreBtn.style.cssText = "width: 100%; padding: 0.75rem; font-size: 0.95rem; margin-top: 0.5rem;";
-                loadMoreBtn.addEventListener("click", () => {
-                  // Show all jobs
-                  postedJobsList.innerHTML = "";
-                  for (const job of allCompletedJobs) {
-                    let completedWith = 'Unknown';
-                    if (job.customerId === user.id && job.hustler) {
-                      completedWith = job.hustler.name || 'Unknown hustler';
-                    } else if (job.hustlerId === user.id && job.customer) {
-                      completedWith = job.customer.name || 'Unknown customer';
-                    }
-                    
-                    const jobItem = document.createElement("div");
-                    jobItem.style.cssText = "padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 0.75rem;";
-                    jobItem.innerHTML = `
-                      <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem;">${job.title || 'Untitled Job'}</div>
-                      <div style="font-size: 0.85rem; color: var(--text-muted);">Completed with ${completedWith}</div>
-                    `;
-                    postedJobsList.appendChild(jobItem);
-                  }
-                });
-                postedJobsList.appendChild(loadMoreBtn);
-              }
+            });
+          }
+        });
+        
+        // Load initial tab (Posted)
+        loadProfileJobs('posted', user);
+      });
+    }
+    
+    // Function to load profile jobs for a specific tab
+    async function loadProfileJobs(tabName, user) {
+      const listId = `profile${tabName.charAt(0).toUpperCase() + tabName.slice(1)}JobsList`;
+      const jobsList = document.getElementById(listId);
+      if (!jobsList) return;
+      
+      // Check if already loaded
+      if (jobsList.dataset.loaded === 'true' && !jobsList.innerHTML.includes('Loading')) {
+        return;
+      }
+      
+      try {
+        jobsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>';
+        
+        const token = localStorage.getItem('hustl_token');
+        const response = await fetch(`${API_BASE}/jobs/my-jobs`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch jobs');
+        const allJobs = await response.json();
+        
+        let jobs = [];
+        const now = new Date();
+        
+        if (tabName === 'posted') {
+          // Posted jobs (as customer) - exclude expired and cancelled
+          jobs = allJobs.filter(j => {
+            if (j.customerId !== user.id) return false;
+            if (j.status === 'CANCELLED' || j.status === 'EXPIRED') return false;
+            if (j.status === 'PAID' || j.status === 'COMPLETED_BY_HUSTLER') return false;
+            if (j.expiresAt) {
+              const expirationDate = new Date(j.expiresAt);
+              if (expirationDate <= now) return false;
             }
-          } catch (error) {
-            console.error("Error loading jobs:", error);
-            if (postedJobsList) postedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Error loading jobs.</div>";
-            if (activeJobsList) activeJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Error loading jobs.</div>";
+            return true;
+          });
+        } else if (tabName === 'active') {
+          // Active jobs (as hustler) - in progress
+          jobs = allJobs.filter(j => {
+            if (j.hustlerId !== user.id) return false;
+            if (j.status === 'PAID' || j.status === 'CANCELLED' || j.status === 'EXPIRED') return false;
+            return j.status === 'ASSIGNED' || j.status === 'SCHEDULED' || j.status === 'IN_PROGRESS';
+          });
+        } else if (tabName === 'completed') {
+          // Completed jobs (both posted and active)
+          jobs = allJobs.filter(j => {
+            const isCustomer = j.customerId === user.id;
+            const isHustler = j.hustlerId === user.id;
+            if (!isCustomer && !isHustler) return false;
+            return j.status === 'PAID' || j.status === 'COMPLETED_BY_HUSTLER' || j.status === 'AWAITING_CUSTOMER_CONFIRM';
+          }).sort((a, b) => new Date(b.createdAt || b.updatedAt) - new Date(a.createdAt || a.updatedAt));
+        }
+        
+        // Render simplified job cards
+        if (jobs.length === 0) {
+          jobsList.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+              <div style="font-size: 2rem; margin-bottom: 0.5rem;">📋</div>
+              <div>No ${tabName} jobs yet.</div>
+            </div>
+          `;
+        } else {
+          jobsList.innerHTML = "";
+          
+          for (const job of jobs) {
+            // Determine if user is customer or hustler
+            const isCustomer = job.customerId === user.id;
+            const isHustler = job.hustlerId === user.id;
+            
+            // Get the other person's name
+            let otherPersonName = 'Unknown';
+            if (isCustomer && job.hustler) {
+              otherPersonName = job.hustler.name || 'Unknown hustler';
+            } else if (isHustler && job.customer) {
+              otherPersonName = job.customer.name || 'Unknown customer';
+            }
+            
+            // Calculate price (earned if hustler, paid if customer)
+            let price = 0;
+            let isWin = false;
+            if (isHustler && job.payment) {
+              price = Number(job.payment.amount || job.amount || 0);
+              isWin = job.status === 'PAID' || job.status === 'COMPLETED_BY_HUSTLER';
+            } else if (isCustomer && job.payment) {
+              price = Number(job.payment.total || job.amount || 0);
+              isWin = job.status === 'PAID';
+            } else {
+              price = Number(job.amount || 0);
+              isWin = job.status === 'PAID' || job.status === 'COMPLETED_BY_HUSTLER';
+            }
+            
+            const jobCard = document.createElement("div");
+            jobCard.style.cssText = "padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 0.75rem; cursor: pointer; transition: all 0.2s;";
+            jobCard.style.borderLeft = `4px solid ${isWin ? '#10b981' : '#ef4444'}`;
+            jobCard.addEventListener('click', () => {
+              if (typeof window.openJobDetails === 'function') {
+                window.openJobDetails(job.id);
+              }
+            });
+            jobCard.addEventListener('mouseenter', () => {
+              jobCard.style.background = '#f9fafb';
+              jobCard.style.transform = 'translateX(2px)';
+            });
+            jobCard.addEventListener('mouseleave', () => {
+              jobCard.style.background = 'white';
+              jobCard.style.transform = 'translateX(0)';
+            });
+            
+            jobCard.innerHTML = `
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-weight: 700; color: var(--text-main); font-size: 1rem; margin-bottom: 0.25rem; word-wrap: break-word;">${job.title || 'Untitled Job'}</div>
+                  <div style="font-size: 0.85rem; color: var(--text-muted);">${isCustomer ? 'Hustler' : 'Customer'}: ${otherPersonName}</div>
+                </div>
+                <div style="text-align: right; margin-left: 1rem; flex-shrink: 0;">
+                  <div style="font-size: 1.1rem; font-weight: 700; color: ${isWin ? '#10b981' : '#ef4444'};">
+                    ${isWin ? '+' : '-'}$${price.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            `;
+            
+            jobsList.appendChild(jobCard);
           }
         }
-      });
+        
+        jobsList.dataset.loaded = 'true';
+      } catch (error) {
+        console.error("Error loading profile jobs:", error);
+        jobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Error loading jobs.</div>";
+      }
     }
   }, 200);
   
