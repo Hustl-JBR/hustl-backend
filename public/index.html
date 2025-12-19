@@ -4911,12 +4911,12 @@
         <!-- Quick Stats -->
         <div id="profileQuickStats" class="profile-quick-stats"></div>
         
-        <!-- Tab Navigation -->
-        <div class="profile-tabs">
-          <button class="profile-tab active" data-tab="settings">⚙️ Settings</button>
-          <button class="profile-tab" data-tab="ratings">⭐ View Ratings</button>
-          <button class="profile-tab" data-tab="jobs">📋 Jobs</button>
-          <button class="profile-tab" data-tab="earnings">💰 Earnings</button>
+        <!-- Tab Navigation (styled like manage jobs tabs) -->
+        <div class="profile-tabs" style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.75rem;">
+          <button class="profile-tab manage-tab active" data-tab="settings" style="position: relative;">⚙️ Settings</button>
+          <button class="profile-tab manage-tab" data-tab="ratings" style="position: relative;">⭐ View Ratings</button>
+          <button class="profile-tab manage-tab" data-tab="jobs" style="position: relative;">📋 Jobs</button>
+          <button class="profile-tab manage-tab" data-tab="earnings" style="position: relative;">💰 Earnings</button>
         </div>
         
         <!-- Settings Tab -->
@@ -5008,38 +5008,8 @@
         
         <!-- Jobs Tab -->
         <div id="profileTabJobs" class="profile-tab-content" style="display: none;">
-          <!-- Jobs Tabs (like manage jobs) -->
-          <div class="profile-tabs" style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border);">
-            <button class="profile-tab manage-tab active" data-profile-job-tab="posted" id="profileJobTabPosted" style="position: relative;">
-              📋 Posted
-            </button>
-            <button class="profile-tab manage-tab" data-profile-job-tab="active" id="profileJobTabActive" style="position: relative;">
-              💼 Active
-            </button>
-            <button class="profile-tab manage-tab" data-profile-job-tab="completed" id="profileJobTabCompleted" style="position: relative;">
-              ✅ Completed
-            </button>
-          </div>
-          
-          <!-- Posted Jobs Tab Content -->
-          <div id="profileJobTabPostedContent" class="profile-job-tab-content" style="display: block;">
-            <div id="profilePostedJobsList" style="padding: 0;">
-              <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
-            </div>
-          </div>
-          
-          <!-- Active Jobs Tab Content -->
-          <div id="profileJobTabActiveContent" class="profile-job-tab-content" style="display: none;">
-            <div id="profileActiveJobsList" style="padding: 0;">
-              <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
-            </div>
-          </div>
-          
-          <!-- Completed Jobs Tab Content -->
-          <div id="profileJobTabCompletedContent" class="profile-job-tab-content" style="display: none;">
-            <div id="profileCompletedJobsList" style="padding: 0;">
-              <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
-            </div>
+          <div id="profileJobsList" style="padding: 0;">
+            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>
           </div>
         </div>
         
@@ -20118,59 +20088,24 @@ async function renderJobs(reset = false) {
       });
     }
     
-    // Populate Jobs tab when clicked - Tab switching like manage jobs
+    // Populate Jobs tab when clicked - All jobs with pagination
     const jobsTab = document.querySelector('.profile-tab[data-tab="jobs"]');
     if (jobsTab && !jobsTab.dataset.listenerAttached) {
       jobsTab.dataset.listenerAttached = 'true';
       jobsTab.addEventListener('click', async () => {
-        // Initialize profile job tabs switching
-        const profileJobTabs = document.querySelectorAll('.profile-tab[data-profile-job-tab]');
-        profileJobTabs.forEach(tab => {
-          if (!tab.dataset.listenerAttached) {
-            tab.dataset.listenerAttached = 'true';
-            tab.addEventListener('click', () => {
-              // Remove active class from all tabs
-              profileJobTabs.forEach(t => t.classList.remove('active'));
-              // Add active class to clicked tab
-              tab.classList.add('active');
-              
-              // Hide all tab content
-              document.querySelectorAll('.profile-job-tab-content').forEach(content => {
-                content.style.display = 'none';
-              });
-              
-              // Show selected tab content
-              const tabName = tab.dataset.profileJobTab;
-              const tabContentId = `profileJobTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}Content`;
-              const tabContent = document.getElementById(tabContentId);
-              if (tabContent) {
-                tabContent.style.display = 'block';
-                
-                // Load jobs for that tab
-                loadProfileJobs(tabName, user);
-              }
-            });
-          }
-        });
-        
-        // Load initial tab (Posted)
-        loadProfileJobs('posted', user);
+        loadAllProfileJobs(user, 0);
       });
     }
     
-    // Function to load profile jobs for a specific tab
-    async function loadProfileJobs(tabName, user) {
-      const listId = `profile${tabName.charAt(0).toUpperCase() + tabName.slice(1)}JobsList`;
-      const jobsList = document.getElementById(listId);
+    // Function to load all profile jobs with pagination (10 at a time)
+    async function loadAllProfileJobs(user, offset = 0) {
+      const jobsList = document.getElementById("profileJobsList");
       if (!jobsList) return;
       
-      // Check if already loaded
-      if (jobsList.dataset.loaded === 'true' && !jobsList.innerHTML.includes('Loading')) {
-        return;
-      }
-      
       try {
-        jobsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>';
+        if (offset === 0) {
+          jobsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading...</div>';
+        }
         
         const token = localStorage.getItem('hustl_token');
         const response = await fetch(`${API_BASE}/jobs/my-jobs`, {
@@ -20180,65 +20115,47 @@ async function renderJobs(reset = false) {
         if (!response.ok) throw new Error('Failed to fetch jobs');
         const allJobs = await response.json();
         
-        let jobs = [];
-        const now = new Date();
-        
-        if (tabName === 'posted') {
-          // Posted jobs (as customer) - exclude expired and cancelled
-          jobs = allJobs.filter(j => {
-            if (j.customerId !== user.id) return false;
-            if (j.status === 'CANCELLED' || j.status === 'EXPIRED') return false;
-            if (j.status === 'PAID' || j.status === 'COMPLETED_BY_HUSTLER') return false;
-            if (j.expiresAt) {
-              const expirationDate = new Date(j.expiresAt);
-              if (expirationDate <= now) return false;
-            }
-            return true;
-          });
-        } else if (tabName === 'active') {
-          // Active jobs (as hustler) - in progress
-          jobs = allJobs.filter(j => {
-            if (j.hustlerId !== user.id) return false;
-            if (j.status === 'PAID' || j.status === 'CANCELLED' || j.status === 'EXPIRED') return false;
-            return j.status === 'ASSIGNED' || j.status === 'SCHEDULED' || j.status === 'IN_PROGRESS';
-          });
-        } else if (tabName === 'completed') {
-          // Completed jobs (both posted and active)
-          jobs = allJobs.filter(j => {
+        // Get all jobs (both as customer and hustler), sorted by most recent
+        const jobs = allJobs
+          .filter(j => {
             const isCustomer = j.customerId === user.id;
             const isHustler = j.hustlerId === user.id;
-            if (!isCustomer && !isHustler) return false;
-            return j.status === 'PAID' || j.status === 'COMPLETED_BY_HUSTLER' || j.status === 'AWAITING_CUSTOMER_CONFIRM';
-          }).sort((a, b) => new Date(b.createdAt || b.updatedAt) - new Date(a.createdAt || a.updatedAt));
+            return isCustomer || isHustler;
+          })
+          .sort((a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0));
+        
+        // Get jobs for current page (10 at a time)
+        const pageSize = 10;
+        const jobsToShow = jobs.slice(offset, offset + pageSize);
+        const hasMore = jobs.length > offset + pageSize;
+        
+        // Clear loading message on first load
+        if (offset === 0) {
+          jobsList.innerHTML = "";
         }
         
-        // Render simplified job cards
-        if (jobs.length === 0) {
-          jobsList.innerHTML = `
-            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
-              <div style="font-size: 2rem; margin-bottom: 0.5rem;">📋</div>
-              <div>No ${tabName} jobs yet.</div>
-            </div>
-          `;
-        } else {
-          jobsList.innerHTML = "";
+        // Render job cards
+        for (const job of jobsToShow) {
+          // Determine if user is customer or hustler
+          const isCustomer = job.customerId === user.id;
+          const isHustler = job.hustlerId === user.id;
           
-          for (const job of jobs) {
-            // Determine if user is customer or hustler
-            const isCustomer = job.customerId === user.id;
-            const isHustler = job.hustlerId === user.id;
-            
-            // Get the other person's name
-            let otherPersonName = 'Unknown';
-            if (isCustomer && job.hustler) {
-              otherPersonName = job.hustler.name || 'Unknown hustler';
-            } else if (isHustler && job.customer) {
-              otherPersonName = job.customer.name || 'Unknown customer';
-            }
-            
-            // Calculate price (earned if hustler, paid if customer)
-            let price = 0;
-            let isWin = false;
+          // Get the other person's name
+          let otherPersonName = 'Unknown';
+          if (isCustomer && job.hustler) {
+            otherPersonName = job.hustler.name || 'Unknown hustler';
+          } else if (isHustler && job.customer) {
+            otherPersonName = job.customer.name || 'Unknown customer';
+          }
+          
+          // Calculate price (earned if hustler, paid if customer)
+          // Only show price if job is paid/completed
+          let price = 0;
+          let isWin = false;
+          let showPrice = false;
+          
+          if (job.status === 'PAID' || job.status === 'COMPLETED_BY_HUSTLER' || job.status === 'AWAITING_CUSTOMER_CONFIRM') {
+            showPrice = true;
             if (isHustler && job.payment) {
               price = Number(job.payment.amount || job.amount || 0);
               isWin = job.status === 'PAID' || job.status === 'COMPLETED_BY_HUSTLER';
@@ -20249,40 +20166,72 @@ async function renderJobs(reset = false) {
               price = Number(job.amount || 0);
               isWin = job.status === 'PAID' || job.status === 'COMPLETED_BY_HUSTLER';
             }
-            
-            const jobCard = document.createElement("div");
-            jobCard.style.cssText = "padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 0.75rem; cursor: pointer; transition: all 0.2s;";
+          }
+          
+          const jobCard = document.createElement("div");
+          jobCard.style.cssText = "padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 0.75rem; cursor: pointer; transition: all 0.2s;";
+          if (showPrice) {
             jobCard.style.borderLeft = `4px solid ${isWin ? '#10b981' : '#ef4444'}`;
-            jobCard.addEventListener('click', () => {
-              if (typeof window.openJobDetails === 'function') {
-                window.openJobDetails(job.id);
-              }
-            });
-            jobCard.addEventListener('mouseenter', () => {
-              jobCard.style.background = '#f9fafb';
-              jobCard.style.transform = 'translateX(2px)';
-            });
-            jobCard.addEventListener('mouseleave', () => {
-              jobCard.style.background = 'white';
-              jobCard.style.transform = 'translateX(0)';
-            });
-            
-            jobCard.innerHTML = `
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-                <div style="flex: 1; min-width: 0;">
-                  <div style="font-weight: 700; color: var(--text-main); font-size: 1rem; margin-bottom: 0.25rem; word-wrap: break-word;">${job.title || 'Untitled Job'}</div>
-                  <div style="font-size: 0.85rem; color: var(--text-muted);">${isCustomer ? 'Hustler' : 'Customer'}: ${otherPersonName}</div>
-                </div>
+          }
+          jobCard.addEventListener('click', () => {
+            if (typeof window.openJobDetails === 'function') {
+              window.openJobDetails(job.id);
+            }
+          });
+          jobCard.addEventListener('mouseenter', () => {
+            jobCard.style.background = '#f9fafb';
+            jobCard.style.transform = 'translateX(2px)';
+          });
+          jobCard.addEventListener('mouseleave', () => {
+            jobCard.style.background = 'white';
+            jobCard.style.transform = 'translateX(0)';
+          });
+          
+          jobCard.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 700; color: var(--text-main); font-size: 1rem; margin-bottom: 0.25rem; word-wrap: break-word;">${job.title || 'Untitled Job'}</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">${isCustomer ? 'Hustler' : 'Customer'}: ${otherPersonName}</div>
+              </div>
+              ${showPrice ? `
                 <div style="text-align: right; margin-left: 1rem; flex-shrink: 0;">
                   <div style="font-size: 1.1rem; font-weight: 700; color: ${isWin ? '#10b981' : '#ef4444'};">
                     ${isWin ? '+' : '-'}$${price.toFixed(2)}
                   </div>
                 </div>
-              </div>
-            `;
-            
-            jobsList.appendChild(jobCard);
+              ` : ''}
+            </div>
+          `;
+          
+          jobsList.appendChild(jobCard);
+        }
+        
+        // Add "Load More" button if there are more jobs
+        if (hasMore) {
+          // Remove existing load more button if any
+          const existingBtn = document.getElementById('profileJobsLoadMore');
+          if (existingBtn) {
+            existingBtn.remove();
           }
+          
+          const loadMoreBtn = document.createElement("button");
+          loadMoreBtn.id = 'profileJobsLoadMore';
+          loadMoreBtn.className = "btn btn-secondary";
+          loadMoreBtn.textContent = `Load More (${jobs.length - offset - pageSize} more)`;
+          loadMoreBtn.style.cssText = "width: 100%; padding: 0.75rem; font-size: 0.95rem; margin-top: 0.5rem;";
+          loadMoreBtn.addEventListener("click", () => {
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.textContent = 'Loading...';
+            loadAllProfileJobs(user, offset + pageSize);
+          });
+          jobsList.appendChild(loadMoreBtn);
+        } else if (offset === 0 && jobs.length === 0) {
+          jobsList.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+              <div style="font-size: 2rem; margin-bottom: 0.5rem;">📋</div>
+              <div>No jobs yet.</div>
+            </div>
+          `;
         }
         
         jobsList.dataset.loaded = 'true';
