@@ -12223,7 +12223,12 @@ async function renderJobs(reset = false) {
                   }
                   
                   let firstNewReview = null;
+                  console.log('[PROFILE REVIEWS] Appending', result.reviews.length, 'new reviews');
                   result.reviews.forEach(review => {
+                    if (!window.createProfileReviewItem) {
+                      console.error('[PROFILE REVIEWS] createProfileReviewItem not found!');
+                      return;
+                    }
                     const reviewItem = window.createProfileReviewItem(review);
                     reviewsList.appendChild(reviewItem);
                     if (!firstNewReview) {
