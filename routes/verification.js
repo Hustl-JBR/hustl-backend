@@ -287,15 +287,36 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       const hourlyRate = Number(job.hourlyRate);
       actualJobAmount = actualHours * hourlyRate;
       
-      // Ensure we don't charge more than the max authorized amount
-      const maxAmount = Number(job.payment.amount);
-      if (actualJobAmount > maxAmount) {
-        console.warn(`[HOURLY JOB] Actual amount ($${actualJobAmount}) exceeds max ($${maxAmount}). Capping to max.`);
-        actualJobAmount = maxAmount;
-        actualHours = maxAmount / hourlyRate; // Recalculate hours based on cap
+      // Get current max hours (may have been extended)
+      const currentMaxHours = job.estHours || 0;
+      
+      // HARD LIMIT: Block completion if max hours exceeded without extension
+      if (actualHours > currentMaxHours) {
+        return res.status(400).json({ 
+          error: `Cannot complete job: ${actualHours.toFixed(2)} hours worked exceeds max ${currentMaxHours} hours. Customer must extend hours first.`,
+          actualHours: actualHours,
+          maxHours: currentMaxHours,
+          exceeded: true
+        });
       }
       
-      console.log(`[HOURLY JOB] Worked ${actualHours} hrs × $${hourlyRate}/hr = $${actualJobAmount.toFixed(2)}`);
+      // Calculate total authorized amount (original + extensions)
+      let totalAuthorizedAmount = Number(job.payment.amount);
+      const extensionPaymentIntents = requirements.extensionPaymentIntents || [];
+      
+      // Sum up all extension amounts
+      extensionPaymentIntents.forEach(ext => {
+        totalAuthorizedAmount += Number(ext.amount || 0);
+      });
+      
+      // Ensure we don't charge more than the total authorized amount
+      if (actualJobAmount > totalAuthorizedAmount) {
+        console.warn(`[HOURLY JOB] Actual amount ($${actualJobAmount}) exceeds total authorized ($${totalAuthorizedAmount}). Capping to authorized.`);
+        actualJobAmount = totalAuthorizedAmount;
+        actualHours = totalAuthorizedAmount / hourlyRate; // Recalculate hours based on cap
+      }
+      
+      console.log(`[HOURLY JOB] Worked ${actualHours} hrs × $${hourlyRate}/hr = $${actualJobAmount.toFixed(2)} (max authorized: $${totalAuthorizedAmount.toFixed(2)})`);
     } else {
       // Flat job: use the pre-authorized amount
       actualJobAmount = Number(job.payment.amount);
@@ -314,19 +335,71 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
     }
 
     // Release payment to hustler (capture payment intent and transfer to hustler)
-    const { capturePaymentIntent, transferToHustler } = require('../services/stripe');
+    const { capturePaymentIntent, transferToHustler, createRefund } = require('../services/stripe');
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
     
     try {
-      // Capture the payment intent (partial capture for hourly jobs)
-      if (job.payment.providerId) {
-        if (job.payType === 'hourly') {
-          // Partial capture: only capture the actual amount worked
-          await capturePaymentIntent(job.payment.providerId, actualJobAmount);
-          console.log(`[HOURLY JOB] Captured $${actualJobAmount.toFixed(2)} (authorized $${Number(job.payment.amount).toFixed(2)})`);
-        } else {
-          // Full capture for flat jobs
-          await capturePaymentIntent(job.payment.providerId);
+      // For hourly jobs: Capture actual amount from all payment intents
+      if (job.payType === 'hourly' && job.payment.providerId) {
+        const requirements = job.requirements || {};
+        const extensionPaymentIntents = requirements.extensionPaymentIntents || [];
+        
+        // Calculate how much to capture from original payment intent
+        const originalAuthorized = Number(job.payment.amount);
+        let remainingToCapture = actualJobAmount;
+        let capturedFromOriginal = 0;
+        
+        // First, capture from original payment intent (up to its authorized amount)
+        if (remainingToCapture > 0 && originalAuthorized > 0) {
+          capturedFromOriginal = Math.min(remainingToCapture, originalAuthorized);
+          await capturePaymentIntent(job.payment.providerId, capturedFromOriginal);
+          remainingToCapture -= capturedFromOriginal;
+          console.log(`[HOURLY JOB] Captured $${capturedFromOriginal.toFixed(2)} from original payment intent`);
         }
+        
+        // Then capture from extension payment intents if needed
+        for (const ext of extensionPaymentIntents) {
+          if (remainingToCapture <= 0) break;
+          
+          const extAmount = Number(ext.amount || 0);
+          const extTotal = Number(ext.total || 0);
+          const extPaymentIntentId = ext.paymentIntentId;
+          
+          if (extPaymentIntentId && extAmount > 0) {
+            // Calculate proportional capture from this extension
+            const captureFromExt = Math.min(remainingToCapture, extAmount);
+            await capturePaymentIntent(extPaymentIntentId, captureFromExt);
+            remainingToCapture -= captureFromExt;
+            console.log(`[HOURLY JOB] Captured $${captureFromExt.toFixed(2)} from extension payment intent ${extPaymentIntentId}`);
+            
+            // Refund unused portion of this extension
+            const unusedFromExt = extAmount - captureFromExt;
+            if (unusedFromExt > 0.01) { // Only refund if more than 1 cent
+              try {
+                await createRefund(extPaymentIntentId, unusedFromExt);
+                console.log(`[HOURLY JOB] Refunded $${unusedFromExt.toFixed(2)} from extension payment intent`);
+              } catch (refundError) {
+                console.error(`[HOURLY JOB] Error refunding extension:`, refundError);
+              }
+            }
+          }
+        }
+        
+        // Refund unused portion of original payment intent
+        const unusedFromOriginal = originalAuthorized - capturedFromOriginal;
+        if (unusedFromOriginal > 0.01) { // Only refund if more than 1 cent
+          try {
+            await createRefund(job.payment.providerId, unusedFromOriginal);
+            console.log(`[HOURLY JOB] Refunded $${unusedFromOriginal.toFixed(2)} from original payment intent`);
+          } catch (refundError) {
+            console.error(`[HOURLY JOB] Error refunding original:`, refundError);
+          }
+        }
+        
+        console.log(`[HOURLY JOB] Total captured: $${actualJobAmount.toFixed(2)}`);
+      } else if (job.payment.providerId) {
+        // Full capture for flat jobs
+        await capturePaymentIntent(job.payment.providerId);
       }
 
       // Transfer to hustler's Stripe Connect account (minus 12% fee)
@@ -555,6 +628,169 @@ router.post('/job/:jobId/regenerate-completion-code', authenticate, async (req, 
   } catch (error) {
     console.error('Error regenerating completion code:', error);
     res.status(500).json({ error: 'Failed to regenerate completion code' });
+  }
+});
+
+// ============================================
+// POST /verification/job/:jobId/extend-hours
+// Customer extends max hours for hourly job (before reaching limit)
+// ============================================
+router.post('/job/:jobId/extend-hours', authenticate, async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const { hours } = req.body; // Number of hours to add (default 1)
+    const userId = req.user.id;
+
+    if (!hours || hours <= 0 || !Number.isInteger(Number(hours))) {
+      return res.status(400).json({ error: 'Hours must be a positive integer' });
+    }
+
+    const hoursToAdd = parseInt(hours);
+
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: { payment: true }
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    // Only the customer can extend hours
+    if (job.customerId !== userId) {
+      return res.status(403).json({ error: 'Only the customer can extend hours' });
+    }
+
+    // Job must be hourly
+    if (job.payType !== 'hourly') {
+      return res.status(400).json({ error: 'Can only extend hours for hourly jobs' });
+    }
+
+    // Job must be IN_PROGRESS (start code verified)
+    if (job.status !== 'IN_PROGRESS' || !job.startCodeVerified) {
+      return res.status(400).json({ error: 'Job must be in progress to extend hours' });
+    }
+
+    // Check current hours worked
+    const requirements = job.requirements || {};
+    const startedAtStr = requirements.startedAt;
+    
+    if (!startedAtStr) {
+      return res.status(400).json({ error: 'Job start time not found' });
+    }
+
+    const startedAt = new Date(startedAtStr);
+    const now = new Date();
+    const currentHours = (now - startedAt) / (1000 * 60 * 60);
+    const currentMaxHours = job.estHours || 0;
+
+    // Check if we're approaching or at max hours (allow extension if within 0.5 hours of max)
+    if (currentHours >= currentMaxHours - 0.5) {
+      // Calculate additional amount needed
+      const hourlyRate = Number(job.hourlyRate);
+      const additionalAmount = hoursToAdd * hourlyRate;
+      const tipPercent = Math.min(parseFloat(job.tipPercent || 0), 25);
+      const tipAmount = Math.min(additionalAmount * (tipPercent / 100), 50);
+      const customerFee = Math.min(Math.max(additionalAmount * 0.03, 1), 10);
+      const totalAdditional = additionalAmount + tipAmount + customerFee;
+
+      // Create new payment intent for extension amount
+      const { createPaymentIntent } = require('../services/stripe');
+      const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+      const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+      let extensionPaymentIntentId = null;
+
+      if (!skipStripeCheck) {
+        if (!process.env.STRIPE_SECRET_KEY) {
+          return res.status(500).json({ error: 'Payment system not configured' });
+        }
+
+        try {
+          const extensionPaymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(totalAdditional * 100),
+            currency: 'usd',
+            capture_method: 'manual',
+            automatic_payment_methods: { enabled: true },
+            metadata: {
+              jobId: job.id,
+              customerId: userId,
+              hustlerId: job.hustlerId,
+              amount: additionalAmount.toString(),
+              tip: tipAmount.toString(),
+              customerFee: customerFee.toString(),
+              payType: 'hourly',
+              extension: 'true',
+              hoursAdded: hoursToAdd.toString(),
+            },
+          });
+
+          extensionPaymentIntentId = extensionPaymentIntent.id;
+          console.log(`[HOURLY EXTENSION] Created payment intent: ${extensionPaymentIntentId} for ${hoursToAdd} hours ($${totalAdditional.toFixed(2)})`);
+        } catch (stripeError) {
+          console.error('[HOURLY EXTENSION] Stripe error:', stripeError);
+          return res.status(500).json({ error: 'Failed to authorize extension payment: ' + stripeError.message });
+        }
+      } else {
+        // Test mode
+        extensionPaymentIntentId = `pi_test_ext_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        console.log(`[HOURLY EXTENSION] Test mode - fake payment intent: ${extensionPaymentIntentId}`);
+      }
+
+      // Store extension payment intent IDs in requirements
+      const extensionPaymentIntents = requirements.extensionPaymentIntents || [];
+      extensionPaymentIntents.push({
+        paymentIntentId: extensionPaymentIntentId,
+        hours: hoursToAdd,
+        amount: additionalAmount,
+        tip: tipAmount,
+        customerFee: customerFee,
+        total: totalAdditional,
+        createdAt: new Date().toISOString()
+      });
+
+      // Update job with new max hours and extension payment intents
+      const newMaxHours = currentMaxHours + hoursToAdd;
+      await prisma.job.update({
+        where: { id: jobId },
+        data: {
+          estHours: newMaxHours,
+          requirements: {
+            ...requirements,
+            extensionPaymentIntents: extensionPaymentIntents,
+            lastExtendedAt: new Date().toISOString()
+          }
+        }
+      });
+
+      // Update payment record total (for reference, actual capture happens on completion)
+      await prisma.payment.update({
+        where: { id: job.payment.id },
+        data: {
+          amount: Number(job.payment.amount) + additionalAmount,
+          tip: Number(job.payment.tip) + tipAmount,
+          feeCustomer: Number(job.payment.feeCustomer) + customerFee,
+          total: Number(job.payment.total) + totalAdditional,
+        }
+      });
+
+      res.json({
+        success: true,
+        message: `Hours extended by ${hoursToAdd}. New max: ${newMaxHours} hours.`,
+        newMaxHours: newMaxHours,
+        additionalAmount: additionalAmount,
+        totalAdditional: totalAdditional,
+        paymentIntentId: extensionPaymentIntentId
+      });
+    } else {
+      return res.status(400).json({ 
+        error: `Cannot extend hours yet. Current: ${currentHours.toFixed(2)}h, Max: ${currentMaxHours}h. Extend when within 0.5 hours of max.` 
+      });
+    }
+
+  } catch (error) {
+    console.error('Error extending hours:', error);
+    res.status(500).json({ error: 'Failed to extend hours' });
   }
 });
 
