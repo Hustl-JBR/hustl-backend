@@ -11140,8 +11140,18 @@ async function renderJobs(reset = false) {
         
         // 8.5. PRICE CHANGE PROPOSAL UI (for hustler to accept/decline when job is scheduled/assigned)
         // Note: requirements and parsedRequirements are already declared above
-        const proposedPriceChangeHustler = parsedRequirements.proposedPriceChange;
+        const proposedPriceChangeHustler = parsedRequirements?.proposedPriceChange;
+        console.log('[PRICE CHANGE] Checking conditions:', {
+          isHustler,
+          hustlerId: job.hustlerId,
+          userId: user?.id,
+          status: job.status,
+          startCodeVerified: job.startCodeVerified,
+          proposedPriceChange: proposedPriceChangeHustler,
+          statusCheck: proposedPriceChangeHustler?.status
+        });
         if (isHustler && job.hustlerId === user?.id && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified && proposedPriceChangeHustler && proposedPriceChangeHustler.status === 'PENDING') {
+          console.log('[PRICE CHANGE] Showing price change section for hustler');
           const priceChangeSectionHustler = document.createElement("div");
           priceChangeSectionHustler.style.cssText = "margin-bottom: 1rem; padding: 1rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 2px solid #f59e0b;";
           
@@ -11189,9 +11199,31 @@ async function renderJobs(reset = false) {
             const declineBtn = document.getElementById(`declinePriceChangeBtn-${job.id}`);
             
             console.log('[PRICE CHANGE] Looking for buttons:', `acceptPriceChangeBtn-${job.id}`, acceptBtn, declineBtn);
+            console.log('[PRICE CHANGE] Button elements found:', { acceptBtn: !!acceptBtn, declineBtn: !!declineBtn });
             
-            if (acceptBtn) {
-              acceptBtn.addEventListener('click', async () => {
+            if (!acceptBtn || !declineBtn) {
+              console.error('[PRICE CHANGE] Buttons not found! Retrying...');
+              // Retry after a longer delay
+              setTimeout(() => {
+                const retryAcceptBtn = document.getElementById(`acceptPriceChangeBtn-${job.id}`);
+                const retryDeclineBtn = document.getElementById(`declinePriceChangeBtn-${job.id}`);
+                console.log('[PRICE CHANGE] Retry - buttons found:', { acceptBtn: !!retryAcceptBtn, declineBtn: !!retryDeclineBtn });
+                if (retryAcceptBtn && retryDeclineBtn) {
+                  attachPriceChangeHandlers(retryAcceptBtn, retryDeclineBtn, job);
+                }
+              }, 500);
+              return;
+            }
+            
+            attachPriceChangeHandlers(acceptBtn, declineBtn, job);
+          }, 100);
+          
+          // Helper function to attach event handlers
+          function attachPriceChangeHandlers(acceptBtn, declineBtn, job) {
+            
+            acceptBtn.addEventListener('click', async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
                 console.log('[PRICE CHANGE] Accept button clicked for job:', job.id);
                 acceptBtn.disabled = true;
                 acceptBtn.textContent = 'Processing...';
@@ -11234,8 +11266,9 @@ async function renderJobs(reset = false) {
               });
             }
             
-            if (declineBtn) {
-              declineBtn.addEventListener('click', async () => {
+            declineBtn.addEventListener('click', async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
                 if (!confirm('Are you sure you want to decline this price change? The customer may unassign you.')) {
                   return;
                 }
