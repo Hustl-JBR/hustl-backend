@@ -1520,6 +1520,19 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
       }
     }
     
+    console.log('[PRICE CHANGE] Updating job with:', {
+      jobId: req.params.id,
+      updateData,
+      newRequirements: {
+        ...existingRequirements,
+        proposedPriceChange: {
+          ...proposedPrice,
+          status: 'ACCEPTED',
+          acceptedAt: new Date().toISOString()
+        }
+      }
+    });
+    
     const updatedJob = await prisma.job.update({
       where: { id: req.params.id },
       data: {
@@ -1537,6 +1550,8 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
         customer: { select: { id: true, name: true, email: true } }
       }
     });
+    
+    console.log('[PRICE CHANGE] Job updated successfully:', updatedJob.id);
 
     // Update payment record
     if (job.payment) {
@@ -1576,10 +1591,18 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
       newAmount: newJobAmount
     });
   } catch (error) {
-    console.error('Accept price change error:', error);
+    console.error('[PRICE CHANGE] Accept price change error:', error);
+    console.error('[PRICE CHANGE] Error stack:', error.stack);
+    console.error('[PRICE CHANGE] Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      type: error.type
+    });
     res.status(500).json({ 
       error: 'Internal server error',
-      message: error.message 
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
