@@ -11913,119 +11913,130 @@ async function renderJobs(reset = false) {
         reviewsTitle.textContent = `Reviews (${totalReviews})`;
         reviewsSection.appendChild(reviewsTitle);
         
+        // Track current offset for pagination
+        let currentOffset = reviews.length;
+        let hasMoreReviews = totalReviews > reviews.length;
+        
+        // Helper function to create a review item element
+        const createReviewItem = (review) => {
+          const reviewItem = document.createElement("div");
+          reviewItem.style.cssText = "padding: 1rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;";
+          
+          // Reviewer info
+          const reviewerInfo = document.createElement("div");
+          reviewerInfo.style.cssText = "display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;";
+          
+          const reviewerPic = document.createElement("img");
+          reviewerPic.style.cssText = "width: 32px; height: 32px; border-radius: 50%; object-fit: cover;";
+          reviewerPic.src = review.reviewer?.photoUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(review.reviewer?.name || "User") + "&background=6366f1&color=fff&size=128";
+          reviewerPic.alt = review.reviewer?.name || "Reviewer";
+          
+          const reviewerName = document.createElement("span");
+          reviewerName.style.cssText = "font-size: 0.9rem; font-weight: 600; color: var(--text-main);";
+          reviewerName.textContent = review.reviewer?.name || "Anonymous";
+          
+          const reviewStars = document.createElement("span");
+          reviewStars.style.cssText = "margin-left: auto; font-size: 0.9rem; color: #fbbf24;";
+          reviewStars.textContent = "★".repeat(review.rating || review.stars || 5);
+          
+          reviewerInfo.appendChild(reviewerPic);
+          reviewerInfo.appendChild(reviewerName);
+          reviewerInfo.appendChild(reviewStars);
+          reviewItem.appendChild(reviewerInfo);
+          
+          // Review text
+          if (review.comment || review.text) {
+            const reviewText = document.createElement("p");
+            reviewText.style.cssText = "margin: 0; font-size: 0.9rem; color: var(--text-main); line-height: 1.5;";
+            reviewText.textContent = review.comment || review.text;
+            reviewItem.appendChild(reviewText);
+          }
+          
+          // Job info with tools/equipment
+          if (review.job) {
+            const jobInfo = document.createElement("div");
+            jobInfo.style.cssText = "margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #e5e7eb;";
+            
+            const jobTitle = document.createElement("div");
+            jobTitle.style.cssText = "font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;";
+            jobTitle.textContent = review.job.title || "Job";
+            jobInfo.appendChild(jobTitle);
+            
+            // Show tools/equipment if available
+            const jobRequirements = review.job.requirements || {};
+            let parsedReq = jobRequirements;
+            if (typeof jobRequirements === 'string') {
+              try {
+                parsedReq = JSON.parse(jobRequirements);
+              } catch (e) {
+                parsedReq = {};
+              }
+            }
+            
+            let equipmentNeeded = parsedReq.equipmentNeeded || parsedReq.equipment_needed || [];
+            let customEquipment = parsedReq.customEquipment || parsedReq.custom_equipment || '';
+            
+            // Ensure equipmentNeeded is an array
+            let equipmentArray = [];
+            if (Array.isArray(equipmentNeeded)) {
+              equipmentArray = equipmentNeeded;
+            } else if (equipmentNeeded && typeof equipmentNeeded === 'string') {
+              try {
+                const parsed = JSON.parse(equipmentNeeded);
+                equipmentArray = Array.isArray(parsed) ? parsed : [parsed];
+              } catch (e) {
+                equipmentArray = [equipmentNeeded];
+              }
+            } else if (equipmentNeeded) {
+              equipmentArray = [equipmentNeeded];
+            }
+            
+            equipmentArray = equipmentArray.filter(tool => tool && String(tool).trim());
+            
+            if (equipmentArray.length > 0 || (customEquipment && String(customEquipment).trim())) {
+              const toolsLabel = document.createElement("div");
+              toolsLabel.style.cssText = "font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem; font-weight: 600;";
+              toolsLabel.textContent = "🔧 Tools/Equipment:";
+              jobInfo.appendChild(toolsLabel);
+              
+              const toolsList = document.createElement("div");
+              toolsList.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.375rem;";
+              
+              equipmentArray.forEach(tool => {
+                const toolStr = String(tool).trim();
+                if (toolStr) {
+                  const toolChip = document.createElement("span");
+                  toolChip.style.cssText = "padding: 0.25rem 0.5rem; background: #f3f4f6; border-radius: 6px; font-size: 0.75rem; color: var(--text-main);";
+                  toolChip.textContent = toolStr;
+                  toolsList.appendChild(toolChip);
+                }
+              });
+              
+              if (customEquipment && String(customEquipment).trim()) {
+                const customChip = document.createElement("span");
+                customChip.style.cssText = "padding: 0.25rem 0.5rem; background: #f3f4f6; border-radius: 6px; font-size: 0.75rem; color: var(--text-main);";
+                customChip.textContent = String(customEquipment).trim();
+                toolsList.appendChild(customChip);
+              }
+              
+              if (toolsList.children.length > 0) {
+                jobInfo.appendChild(toolsList);
+              }
+            }
+            
+            reviewItem.appendChild(jobInfo);
+          }
+          
+          return reviewItem;
+        };
+        
         if (reviews.length > 0) {
           const reviewsList = document.createElement("div");
           reviewsList.style.cssText = "display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem;";
+          reviewsList.id = "profileReviewsList";
           
           reviews.forEach(review => {
-            const reviewItem = document.createElement("div");
-            reviewItem.style.cssText = "padding: 1rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;";
-            
-            // Reviewer info
-            const reviewerInfo = document.createElement("div");
-            reviewerInfo.style.cssText = "display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;";
-            
-            const reviewerPic = document.createElement("img");
-            reviewerPic.style.cssText = "width: 32px; height: 32px; border-radius: 50%; object-fit: cover;";
-            reviewerPic.src = review.reviewer?.photoUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(review.reviewer?.name || "User") + "&background=6366f1&color=fff&size=128";
-            reviewerPic.alt = review.reviewer?.name || "Reviewer";
-            
-            const reviewerName = document.createElement("span");
-            reviewerName.style.cssText = "font-size: 0.9rem; font-weight: 600; color: var(--text-main);";
-            reviewerName.textContent = review.reviewer?.name || "Anonymous";
-            
-            const reviewStars = document.createElement("span");
-            reviewStars.style.cssText = "margin-left: auto; font-size: 0.9rem; color: #fbbf24;";
-            reviewStars.textContent = "★".repeat(review.rating || 5);
-            
-            reviewerInfo.appendChild(reviewerPic);
-            reviewerInfo.appendChild(reviewerName);
-            reviewerInfo.appendChild(reviewStars);
-            reviewItem.appendChild(reviewerInfo);
-            
-            // Review text
-            if (review.comment) {
-              const reviewText = document.createElement("p");
-              reviewText.style.cssText = "margin: 0; font-size: 0.9rem; color: var(--text-main); line-height: 1.5;";
-              reviewText.textContent = review.comment;
-              reviewItem.appendChild(reviewText);
-            }
-            
-            // Job info with tools/equipment
-            if (review.job) {
-              const jobInfo = document.createElement("div");
-              jobInfo.style.cssText = "margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #e5e7eb;";
-              
-              const jobTitle = document.createElement("div");
-              jobTitle.style.cssText = "font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;";
-              jobTitle.textContent = review.job.title || "Job";
-              jobInfo.appendChild(jobTitle);
-              
-              // Show tools/equipment if available
-              const jobRequirements = review.job.requirements || {};
-              let parsedReq = jobRequirements;
-              if (typeof jobRequirements === 'string') {
-                try {
-                  parsedReq = JSON.parse(jobRequirements);
-                } catch (e) {
-                  parsedReq = {};
-                }
-              }
-              
-              let equipmentNeeded = parsedReq.equipmentNeeded || parsedReq.equipment_needed || [];
-              let customEquipment = parsedReq.customEquipment || parsedReq.custom_equipment || '';
-              
-              // Ensure equipmentNeeded is an array
-              let equipmentArray = [];
-              if (Array.isArray(equipmentNeeded)) {
-                equipmentArray = equipmentNeeded;
-              } else if (equipmentNeeded && typeof equipmentNeeded === 'string') {
-                try {
-                  const parsed = JSON.parse(equipmentNeeded);
-                  equipmentArray = Array.isArray(parsed) ? parsed : [parsed];
-                } catch (e) {
-                  equipmentArray = [equipmentNeeded];
-                }
-              } else if (equipmentNeeded) {
-                equipmentArray = [equipmentNeeded];
-              }
-              
-              equipmentArray = equipmentArray.filter(tool => tool && String(tool).trim());
-              
-              if (equipmentArray.length > 0 || (customEquipment && String(customEquipment).trim())) {
-                const toolsLabel = document.createElement("div");
-                toolsLabel.style.cssText = "font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem; font-weight: 600;";
-                toolsLabel.textContent = "🔧 Tools/Equipment:";
-                jobInfo.appendChild(toolsLabel);
-                
-                const toolsList = document.createElement("div");
-                toolsList.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.375rem;";
-                
-                equipmentArray.forEach(tool => {
-                  const toolStr = String(tool).trim();
-                  if (toolStr) {
-                    const toolChip = document.createElement("span");
-                    toolChip.style.cssText = "padding: 0.25rem 0.5rem; background: #f3f4f6; border-radius: 6px; font-size: 0.75rem; color: var(--text-main);";
-                    toolChip.textContent = toolStr;
-                    toolsList.appendChild(toolChip);
-                  }
-                });
-                
-                if (customEquipment && String(customEquipment).trim()) {
-                  const customChip = document.createElement("span");
-                  customChip.style.cssText = "padding: 0.25rem 0.5rem; background: #f3f4f6; border-radius: 6px; font-size: 0.75rem; color: var(--text-main);";
-                  customChip.textContent = String(customEquipment).trim();
-                  toolsList.appendChild(customChip);
-                }
-                
-                if (toolsList.children.length > 0) {
-                  jobInfo.appendChild(toolsList);
-                }
-              }
-              
-              reviewItem.appendChild(jobInfo);
-            }
-            
+            const reviewItem = createReviewItem(review);
             reviewsList.appendChild(reviewItem);
           });
           
@@ -12038,17 +12049,46 @@ async function renderJobs(reset = false) {
         }
         
         // Load more reviews button (if more than 3)
-        if (totalReviews > 3) {
+        if (hasMoreReviews) {
           const loadMoreBtn = document.createElement("button");
           loadMoreBtn.className = "btn btn-secondary";
-          loadMoreBtn.textContent = `Load more reviews (${totalReviews - 3} more)`;
+          loadMoreBtn.id = "profileLoadMoreReviewsBtn";
+          loadMoreBtn.textContent = `Load more reviews (${totalReviews - currentOffset} more)`;
           loadMoreBtn.style.cssText = "width: 100%; padding: 0.75rem; font-size: 0.95rem;";
-          loadMoreBtn.addEventListener("click", () => {
-            // Close popup and navigate to full profile (or expand reviews)
-            document.body.removeChild(modalOverlay);
-            document.body.style.overflow = "";
-            // Could navigate to full profile page or expand reviews in place
-            showToast("Full profile view coming soon");
+          loadMoreBtn.addEventListener("click", async () => {
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.textContent = "Loading...";
+            
+            try {
+              const result = await window.loadUserReviews(targetUserId, 6, currentOffset);
+              
+              if (result.reviews && result.reviews.length > 0) {
+                const reviewsList = document.getElementById("profileReviewsList");
+                if (reviewsList) {
+                  result.reviews.forEach(review => {
+                    const reviewItem = createReviewItem(review);
+                    reviewsList.appendChild(reviewItem);
+                  });
+                }
+                
+                currentOffset += result.reviews.length;
+                hasMoreReviews = result.hasMore && (currentOffset < result.total);
+                
+                if (hasMoreReviews) {
+                  loadMoreBtn.disabled = false;
+                  loadMoreBtn.textContent = `Load more reviews (${result.total - currentOffset} more)`;
+                } else {
+                  loadMoreBtn.remove();
+                }
+              } else {
+                loadMoreBtn.remove();
+              }
+            } catch (error) {
+              console.error("Error loading more reviews:", error);
+              showToast("Failed to load more reviews. Please try again.");
+              loadMoreBtn.disabled = false;
+              loadMoreBtn.textContent = `Load more reviews (${totalReviews - currentOffset} more)`;
+            }
           });
           reviewsSection.appendChild(loadMoreBtn);
         }
