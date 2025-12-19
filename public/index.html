@@ -12215,22 +12215,28 @@ async function renderJobs(reset = false) {
               
               if (result.reviews && result.reviews.length > 0) {
                 const reviewsList = document.getElementById("profileReviewsList");
+                console.log('[PROFILE REVIEWS] reviewsList element:', reviewsList ? 'found' : 'NOT FOUND');
                 if (reviewsList) {
                   // Remove "No reviews yet" message if it exists
                   const noReviewsMsg = reviewsList.querySelector('div[style*="No reviews yet"]');
                   if (noReviewsMsg) {
+                    console.log('[PROFILE REVIEWS] Removing "No reviews yet" message');
                     noReviewsMsg.remove();
                   }
                   
                   let firstNewReview = null;
                   console.log('[PROFILE REVIEWS] Appending', result.reviews.length, 'new reviews');
-                  result.reviews.forEach(review => {
+                  console.log('[PROFILE REVIEWS] createProfileReviewItem available:', typeof window.createProfileReviewItem);
+                  result.reviews.forEach((review, index) => {
                     if (!window.createProfileReviewItem) {
                       console.error('[PROFILE REVIEWS] createProfileReviewItem not found!');
                       return;
                     }
+                    console.log(`[PROFILE REVIEWS] Creating review item ${index + 1} of ${result.reviews.length}`);
                     const reviewItem = window.createProfileReviewItem(review);
+                    console.log('[PROFILE REVIEWS] Review item created:', reviewItem ? 'yes' : 'no');
                     reviewsList.appendChild(reviewItem);
+                    console.log('[PROFILE REVIEWS] Review item appended to list. List now has', reviewsList.children.length, 'children');
                     if (!firstNewReview) {
                       firstNewReview = reviewItem;
                     }
