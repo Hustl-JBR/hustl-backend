@@ -6544,11 +6544,22 @@ window.showChangePasswordModal = function showChangePasswordModal() {
       
       console.log('[CHANGE PASSWORD] Response status:', response.status);
       
-      const data = await response.json();
-      console.log('[CHANGE PASSWORD] Response data:', data);
+      let data;
+      try {
+        data = await response.json();
+        console.log('[CHANGE PASSWORD] Response data:', data);
+      } catch (parseError) {
+        console.error('[CHANGE PASSWORD] Failed to parse response:', parseError);
+        const text = await response.text();
+        console.error('[CHANGE PASSWORD] Response text:', text);
+        throw new Error('Invalid response from server');
+      }
       
       if (!response.ok) {
-        throw new Error(data.error || data.message || 'Failed to change password');
+        console.error('[CHANGE PASSWORD] Error response:', data);
+        const errorMsg = data.message || data.error || 'Failed to change password';
+        console.error('[CHANGE PASSWORD] Error details:', data.details);
+        throw new Error(errorMsg);
       }
       
       showToast("✅ Password changed successfully!");
