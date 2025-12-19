@@ -461,17 +461,14 @@ router.post('/change-password', authenticate, [
     console.log('[AUTH] Password updated successfully in database');
 
     // Send email notification (without sending password in plain text for security)
-    try {
-      await sendPasswordChangedEmail(user.email, user.name);
-      console.log('[AUTH] Password changed email sent successfully to:', user.email);
-    } catch (emailError) {
+    // This is non-blocking - password change succeeds even if email fails
+    sendPasswordChangedEmail(user.email, user.name).catch((emailError) => {
       console.error('[AUTH] Failed to send password changed email:', emailError);
       console.error('[AUTH] Email error details:', {
         message: emailError.message,
         stack: emailError.stack
       });
-      // Don't fail the request if email fails - password change was successful
-    }
+    });
 
     console.log('[AUTH] Password changed successfully for user:', userId);
     res.json({ message: 'Password changed successfully. Check your email for confirmation.' });
