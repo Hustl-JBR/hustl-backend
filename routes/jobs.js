@@ -1136,21 +1136,32 @@ router.patch('/:id', authenticate, requireRole('CUSTOMER'), [
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    // Allow editing OPEN jobs, or price adjustments for SCHEDULED/ASSIGNED jobs (before start)
-    const isPriceOnlyUpdate = Object.keys(req.body).every(key => 
-      ['amount', 'hourlyRate', 'estHours'].includes(key)
-    );
-    
-    if (job.status !== 'OPEN' && !(isPriceOnlyUpdate && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified)) {
-      return res.status(400).json({ 
-        error: 'Can only edit open jobs, or adjust price for scheduled jobs before they start' 
-      });
+    // PRICE LOCK: Once start code is entered, price is locked
+    if (job.startCodeVerified) {
+      // Check if trying to change price-related fields
+      const isPriceChange = ['amount', 'hourlyRate', 'estHours'].some(key => req.body[key] !== undefined);
+      if (isPriceChange) {
+        return res.status(400).json({ 
+          error: 'Price is locked. Cannot change price after job has started. Use the price change proposal flow before starting the job.' 
+        });
+      }
     }
     
-    // For scheduled jobs, only allow price adjustments
-    if (job.status !== 'OPEN' && !isPriceOnlyUpdate) {
+    // For SCHEDULED/ASSIGNED jobs (before start), price changes must go through proposal flow
+    if ((job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified) {
+      const isPriceChange = ['amount', 'hourlyRate', 'estHours'].some(key => req.body[key] !== undefined);
+      if (isPriceChange) {
+        return res.status(400).json({ 
+          error: 'Price changes for scheduled jobs must be proposed using the price change proposal endpoint. The hustler must accept the change before it takes effect.',
+          useProposalFlow: true
+        });
+      }
+    }
+    
+    // Allow editing OPEN jobs, or non-price adjustments for SCHEDULED/ASSIGNED jobs (before start)
+    if (job.status !== 'OPEN' && job.status !== 'SCHEDULED' && job.status !== 'ASSIGNED') {
       return res.status(400).json({ 
-        error: 'For scheduled jobs, only price adjustments are allowed' 
+        error: 'Can only edit open or scheduled jobs' 
       });
     }
 
@@ -1287,6 +1298,344 @@ router.patch('/:id', authenticate, requireRole('CUSTOMER'), [
       error: 'Internal server error',
       message: error.message || 'Unknown error',
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// POST /jobs/:id/propose-price-change - Customer proposes price change (before start code)
+router.post('/:id/propose-price-change', authenticate, requireRole('CUSTOMER'), [
+  body('amount').optional().isFloat({ min: 0 }),
+  body('hourlyRate').optional().isFloat({ min: 0 }),
+  body('estHours').optional().isInt({ min: 1 }),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        error: 'Validation failed',
+        details: errors.array() 
+      });
+    }
+
+    const job = await prisma.job.findUnique({
+      where: { id: req.params.id },
+      include: { 
+        payment: true,
+        hustler: { select: { id: true, name: true, email: true } }
+      }
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Price changes only allowed before start code
+    if (job.startCodeVerified) {
+      return res.status(400).json({ 
+        error: 'Price is locked. Cannot change price after job has started.' 
+      });
+    }
+
+    // Only allow for SCHEDULED or ASSIGNED jobs (hustler already assigned)
+    if (job.status !== 'SCHEDULED' && job.status !== 'ASSIGNED') {
+      return res.status(400).json({ 
+        error: 'Can only propose price changes for scheduled jobs with an assigned hustler' 
+      });
+    }
+
+    if (!job.hustlerId) {
+      return res.status(400).json({ 
+        error: 'No hustler assigned to this job' 
+      });
+    }
+
+    const { amount, hourlyRate, estHours } = req.body;
+    const proposedPrice = {
+      amount: amount !== undefined ? parseFloat(amount) : null,
+      hourlyRate: hourlyRate !== undefined ? parseFloat(hourlyRate) : null,
+      estHours: estHours !== undefined ? parseInt(estHours) : null,
+      proposedAt: new Date().toISOString(),
+      status: 'PENDING', // PENDING = waiting for hustler acceptance
+    };
+
+    // Store in job requirements
+    const existingRequirements = job.requirements || {};
+    const updatedJob = await prisma.job.update({
+      where: { id: req.params.id },
+      data: {
+        requirements: {
+          ...existingRequirements,
+          proposedPriceChange: proposedPrice
+        }
+      },
+      include: {
+        hustler: { select: { id: true, name: true, email: true } }
+      }
+    });
+
+    // Send notification email to hustler (non-blocking)
+    const { sendPriceChangeProposalEmail } = require('../services/email');
+    try {
+      await sendPriceChangeProposalEmail(
+        job.hustler.email,
+        job.hustler.name,
+        job.title,
+        job.id,
+        proposedPrice
+      );
+    } catch (emailError) {
+      console.error('Error sending price change proposal email:', emailError);
+    }
+
+    res.json({ 
+      success: true,
+      job: updatedJob,
+      proposedPrice 
+    });
+  } catch (error) {
+    console.error('Propose price change error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message 
+    });
+  }
+});
+
+// POST /jobs/:id/accept-price-change - Hustler accepts price change
+router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), async (req, res) => {
+  try {
+    const job = await prisma.job.findUnique({
+      where: { id: req.params.id },
+      include: { 
+        payment: true,
+        customer: { select: { id: true, name: true, email: true } }
+      }
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (job.hustlerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Price changes only allowed before start code
+    if (job.startCodeVerified) {
+      return res.status(400).json({ 
+        error: 'Price is locked. Cannot change price after job has started.' 
+      });
+    }
+
+    const requirements = job.requirements || {};
+    const proposedPrice = requirements.proposedPriceChange;
+
+    if (!proposedPrice || proposedPrice.status !== 'PENDING') {
+      return res.status(400).json({ 
+        error: 'No pending price change proposal found' 
+      });
+    }
+
+    // Calculate new job amount
+    let newJobAmount = job.amount;
+    if (job.payType === 'hourly') {
+      const newRate = proposedPrice.hourlyRate !== null ? proposedPrice.hourlyRate : job.hourlyRate;
+      const newHours = proposedPrice.estHours !== null ? proposedPrice.estHours : job.estHours;
+      newJobAmount = newRate * newHours;
+    } else {
+      newJobAmount = proposedPrice.amount !== null ? proposedPrice.amount : job.amount;
+    }
+
+    // Update Stripe payment intent if payment exists
+    if (job.payment && job.payment.providerId) {
+      const Stripe = require('stripe');
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+      
+      try {
+        // Calculate new total with fees
+        const tipPercent = Math.min(parseFloat(job.tipPercent || 0), 25);
+        const tipAmount = Math.min(newJobAmount * (tipPercent / 100), 50);
+        const customerFee = Math.min(Math.max(newJobAmount * 0.03, 1), 10);
+        const newTotal = newJobAmount + tipAmount + customerFee;
+
+        // Update payment intent amount
+        await stripe.paymentIntents.update(job.payment.providerId, {
+          amount: Math.round(newTotal * 100), // Convert to cents
+          metadata: {
+            ...(await stripe.paymentIntents.retrieve(job.payment.providerId)).metadata,
+            amount: newJobAmount.toString(),
+            tip: tipAmount.toString(),
+            customerFee: customerFee.toString(),
+            priceUpdatedAt: new Date().toISOString()
+          }
+        });
+
+        console.log(`[PRICE CHANGE] Updated Stripe payment intent ${job.payment.providerId} to $${newTotal}`);
+      } catch (stripeError) {
+        console.error('[PRICE CHANGE] Stripe update error:', stripeError);
+        return res.status(500).json({ 
+          error: 'Failed to update payment authorization',
+          message: stripeError.message 
+        });
+      }
+    }
+
+    // Update job with new price
+    const updateData = {
+      amount: newJobAmount
+    };
+    
+    if (job.payType === 'hourly') {
+      if (proposedPrice.hourlyRate !== null) {
+        updateData.hourlyRate = proposedPrice.hourlyRate;
+      }
+      if (proposedPrice.estHours !== null) {
+        updateData.estHours = proposedPrice.estHours;
+      }
+    }
+
+    // Mark price change as accepted
+    const existingRequirements = job.requirements || {};
+    const updatedJob = await prisma.job.update({
+      where: { id: req.params.id },
+      data: {
+        ...updateData,
+        requirements: {
+          ...existingRequirements,
+          proposedPriceChange: {
+            ...proposedPrice,
+            status: 'ACCEPTED',
+            acceptedAt: new Date().toISOString()
+          }
+        }
+      },
+      include: {
+        customer: { select: { id: true, name: true, email: true } }
+      }
+    });
+
+    // Update payment record
+    if (job.payment) {
+      const tipPercent = Math.min(parseFloat(job.tipPercent || 0), 25);
+      const tipAmount = Math.min(newJobAmount * (tipPercent / 100), 50);
+      const customerFee = Math.min(Math.max(newJobAmount * 0.03, 1), 10);
+      const total = newJobAmount + tipAmount + customerFee;
+
+      await prisma.payment.update({
+        where: { id: job.payment.id },
+        data: {
+          amount: newJobAmount,
+          tip: tipAmount,
+          feeCustomer: customerFee,
+          total
+        }
+      });
+    }
+
+    // Send notification email to customer (non-blocking)
+    const { sendPriceChangeAcceptedEmail } = require('../services/email');
+    try {
+      await sendPriceChangeAcceptedEmail(
+        job.customer.email,
+        job.customer.name,
+        job.title,
+        job.id,
+        newJobAmount
+      );
+    } catch (emailError) {
+      console.error('Error sending price change accepted email:', emailError);
+    }
+
+    res.json({ 
+      success: true,
+      job: updatedJob,
+      newAmount: newJobAmount
+    });
+  } catch (error) {
+    console.error('Accept price change error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message 
+    });
+  }
+});
+
+// POST /jobs/:id/decline-price-change - Hustler declines price change
+router.post('/:id/decline-price-change', authenticate, requireRole('HUSTLER'), async (req, res) => {
+  try {
+    const job = await prisma.job.findUnique({
+      where: { id: req.params.id },
+      include: { 
+        customer: { select: { id: true, name: true, email: true } }
+      }
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (job.hustlerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Price changes only allowed before start code
+    if (job.startCodeVerified) {
+      return res.status(400).json({ 
+        error: 'Price is locked. Cannot change price after job has started.' 
+      });
+    }
+
+    const requirements = job.requirements || {};
+    const proposedPrice = requirements.proposedPriceChange;
+
+    if (!proposedPrice || proposedPrice.status !== 'PENDING') {
+      return res.status(400).json({ 
+        error: 'No pending price change proposal found' 
+      });
+    }
+
+    // Mark price change as declined
+    const existingRequirements = job.requirements || {};
+    const updatedJob = await prisma.job.update({
+      where: { id: req.params.id },
+      data: {
+        requirements: {
+          ...existingRequirements,
+          proposedPriceChange: {
+            ...proposedPrice,
+            status: 'DECLINED',
+            declinedAt: new Date().toISOString()
+          }
+        }
+      }
+    });
+
+    // Send notification email to customer (non-blocking)
+    const { sendPriceChangeDeclinedEmail } = require('../services/email');
+    try {
+      await sendPriceChangeDeclinedEmail(
+        job.customer.email,
+        job.customer.name,
+        job.title,
+        job.id
+      );
+    } catch (emailError) {
+      console.error('Error sending price change declined email:', emailError);
+    }
+
+    res.json({ 
+      success: true,
+      job: updatedJob
+    });
+  } catch (error) {
+    console.error('Decline price change error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message 
     });
   }
 });

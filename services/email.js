@@ -997,6 +997,156 @@ async function sendHustlerLeftConfirmationEmail(email, name, jobTitle, customerN
   }
 }
 
+async function sendPriceChangeProposalEmail(email, name, jobTitle, jobId, proposedPrice) {
+  if (!isEmailConfigured()) return;
+  try {
+    const manageJobsUrl = `https://hustljobs.com?view=manage-jobs&jobId=${jobId}`;
+    const priceText = proposedPrice.amount !== null 
+      ? `$${proposedPrice.amount.toFixed(2)}`
+      : proposedPrice.hourlyRate !== null && proposedPrice.estHours !== null
+      ? `$${proposedPrice.hourlyRate.toFixed(2)}/hr × ${proposedPrice.estHours} hours = $${(proposedPrice.hourlyRate * proposedPrice.estHours).toFixed(2)}`
+      : 'See job details';
+    
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `💰 Price Change Proposal for "${jobTitle}"`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">💰 Price Change Proposal</h1>
+          </div>
+          
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hey <strong>${name}</strong>! 👋
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              The customer has proposed a price change for the job <strong>"${jobTitle}"</strong>.
+            </p>
+            
+            <div style="background: white; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; border: 2px solid #fbbf24;">
+              <p style="margin: 0 0 0.75rem 0; font-weight: 600; color: #92400e;">Proposed New Price:</p>
+              <p style="margin: 0; font-size: 1.5rem; font-weight: 700; color: #78350f;">${priceText}</p>
+            </div>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              <strong>Action Required:</strong> Please review and accept or decline this price change. The job cannot proceed until you respond.
+            </p>
+            
+            <div style="text-align: center; margin: 2rem 0;">
+              <a href="${manageJobsUrl}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+                Review Price Change →
+              </a>
+            </div>
+            
+            <p style="color: #64748b; font-size: 0.9rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0; text-align: center;">
+              If you decline, the customer may unassign you and select another hustler.
+            </p>
+          </div>
+        </div>
+      `,
+    });
+    console.log('[Email] Price change proposal email sent successfully to:', email);
+  } catch (error) {
+    console.error('[Email] Send price change proposal email error:', error);
+  }
+}
+
+async function sendPriceChangeAcceptedEmail(email, name, jobTitle, jobId, newAmount) {
+  if (!isEmailConfigured()) return;
+  try {
+    const manageJobsUrl = `https://hustljobs.com?view=manage-jobs&jobId=${jobId}`;
+    
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `✅ Price Change Accepted for "${jobTitle}"`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">✅ Price Change Accepted</h1>
+          </div>
+          
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hey <strong>${name}</strong>! 👋
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              Great news! The hustler has accepted your price change proposal for <strong>"${jobTitle}"</strong>.
+            </p>
+            
+            <div style="background: white; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; border: 2px solid #10b981;">
+              <p style="margin: 0 0 0.75rem 0; font-weight: 600; color: #059669;">New Agreed Price:</p>
+              <p style="margin: 0; font-size: 1.5rem; font-weight: 700; color: #047857;">$${newAmount.toFixed(2)}</p>
+            </div>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              The payment authorization has been updated to reflect the new price. The job can now proceed as scheduled.
+            </p>
+            
+            <div style="text-align: center; margin: 2rem 0;">
+              <a href="${manageJobsUrl}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+                View Job →
+              </a>
+            </div>
+          </div>
+        </div>
+      `,
+    });
+    console.log('[Email] Price change accepted email sent successfully to:', email);
+  } catch (error) {
+    console.error('[Email] Send price change accepted email error:', error);
+  }
+}
+
+async function sendPriceChangeDeclinedEmail(email, name, jobTitle, jobId) {
+  if (!isEmailConfigured()) return;
+  try {
+    const manageJobsUrl = `https://hustljobs.com?view=manage-jobs&jobId=${jobId}`;
+    
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `❌ Price Change Declined for "${jobTitle}"`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">❌ Price Change Declined</h1>
+          </div>
+          
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hey <strong>${name}</strong>! 👋
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              The hustler has declined your price change proposal for <strong>"${jobTitle}"</strong>.
+            </p>
+            
+            <div style="background: white; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; border: 2px solid #fca5a5;">
+              <p style="margin: 0; color: #991b1b; font-weight: 600;">
+                The job will remain at the original agreed price. If you'd like to proceed with a different price, you may need to unassign this hustler and select another.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 2rem 0;">
+              <a href="${manageJobsUrl}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+                Manage Job →
+              </a>
+            </div>
+          </div>
+        </div>
+      `,
+    });
+    console.log('[Email] Price change declined email sent successfully to:', email);
+  } catch (error) {
+    console.error('[Email] Send price change declined email error:', error);
+  }
+}
+
 module.exports = {
   sendSignupEmail,
   sendEmailVerificationEmail,
