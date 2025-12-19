@@ -10500,14 +10500,19 @@ async function renderJobs(reset = false) {
         }
         console.log("Parsed requirements:", parsedRequirements);
         
-        // Get current user early (needed for timer extension button)
+        // Get current user early (needed for timer extension button and price change UI)
         let user = null;
         let isOwner = false;
+        let isHustler = false;
         try {
           if (window.hustlAPI && window.hustlAPI.auth) {
             user = await window.hustlAPI.auth.getCurrentUser();
             if (user) {
               isOwner = job.customerId === user.id;
+              // Check for hustler role in multiple ways
+              isHustler = (user.roles && Array.isArray(user.roles) && user.roles.some(r => r.toUpperCase() === 'HUSTLER')) || 
+                         (user.role && user.role.toUpperCase() === 'HUSTLER') ||
+                         (user.isHustler === true);
             }
           }
         } catch (e) {
@@ -11473,15 +11478,8 @@ async function renderJobs(reset = false) {
         const actionsSection = document.createElement("div");
         actionsSection.style.cssText = "padding: 1rem; background: #f8f9fa; border-radius: 12px; border: 1px solid #e5e7eb;";
         
-        // Get current user from API (async) - user and isOwner already defined above for timer
+        // Get current user from API (async) - user, isOwner, and isHustler already defined above for timer and price change UI
         // Note: token is already declared at line 9701 in this function
-        let isHustler = false;
-        
-        if (user) {
-          // Check for hustler role in multiple ways
-          isHustler = (user.roles && Array.isArray(user.roles) && user.roles.some(r => r.toUpperCase() === 'HUSTLER')) || 
-                     (user.role && user.role.toUpperCase() === 'HUSTLER') ||
-                     (user.isHustler === true);
           // isOwner already set above
         }
         
