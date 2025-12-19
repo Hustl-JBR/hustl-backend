@@ -11808,6 +11808,8 @@ async function renderJobs(reset = false) {
         } else {
           modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);";
         }
+        // Ensure modal is scrollable
+        modalContent.style.overflowY = "auto";
         
         // Close button
         const closeBtn = document.createElement("button");
@@ -12030,23 +12032,24 @@ async function renderJobs(reset = false) {
           return reviewItem;
         };
         
+        // Always create reviewsList container for pagination to work
+        const reviewsList = document.createElement("div");
+        reviewsList.style.cssText = "display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem;";
+        reviewsList.id = "profileReviewsList";
+        
         if (reviews.length > 0) {
-          const reviewsList = document.createElement("div");
-          reviewsList.style.cssText = "display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem;";
-          reviewsList.id = "profileReviewsList";
-          
           reviews.forEach(review => {
             const reviewItem = createReviewItem(review);
             reviewsList.appendChild(reviewItem);
           });
-          
-          reviewsSection.appendChild(reviewsList);
         } else {
           const noReviews = document.createElement("div");
           noReviews.style.cssText = "padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.9rem;";
           noReviews.textContent = "No reviews yet";
-          reviewsSection.appendChild(noReviews);
+          reviewsList.appendChild(noReviews);
         }
+        
+        reviewsSection.appendChild(reviewsList);
         
         // Load more reviews button (if more than 3)
         if (hasMoreReviews) {
@@ -12065,10 +12068,27 @@ async function renderJobs(reset = false) {
               if (result.reviews && result.reviews.length > 0) {
                 const reviewsList = document.getElementById("profileReviewsList");
                 if (reviewsList) {
+                  // Remove "No reviews yet" message if it exists
+                  const noReviewsMsg = reviewsList.querySelector('div[style*="No reviews yet"]');
+                  if (noReviewsMsg) {
+                    noReviewsMsg.remove();
+                  }
+                  
+                  let firstNewReview = null;
                   result.reviews.forEach(review => {
                     const reviewItem = createReviewItem(review);
                     reviewsList.appendChild(reviewItem);
+                    if (!firstNewReview) {
+                      firstNewReview = reviewItem;
+                    }
                   });
+                  
+                  // Scroll to the first newly loaded review
+                  if (firstNewReview) {
+                    setTimeout(() => {
+                      firstNewReview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }, 100);
+                  }
                 }
                 
                 currentOffset += result.reviews.length;
@@ -21194,7 +21214,11 @@ meta.textContent =
             
             card.querySelector('.viewJobBtn')?.addEventListener('click', (e) => {
               e.stopPropagation();
-              showViewJobModal(job.id, isCustomer ? 'customer' : 'hustler');
+              if (typeof window.openJobDetails === 'function') {
+                window.openJobDetails(job.id);
+              } else if (typeof openJobDetails === 'function') {
+                openJobDetails(job.id);
+              }
             });
             
             // Map button removed - not needed on active job cards
@@ -21391,7 +21415,11 @@ meta.textContent =
                   !e.target.closest('input') &&
                   !e.target.closest(`#startCodeInput_${job.id}`) &&
                   !e.target.closest(`#completionCodeInput_${job.id}`)) {
-                showViewJobModal(job.id, isCustomer ? 'customer' : 'hustler');
+                if (typeof window.openJobDetails === 'function') {
+                  window.openJobDetails(job.id);
+                } else if (typeof openJobDetails === 'function') {
+                  openJobDetails(job.id);
+                }
               }
             });
             
