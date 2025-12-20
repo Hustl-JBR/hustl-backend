@@ -15021,10 +15021,24 @@ async function renderJobs(reset = false) {
               throw new Error(data.error || "Verification failed");
             }
             
-            showToast("✅ Completion code verified! Job is now complete.");
+            // Show completion success modal with actual payment data
+            if (data.success && data.paymentReleased) {
+              showCompletionSuccessModal(job.id, {
+                customerId: data.customerId,
+                hustlerId: data.hustlerId,
+                actualJobAmount: data.actualJobAmount || 0,
+                hustlerPayout: data.hustlerPayout || 0,
+                actualHours: data.actualHours || null,
+                platformFee: data.platformFee || 0
+              });
+            } else {
+              showToast("✅ Completion code verified! Job is now complete.");
+            }
+            
             document.body.removeChild(modalOverlay);
             document.body.style.overflow = "";
-            openJobDetails(job.id);
+            if (typeof loadActiveJobs === 'function') loadActiveJobs();
+            if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
             renderJobs();
           } catch (error) {
             showToast("Error: " + (error.message || "Failed to verify"));
@@ -26142,12 +26156,20 @@ meta.textContent =
             if (jobData.completionCodeVerified && (jobData.status === 'PAID' || jobData.status === 'COMPLETED_BY_HUSTLER' || jobData.status === 'IN_PROGRESS')) {
               // Job is actually completed, show success
               console.log('✅ Job is completed! Showing success modal');
+              
+              // Get actual amounts from payment record (for hourly jobs, this is the actual charged amount)
+              const actualJobAmount = jobData.payment?.amount || jobData.amount || 0;
+              const platformFee = jobData.payment?.feeHustler || (actualJobAmount * 0.12);
+              const hustlerPayout = actualJobAmount - platformFee;
+              const actualHours = jobData.requirements?.actualHours || null;
+              
               showCompletionSuccessModal(jobId, {
                 customerId: jobData.customerId,
                 hustlerId: jobData.hustlerId,
-                actualJobAmount: jobData.payment?.amount || jobData.amount || 0,
-                hustlerPayout: jobData.payment?.amount ? jobData.payment.amount * 0.88 : (jobData.amount ? jobData.amount * 0.88 : 0),
-                actualHours: jobData.requirements?.actualHours || null
+                actualJobAmount: actualJobAmount,
+                hustlerPayout: hustlerPayout,
+                actualHours: actualHours,
+                platformFee: platformFee
               });
               if (typeof loadActiveJobs === 'function') loadActiveJobs();
               if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
@@ -26413,8 +26435,8 @@ meta.textContent =
             <div style="font-weight: 700; color: #166534; margin-bottom: 1rem; font-size: 1.25rem; text-align: center;">💰 Payment Released</div>
             <div style="color: #166534; text-align: center; font-size: 1.1rem;">
               ${completionData.actualJobAmount ? `<div style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">$${parseFloat(completionData.actualJobAmount).toFixed(2)}</div><div style="font-size: 0.95rem; opacity: 0.9;">has been released to ${isHustler ? 'you' : 'the hustler'}</div>` : '<div style="font-size: 1.5rem; font-weight: 700;">Payment has been processed.</div>'}
-              ${completionData.actualHours ? `<div style="margin-top: 1rem; font-size: 1rem; font-weight: 600; padding-top: 1rem; border-top: 2px solid rgba(22, 163, 74, 0.3);">⏱️ Hours worked: ${completionData.actualHours.toFixed(1)}</div>` : ''}
-              ${completionData.hustlerPayout ? `<div style="margin-top: 0.5rem; font-size: 0.9rem; opacity: 0.8;">After platform fee: $${parseFloat(completionData.hustlerPayout).toFixed(2)}</div>` : ''}
+              ${completionData.actualHours ? `<div style="margin-top: 1rem; font-size: 1rem; font-weight: 600; padding-top: 1rem; border-top: 2px solid rgba(22, 163, 74, 0.3);">⏱️ Final time worked: ${completionData.actualHours.toFixed(2)} hours</div>` : ''}
+              ${completionData.hustlerPayout ? `<div style="margin-top: 0.5rem; font-size: 0.9rem; opacity: 0.8;">After platform fee (12%): $${parseFloat(completionData.hustlerPayout).toFixed(2)}</div>` : ''}
             </div>
           </div>
           
