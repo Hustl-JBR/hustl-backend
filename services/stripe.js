@@ -75,13 +75,22 @@ async function createConnectedAccount(email, country = 'US') {
 
 // Stripe Connect: Create account link for onboarding
 async function createAccountLink(accountId, returnUrl, refreshUrl) {
-  const accountLink = await stripe.accountLinks.create({
-    account: accountId,
-    refresh_url: refreshUrl,
-    return_url: returnUrl,
-    type: 'account_onboarding',
-  });
-  return accountLink;
+  try {
+    // First verify the account exists
+    await stripe.accounts.retrieve(accountId);
+    
+    const accountLink = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: refreshUrl,
+      return_url: returnUrl,
+      type: 'account_onboarding',
+    });
+    
+    return accountLink;
+  } catch (error) {
+    console.error('[STRIPE] Error creating account link:', error);
+    throw error;
+  }
 }
 
 // Stripe Connect: Transfer funds to hustler's connected account

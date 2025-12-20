@@ -81,7 +81,10 @@ router.get('/onboarding-link', async (req, res) => {
     }
 
     if (!user.stripeAccountId) {
-      return res.status(400).json({ error: 'Stripe account not created. Please create account first.' });
+      return res.status(400).json({ 
+        error: 'Stripe account not created. Please create account first.',
+        hint: 'Call POST /stripe-connect/create-account first, then call this endpoint'
+      });
     }
 
     // Check if we should skip Stripe (only if explicitly set)
@@ -108,13 +111,36 @@ router.get('/onboarding-link', async (req, res) => {
       res.json({ url: accountLink.url });
     } catch (stripeError) {
       console.error('[STRIPE CONNECT] Error creating account link:', stripeError);
+      console.error('[STRIPE CONNECT] Error details:', {
+        type: stripeError.type,
+        code: stripeError.code,
+        message: stripeError.message,
+        accountId: user.stripeAccountId
+      });
+      
       if (stripeError.type === 'StripeAuthenticationError' || stripeError.code === 'invalid_api_key') {
         return res.status(500).json({ 
           error: 'Stripe configuration error',
-          message: 'Invalid or missing Stripe API key. Please check STRIPE_SECRET_KEY in Railway.'
+          message: 'Invalid or missing Stripe API key. Please check STRIPE_SECRET_KEY in Railway.',
+          details: stripeError.message
         });
       }
-      throw stripeError;
+      
+      if (stripeError.code === 'resource_missing') {
+        return res.status(400).json({
+          error: 'Stripe account not found',
+          message: 'The Stripe account ID in database does not exist in Stripe. Please create a new account.',
+          accountId: user.stripeAccountId,
+          hint: 'Call POST /stripe-connect/create-account to create a new account'
+        });
+      }
+      
+      return res.status(500).json({ 
+        error: 'Failed to create Stripe account link',
+        message: stripeError.message || 'Unknown error',
+        type: stripeError.type,
+        code: stripeError.code
+      });
     }
   } catch (error) {
     console.error('Error creating account link:', error);
