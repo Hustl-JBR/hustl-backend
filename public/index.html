@@ -19810,6 +19810,31 @@ async function renderJobs(reset = false) {
               }
             }
             
+            // Verify tools were saved and update UI
+            if (cleanUpdates.tools !== undefined) {
+              const sentTools = cleanUpdates.tools === null || cleanUpdates.tools === '' ? null : cleanUpdates.tools;
+              const receivedTools = updatedUser.tools === null || updatedUser.tools === '' ? null : updatedUser.tools;
+              if (sentTools !== receivedTools) {
+                console.warn('[PROFILE SAVE] Tools mismatch! Sent:', JSON.stringify(cleanUpdates.tools), 'Got:', JSON.stringify(updatedUser.tools));
+                // Force update tools in localStorage with what we sent (it should be saved)
+                const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
+                storedUser.tools = sentTools;
+                localStorage.setItem('hustl_user', JSON.stringify(storedUser));
+                // Also update the input field
+                const toolsInput = document.getElementById("basicInfoTools");
+                if (toolsInput) {
+                  toolsInput.value = sentTools || '';
+                }
+              } else {
+                console.log('[PROFILE SAVE] Tools match:', receivedTools);
+                // Update the input field with saved value
+                const toolsInput = document.getElementById("basicInfoTools");
+                if (toolsInput) {
+                  toolsInput.value = receivedTools || '';
+                }
+              }
+            }
+            
             // Update cached user in auth object
             if (window.hustlAPI && window.hustlAPI.auth) {
               window.hustlAPI.auth.currentUser = updatedUser;
