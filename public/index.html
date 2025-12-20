@@ -15737,8 +15737,11 @@ async function renderJobs(reset = false) {
                         document.body.removeChild(modalOverlay);
                         document.body.style.overflow = "";
                         
-                        // Show Stripe payment modal
-                        await showStripePaymentModal(paymentData.clientSecret, job.id, async (paymentIntentId) => {
+                        // Show Stripe payment modal with amount breakdown
+                        await showStripePaymentModal(
+                          paymentData.clientSecret, 
+                          job.id, 
+                          async (paymentIntentId) => {
                           // After payment succeeds, accept the offer with paymentIntentId
                           try {
                             const acceptResponse = await fetch(`${API_BASE}/offers/${offer.id}/accept`, {
