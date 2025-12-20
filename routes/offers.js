@@ -421,11 +421,11 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     
     if (!paymentIntentId && process.env.SKIP_STRIPE_CHECK !== 'true') {
       // Calculate payment amounts from job
+      // TIPS ARE NOT INCLUDED IN AUTHORIZATION - They happen after completion
       const jobAmount = parseFloat(offer.job.amount || 0);
-      const tipPercent = Math.min(parseFloat(offer.job.tipPercent || 0), 25);
-      const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50);
-      const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10);
-      const total = jobAmount + tipAmount + customerFee;
+      const tipAmount = 0; // Tips happen after completion, not in authorization
+      const customerFee = jobAmount * 0.065; // 6.5% customer fee (no min/max cap)
+      const total = jobAmount + customerFee;
       
       return res.status(400).json({ 
         error: 'Payment required to accept this offer. Please complete payment to proceed.',

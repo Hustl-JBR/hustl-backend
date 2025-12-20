@@ -265,10 +265,11 @@ router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER
       jobAmount = Number(offer.job.amount);
     }
     
-    const tipPercent = Math.min(parseFloat(req.body.tipPercent || 0), 25);
-    const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50);
-    const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10);
-    const total = jobAmount + tipAmount + customerFee;
+    // TIPS ARE NOT INCLUDED IN AUTHORIZATION - They happen after completion
+    // Customer fee is 6.5% (no min/max cap)
+    const tipAmount = 0; // Tips happen after completion, not in authorization
+    const customerFee = jobAmount * 0.065; // 6.5% customer fee
+    const total = jobAmount + customerFee;
 
     // Check if we're in test mode (skip Stripe entirely)
     const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
