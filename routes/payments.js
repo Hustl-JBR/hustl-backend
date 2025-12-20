@@ -310,8 +310,9 @@ router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER
     }
 
     // Calculate payment amounts
+    // Priority: 1) proposedAmount (if price was negotiated), 2) job.amount (original price)
     // For hourly jobs: authorize max amount (hourlyRate × maxHours)
-    // For flat jobs: use the flat amount
+    // For flat jobs: use the negotiated amount or original job amount
     let jobAmount = 0;
     
     if (offer.job.payType === 'hourly' && offer.job.hourlyRate && offer.job.estHours) {
@@ -320,7 +321,14 @@ router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER
       jobAmount = hourlyRate * maxHours; // Max possible charge (authorized, not charged yet)
       console.log(`[PAYMENT INTENT] Hourly job - authorizing max: $${jobAmount} ($${hourlyRate}/hr × ${maxHours} hrs)`);
     } else {
-      jobAmount = Number(offer.job.amount);
+      // Use proposedAmount if it exists (price was negotiated), otherwise use job.amount
+      if (offer.proposedAmount && offer.proposedAmount > 0) {
+        jobAmount = Number(offer.proposedAmount);
+        console.log(`[PAYMENT INTENT] Using negotiated price: $${jobAmount} (proposedAmount)`);
+      } else {
+        jobAmount = Number(offer.job.amount);
+        console.log(`[PAYMENT INTENT] Using original job price: $${jobAmount}`);
+      }
     }
     
     // TIPS ARE NOT INCLUDED IN AUTHORIZATION - They happen after completion

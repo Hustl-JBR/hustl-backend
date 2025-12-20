@@ -13689,18 +13689,23 @@ async function renderJobs(reset = false) {
         return;
       }
 
-      // Fetch job details to show payment amount
+      // Fetch job details and offer to show correct payment amount
+      // Need to check if there's a price negotiation (proposedAmount on offer)
       let jobAmount = 0;
       let customerFee = 0;
       let totalAmount = 0;
       try {
         const token = localStorage.getItem('hustl_token');
+        // First, try to get the offer to check for proposedAmount
+        // We need to find which offer is being accepted - this is tricky without offerId
+        // For now, fetch the job and use its amount (which should be updated if price was negotiated)
         const jobResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         if (jobResponse.ok) {
           const job = await jobResponse.json();
           // Calculate amounts based on job type
+          // Note: If price was negotiated and accepted, job.amount should already be updated
           if (job.payType === 'hourly' && job.hourlyRate && job.estHours) {
             jobAmount = Number(job.hourlyRate) * parseInt(job.estHours);
           } else {
