@@ -133,6 +133,7 @@ module.exports = {
   voidPaymentIntent,
   createRefund,
   createConnectedAccount,
+  verifyStripeAccount,
   createAccountLink,
   transferToHustler,
 };

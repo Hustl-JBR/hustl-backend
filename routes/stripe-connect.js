@@ -110,12 +110,12 @@ const handleOnboardingLink = async (req, res) => {
     }
 
     // If account doesn't exist, create it first
-    if (!user.stripeAccountId) {
+    // If account exists but is invalid, delete it and create a new one
+    let accountId = user.stripeAccountId;
+    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+    
+    if (!accountId) {
       console.log('[STRIPE CONNECT] Account not found, creating new account for user:', user.id);
-      
-      // Create account first
-      const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
-      let accountId;
       
       if (skipStripeCheck) {
         accountId = `acct_test_${user.id.substring(0, 24)}`;
@@ -129,7 +129,9 @@ const handleOnboardingLink = async (req, res) => {
           console.error('[STRIPE CONNECT] Error creating account:', stripeError);
           return res.status(500).json({ 
             error: 'Failed to create Stripe account',
-            message: stripeError.message
+            message: stripeError.message,
+            type: stripeError.type,
+            code: stripeError.code
           });
         }
       }
@@ -139,9 +141,52 @@ const handleOnboardingLink = async (req, res) => {
         where: { id: user.id },
         data: { stripeAccountId: accountId },
       });
+      console.log('[STRIPE CONNECT] Account created and saved:', accountId);
+    } else {
+      console.log('[STRIPE CONNECT] User already has Stripe account:', accountId);
       
-      // Update user object for next step
-      user.stripeAccountId = accountId;
+      // Verify the account actually exists in Stripe (unless we're skipping Stripe)
+      if (!skipStripeCheck) {
+        try {
+          const account = await verifyStripeAccount(accountId);
+          console.log('[STRIPE CONNECT] Account verified:', account.id);
+        } catch (verifyError) {
+          // Account doesn't exist or is invalid - delete it and create a new one
+          if (verifyError.code === 'account_invalid' || verifyError.code === 'resource_missing') {
+            console.log('[STRIPE CONNECT] Account invalid or missing, creating new account:', verifyError.message);
+            
+            // Delete the invalid account ID from database
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { stripeAccountId: null },
+            });
+            
+            // Create a new account
+            try {
+              const newAccount = await createConnectedAccount(user.email);
+              accountId = newAccount.id;
+              console.log('[STRIPE CONNECT] Created new account:', accountId);
+              
+              // Save the new account ID
+              await prisma.user.update({
+                where: { id: user.id },
+                data: { stripeAccountId: accountId },
+              });
+            } catch (createError) {
+              console.error('[STRIPE CONNECT] Error creating replacement account:', createError);
+              return res.status(500).json({ 
+                error: 'Failed to create Stripe account',
+                message: createError.message,
+                type: createError.type,
+                code: createError.code
+              });
+            }
+          } else {
+            // Some other error - return it
+            throw verifyError;
+          }
+        }
+      }
     }
 
     // Check if we should skip Stripe (only if explicitly set)
@@ -163,7 +208,7 @@ const handleOnboardingLink = async (req, res) => {
     const refreshUrl = `${origin}/profile?stripe_onboarding=refresh`;
 
     try {
-      const accountLink = await createAccountLink(user.stripeAccountId, returnUrl, refreshUrl);
+      const accountLink = await createAccountLink(accountId, returnUrl, refreshUrl);
       console.log('[STRIPE CONNECT] Created onboarding link:', accountLink.url);
       res.json({ url: accountLink.url });
     } catch (stripeError) {
