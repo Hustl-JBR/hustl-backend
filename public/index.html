@@ -11738,12 +11738,35 @@ async function renderJobs(reset = false) {
                   
                   const adjustModal = document.createElement('div');
                   adjustModal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 1rem;';
+                  const currentAmount = payType === 'hourly' ? (hourlyRate * maxHours) : jobAmount;
+                  const currentTotal = currentAmount + (currentAmount * 0.065);
+                  
                   adjustModal.innerHTML = `
-                    <div style="background: white; border-radius: 16px; max-width: 500px; width: 100%; padding: 2rem; position: relative;">
+                    <div style="background: white; border-radius: 16px; max-width: 500px; width: 100%; padding: 2rem; position: relative; max-height: 90vh; overflow-y: auto;">
                       <button class="closeAdjustModal" style="position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; border-radius: 50%; border: none; background: #f3f4f6; cursor: pointer; font-size: 1.25rem;">×</button>
                       <h3 style="font-size: 1.25rem; font-weight: 700; margin: 0 0 1rem 0;">Propose Price Change</h3>
+                      
+                      <!-- How It Works Explanation -->
+                      <div style="background: #eff6ff; border: 1px solid #93c5fd; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.85rem; line-height: 1.6;">
+                        <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.5rem;">ℹ️ How Price Changes Work:</div>
+                        <div style="color: #1e3a8a;">
+                          <div style="margin-bottom: 0.5rem;"><strong>Current Price:</strong> $${currentAmount.toFixed(2)} + $${(currentAmount * 0.065).toFixed(2)} fee = $${currentTotal.toFixed(2)} total</div>
+                          <div style="margin-bottom: 0.75rem;"><strong>When Available:</strong> Only before the hustler enters the start code. Price is locked once work begins.</div>
+                          <div style="margin-bottom: 0.5rem;"><strong>Process:</strong></div>
+                          <ol style="margin: 0.5rem 0 0.5rem 1.25rem; padding: 0;">
+                            <li>You propose a new price</li>
+                            <li>Hustler must accept or decline</li>
+                            <li>If accepted, payment is automatically updated</li>
+                          </ol>
+                          <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #93c5fd;">
+                            <div style="margin-bottom: 0.25rem;"><strong>If price goes UP:</strong> You'll be charged the difference</div>
+                            <div><strong>If price goes DOWN:</strong> You'll be refunded the difference</div>
+                          </div>
+                        </div>
+                      </div>
+                      
                       <div style="margin-bottom: 1.5rem;">
-                        <label style="display: block; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">New Price</label>
+                        <label style="display: block; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">New Price</label>
                         ${payType === 'hourly' ? `
                           <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem;">
                             <div>
