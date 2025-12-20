@@ -12041,8 +12041,9 @@ async function renderJobs(reset = false) {
                         }
                         
                         const paymentData = await intentRes.json();
+                        console.log('[PAYMENT] Payment intent created:', paymentData);
                         
-                        // Step 2: Show payment modal
+                        // Step 2: Show payment modal with amount breakdown from payment intent
                         await showStripePaymentModal(paymentData.clientSecret, job.id, async (paymentIntentId) => {
                           // Step 3: Accept offer
                           try {
