@@ -1374,12 +1374,15 @@ router.patch('/:id', authenticate, requireRole('CUSTOMER'), [
   }
 });
 
-// POST /jobs/:id/propose-price-change - Customer proposes price change (before start code)
-router.post('/:id/propose-price-change', authenticate, requireRole('CUSTOMER'), [
-  body('amount').optional().isFloat({ min: 0 }),
-  body('hourlyRate').optional().isFloat({ min: 0 }),
-  body('estHours').optional().isInt({ min: 1 }),
-], async (req, res) => {
+// POST /jobs/:id/propose-price-change - DISABLED: Price changes require complex payment flow for increases
+// Price change feature removed - if price increases, customer needs to authorize additional payment
+// This would require a new payment modal flow which is complex to implement correctly
+router.post('/:id/propose-price-change', authenticate, requireRole('CUSTOMER'), async (req, res) => {
+  return res.status(410).json({ 
+    error: 'Price change feature is currently disabled',
+    message: 'Price changes are not available at this time. Please cancel and repost the job with the new price, or contact support for assistance.'
+  });
+});
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -1477,213 +1480,12 @@ router.post('/:id/propose-price-change', authenticate, requireRole('CUSTOMER'), 
   }
 });
 
-// POST /jobs/:id/accept-price-change - Hustler accepts price change
+// POST /jobs/:id/accept-price-change - DISABLED: Price changes require complex payment flow
 router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), async (req, res) => {
-  try {
-    const job = await prisma.job.findUnique({
-      where: { id: req.params.id },
-      include: { 
-        payment: true,
-        customer: { select: { id: true, name: true, email: true } }
-      }
-    });
-
-    if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
-    }
-
-    if (job.hustlerId !== req.user.id) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    // Price changes only allowed before start code
-    if (job.startCodeVerified) {
-      return res.status(400).json({ 
-        error: 'Price is locked. Cannot change price after job has started.' 
-      });
-    }
-
-    const requirements = job.requirements || {};
-    const proposedPrice = requirements.proposedPriceChange;
-
-    if (!proposedPrice || proposedPrice.status !== 'PENDING') {
-      return res.status(400).json({ 
-        error: 'No pending price change proposal found' 
-      });
-    }
-
-    // Calculate new job amount
-    let newJobAmount = job.amount;
-    if (job.payType === 'hourly') {
-      const newRate = proposedPrice.hourlyRate !== null ? proposedPrice.hourlyRate : job.hourlyRate;
-      const newHours = proposedPrice.estHours !== null ? proposedPrice.estHours : job.estHours;
-      newJobAmount = newRate * newHours;
-    } else {
-      newJobAmount = proposedPrice.amount !== null ? proposedPrice.amount : job.amount;
-    }
-
-    // Update Stripe payment intent if payment exists
-    if (job.payment && job.payment.providerId) {
-      try {
-        if (!process.env.STRIPE_SECRET_KEY) {
-          console.warn('[PRICE CHANGE] Stripe secret key not configured, skipping payment intent update');
-        } else {
-          const Stripe = require('stripe');
-          const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-          
-          // Retrieve existing payment intent to get current metadata
-          const existingIntent = await stripe.paymentIntents.retrieve(job.payment.providerId);
-          const existingMetadata = existingIntent.metadata || {};
-          
-          // Calculate new total with fees
-          // Tips not included in authorization - they happen after completion
-          const customerFee = newJobAmount * 0.065; // 6.5% customer fee
-          const newTotal = newJobAmount + customerFee;
-
-          // Only update if payment intent is in a state that allows updates
-          if (existingIntent.status === 'requires_capture' || existingIntent.status === 'requires_payment_method') {
-            // Update payment intent amount
-            await stripe.paymentIntents.update(job.payment.providerId, {
-              amount: Math.round(newTotal * 100), // Convert to cents
-              metadata: {
-                ...existingMetadata,
-                amount: newJobAmount.toString(),
-                tip: '0', // Tips happen after completion, not in authorization
-                customerFee: customerFee.toString(),
-                priceUpdatedAt: new Date().toISOString()
-              }
-            });
-
-            console.log(`[PRICE CHANGE] Updated Stripe payment intent ${job.payment.providerId} to $${newTotal}`);
-          } else {
-            console.warn(`[PRICE CHANGE] Payment intent ${job.payment.providerId} is in status ${existingIntent.status}, cannot update. Continuing with job update.`);
-          }
-        }
-      } catch (stripeError) {
-        console.error('[PRICE CHANGE] Stripe update error:', stripeError);
-        console.error('[PRICE CHANGE] Stripe error details:', {
-          type: stripeError.type,
-          code: stripeError.code,
-          message: stripeError.message,
-          paymentIntentId: job.payment.providerId,
-          stack: stripeError.stack
-        });
-        // Don't fail the entire request if Stripe update fails - log and continue
-        // The payment record will still be updated in the database
-        console.warn('[PRICE CHANGE] Continuing with job update despite Stripe error');
-      }
-    }
-
-    // Update job with new price
-    const updateData = {
-      amount: newJobAmount
-    };
-    
-    if (job.payType === 'hourly') {
-      if (proposedPrice.hourlyRate !== null) {
-        updateData.hourlyRate = proposedPrice.hourlyRate;
-      }
-      if (proposedPrice.estHours !== null) {
-        updateData.estHours = proposedPrice.estHours;
-      }
-    }
-
-    // Mark price change as accepted
-    // Ensure requirements is an object (not a string)
-    let existingRequirements = job.requirements || {};
-    if (typeof existingRequirements === 'string') {
-      try {
-        existingRequirements = JSON.parse(existingRequirements);
-      } catch (e) {
-        console.error('[PRICE CHANGE] Error parsing existing requirements:', e);
-        existingRequirements = {};
-      }
-    }
-    
-    console.log('[PRICE CHANGE] Updating job with:', {
-      jobId: req.params.id,
-      updateData,
-      newRequirements: {
-        ...existingRequirements,
-        proposedPriceChange: {
-          ...proposedPrice,
-          status: 'ACCEPTED',
-          acceptedAt: new Date().toISOString()
-        }
-      }
-    });
-    
-    const updatedJob = await prisma.job.update({
-      where: { id: req.params.id },
-      data: {
-        ...updateData,
-        requirements: {
-          ...existingRequirements,
-          proposedPriceChange: {
-            ...proposedPrice,
-            status: 'ACCEPTED',
-            acceptedAt: new Date().toISOString()
-          }
-        }
-      },
-      include: {
-        customer: { select: { id: true, name: true, email: true } }
-      }
-    });
-    
-    console.log('[PRICE CHANGE] Job updated successfully:', updatedJob.id);
-
-    // Update payment record
-    // TIPS ARE NOT INCLUDED IN AUTHORIZATION - They happen after completion
-    if (job.payment) {
-      const customerFee = newJobAmount * 0.065; // 6.5% customer fee
-      const total = newJobAmount + customerFee;
-
-      await prisma.payment.update({
-        where: { id: job.payment.id },
-        data: {
-          amount: newJobAmount,
-          tip: 0, // Tips happen after completion, not in authorization
-          feeCustomer: customerFee,
-          total
-        }
-      });
-    }
-
-    // Send notification email to customer (non-blocking)
-    const { sendPriceChangeAcceptedEmail } = require('../services/email');
-    try {
-      await sendPriceChangeAcceptedEmail(
-        job.customer.email,
-        job.customer.name,
-        job.title,
-        job.id,
-        newJobAmount
-      );
-    } catch (emailError) {
-      console.error('Error sending price change accepted email:', emailError);
-    }
-
-    res.json({ 
-      success: true,
-      job: updatedJob,
-      newAmount: newJobAmount
-    });
-  } catch (error) {
-    console.error('[PRICE CHANGE] Accept price change error:', error);
-    console.error('[PRICE CHANGE] Error stack:', error.stack);
-    console.error('[PRICE CHANGE] Error details:', {
-      name: error.name,
-      message: error.message,
-      code: error.code,
-      type: error.type
-    });
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: error.message,
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-  }
+  return res.status(410).json({ 
+    error: 'Price change feature is currently disabled',
+    message: 'Price changes are not available at this time.'
+  });
 });
 
 // POST /jobs/:id/decline-price-change - Hustler declines price change
@@ -2349,7 +2151,7 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
     const customerName = job.customer?.name || req.user.name;
 
     // Process refund (automatic if before start code)
-    await processRefundIfNeeded(job, 'Job deleted by customer', req.user.id, req.user.name, req.ip);
+    const refundInfo = await processRefundIfNeeded(job, 'Job deleted by customer', req.user.id, req.user.name, req.ip);
 
     // Delete payment first (if exists) - Payment has ON DELETE RESTRICT constraint
     // Note: Refund should have already been processed above, but we still need to delete the payment record
@@ -2398,7 +2200,14 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
       console.error('Error sending delete notification emails (non-fatal):', emailError);
     }
 
-    res.json({ message: 'Job deleted successfully' });
+    res.json({ 
+      message: 'Job deleted successfully',
+      refund: refundInfo.refunded ? {
+        processed: true,
+        amount: refundInfo.amount,
+        message: refundInfo.message
+      } : null
+    });
   } catch (error) {
     console.error('Delete job error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -2406,14 +2215,15 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
 });
 
 // Helper function to process refunds (only if start code not verified)
+// Returns: { refunded: boolean, amount: number, message: string }
 async function processRefundIfNeeded(job, reason, actorId, actorName, ipAddress = 'system') {
   // Only refund if job hasn't started (start code not verified)
   if (job.startCodeVerified || job.status === 'IN_PROGRESS') {
-    return; // No refund if job has started
+    return { refunded: false, amount: 0, message: 'No refund: Job has already started' };
   }
 
   if (!job.payment) {
-    return; // No payment to refund
+    return { refunded: false, amount: 0, message: 'No payment to refund' };
   }
 
   const { voidPaymentIntent, createRefund } = require('../services/stripe');
@@ -2452,10 +2262,17 @@ async function processRefundIfNeeded(job, reason, actorId, actorName, ipAddress 
           ipAddress: ipAddress,
         },
       }).catch(err => console.error('Error creating audit log:', err));
+      
+      return { 
+        refunded: true, 
+        amount: Number(job.payment.total), 
+        message: `Payment authorization voided. $${Number(job.payment.total).toFixed(2)} will not be charged.`
+      };
     } else if (job.payment.status === 'CAPTURED') {
       // Payment was captured - issue full refund
+      const refundAmount = Number(job.payment.total);
       if (!skipStripeCheck && job.payment.providerId) {
-        const refundAmountCents = Math.round(Number(job.payment.total) * 100);
+        const refundAmountCents = Math.round(refundAmount * 100);
         await createRefund(job.payment.providerId, refundAmountCents);
       }
 
@@ -2463,7 +2280,7 @@ async function processRefundIfNeeded(job, reason, actorId, actorName, ipAddress 
         where: { id: job.payment.id },
         data: { 
           status: 'REFUNDED',
-          refundAmount: Number(job.payment.total),
+          refundAmount: refundAmount,
           refundReason: reason,
         },
       });
@@ -2476,14 +2293,14 @@ async function processRefundIfNeeded(job, reason, actorId, actorName, ipAddress 
           resourceType: 'PAYMENT',
           resourceId: job.payment.id,
           details: {
-            amount: Number(job.payment.total),
+            amount: refundAmount,
             reason: reason,
             jobId: job.id,
           },
           ipAddress: ipAddress,
         },
       }).catch(err => console.error('Error creating audit log:', err));
-
+      
       // Send email to customer about refund
       const { sendRefundEmail, sendAdminRefundNotification } = require('../services/email');
       try {
@@ -2504,16 +2321,20 @@ async function processRefundIfNeeded(job, reason, actorId, actorName, ipAddress 
         console.error('Error sending refund email:', emailError);
       }
 
-      // Send admin notification
-      try {
-        const payment = await prisma.payment.findUnique({
-          where: { id: job.payment.id },
-          include: { 
-            customer: { select: { id: true, email: true, name: true } }, 
-            hustler: { select: { id: true, email: true, name: true } }, 
-            job: true 
-          },
-        });
+      return { 
+        refunded: true, 
+        amount: refundAmount, 
+        message: `Full refund of $${refundAmount.toFixed(2)} has been processed. It may take 5-10 business days to appear in your account.`
+      };
+    }
+    
+    // No refund needed (payment already processed or no payment)
+    return { refunded: false, amount: 0, message: 'No refund processed' };
+  } catch (error) {
+    console.error('Error processing refund:', error);
+    return { refunded: false, amount: 0, message: 'Error processing refund' };
+  }
+}
         await sendAdminRefundNotification(
           payment,
           Number(job.payment.total),
@@ -2562,7 +2383,7 @@ router.post('/:id/unassign', authenticate, requireRole('CUSTOMER'), async (req, 
     }
 
     // Process refund (automatic if before start code)
-    await processRefundIfNeeded(job, 'Job unassigned by customer', req.user.id, req.user.name, req.ip);
+    const refundInfo = await processRefundIfNeeded(job, 'Job unassigned by customer', req.user.id, req.user.name, req.ip);
 
     // Find accepted offer
     const acceptedOffer = job.offers && job.offers.length > 0 ? job.offers[0] : null;
@@ -2624,7 +2445,12 @@ router.post('/:id/unassign', authenticate, requireRole('CUSTOMER'), async (req, 
     res.json({
       success: true,
       message: 'Hustler unassigned. Job is now open for other applicants.',
-      job: updatedJob
+      job: updatedJob,
+      refund: refundInfo.refunded ? {
+        processed: true,
+        amount: refundInfo.amount,
+        message: refundInfo.message
+      } : null
     });
   } catch (error) {
     console.error('Unassign job error:', error);
