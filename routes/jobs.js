@@ -2245,9 +2245,23 @@ router.post('/:id/confirm-complete', authenticate, requireRole('CUSTOMER'), asyn
         },
       });
       
+      // Calculate actual amounts for completion modal
+      const actualJobAmount = finalJob.payment.amount || 0;
+      const platformFee = finalJob.payment.feeHustler || (actualJobAmount * 0.12);
+      const hustlerPayout = actualJobAmount - platformFee;
+      const actualHours = finalJob.requirements?.actualHours || null;
+      
       return res.json({
         ...finalJob,
         message: 'Job confirmed and payment released to hustler',
+        success: true,
+        paymentReleased: true,
+        actualJobAmount: actualJobAmount,
+        hustlerPayout: hustlerPayout,
+        actualHours: actualHours,
+        platformFee: platformFee,
+        customerId: finalJob.customerId,
+        hustlerId: finalJob.hustlerId
       });
     }
 

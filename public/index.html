@@ -17092,7 +17092,6 @@ async function renderJobs(reset = false) {
             
             try {
               const result = await window.hustlAPI.jobs.confirmComplete(job.id, enteredCode);
-              showToast("✓ Job confirmed! Payment has been released to the hustler.");
               
               // Close the job details modal first
               overlay.remove();
@@ -17102,15 +17101,29 @@ async function renderJobs(reset = false) {
               renderJobs();
               renderProfile();
               
-              // Job is now COMPLETED - both parties can review each other
-              // Show review modal for customer to review hustler
-              if (job.hustlerId) {
-                setTimeout(() => {
-                  showReviewModal(job.id, job.hustlerId, job.hustler?.name || "Hustler");
-                }, 300);
+              // Show completion success modal with payment data (same as hustler gets)
+              if (result && result.payment) {
+                const actualJobAmount = result.payment.amount || job.amount || 0;
+                const platformFee = result.payment.feeHustler || (actualJobAmount * 0.12);
+                const hustlerPayout = actualJobAmount - platformFee;
+                const actualHours = result.requirements?.actualHours || null;
+                
+                showCompletionSuccessModal(job.id, {
+                  customerId: job.customerId,
+                  hustlerId: job.hustlerId,
+                  actualJobAmount: actualJobAmount,
+                  hustlerPayout: hustlerPayout,
+                  actualHours: actualHours,
+                  platformFee: platformFee
+                });
+              } else {
+                // Fallback: show review modal if completion modal data not available
+                if (job.hustlerId) {
+                  setTimeout(() => {
+                    showReviewModal(job.id, job.hustlerId, job.hustler?.name || "Hustler");
+                  }, 300);
+                }
               }
-              
-              // Note: Hustler can also review customer - they'll see the option when they view the job
             } catch (error) {
               showToast("Error: " + (error.message || "Failed to confirm completion"));
               confirmBtn.disabled = false;
