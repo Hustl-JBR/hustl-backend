@@ -191,8 +191,6 @@ const handleOnboardingLink = async (req, res) => {
 
     // Check if we should skip Stripe (only if explicitly set)
     // Even in test mode with sk_test_ key, we should create real Stripe onboarding links
-    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
-    
     if (skipStripeCheck) {
       // Only skip if explicitly set - this is for development without Stripe
       const origin = process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || req.get('origin');
