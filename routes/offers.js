@@ -422,9 +422,16 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     if (!paymentIntentId && process.env.SKIP_STRIPE_CHECK !== 'true') {
       // Calculate payment amounts from job
       // TIPS ARE NOT INCLUDED IN AUTHORIZATION - They happen after completion
-      // Use proposedAmount if it exists (price was negotiated), otherwise use job.amount
+      // Use proposedAmount ONLY if there was a negotiation (customer proposed a price)
+      // Otherwise, use the job's original amount
       let jobAmount = 0;
-      if (offer.proposedAmount && offer.proposedAmount > 0) {
+      const jobRequirements = offer.job.requirements || {};
+      const hasNegotiation = jobRequirements.negotiationAccepted || 
+                            (offer.proposedAmount && offer.proposedAmount !== parseFloat(offer.job.amount || 0));
+      
+      // Only use proposedAmount if it's different from job amount (meaning it was negotiated)
+      if (offer.proposedAmount && offer.proposedAmount > 0 && 
+          (hasNegotiation || offer.proposedAmount !== parseFloat(offer.job.amount || 0))) {
         jobAmount = parseFloat(offer.proposedAmount);
       } else {
         jobAmount = parseFloat(offer.job.amount || 0);
@@ -483,13 +490,23 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       jobAmount = maxAmount; // Authorize the max amount, but we'll capture actual amount later
       console.log(`[HOURLY JOB] Authorizing max amount: $${maxAmount} ($${hourlyRate}/hr × ${maxHours} hrs)`);
     } else {
-      // Use proposedAmount if it exists (price was negotiated), otherwise use job.amount
-      if (offer.proposedAmount && offer.proposedAmount > 0) {
+      // Use proposedAmount ONLY if there was a negotiation (customer proposed a price)
+      // Check if negotiation was accepted by looking at job requirements
+      const jobRequirements = offer.job.requirements || {};
+      const hasNegotiation = jobRequirements.negotiationAccepted || 
+                            (offer.proposedAmount && offer.proposedAmount !== parseFloat(offer.job.amount || 0));
+      
+      // Only use proposedAmount if it's different from job amount (meaning it was negotiated)
+      // OR if the job amount was already updated to match proposedAmount (negotiation was accepted)
+      if (offer.proposedAmount && offer.proposedAmount > 0 && 
+          (hasNegotiation || offer.proposedAmount !== parseFloat(offer.job.amount || 0))) {
         jobAmount = parseFloat(offer.proposedAmount);
         console.log(`[OFFER ACCEPT] Using negotiated price: $${jobAmount} (proposedAmount)`);
       } else {
+        // Use the job's current amount (which may have been updated if negotiation was accepted)
+        // or the original job amount
         jobAmount = parseFloat(offer.job.amount || 0);
-        console.log(`[OFFER ACCEPT] Using original job price: $${jobAmount}`);
+        console.log(`[OFFER ACCEPT] Using job price: $${jobAmount} (job.amount)`);
       }
       maxAmount = jobAmount; // For flat jobs, max = actual
     }
