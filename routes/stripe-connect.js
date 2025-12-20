@@ -156,16 +156,51 @@ router.get('/status', async (req, res) => {
     // Check if user has HUSTLER role
     const userRoles = (user.roles || []).map(r => r.toUpperCase());
     if (!userRoles.includes('HUSTLER')) {
-      return res.json({ connected: false, accountId: null });
+      return res.json({ 
+        connected: false, 
+        accountId: null,
+        message: 'User is not a hustler'
+      });
     }
 
     if (!user.stripeAccountId) {
-      return res.json({ connected: false, accountId: null });
+      return res.json({ 
+        connected: false, 
+        accountId: null,
+        message: 'Stripe account not created. Call POST /stripe-connect/create-account first.'
+      });
     }
 
-    // In a real app, you'd fetch the account from Stripe to check details
-    // For now, just checking if accountId exists is sufficient for 'connected'
-    res.json({ connected: true, accountId: user.stripeAccountId });
+    // Try to verify account exists in Stripe
+    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+    let accountValid = false;
+    let accountDetails = null;
+
+    if (!skipStripeCheck && process.env.STRIPE_SECRET_KEY) {
+      try {
+        const Stripe = require('stripe');
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+        accountDetails = await stripe.accounts.retrieve(user.stripeAccountId);
+        accountValid = true;
+      } catch (stripeError) {
+        console.error('[STRIPE CONNECT] Error retrieving account:', stripeError);
+        accountValid = false;
+      }
+    } else {
+      accountValid = true; // Assume valid if skipping check
+    }
+
+    res.json({ 
+      connected: accountValid,
+      accountId: user.stripeAccountId,
+      accountDetails: accountDetails ? {
+        id: accountDetails.id,
+        type: accountDetails.type,
+        chargesEnabled: accountDetails.charges_enabled,
+        payoutsEnabled: accountDetails.payouts_enabled,
+        detailsSubmitted: accountDetails.details_submitted
+      } : null
+    });
   } catch (error) {
     console.error('Error checking Stripe status:', error);
     res.status(500).json({ error: 'Failed to check Stripe status' });
