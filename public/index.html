@@ -27428,59 +27428,85 @@ meta.textContent =
         
         const token = localStorage.getItem('hustl_token');
         
-        // Check if payment is needed by trying to accept first
-        const offerRes = await fetch(`${API_BASE}/offers/${offerId}/accept`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({})
+        // Step 1: Create payment intent first
+        let paymentIntentData;
+        try {
+          const intentRes = await fetch(`${API_BASE}/payments/create-intent/offer/${offerId}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (!intentRes.ok) {
+            const error = await intentRes.json().catch(() => ({}));
+            if (error.error?.includes('Stripe') || error.error?.includes('payment')) {
+              throw new Error(error.message || 'Failed to create payment');
+            }
+            throw new Error(error.error || 'Failed to create payment intent');
+          }
+          
+          paymentIntentData = await intentRes.json();
+        } catch (error) {
+          console.error('Error creating payment intent:', error);
+          showToast(error.message || 'Failed to create payment. Please try again.');
+          return;
+        }
+        
+        // Step 2: Show Stripe payment modal
+        await showStripePaymentModal(paymentIntentData.clientSecret, jobId, async (paymentIntentId) => {
+          // Step 3: Accept offer with payment intent ID
+          try {
+            const acceptRes = await fetch(`${API_BASE}/offers/${offerId}/accept`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                paymentIntentId: paymentIntentId
+              })
+            });
+            
+            if (!acceptRes.ok) {
+              const error = await acceptRes.json().catch(() => ({}));
+              throw new Error(error.error || 'Failed to accept offer');
+            }
+            
+            // Success!
+            showToast("✅ Hustler accepted! Payment is held in escrow until job completion.");
+            if (modalOverlay && modalOverlay.parentNode) {
+              document.body.removeChild(modalOverlay);
+            }
+            
+            // Refresh the manage jobs view if we're on it
+            if (activeView === 'manage-jobs') {
+              const postedJobsList = document.getElementById("managePostedJobsList");
+              if (postedJobsList) {
+                postedJobsList.dataset.loaded = 'false'; // Force reload
+                loadPostedJobs();
+              }
+              // Also refresh active jobs since job moved there
+              const activeJobsList = document.getElementById("manageActiveJobsList");
+              if (activeJobsList) {
+                activeJobsList.dataset.loaded = 'false';
+                loadActiveJobs();
+              }
+            } else {
+              // Otherwise refresh profile jobs tab
+              const jobsTab = document.querySelector('.profile-tab[data-tab="jobs"]');
+              if (jobsTab) {
+                jobsTab.click();
+              }
+            }
+          } catch (error) {
+            console.error("Error accepting offer:", error);
+            showToast(error.message || "Error accepting offer. Please try again.");
+          }
         });
-        
-        if (!offerRes.ok) {
-          const error = await offerRes.json().catch(() => ({}));
-          if (error.requiresStripe || error.error?.includes('Stripe')) {
-            // Stripe account required
-            showToast("⚠️ This hustler needs to connect their Stripe account before you can accept them. They've been notified via email.");
-            return;
-          }
-          if (error.requiresPayment) {
-            // Show embedded payment modal
-            await showPaymentModal(offerId, jobId, modalOverlay);
-            return;
-          }
-          throw new Error(error.error || 'Failed to accept offer');
-        }
-        
-        // Payment not required (test mode) or already paid
-        showToast("✅ Hustler accepted! Payment is held in escrow until job completion.");
-        if (modalOverlay && modalOverlay.parentNode) {
-          document.body.removeChild(modalOverlay);
-        }
-        
-        // Refresh the manage jobs view if we're on it
-        if (activeView === 'manage-jobs') {
-          const postedJobsList = document.getElementById("managePostedJobsList");
-          if (postedJobsList) {
-            postedJobsList.dataset.loaded = 'false'; // Force reload
-            loadPostedJobs();
-          }
-          // Also refresh active jobs since job moved there
-          const activeJobsList = document.getElementById("manageActiveJobsList");
-          if (activeJobsList) {
-            activeJobsList.dataset.loaded = 'false';
-            loadActiveJobs();
-          }
-        } else {
-          // Otherwise refresh profile jobs tab
-          const jobsTab = document.querySelector('.profile-tab[data-tab="jobs"]');
-          if (jobsTab) {
-            jobsTab.click();
-          }
-        }
       } catch (error) {
-        console.error("Error accepting offer:", error);
+        console.error("Error in acceptOffer:", error);
         showToast(error.message || "Error accepting offer. Please try again.");
       }
     }
