@@ -10721,6 +10721,7 @@ async function renderJobs(reset = false) {
         let user = null;
         let isOwner = false;
         let isHustler = false;
+        let isCustomer = false;
         try {
           if (window.hustlAPI && window.hustlAPI.auth) {
             user = await window.hustlAPI.auth.getCurrentUser();
@@ -10730,6 +10731,10 @@ async function renderJobs(reset = false) {
               isHustler = (user.roles && Array.isArray(user.roles) && user.roles.some(r => r.toUpperCase() === 'HUSTLER')) || 
                          (user.role && user.role.toUpperCase() === 'HUSTLER') ||
                          (user.isHustler === true);
+              // Check for customer role
+              isCustomer = job.customerId === user.id || 
+                          (user.roles && Array.isArray(user.roles) && user.roles.some(r => r.toUpperCase() === 'CUSTOMER')) ||
+                          (user.role && user.role.toUpperCase() === 'CUSTOMER');
             }
           }
         } catch (e) {
@@ -11620,7 +11625,7 @@ async function renderJobs(reset = false) {
             declineBtn.addEventListener('click', async (e) => {
               e.preventDefault();
               e.stopPropagation();
-                if (!confirm('Are you sure you want to decline this price change? The customer may unassign you.')) {
+                if (!confirm('Are you sure you want to decline this price change? The job will remain at the original price.')) {
                   return;
                 }
                 console.log('[PRICE CHANGE] Decline button clicked for job:', job.id);

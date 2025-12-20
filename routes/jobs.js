@@ -1597,7 +1597,7 @@ router.post('/:id/accept-price-change', authenticate, requireRole('CUSTOMER'), a
             customerFee: feeDifference,
             total: totalDifference
           },
-          message: `Price increased by $${totalDifference.toFixed(2)}. Customer must authorize additional payment.`
+          message: `Price increased by $${totalDifference.toFixed(2)}. Please authorize additional payment to accept this price change.`
         });
       } catch (stripeError) {
         console.error('[PRICE CHANGE] Error creating difference payment intent:', stripeError);
