@@ -288,9 +288,9 @@ router.get('/status', async (req, res) => {
       });
     }
 
-    // Try to verify account exists in Stripe
+    // Try to verify account exists in Stripe and check if onboarding is complete
     const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
-    let accountValid = false;
+    let isConnected = false;
     let accountDetails = null;
 
     if (!skipStripeCheck && process.env.STRIPE_SECRET_KEY) {
@@ -298,25 +298,43 @@ router.get('/status', async (req, res) => {
         const Stripe = require('stripe');
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
         accountDetails = await stripe.accounts.retrieve(user.stripeAccountId);
-        accountValid = true;
+        
+        // Account is considered "connected" if:
+        // 1. Account exists in Stripe
+        // 2. Details have been submitted (user completed onboarding)
+        // OR charges are enabled (account is ready to receive payments)
+        isConnected = accountDetails.details_submitted || accountDetails.charges_enabled;
+        
+        console.log('[STRIPE CONNECT] Status check:', {
+          accountId: user.stripeAccountId,
+          detailsSubmitted: accountDetails.details_submitted,
+          chargesEnabled: accountDetails.charges_enabled,
+          payoutsEnabled: accountDetails.payouts_enabled,
+          isConnected
+        });
       } catch (stripeError) {
         console.error('[STRIPE CONNECT] Error retrieving account:', stripeError);
-        accountValid = false;
+        isConnected = false;
       }
     } else {
-      accountValid = true; // Assume valid if skipping check
+      // In skip mode, if account ID exists, consider it connected
+      isConnected = !!user.stripeAccountId;
     }
 
     res.json({ 
-      connected: accountValid,
+      connected: isConnected,
       accountId: user.stripeAccountId,
       accountDetails: accountDetails ? {
         id: accountDetails.id,
         type: accountDetails.type,
         chargesEnabled: accountDetails.charges_enabled,
         payoutsEnabled: accountDetails.payouts_enabled,
-        detailsSubmitted: accountDetails.details_submitted
-      } : null
+        detailsSubmitted: accountDetails.details_submitted,
+        email: accountDetails.email
+      } : null,
+      message: isConnected 
+        ? 'Stripe account is connected and ready to receive payments'
+        : 'Stripe account created but onboarding not completed. Complete onboarding to receive payments.'
     });
   } catch (error) {
     console.error('Error checking Stripe status:', error);
