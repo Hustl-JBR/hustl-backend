@@ -438,11 +438,33 @@ router.post('/', authenticate, requireRole('CUSTOMER'), [
     }
     
     // Ensure equipmentNeeded is preserved from request body
-    // Check both camelCase and snake_case versions
-    const equipmentNeeded = parsedRequirements.equipmentNeeded || parsedRequirements.equipment_needed || req.body.equipmentNeeded || req.body.equipment_needed || [];
-    const customEquipment = parsedRequirements.customEquipment || parsedRequirements.custom_equipment || req.body.customEquipment || req.body.custom_equipment || null;
+    // Check both camelCase and snake_case versions - check requirements object first, then direct body
+    let equipmentNeeded = parsedRequirements.equipmentNeeded || parsedRequirements.equipment_needed || [];
+    let customEquipment = parsedRequirements.customEquipment || parsedRequirements.custom_equipment || null;
     
-    console.log('[POST /jobs] Equipment data - equipmentNeeded:', equipmentNeeded, 'customEquipment:', customEquipment);
+    // Also check direct body fields (in case they're sent separately)
+    if ((!equipmentNeeded || (Array.isArray(equipmentNeeded) && equipmentNeeded.length === 0)) && req.body.equipmentNeeded) {
+      equipmentNeeded = req.body.equipmentNeeded;
+    }
+    if ((!equipmentNeeded || (Array.isArray(equipmentNeeded) && equipmentNeeded.length === 0)) && req.body.equipment_needed) {
+      equipmentNeeded = req.body.equipment_needed;
+    }
+    if (!customEquipment && req.body.customEquipment) {
+      customEquipment = req.body.customEquipment;
+    }
+    if (!customEquipment && req.body.custom_equipment) {
+      customEquipment = req.body.custom_equipment;
+    }
+    
+    // Default to empty array if still null/undefined
+    if (!equipmentNeeded) {
+      equipmentNeeded = [];
+    }
+    
+    console.log('[POST /jobs] Equipment data - equipmentNeeded:', equipmentNeeded, 'Type:', typeof equipmentNeeded, 'IsArray:', Array.isArray(equipmentNeeded));
+    console.log('[POST /jobs] Custom equipment:', customEquipment);
+    console.log('[POST /jobs] Parsed requirements keys:', Object.keys(parsedRequirements || {}));
+    console.log('[POST /jobs] Request body keys:', Object.keys(req.body || {}));
 
     // Content moderation - check for prohibited content
     const notes = requirements.notes || '';

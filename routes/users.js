@@ -526,18 +526,47 @@ router.patch('/me', authenticate, [
               `UPDATE users SET tools = NULL, updated_at = NOW() WHERE id = '${req.user.id.replace(/'/g, "''")}'`
             );
             user.tools = null;
+            console.log('[PATCH /users/me] Tools cleared via fallback unsafe method');
           } else {
-            const escapedTools = String(toolsToSave).replace(/'/g, "''");
+            const escapedTools = String(toolsToSave).replace(/'/g, "''").replace(/\\/g, '\\\\');
             const escapedId = req.user.id.replace(/'/g, "''");
-            await prisma.$executeRawUnsafe(
-              `UPDATE users SET tools = '${escapedTools}', updated_at = NOW() WHERE id = '${escapedId}'`
-            );
+            const sql = `UPDATE users SET tools = $1::text, updated_at = NOW() WHERE id = $2::text`;
+            await prisma.$executeRawUnsafe(sql, escapedTools, escapedId);
             user.tools = toolsToSave;
+            console.log('[PATCH /users/me] Tools saved via fallback unsafe method:', toolsToSave);
           }
-          console.log('[PATCH /users/me] Tools saved via fallback unsafe method');
+          
+          // Verify it was saved
+          try {
+            const verifyResult = await prisma.$queryRawUnsafe(
+              `SELECT tools FROM users WHERE id = '${req.user.id.replace(/'/g, "''")}'`
+            );
+            if (verifyResult && Array.isArray(verifyResult) && verifyResult.length > 0) {
+              user.tools = verifyResult[0].tools;
+              console.log('[PATCH /users/me] Verified tools after fallback save:', user.tools);
+            }
+          } catch (verifyError) {
+            console.warn('[PATCH /users/me] Could not verify tools after fallback save:', verifyError);
+          }
         } catch (fallbackError) {
           console.error('[PATCH /users/me] Fallback method also failed:', fallbackError);
-          user.tools = null;
+          console.error('[PATCH /users/me] Fallback error details:', {
+            message: fallbackError.message,
+            code: fallbackError.code,
+            stack: fallbackError.stack
+          });
+          // Last resort: try direct SQL without parameterization
+          try {
+            if (toolsToSave && toolsToSave !== '') {
+              const directSql = `UPDATE users SET tools = '${String(toolsToSave).replace(/'/g, "''").replace(/\\/g, '\\\\')}', updated_at = NOW() WHERE id = '${req.user.id.replace(/'/g, "''")}'`;
+              await prisma.$executeRawUnsafe(directSql);
+              user.tools = toolsToSave;
+              console.log('[PATCH /users/me] Tools saved via direct SQL (last resort)');
+            }
+          } catch (directError) {
+            console.error('[PATCH /users/me] All methods failed. Tools column may not exist:', directError);
+            user.tools = null;
+          }
         }
       }
     }
