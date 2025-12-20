@@ -11779,7 +11779,25 @@ async function renderJobs(reset = false) {
                         ` : `
                           <input type="number" id="newAmount-${job.id}" placeholder="Total amount" min="1" step="0.01" style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem;" value="${jobAmount || ''}">
                         `}
+                        <div style="margin-top: 0.75rem; font-size: 0.8rem; color: #6b7280;">
+                          <div id="pricePreview-${job.id}" style="padding: 0.5rem; background: #f9fafb; border-radius: 6px; margin-top: 0.5rem;">
+                            <div>New total: <span id="newTotalPreview-${job.id}" style="font-weight: 600;">$0.00</span></div>
+                            <div style="margin-top: 0.25rem; font-size: 0.75rem;">
+                              <span id="priceChangePreview-${job.id}" style="color: #6b7280;">Enter new price</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
+                      
+                      <div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 0.875rem; margin-bottom: 1.5rem; font-size: 0.85rem; color: #92400e;">
+                        <div style="font-weight: 600; margin-bottom: 0.25rem;">⚠️ Important:</div>
+                        <div style="line-height: 1.5;">
+                          • Only propose if necessary and after discussing with the hustler<br>
+                          • Hustler must accept before the price changes<br>
+                          • Price is locked once the start code is entered
+                        </div>
+                      </div>
+                      
                       <div style="display: flex; gap: 0.75rem;">
                         <button class="btn btn-primary savePriceBtn-${job.id}" style="flex: 1; padding: 0.75rem; font-weight: 600;">Send Proposal</button>
                         <button class="btn btn-ghost cancelPriceBtn-${job.id}" style="flex: 1; padding: 0.75rem;">Cancel</button>
@@ -11787,6 +11805,52 @@ async function renderJobs(reset = false) {
                     </div>
                   `;
                   document.body.appendChild(adjustModal);
+                  
+                  // Add real-time price preview
+                  const updatePricePreview = () => {
+                    let newAmount = 0;
+                    if (payType === 'hourly') {
+                      const newRate = parseFloat(document.getElementById(`newHourlyRate-${job.id}`)?.value || 0);
+                      const newHours = parseInt(document.getElementById(`newMaxHours-${job.id}`)?.value || 0);
+                      newAmount = newRate * newHours;
+                    } else {
+                      newAmount = parseFloat(document.getElementById(`newAmount-${job.id}`)?.value || 0);
+                    }
+                    
+                    if (newAmount > 0) {
+                      const newFee = newAmount * 0.065;
+                      const newTotal = newAmount + newFee;
+                      const difference = newTotal - currentTotal;
+                      
+                      document.getElementById(`newTotalPreview-${job.id}`).textContent = `$${newTotal.toFixed(2)}`;
+                      
+                      if (Math.abs(difference) < 0.01) {
+                        document.getElementById(`priceChangePreview-${job.id}`).textContent = 'No change';
+                        document.getElementById(`priceChangePreview-${job.id}`).style.color = '#6b7280';
+                      } else if (difference > 0) {
+                        document.getElementById(`priceChangePreview-${job.id}`).textContent = `You'll be charged an additional $${difference.toFixed(2)}`;
+                        document.getElementById(`priceChangePreview-${job.id}`).style.color = '#dc2626';
+                      } else {
+                        document.getElementById(`priceChangePreview-${job.id}`).textContent = `You'll be refunded $${Math.abs(difference).toFixed(2)}`;
+                        document.getElementById(`priceChangePreview-${job.id}`).style.color = '#10b981';
+                      }
+                    } else {
+                      document.getElementById(`newTotalPreview-${job.id}`).textContent = '$0.00';
+                      document.getElementById(`priceChangePreview-${job.id}`).textContent = 'Enter new price';
+                      document.getElementById(`priceChangePreview-${job.id}`).style.color = '#6b7280';
+                    }
+                  };
+                  
+                  // Add event listeners for real-time preview
+                  if (payType === 'hourly') {
+                    document.getElementById(`newHourlyRate-${job.id}`)?.addEventListener('input', updatePricePreview);
+                    document.getElementById(`newMaxHours-${job.id}`)?.addEventListener('input', updatePricePreview);
+                  } else {
+                    document.getElementById(`newAmount-${job.id}`)?.addEventListener('input', updatePricePreview);
+                  }
+                  
+                  // Initial preview
+                  setTimeout(updatePricePreview, 100);
                   
                   adjustModal.querySelector('.closeAdjustModal')?.addEventListener('click', () => {
                     document.body.removeChild(adjustModal);
