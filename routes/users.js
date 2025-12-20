@@ -73,7 +73,19 @@ router.get('/me', authenticate, async (req, res) => {
         });
         user.gender = null;
         user.bio = null;
-        user.tools = null;
+        // Try to fetch tools with raw SQL
+        try {
+          const toolsResult = await prisma.$queryRawUnsafe(
+            `SELECT tools FROM users WHERE id = '${req.user.id.replace(/'/g, "''")}'`
+          );
+          if (toolsResult && Array.isArray(toolsResult) && toolsResult.length > 0) {
+            user.tools = toolsResult[0].tools;
+          } else {
+            user.tools = null;
+          }
+        } catch (toolsError) {
+          user.tools = null;
+        }
       } else {
         throw genderError;
       }
