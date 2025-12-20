@@ -321,6 +321,38 @@ router.get('/status', async (req, res) => {
       isConnected = !!user.stripeAccountId;
     }
 
+    // Check if account just became connected (wasn't connected before, now is)
+    // This happens when user returns from Stripe onboarding
+    const wasConnectedBefore = user.requirements?.stripeConnected === true;
+    const justConnected = !wasConnectedBefore && isConnected;
+    
+    // If account just became connected, send email and update user record
+    if (justConnected) {
+      console.log('[STRIPE CONNECT] Account just became connected, sending email notification');
+      
+      // Update user record to mark as connected
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          requirements: {
+            ...(user.requirements || {}),
+            stripeConnected: true,
+            stripeConnectedAt: new Date().toISOString()
+          }
+        }
+      });
+      
+      // Send email notification (non-blocking)
+      try {
+        const { sendStripeConnectedEmail } = require('../services/email');
+        await sendStripeConnectedEmail(user.email, user.name || 'Hustler');
+        console.log('[STRIPE CONNECT] Email notification sent');
+      } catch (emailError) {
+        console.error('[STRIPE CONNECT] Error sending email:', emailError);
+        // Don't fail the request if email fails
+      }
+    }
+    
     res.json({ 
       connected: isConnected,
       accountId: user.stripeAccountId,
@@ -334,7 +366,8 @@ router.get('/status', async (req, res) => {
       } : null,
       message: isConnected 
         ? 'Stripe account is connected and ready to receive payments'
-        : 'Stripe account created but onboarding not completed. Complete onboarding to receive payments.'
+        : 'Stripe account created but onboarding not completed. Complete onboarding to receive payments.',
+      justConnected: justConnected // Frontend can use this to show a success message
     });
   } catch (error) {
     console.error('Error checking Stripe status:', error);
