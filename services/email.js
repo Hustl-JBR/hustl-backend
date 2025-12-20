@@ -1337,6 +1337,7 @@ module.exports = {
   sendAdminRefundNotification,
   sendAdminPayoutNotification,
   sendStripeRequiredEmail,
+  sendStripeConnectedEmail,
   sendFeedbackEmail,
   sendNewMessageEmail,
   sendJobExpiringEmail,
