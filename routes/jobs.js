@@ -331,13 +331,8 @@ router.get('/completed', authenticate, async (req, res) => {
       orderBy: { updatedAt: 'desc' },
     });
     
-    // Add empty reviews array for frontend compatibility
-    const jobsWithReviews = jobs.map(job => ({
-      ...job,
-      reviews: []
-    }));
-    
-    res.json(jobsWithReviews);
+    // Return jobs with reviews (reviews are already included in the query)
+    res.json(jobs);
   } catch (error) {
     console.error('Get completed jobs error:', error);
     console.error('Error details:', error.message, error.stack);
