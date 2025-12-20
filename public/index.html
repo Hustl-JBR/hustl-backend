@@ -12044,39 +12044,44 @@ async function renderJobs(reset = false) {
                         console.log('[PAYMENT] Payment intent created:', paymentData);
                         
                         // Step 2: Show payment modal with amount breakdown from payment intent
-                        await showStripePaymentModal(paymentData.clientSecret, job.id, async (paymentIntentId) => {
-                          // Step 3: Accept offer
-                          try {
-                            const acceptRes = await fetch(`${API_BASE}/offers/${offerId}/accept`, {
-                              method: 'POST',
-                              headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Content-Type': 'application/json'
-                              },
-                              body: JSON.stringify({
-                                paymentIntentId: paymentIntentId
-                              })
-                            });
-                            
-                            if (!acceptRes.ok) {
-                              const error = await acceptRes.json();
-                              throw new Error(error.error || 'Failed to accept applicant');
+                        await showStripePaymentModal(
+                          paymentData.clientSecret, 
+                          job.id, 
+                          async (paymentIntentId) => {
+                            // Step 3: Accept offer
+                            try {
+                              const acceptRes = await fetch(`${API_BASE}/offers/${offerId}/accept`, {
+                                method: 'POST',
+                                headers: {
+                                  'Authorization': `Bearer ${token}`,
+                                  'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                  paymentIntentId: paymentIntentId
+                                })
+                              });
+                              
+                              if (!acceptRes.ok) {
+                                const error = await acceptRes.json();
+                                throw new Error(error.error || 'Failed to accept applicant');
+                              }
+                              
+                              showToast('✅ Applicant accepted!');
+                              // Close modal and refresh
+                              document.body.removeChild(modalOverlay);
+                              document.body.style.overflow = "";
+                              window._viewingFromPostedTab = false;
+                              // Refresh posted jobs
+                              if (typeof loadPostedJobs === 'function') {
+                                loadPostedJobs();
+                              }
+                            } catch (error) {
+                              console.error('Error accepting offer:', error);
+                              showToast(error.message || 'Failed to accept applicant');
                             }
-                            
-                            showToast('✅ Applicant accepted!');
-                            // Close modal and refresh
-                            document.body.removeChild(modalOverlay);
-                            document.body.style.overflow = "";
-                            window._viewingFromPostedTab = false;
-                            // Refresh posted jobs
-                            if (typeof loadPostedJobs === 'function') {
-                              loadPostedJobs();
-                            }
-                          } catch (error) {
-                            console.error('Error accepting offer:', error);
-                            showToast(error.message || 'Failed to accept applicant');
-                          }
-                        });
+                          },
+                          paymentData.amount // Pass amount breakdown from payment intent
+                        );
                         
                         acceptBtn.disabled = false;
                         acceptBtn.textContent = "✅ Accept";
