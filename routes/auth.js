@@ -413,15 +413,18 @@ router.post('/reset-password', [
       data: { passwordHash },
     });
 
-    // Send confirmation email with new password
-    try {
-      await sendPasswordChangedEmail(user.email, user.name, newPassword);
-    } catch (emailError) {
+    // Send confirmation email (non-blocking) - fire and forget
+    sendPasswordChangedEmail(user.email, user.name, newPassword).catch(emailError => {
       console.error('Failed to send password changed email:', emailError);
       // Don't fail the request if email fails
-    }
+    });
 
-    res.json({ message: 'Password reset successfully. Check your email for confirmation.' });
+    // IMPORTANT: Do NOT auto-login after password reset for security
+    // User must log in manually with their new password
+    res.json({ 
+      message: 'Password reset successfully. Please log in with your new password.',
+      requiresLogin: true
+    });
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({ error: 'Internal server error' });
