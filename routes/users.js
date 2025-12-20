@@ -10,8 +10,7 @@ const router = express.Router();
 router.get('/me', authenticate, async (req, res) => {
   try {
     let user;
-    // Since tools column doesn't exist, query without it from the start
-    // This avoids the error and retry cycle that could cause stale data
+    // Try to include tools in the select
     try {
       user = await prisma.user.findUnique({
         where: { id: req.user.id },
@@ -30,12 +29,26 @@ router.get('/me', authenticate, async (req, res) => {
           createdAt: true,
           gender: true,
           bio: true,
-          // tools: true, // Removed - column doesn't exist in database
+          tools: true, // Try to include tools
         },
       });
       
-      // Set tools to null since column doesn't exist
-      user.tools = null;
+      // If tools is undefined, try to fetch it with raw SQL
+      if (user && user.tools === undefined) {
+        try {
+          const toolsResult = await prisma.$queryRawUnsafe(
+            `SELECT tools FROM users WHERE id = '${req.user.id.replace(/'/g, "''")}'`
+          );
+          if (toolsResult && Array.isArray(toolsResult) && toolsResult.length > 0) {
+            user.tools = toolsResult[0].tools;
+          } else {
+            user.tools = null;
+          }
+        } catch (toolsError) {
+          console.warn('[GET /users/me] Could not fetch tools:', toolsError);
+          user.tools = null;
+        }
+      }
     } catch (genderError) {
       // If gender/bio/tools columns don't exist, query without them
       // BUT ALWAYS include photoUrl
@@ -95,6 +108,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
 
     let user;
     try {
+      // Try to include tools in the select
       user = await prisma.user.findUnique({
         where: { id: requestedUserId },
         select: {
@@ -110,15 +124,30 @@ router.get('/:id', optionalAuth, async (req, res) => {
           createdAt: true,
           gender: true,
           bio: true,
-          // tools: true, // Removed - column doesn't exist in database
+          tools: true, // Try to include tools
         },
       });
       
-      // Set tools to null since column doesn't exist
-      user.tools = null;
+      // If tools is undefined, try to fetch it with raw SQL
+      if (user && user.tools === undefined) {
+        try {
+          const toolsResult = await prisma.$queryRawUnsafe(
+            `SELECT tools FROM users WHERE id = '${requestedUserId.replace(/'/g, "''")}'`
+          );
+          if (toolsResult && Array.isArray(toolsResult) && toolsResult.length > 0) {
+            user.tools = toolsResult[0].tools;
+          } else {
+            user.tools = null;
+          }
+        } catch (toolsError) {
+          console.warn('[GET /users/:id] Could not fetch tools:', toolsError);
+          user.tools = null;
+        }
+      }
     } catch (genderError) {
       // If gender/bio/tools columns don't exist, query without them
-      if (genderError.message && (genderError.message.includes('gender') || genderError.message.includes('tools'))) {
+      if (genderError.message && (genderError.message.includes('gender') || genderError.message.includes('tools') || genderError.message.includes('bio'))) {
+        console.warn('[GET /users/:id] Some columns missing, retrying without them');
         user = await prisma.user.findUnique({
           where: { id: requestedUserId },
           select: {
@@ -136,7 +165,19 @@ router.get('/:id', optionalAuth, async (req, res) => {
         });
         user.gender = null;
         user.bio = null;
-        user.tools = null;
+        // Try to fetch tools with raw SQL
+        try {
+          const toolsResult = await prisma.$queryRawUnsafe(
+            `SELECT tools FROM users WHERE id = '${requestedUserId.replace(/'/g, "''")}'`
+          );
+          if (toolsResult && Array.isArray(toolsResult) && toolsResult.length > 0) {
+            user.tools = toolsResult[0].tools;
+          } else {
+            user.tools = null;
+          }
+        } catch (toolsError) {
+          user.tools = null;
+        }
       } else {
         throw genderError;
       }
