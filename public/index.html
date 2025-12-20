@@ -11087,16 +11087,24 @@ async function renderJobs(reset = false) {
         let customEquipment = parsedRequirements.customEquipment || parsedRequirements.custom_equipment || '';
         
         // Also check if it's stored directly in requirements object (fallback)
-        if (!equipmentNeeded || equipmentNeeded.length === 0) {
+        if (!equipmentNeeded || (Array.isArray(equipmentNeeded) && equipmentNeeded.length === 0)) {
           equipmentNeeded = requirements.equipmentNeeded || requirements.equipment_needed || [];
         }
         if (!customEquipment || !customEquipment.trim()) {
           customEquipment = requirements.customEquipment || requirements.custom_equipment || '';
         }
         
-        console.log("Equipment needed found:", equipmentNeeded, "Type:", typeof equipmentNeeded);
-        console.log("Custom equipment found:", customEquipment);
-        console.log("Full parsedRequirements:", JSON.stringify(parsedRequirements, null, 2));
+        // Also check the raw job.requirements if it's different
+        if ((!equipmentNeeded || (Array.isArray(equipmentNeeded) && equipmentNeeded.length === 0)) && job.requirements) {
+          const rawReq = typeof job.requirements === 'string' ? JSON.parse(job.requirements) : job.requirements;
+          equipmentNeeded = rawReq.equipmentNeeded || rawReq.equipment_needed || equipmentNeeded || [];
+          customEquipment = rawReq.customEquipment || rawReq.custom_equipment || customEquipment || '';
+        }
+        
+        console.log("[EQUIPMENT DEBUG] Equipment needed found:", equipmentNeeded, "Type:", typeof equipmentNeeded);
+        console.log("[EQUIPMENT DEBUG] Custom equipment found:", customEquipment);
+        console.log("[EQUIPMENT DEBUG] Full parsedRequirements:", JSON.stringify(parsedRequirements, null, 2));
+        console.log("[EQUIPMENT DEBUG] Raw job.requirements:", JSON.stringify(job.requirements, null, 2));
         
         // Ensure equipmentNeeded is an array
         let equipmentArray = [];
@@ -12567,7 +12575,14 @@ async function renderJobs(reset = false) {
         toolsTitle.textContent = "🔧 Tools Available";
         toolsSection.appendChild(toolsTitle);
         
-        if (profile.tools && Array.isArray(profile.tools) && profile.tools.length > 0) {
+        // Tools is stored as a STRING, not an array
+        if (profile.tools && typeof profile.tools === 'string' && profile.tools.trim()) {
+          const toolsText = document.createElement("div");
+          toolsText.style.cssText = "font-size: 0.95rem; color: var(--text-main); line-height: 1.6; padding: 0.75rem; background: #f9fafb; border-radius: 8px; white-space: pre-wrap;";
+          toolsText.textContent = profile.tools.trim();
+          toolsSection.appendChild(toolsText);
+        } else if (profile.tools && Array.isArray(profile.tools) && profile.tools.length > 0) {
+          // Fallback: if it's an array (shouldn't happen, but handle it)
           const toolsList = document.createElement("div");
           toolsList.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.5rem;";
           profile.tools.forEach(tool => {
