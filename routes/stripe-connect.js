@@ -12,18 +12,28 @@ router.use(authenticate);
 router.post('/create-account', async (req, res) => {
   try {
     const user = req.user;
+    
+    console.log('[STRIPE CONNECT] Create account request from user:', user.id, 'Email:', user.email);
 
     // Check if user has HUSTLER role
     const userRoles = (user.roles || []).map(r => r.toUpperCase());
+    console.log('[STRIPE CONNECT] User roles:', userRoles);
+    
     if (!userRoles.includes('HUSTLER')) {
+      console.log('[STRIPE CONNECT] User does not have HUSTLER role');
       return res.status(403).json({ 
         error: 'Forbidden',
-        message: 'You must be a hustler to connect a Stripe account'
+        message: 'You must be a hustler to connect a Stripe account',
+        userRoles: userRoles
       });
     }
 
     if (user.stripeAccountId) {
-      return res.status(400).json({ error: 'Stripe account already connected' });
+      return res.status(400).json({ 
+        error: 'Stripe account already connected',
+        accountId: user.stripeAccountId,
+        message: 'Account already exists. Use GET /stripe-connect/onboarding-link to get onboarding URL.'
+      });
     }
 
     // Check if we should skip Stripe (only if explicitly set)
@@ -59,10 +69,19 @@ router.post('/create-account', async (req, res) => {
       data: { stripeAccountId: accountId },
     });
 
-    res.json({ accountId });
+    console.log('[STRIPE CONNECT] Account created and saved:', accountId);
+    res.json({ 
+      accountId,
+      message: 'Stripe account created successfully. Call GET /stripe-connect/onboarding-link to get onboarding URL.'
+    });
   } catch (error) {
-    console.error('Error creating Stripe account:', error);
-    res.status(500).json({ error: 'Failed to create Stripe account' });
+    console.error('[STRIPE CONNECT] Error creating Stripe account:', error);
+    console.error('[STRIPE CONNECT] Error stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Failed to create Stripe account',
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
@@ -71,13 +90,19 @@ router.post('/create-account', async (req, res) => {
 router.get('/onboarding-link', async (req, res) => {
   try {
     const user = req.user;
+    
+    console.log('[STRIPE CONNECT] Onboarding link request from user:', user.id, 'Email:', user.email);
 
     // Check if user has HUSTLER role
     const userRoles = (user.roles || []).map(r => r.toUpperCase());
+    console.log('[STRIPE CONNECT] User roles:', userRoles);
+    
     if (!userRoles.includes('HUSTLER')) {
+      console.log('[STRIPE CONNECT] User does not have HUSTLER role');
       return res.status(403).json({ 
         error: 'Forbidden',
-        message: 'You must be a hustler to connect a Stripe account'
+        message: 'You must be a hustler to connect a Stripe account',
+        userRoles: userRoles
       });
     }
 
@@ -172,8 +197,21 @@ router.get('/onboarding-link', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error creating account link:', error);
-    res.status(500).json({ error: 'Failed to create Stripe account link' });
+    console.error('[STRIPE CONNECT] Error creating account link:', error);
+    console.error('[STRIPE CONNECT] Error stack:', error.stack);
+    console.error('[STRIPE CONNECT] Error details:', {
+      type: error.type,
+      code: error.code,
+      message: error.message,
+      userId: req.user?.id
+    });
+    res.status(500).json({ 
+      error: 'Failed to create Stripe account link',
+      message: error.message || 'Unknown error',
+      type: error.type,
+      code: error.code,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
