@@ -13695,14 +13695,17 @@ async function renderJobs(reset = false) {
       let customerFee = 0;
       let totalAmount = 0;
       
-      if (amountBreakdown && amountBreakdown.jobAmount) {
+      console.log('[PAYMENT MODAL] amountBreakdown received:', amountBreakdown);
+      
+      if (amountBreakdown && typeof amountBreakdown === 'object' && amountBreakdown.jobAmount !== undefined) {
         // Use amounts from payment intent (most accurate)
         jobAmount = Number(amountBreakdown.jobAmount);
         customerFee = Number(amountBreakdown.customerFee);
         totalAmount = Number(amountBreakdown.total);
-        console.log('[PAYMENT MODAL] Using amounts from payment intent:', { jobAmount, customerFee, totalAmount });
+        console.log('[PAYMENT MODAL] ✅ Using amounts from payment intent:', { jobAmount, customerFee, totalAmount });
       } else {
         // Fallback: fetch from job (may be stale)
+        console.warn('[PAYMENT MODAL] ⚠️ No amount breakdown provided, fetching from job (may be incorrect)');
         try {
           const token = localStorage.getItem('hustl_token');
           const jobResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
@@ -13717,7 +13720,7 @@ async function renderJobs(reset = false) {
             }
             customerFee = jobAmount * 0.065;
             totalAmount = jobAmount + customerFee;
-            console.log('[PAYMENT MODAL] Using amounts from job fetch:', { jobAmount, customerFee, totalAmount });
+            console.log('[PAYMENT MODAL] ⚠️ Using amounts from job fetch (fallback):', { jobAmount, customerFee, totalAmount, jobAmountFromDB: job.amount });
           }
         } catch (e) {
           console.error("Error fetching job details:", e);
