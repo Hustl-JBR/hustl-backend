@@ -422,8 +422,13 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     if (!paymentIntentId && process.env.SKIP_STRIPE_CHECK !== 'true') {
       // Calculate payment amounts from job
       // TIPS ARE NOT INCLUDED IN AUTHORIZATION - They happen after completion
-      // Always use job.amount as the source of truth (original or negotiated price)
-      const jobAmount = parseFloat(offer.job.amount || 0);
+      // Use proposedAmount if it exists (hustler's proposed price), otherwise use job.amount
+      let jobAmount = 0;
+      if (offer.proposedAmount && offer.proposedAmount > 0) {
+        jobAmount = parseFloat(offer.proposedAmount);
+      } else {
+        jobAmount = parseFloat(offer.job.amount || 0);
+      }
       const tipAmount = 0; // Tips happen after completion, not in authorization
       const customerFee = jobAmount * 0.065; // 6.5% customer fee (no min/max cap)
       const total = jobAmount + customerFee;
