@@ -5841,9 +5841,10 @@
       el.textContent = msg;
       el.classList.add("show");
       if (toastTimeout) clearTimeout(toastTimeout);
+      // Always use 2 seconds (2000ms) for all toasts for consistent UX
       toastTimeout = setTimeout(() => {
         el.classList.remove("show");
-      }, duration);
+      }, 2000);
     }
 
     // ⏱ Auto-complete checker: if Hustler marked finished and no dispute + no response in time
