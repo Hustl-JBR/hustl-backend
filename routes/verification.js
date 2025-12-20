@@ -283,6 +283,8 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       // Round to 2 decimal places (e.g., 1.67 hours)
       actualHours = Math.round(actualHours * 100) / 100;
       
+      console.log(`[HOURLY JOB] Time calculation - startedAt: ${startedAt.toISOString()}, completionTime: ${completionTime.toISOString()}, timeDiffMs: ${timeDiffMs}, actualHours: ${actualHours}`);
+      
       // Calculate actual charge: actualHours × hourlyRate
       const hourlyRate = Number(job.hourlyRate);
       actualJobAmount = actualHours * hourlyRate;
