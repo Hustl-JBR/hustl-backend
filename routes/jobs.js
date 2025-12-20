@@ -1536,10 +1536,9 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
           const existingMetadata = existingIntent.metadata || {};
           
           // Calculate new total with fees
-          const tipPercent = Math.min(parseFloat(job.tipPercent || 0), 25);
-          const tipAmount = Math.min(newJobAmount * (tipPercent / 100), 50);
+          // Tips not included in authorization - they happen after completion
           const customerFee = newJobAmount * 0.065; // 6.5% customer fee
-          const newTotal = newJobAmount + tipAmount + customerFee;
+          const newTotal = newJobAmount + customerFee;
 
           // Only update if payment intent is in a state that allows updates
           if (existingIntent.status === 'requires_capture' || existingIntent.status === 'requires_payment_method') {
