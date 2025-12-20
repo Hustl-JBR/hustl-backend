@@ -286,6 +286,16 @@ router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER
         },
       },
     });
+    
+    console.log('[PAYMENT INTENT] Offer data:', {
+      offerId: offer?.id,
+      jobId: offer?.job?.id,
+      jobAmount: offer?.job?.amount,
+      proposedAmount: offer?.proposedAmount,
+      payType: offer?.job?.payType,
+      hourlyRate: offer?.job?.hourlyRate,
+      estHours: offer?.job?.estHours
+    });
 
     if (!offer) {
       return res.status(404).json({ error: 'Offer not found' });
