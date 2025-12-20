@@ -11444,8 +11444,9 @@ async function renderJobs(reset = false) {
           proposedPriceChange: proposedPriceChangeHustler,
           statusCheck: proposedPriceChangeHustler?.status
         });
-        if (isHustler && job.hustlerId === user?.id && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified && proposedPriceChangeHustler && proposedPriceChangeHustler.status === 'PENDING') {
-          console.log('[PRICE CHANGE] Showing price change section for hustler');
+        // Price change feature disabled - hide this section
+        if (false && isHustler && job.hustlerId === user?.id && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified && proposedPriceChangeHustler && proposedPriceChangeHustler.status === 'PENDING') {
+          console.log('[PRICE CHANGE] Price change feature disabled');
           const priceChangeSectionHustler = document.createElement("div");
           priceChangeSectionHustler.style.cssText = "margin-bottom: 1rem; padding: 1rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 2px solid #f59e0b;";
           
@@ -24230,9 +24231,7 @@ meta.textContent =
                 <!-- Price Adjustment Section (if job not started) -->
                 ${(job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified ? `
                   <div style="padding: 1.5rem; background: #f8f9fa; border-radius: 12px; margin-bottom: 1.5rem; border: 1px solid #e5e7eb;">
-                    <div style="font-weight: 700; color: #111827; margin-bottom: 0.875rem; font-size: 1rem; letter-spacing: -0.01em;">💰 Adjust Price (if needed)</div>
-                    <div style="font-size: 0.875rem; color: #6b7280; margin-bottom: 1.25rem; line-height: 1.5; font-weight: 500;">If you need to change the price before the job starts, you can adjust it here. The hustler will be notified.</div>
-                    <button class="btn btn-ghost adjustPriceBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.875rem; font-weight: 700; border: 2px solid #3b82f6; color: #3b82f6; border-radius: 8px; font-size: 0.95rem; background: white;">✏️ Adjust Price</button>
+                    <!-- Price change feature disabled -->
                   </div>
                 ` : ''}
                 

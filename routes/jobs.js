@@ -1488,101 +1488,12 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
   });
 });
 
-// POST /jobs/:id/decline-price-change - Hustler declines price change
+// POST /jobs/:id/decline-price-change - DISABLED: Price changes require complex payment flow
 router.post('/:id/decline-price-change', authenticate, requireRole('HUSTLER'), async (req, res) => {
-  try {
-    const job = await prisma.job.findUnique({
-      where: { id: req.params.id },
-      include: { 
-        customer: { select: { id: true, name: true, email: true } }
-      }
-    });
-
-    if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
-    }
-
-    if (job.hustlerId !== req.user.id) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    // Price changes only allowed before start code
-    if (job.startCodeVerified) {
-      return res.status(400).json({ 
-        error: 'Price is locked. Cannot change price after job has started.' 
-      });
-    }
-
-    // Parse requirements if it's a string
-    let requirements = job.requirements || {};
-    if (typeof requirements === 'string') {
-      try {
-        requirements = JSON.parse(requirements);
-      } catch (e) {
-        console.error('[PRICE CHANGE] Error parsing requirements:', e);
-        requirements = {};
-      }
-    }
-    
-    const proposedPrice = requirements.proposedPriceChange;
-
-    if (!proposedPrice || proposedPrice.status !== 'PENDING') {
-      console.error('[PRICE CHANGE] No pending proposal found. Requirements:', JSON.stringify(requirements));
-      return res.status(400).json({ 
-        error: 'No pending price change proposal found' 
-      });
-    }
-
-    // Mark price change as declined
-    // Ensure requirements is an object (not a string)
-    let existingRequirements = job.requirements || {};
-    if (typeof existingRequirements === 'string') {
-      try {
-        existingRequirements = JSON.parse(existingRequirements);
-      } catch (e) {
-        console.error('[PRICE CHANGE] Error parsing existing requirements:', e);
-        existingRequirements = {};
-      }
-    }
-    
-    const updatedJob = await prisma.job.update({
-      where: { id: req.params.id },
-      data: {
-        requirements: {
-          ...existingRequirements,
-          proposedPriceChange: {
-            ...proposedPrice,
-            status: 'DECLINED',
-            declinedAt: new Date().toISOString()
-          }
-        }
-      }
-    });
-
-    // Send notification email to customer (non-blocking)
-    const { sendPriceChangeDeclinedEmail } = require('../services/email');
-    try {
-      await sendPriceChangeDeclinedEmail(
-        job.customer.email,
-        job.customer.name,
-        job.title,
-        job.id
-      );
-    } catch (emailError) {
-      console.error('Error sending price change declined email:', emailError);
-    }
-
-    res.json({ 
-      success: true,
-      job: updatedJob
-    });
-  } catch (error) {
-    console.error('Decline price change error:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: error.message 
-    });
-  }
+  return res.status(410).json({ 
+    error: 'Price change feature is currently disabled',
+    message: 'Price changes are not available at this time.'
+  });
 });
 
 // POST /jobs/:id/close - Close a job (Customer only)
