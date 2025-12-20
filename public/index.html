@@ -11534,21 +11534,30 @@ async function renderJobs(reset = false) {
                     }
                   });
                   
+                  const data = await response.json();
+                  
                   if (response.ok) {
-                    showToast('✅ Price change accepted! Payment authorization updated.');
-                    // Close existing modal first
-                    const existingModal = document.getElementById('jobDetailModal');
-                    if (existingModal) {
-                      document.body.removeChild(existingModal);
-                      document.body.style.overflow = '';
+                    // If price increased, customer needs to authorize additional payment
+                    if (data.requiresPayment && data.clientSecret) {
+                      showToast('Price increase requires customer payment authorization. Waiting for customer...');
+                      acceptBtn.disabled = false;
+                      acceptBtn.textContent = '✓ Accept Updated Price';
+                      // The customer will see a payment modal - we'll refresh when they complete it
+                    } else {
+                      showToast('✅ Price change accepted! Payment authorization updated.');
+                      // Close existing modal first
+                      const existingModal = document.getElementById('jobDetailModal');
+                      if (existingModal) {
+                        document.body.removeChild(existingModal);
+                        document.body.style.overflow = '';
+                      }
+                      // Small delay to ensure modal is closed, then reopen with fresh data
+                      setTimeout(() => {
+                        window.openJobDetails(job.id);
+                      }, 100);
                     }
-                    // Small delay to ensure modal is closed, then reopen with fresh data
-                    setTimeout(() => {
-                      window.openJobDetails(job.id);
-                    }, 100);
                   } else {
-                    const error = await response.json();
-                    showToast(error.error || 'Failed to accept price change');
+                    showToast(data.error || 'Failed to accept price change');
                     acceptBtn.disabled = false;
                     acceptBtn.textContent = '✓ Accept Updated Price';
                   }
@@ -11708,12 +11717,18 @@ async function renderJobs(reset = false) {
               }
             }, 100);
           } else {
-            // Price change feature disabled - show message instead
+            // No proposal yet - show button to propose price change
             priceChangeSection.innerHTML = `
-              <div style="font-size: 0.9rem; color: #92400e; margin-bottom: 0.75rem; font-weight: 700;">💰 Price Changes</div>
-              <div style="font-size: 0.85rem; color: #78350f; margin-bottom: 0.75rem; line-height: 1.5; padding: 0.75rem; background: #fef3c7; border-radius: 6px; border: 1px solid #fbbf24;">
-                ⚠️ <strong>Price changes are currently unavailable.</strong> If you need to change the price, please cancel this job and create a new one with the updated price.
+              <div style="font-size: 0.9rem; color: #92400e; margin-bottom: 0.75rem; font-weight: 700;">💰 Adjust Price</div>
+              <div style="font-size: 0.85rem; color: #78350f; margin-bottom: 0.75rem; line-height: 1.5;">
+                Need to change the price? Propose a new price to the hustler. They must accept before the price changes.
               </div>
+              <div style="font-size: 0.8rem; color: #92400e; margin-bottom: 1rem; padding: 0.625rem; background: #fef3c7; border-radius: 6px; border: 1px solid #fbbf24;">
+                ⚠️ <strong>Important:</strong> Only propose a price change if necessary and after messaging with the hustler to discuss the change.
+              </div>
+              <button id="proposePriceChangeBtn-${job.id}" class="btn btn-primary" style="width: 100%; padding: 0.875rem; font-weight: 700; background: #f59e0b; border: none; border-radius: 8px; color: white; cursor: pointer;">
+                ✏️ Propose Price Change
+              </button>
             `;
             
             setTimeout(() => {
