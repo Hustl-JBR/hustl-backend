@@ -13689,46 +13689,95 @@ async function renderJobs(reset = false) {
         return;
       }
 
+      // Fetch job details to show payment amount
+      let jobAmount = 0;
+      let customerFee = 0;
+      let totalAmount = 0;
+      try {
+        const token = localStorage.getItem('hustl_token');
+        const jobResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (jobResponse.ok) {
+          const job = await jobResponse.json();
+          // Calculate amounts based on job type
+          if (job.payType === 'hourly' && job.hourlyRate && job.estHours) {
+            jobAmount = Number(job.hourlyRate) * parseInt(job.estHours);
+          } else {
+            jobAmount = Number(job.amount) || 0;
+          }
+          customerFee = jobAmount * 0.065; // 6.5% customer fee
+          totalAmount = jobAmount + customerFee;
+        }
+      } catch (e) {
+        console.error("Error fetching job details:", e);
+      }
+
       const stripe = Stripe(publishableKey);
       
       const modalOverlay = document.createElement("div");
       modalOverlay.id = "stripePaymentModal";
-      modalOverlay.style.cssText = "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 1rem;";
+      modalOverlay.style.cssText = "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto;";
       
       const modalContent = document.createElement("div");
-      modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 500px; width: 100%; padding: 2rem; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);";
+      modalContent.style.cssText = "background: white; border-radius: 16px; max-width: 480px; width: 100%; max-height: 90vh; padding: 1.5rem; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); overflow-y: auto; margin: auto;";
       
       const closeBtn = document.createElement("button");
       closeBtn.innerHTML = "×";
-      closeBtn.style.cssText = "position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; border-radius: 50%; background: #f3f4f6; border: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6b7280;";
+      closeBtn.style.cssText = "position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; border-radius: 50%; background: #f3f4f6; border: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6b7280; z-index: 10;";
       closeBtn.addEventListener("click", () => {
-        document.body.removeChild(modalOverlay);
+        if (modalOverlay.parentNode) {
+          document.body.removeChild(modalOverlay);
+        }
         document.body.style.overflow = "";
       });
       modalContent.appendChild(closeBtn);
       
       const title = document.createElement("h2");
-      title.style.cssText = "margin: 0 0 1.5rem 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main);";
+      title.style.cssText = "margin: 0 0 1rem 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main);";
       title.textContent = "Complete Payment";
       modalContent.appendChild(title);
       
-      const description = document.createElement("p");
-      description.style.cssText = "margin-bottom: 1.5rem; color: var(--text-muted);";
-      description.textContent = "Complete payment to accept this hustler. Payment will be held in escrow until the job is completed.";
-      modalContent.appendChild(description);
+      // Payment breakdown
+      if (totalAmount > 0) {
+        const breakdownDiv = document.createElement("div");
+        breakdownDiv.style.cssText = "background: #f9fafb; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;";
+        breakdownDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; color: #6b7280;">
+            <span>Job Amount:</span>
+            <span>$${jobAmount.toFixed(2)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; color: #6b7280;">
+            <span>Service Fee (6.5%):</span>
+            <span>$${customerFee.toFixed(2)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 1rem; font-weight: 600; color: var(--text-main); padding-top: 0.5rem; border-top: 1px solid #e5e7eb;">
+            <span>Total:</span>
+            <span>$${totalAmount.toFixed(2)}</span>
+          </div>
+        `;
+        modalContent.appendChild(breakdownDiv);
+      }
+      
+      // Refund policy notice
+      const refundNotice = document.createElement("div");
+      refundNotice.style.cssText = "padding: 0.75rem; background: #eff6ff; border: 1px solid #93c5fd; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; color: #1e40af; line-height: 1.5;";
+      refundNotice.innerHTML = `
+        <div style="font-weight: 600; margin-bottom: 0.25rem;">🛡️ Fully Refundable</div>
+        <div>Your payment is fully refundable until the hustler enters the start code. Once work begins, payment is held in escrow until job completion.</div>
+      `;
+      modalContent.appendChild(refundNotice);
       
       // Add test mode indicator and test card instructions
       const isTestMode = publishableKey && publishableKey.startsWith('pk_test_');
       if (isTestMode) {
         const testModeNotice = document.createElement("div");
-        testModeNotice.style.cssText = "padding: 1rem; background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; margin-bottom: 1.5rem;";
+        testModeNotice.style.cssText = "padding: 0.75rem; background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; margin-bottom: 1rem; font-size: 0.8rem;";
         testModeNotice.innerHTML = `
-          <div style="font-weight: 600; color: #92400e; margin-bottom: 0.5rem;">🧪 Test Mode</div>
-          <div style="font-size: 0.85rem; color: #78350f; line-height: 1.5;">
-            <strong>Test Card Numbers:</strong><br>
-            • Success: <code style="background: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">4242 4242 4242 4242</code><br>
-            • Decline: <code style="background: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">4000 0000 0000 0002</code><br>
-            Use any future expiry date (e.g., 12/34) and any 3-digit CVC (e.g., 123)
+          <div style="font-weight: 600; color: #92400e; margin-bottom: 0.25rem;">🧪 Test Mode</div>
+          <div style="color: #78350f; line-height: 1.4;">
+            <strong>Test Card:</strong> <code style="background: white; padding: 2px 6px; border-radius: 4px;">4242 4242 4242 4242</code><br>
+            Use any future expiry (12/34) and any CVC (123)
           </div>
         `;
         modalContent.appendChild(testModeNotice);
@@ -13736,12 +13785,13 @@ async function renderJobs(reset = false) {
       
       const paymentElement = document.createElement("div");
       paymentElement.id = "stripe-payment-element";
+      paymentElement.style.cssText = "margin-bottom: 1rem;";
       modalContent.appendChild(paymentElement);
       
       const submitBtn = document.createElement("button");
       submitBtn.className = "btn btn-primary";
-      submitBtn.textContent = "Pay & Accept Hustler";
-      submitBtn.style.cssText = "width: 100%; padding: 1rem; margin-top: 1.5rem; font-size: 1rem; font-weight: 600;";
+      submitBtn.textContent = totalAmount > 0 ? `Pay $${totalAmount.toFixed(2)} & Accept` : "Pay & Accept Hustler";
+      submitBtn.style.cssText = "width: 100%; padding: 0.875rem; margin-top: 0.5rem; font-size: 0.95rem; font-weight: 600;";
       submitBtn.disabled = true;
       modalContent.appendChild(submitBtn);
       
@@ -13750,50 +13800,87 @@ async function renderJobs(reset = false) {
       document.body.style.overflow = "hidden";
       
       // Initialize Stripe Elements
-      const elements = stripe.elements({ clientSecret });
-      const paymentElementInstance = elements.create('payment');
+      const elements = stripe.elements({ 
+        clientSecret,
+        appearance: {
+          theme: 'stripe',
+        }
+      });
+      const paymentElementInstance = elements.create('payment', {
+        layout: 'tabs'
+      });
+      
+      let mounted = false;
       paymentElementInstance.mount('#stripe-payment-element');
       
       paymentElementInstance.on('ready', () => {
+        mounted = true;
         submitBtn.disabled = false;
       });
       
+      paymentElementInstance.on('loading', () => {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Loading...";
+      });
+      
+      paymentElementInstance.on('change', (event) => {
+        if (event.complete && mounted) {
+          submitBtn.disabled = false;
+        }
+      });
+      
       submitBtn.addEventListener("click", async () => {
+        if (!mounted) {
+          showToast("Payment form is still loading. Please wait...");
+          return;
+        }
+        
         submitBtn.disabled = true;
         submitBtn.textContent = "Processing...";
         
-        const { error, paymentIntent } = await stripe.confirmPayment({
-          elements: paymentElementInstance,
-          confirmParams: {
-            return_url: `${window.location.origin}/?payment_success=true&jobId=${jobId}`
-          },
-          redirect: 'if_required'
-        });
-        
-        if (error) {
-          showToast("Payment failed: " + error.message);
-          submitBtn.disabled = false;
-          submitBtn.textContent = "Pay & Accept Hustler";
-        } else if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'requires_capture')) {
-          // Payment succeeded or is pre-authorized (held in escrow)
-          showToast("✅ Payment successful! Processing...");
-          document.body.removeChild(modalOverlay);
-          document.body.style.overflow = "";
+        try {
+          const { error, paymentIntent } = await stripe.confirmPayment({
+            elements,
+            confirmParams: {
+              return_url: `${window.location.origin}/?payment_success=true&jobId=${jobId}`
+            },
+            redirect: 'if_required'
+          });
           
-          // Call the callback with paymentIntentId if provided
-          if (onSuccessCallback && typeof onSuccessCallback === 'function') {
-            await onSuccessCallback(paymentIntent.id);
-          } else {
-            // Default behavior: refresh job details
-            openJobDetails(jobId);
-            renderJobs();
+          if (error) {
+            showToast("Payment failed: " + error.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = totalAmount > 0 ? `Pay $${totalAmount.toFixed(2)} & Accept` : "Pay & Accept Hustler";
+          } else if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'requires_capture')) {
+            // Payment succeeded or is pre-authorized (held in escrow)
+            showToast("✅ Payment successful! Processing...");
+            if (modalOverlay.parentNode) {
+              document.body.removeChild(modalOverlay);
+            }
+            document.body.style.overflow = "";
+            
+            // Call the callback with paymentIntentId if provided
+            if (onSuccessCallback && typeof onSuccessCallback === 'function') {
+              await onSuccessCallback(paymentIntent.id);
+            } else {
+              // Default behavior: refresh job details
+              openJobDetails(jobId);
+              renderJobs();
+            }
           }
+        } catch (err) {
+          console.error("Payment error:", err);
+          showToast("Payment error: " + (err.message || "Unknown error"));
+          submitBtn.disabled = false;
+          submitBtn.textContent = totalAmount > 0 ? `Pay $${totalAmount.toFixed(2)} & Accept` : "Pay & Accept Hustler";
         }
       });
       
       modalOverlay.addEventListener("click", (e) => {
         if (e.target === modalOverlay) {
-          document.body.removeChild(modalOverlay);
+          if (modalOverlay.parentNode) {
+            document.body.removeChild(modalOverlay);
+          }
           document.body.style.overflow = "";
         }
       });
