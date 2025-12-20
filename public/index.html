@@ -22993,10 +22993,9 @@ meta.textContent =
                 </div>
               `;
             } else if (hasRated) {
-              // Review left - show "See your review" and "Delete Job" buttons
+              // Review left - show "Delete Job" button
               buttonSection = `
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-                  <button class="btn btn-primary viewReviewBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600; background: #3b82f6;">👁️ See Your Review</button>
                   <button class="btn btn-ghost deleteCompletedJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-size: 0.9rem; color: #dc2626; border-color: #fecaca;">🗑️ Delete Job</button>
                 </div>
               `;
@@ -23067,16 +23066,6 @@ meta.textContent =
                   window.showHustlerProfilePopup(userId);
                 }
               });
-            });
-            
-            // View review button
-            card.querySelector('.viewReviewBtn')?.addEventListener('click', (e) => {
-              e.stopPropagation();
-              const jobId = e.target.dataset.jobId;
-              // Open job details to show review
-              if (typeof openJobDetails === 'function') {
-                openJobDetails(jobId);
-              }
             });
             
             // Delete completed job (client-side only, for personal organization)
