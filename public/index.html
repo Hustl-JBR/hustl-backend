@@ -13665,7 +13665,7 @@ async function renderJobs(reset = false) {
     }
 
     // Show Stripe Payment Modal for accepting hustler
-    async function showStripePaymentModal(clientSecret, jobId, onSuccessCallback) {
+    async function showStripePaymentModal(clientSecret, jobId, onSuccessCallback, amountBreakdown = null) {
       // Check if Stripe.js is loaded
       if (typeof Stripe === 'undefined') {
         showToast("Payment system loading... Please try again in a moment.");
@@ -13689,33 +13689,38 @@ async function renderJobs(reset = false) {
         return;
       }
 
-      // Fetch job details and offer to show correct payment amount
-      // Need to check if there's a price negotiation (proposedAmount on offer)
+      // Use amount breakdown from payment intent if provided, otherwise fetch from job
       let jobAmount = 0;
       let customerFee = 0;
       let totalAmount = 0;
-      try {
-        const token = localStorage.getItem('hustl_token');
-        // First, try to get the offer to check for proposedAmount
-        // We need to find which offer is being accepted - this is tricky without offerId
-        // For now, fetch the job and use its amount (which should be updated if price was negotiated)
-        const jobResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        });
-        if (jobResponse.ok) {
-          const job = await jobResponse.json();
-          // Calculate amounts based on job type
-          // Note: If price was negotiated and accepted, job.amount should already be updated
-          if (job.payType === 'hourly' && job.hourlyRate && job.estHours) {
-            jobAmount = Number(job.hourlyRate) * parseInt(job.estHours);
-          } else {
-            jobAmount = Number(job.amount) || 0;
+      
+      if (amountBreakdown && amountBreakdown.jobAmount) {
+        // Use amounts from payment intent (most accurate)
+        jobAmount = Number(amountBreakdown.jobAmount);
+        customerFee = Number(amountBreakdown.customerFee);
+        totalAmount = Number(amountBreakdown.total);
+        console.log('[PAYMENT MODAL] Using amounts from payment intent:', { jobAmount, customerFee, totalAmount });
+      } else {
+        // Fallback: fetch from job (may be stale)
+        try {
+          const token = localStorage.getItem('hustl_token');
+          const jobResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          });
+          if (jobResponse.ok) {
+            const job = await jobResponse.json();
+            if (job.payType === 'hourly' && job.hourlyRate && job.estHours) {
+              jobAmount = Number(job.hourlyRate) * parseInt(job.estHours);
+            } else {
+              jobAmount = Number(job.amount) || 0;
+            }
+            customerFee = jobAmount * 0.065;
+            totalAmount = jobAmount + customerFee;
+            console.log('[PAYMENT MODAL] Using amounts from job fetch:', { jobAmount, customerFee, totalAmount });
           }
-          customerFee = jobAmount * 0.065; // 6.5% customer fee
-          totalAmount = jobAmount + customerFee;
+        } catch (e) {
+          console.error("Error fetching job details:", e);
         }
-      } catch (e) {
-        console.error("Error fetching job details:", e);
       }
 
       const stripe = Stripe(publishableKey);

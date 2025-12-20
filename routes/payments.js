@@ -396,13 +396,28 @@ router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER
       });
 
       console.log('[PAYMENT INTENT] Created:', paymentIntent.id);
+      console.log('[PAYMENT INTENT] Amount breakdown:', {
+        jobAmount: jobAmount,
+        customerFee: customerFee,
+        total: total,
+        totalInCents: Math.round(total * 100),
+        jobAmountFromDB: offer.job.amount,
+        proposedAmount: offer.proposedAmount,
+        payType: offer.job.payType
+      });
       
       const isTestMode = secretKey.startsWith('sk_test_');
       
       res.json({ 
         clientSecret: paymentIntent.client_secret,
         paymentIntentId: paymentIntent.id,
-        isTestMode: isTestMode
+        isTestMode: isTestMode,
+        // Include amount breakdown so frontend can display it correctly
+        amount: {
+          jobAmount: jobAmount,
+          customerFee: customerFee,
+          total: total
+        }
       });
     } catch (stripeError) {
       console.error('[PAYMENT INTENT] Stripe API error:', stripeError);
