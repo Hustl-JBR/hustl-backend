@@ -87,7 +87,8 @@ router.post('/create-account', async (req, res) => {
 
 // GET /stripe-connect/onboarding-link - Get a link to onboard or manage the Stripe account
 // POST /stripe-connect/onboarding-link - Create account and get onboarding link (if account doesn't exist)
-router.get('/onboarding-link', async (req, res) => {
+// Both GET and POST work the same way
+const handleOnboardingLink = async (req, res) => {
   try {
     const user = req.user;
     
