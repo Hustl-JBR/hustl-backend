@@ -759,6 +759,61 @@ async function sendAdminPayoutNotification(payout, hustler) {
   }
 }
 
+async function sendStripeConnectedEmail(email, name) {
+  if (!isEmailConfigured()) return;
+  try {
+    console.log('[Email] Sending Stripe connected email to:', email);
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: '✅ Your Stripe account is connected - You\'re ready to earn!',
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #ffffff; padding: 0;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">✅ Stripe Account Connected!</h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hey <strong>${name}</strong>! 🎉
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              Great news! Your Stripe account has been successfully connected. You're now all set to receive payments directly to your bank account.
+            </p>
+            
+            <div style="background: white; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; border: 1px solid #e2e8f0;">
+              <h3 style="color: #1e293b; margin-top: 0; margin-bottom: 1rem;">💰 What happens next?</h3>
+              <ul style="color: #475569; line-height: 1.8; margin: 0; padding-left: 1.5rem;">
+                <li>When you complete a job, payment is automatically transferred to your Stripe account</li>
+                <li>Stripe will automatically send payouts to your bank (usually daily or weekly)</li>
+                <li>You can track all payments in your Stripe dashboard</li>
+                <li>No action needed from you - it's all automatic!</li>
+              </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 2rem 0;">
+              <a href="${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || 'https://hustljobs.com'}/profile" 
+                 style="display: inline-block; background: #2563eb; color: white; padding: 0.75rem 2rem; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                View Your Profile
+              </a>
+            </div>
+            
+            <p style="color: #64748b; font-size: 0.9rem; margin-top: 2rem; margin-bottom: 0;">
+              Questions? Reply to this email or contact us at <a href="mailto:${FROM_EMAIL.replace(/.*<(.+)>/, '$1')}" style="color: #2563eb;">${FROM_EMAIL.replace(/.*<(.+)>/, '$1')}</a>
+            </p>
+          </div>
+        </div>
+      `,
+    });
+    console.log('[Email] Stripe connected email sent successfully');
+  } catch (error) {
+    console.error('[Email] Error sending Stripe connected email:', error);
+  }
+}
+
 async function sendStripeRequiredEmail(email, name, jobTitle) {
   if (!isEmailConfigured()) return;
   try {
