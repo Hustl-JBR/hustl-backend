@@ -1549,7 +1549,7 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
               metadata: {
                 ...existingMetadata,
                 amount: newJobAmount.toString(),
-                tip: tipAmount.toString(),
+                tip: '0', // Tips happen after completion, not in authorization
                 customerFee: customerFee.toString(),
                 priceUpdatedAt: new Date().toISOString()
               }
@@ -1635,11 +1635,10 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
     console.log('[PRICE CHANGE] Job updated successfully:', updatedJob.id);
 
     // Update payment record
+    // TIPS ARE NOT INCLUDED IN AUTHORIZATION - They happen after completion
     if (job.payment) {
-      const tipPercent = Math.min(parseFloat(job.tipPercent || 0), 25);
-      const tipAmount = Math.min(newJobAmount * (tipPercent / 100), 50);
-      const customerFee = Math.min(Math.max(newJobAmount * 0.03, 1), 10);
-      const total = newJobAmount + tipAmount + customerFee;
+      const customerFee = newJobAmount * 0.065; // 6.5% customer fee
+      const total = newJobAmount + customerFee;
 
       await prisma.payment.update({
         where: { id: job.payment.id },
