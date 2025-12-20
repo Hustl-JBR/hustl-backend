@@ -51,7 +51,25 @@ async function createConnectedAccount(email, country = 'US') {
       card_payments: { requested: true },
       transfers: { requested: true },
     },
+    // In test mode, we can set business_profile to make onboarding easier
+    business_profile: {
+      mcc: '5734', // Computer Software Stores
+      url: 'https://hustljobs.com',
+    },
   });
+  
+  // In test mode, accept TOS automatically to make onboarding smoother
+  // This allows the account to be used immediately for testing
+  const isTestMode = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_');
+  if (isTestMode) {
+    await stripe.accounts.update(account.id, {
+      tos_acceptance: {
+        date: Math.floor(Date.now() / 1000),
+        ip: '127.0.0.1',
+      },
+    });
+  }
+  
   return account;
 }
 

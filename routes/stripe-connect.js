@@ -26,18 +26,22 @@ router.post('/create-account', async (req, res) => {
       return res.status(400).json({ error: 'Stripe account already connected' });
     }
 
-    // In test mode, create a fake account ID
+    // Check if we should skip Stripe (only if explicitly set)
+    // Even in test mode with sk_test_ key, we should create real Stripe accounts
     const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
     let accountId;
     
     if (skipStripeCheck) {
-      // Use a fake test account ID
+      // Only skip if explicitly set - this is for development without Stripe
       accountId = `acct_test_${user.id.substring(0, 24)}`;
-      console.log('[TEST MODE] Creating fake Stripe account:', accountId);
+      console.log('[SKIP_STRIPE_CHECK] Creating fake Stripe account:', accountId);
     } else {
       try {
+        // Create real Stripe Connect account (works in both test and live mode)
+        // In test mode, this creates a test account that can receive test payouts
         const account = await createConnectedAccount(user.email);
         accountId = account.id;
+        console.log('[STRIPE CONNECT] Created account:', accountId, 'Type:', account.type);
       } catch (stripeError) {
         console.error('[STRIPE CONNECT] Error creating connected account:', stripeError);
         if (stripeError.type === 'StripeAuthenticationError' || stripeError.code === 'invalid_api_key') {
@@ -80,23 +84,38 @@ router.get('/onboarding-link', async (req, res) => {
       return res.status(400).json({ error: 'Stripe account not created. Please create account first.' });
     }
 
-    // In test mode, return a fake success URL
+    // Check if we should skip Stripe (only if explicitly set)
+    // Even in test mode with sk_test_ key, we should create real Stripe onboarding links
     const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
     
     if (skipStripeCheck) {
+      // Only skip if explicitly set - this is for development without Stripe
       const origin = process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || req.get('origin');
       const fakeUrl = `${origin}/profile?stripe_onboarding=success&test_mode=true`;
-      console.log('[TEST MODE] Returning fake Stripe onboarding link');
+      console.log('[SKIP_STRIPE_CHECK] Returning fake Stripe onboarding link');
       return res.json({ url: fakeUrl });
     }
 
+    // Create real Stripe account link (works in both test and live mode)
+    // In test mode, this will create a test onboarding link that goes to Stripe's test onboarding
     const origin = process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || req.get('origin');
     const returnUrl = `${origin}/profile?stripe_onboarding=success`;
     const refreshUrl = `${origin}/profile?stripe_onboarding=refresh`;
 
-    const accountLink = await createAccountLink(user.stripeAccountId, returnUrl, refreshUrl);
-
-    res.json({ url: accountLink.url });
+    try {
+      const accountLink = await createAccountLink(user.stripeAccountId, returnUrl, refreshUrl);
+      console.log('[STRIPE CONNECT] Created onboarding link:', accountLink.url);
+      res.json({ url: accountLink.url });
+    } catch (stripeError) {
+      console.error('[STRIPE CONNECT] Error creating account link:', stripeError);
+      if (stripeError.type === 'StripeAuthenticationError' || stripeError.code === 'invalid_api_key') {
+        return res.status(500).json({ 
+          error: 'Stripe configuration error',
+          message: 'Invalid or missing Stripe API key. Please check STRIPE_SECRET_KEY in Railway.'
+        });
+      }
+      throw stripeError;
+    }
   } catch (error) {
     console.error('Error creating account link:', error);
     res.status(500).json({ error: 'Failed to create Stripe account link' });
