@@ -2823,16 +2823,20 @@
       padding: 0.5rem 0.8rem;
       border-radius: 999px;
       font-size: 0.75rem;
-      z-index: 50;
+      z-index: 9999;
       opacity: 0;
       transform: translateY(10px);
-      transition: opacity 0.4s ease, transform 0.4s ease;
+      transition: opacity 0.3s ease, transform 0.3s ease;
       pointer-events: none;
+      max-width: 300px;
+      word-wrap: break-word;
+      visibility: hidden;
     }
 
     .toast.show {
       opacity: 1;
       transform: translateY(0);
+      visibility: visible;
     }
 
     .age-gate-overlay {
@@ -5837,13 +5841,35 @@
 
     function showToast(msg, duration = 2000) {
       const el = document.getElementById("toast");
-      if (!el) return;
+      if (!el) {
+        console.warn('[Toast] Toast element not found');
+        return;
+      }
+      
+      // Clear any existing timeout
+      if (toastTimeout) {
+        clearTimeout(toastTimeout);
+        toastTimeout = null;
+      }
+      
+      // Remove show class first to reset animation
+      el.classList.remove("show");
+      
+      // Set the message
       el.textContent = msg;
+      
+      // Force a reflow to ensure the class removal is processed
+      void el.offsetWidth;
+      
+      // Add show class to display toast
       el.classList.add("show");
-      if (toastTimeout) clearTimeout(toastTimeout);
-      // Always use 2 seconds (2000ms) for all toasts for consistent UX
+      
+      // Always auto-dismiss after 2 seconds (2000ms) for consistent UX
       toastTimeout = setTimeout(() => {
-        el.classList.remove("show");
+        if (el) {
+          el.classList.remove("show");
+          toastTimeout = null;
+        }
       }, 2000);
     }
 
