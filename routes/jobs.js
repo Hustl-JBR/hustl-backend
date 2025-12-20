@@ -2221,14 +2221,36 @@ router.post('/:id/confirm-complete', authenticate, requireRole('CUSTOMER'), asyn
         }
       }
 
-      // Send email to hustler
-      const { sendPaymentCompleteEmail } = require('../services/email');
-      await sendPaymentCompleteEmail(
-        job.hustler.email,
-        job.hustler.name,
-        job.title,
-        hustlerAmount
-      );
+      // Send email receipts to both customer and hustler
+      const { sendPaymentReceiptEmail, sendHustlerPaymentReceiptEmail } = require('../services/email');
+      const receiptUrl = `${process.env.APP_BASE_URL || 'https://hustljobs.com'}/payments/receipts/${job.payment.id}`;
+      
+      // Send customer receipt
+      if (job.customer?.email) {
+        sendPaymentReceiptEmail(
+          job.customer.email,
+          job.customer.name,
+          job.payment,
+          receiptUrl
+        ).catch(emailError => {
+          console.error('[CONFIRM COMPLETE] Error sending customer receipt email:', emailError);
+        });
+      }
+      
+      // Send hustler receipt
+      if (job.hustler?.email) {
+        const actualHours = job.requirements?.actualHours || null;
+        sendHustlerPaymentReceiptEmail(
+          job.hustler.email,
+          job.hustler.name,
+          job.title,
+          req.params.id,
+          job.payment,
+          actualHours
+        ).catch(emailError => {
+          console.error('[CONFIRM COMPLETE] Error sending hustler receipt email:', emailError);
+        });
+      }
       
       // Return updated job with payment info
       const finalJob = await prisma.job.findUnique({

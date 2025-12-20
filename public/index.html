@@ -22969,6 +22969,9 @@ meta.textContent =
             // Check if user has already rated
             const hasRated = job.reviews && job.reviews.some(r => r.reviewerId === user.id);
             
+            // Find user's review if it exists
+            const userReview = job.reviews && job.reviews.find(r => r.reviewerId === user.id);
+            
             // Posted date
             const postedDate = new Date(job.createdAt);
             const daysAgo = Math.floor((Date.now() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -22978,6 +22981,33 @@ meta.textContent =
             card.style.cssText = "padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.2s;";
             card.onmouseenter = () => { card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; };
             card.onmouseleave = () => { card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)'; };
+            
+            // Build button section based on review status
+            let buttonSection = '';
+            if (!hasRated && otherUser) {
+              // No review yet - show "Rate Worker" button with disabled trash icon
+              buttonSection = `
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                  <button class="btn btn-primary rateWorkerBtn" data-job-id="${job.id}" data-user-id="${otherUser.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600; background: #f59e0b;">⭐ Rate Worker</button>
+                  <button class="btn btn-ghost deleteCompletedJobBtn disabled" data-job-id="${job.id}" style="flex: 0 0 auto; padding: 0.75rem; width: 48px; height: 48px; color: #9ca3af; border-color: #e5e7eb; background: #f3f4f6; cursor: not-allowed; opacity: 0.6;" title="Please leave a review before deleting" disabled>🗑️</button>
+                </div>
+              `;
+            } else if (hasRated) {
+              // Review left - show "See your review" and "Delete Job" buttons
+              buttonSection = `
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                  <button class="btn btn-primary viewReviewBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600; background: #3b82f6;">👁️ See Your Review</button>
+                  <button class="btn btn-ghost deleteCompletedJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-size: 0.9rem; color: #dc2626; border-color: #fecaca;">🗑️ Delete Job</button>
+                </div>
+              `;
+            } else {
+              // No other user (edge case) - just show delete
+              buttonSection = `
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                  <button class="btn btn-ghost deleteCompletedJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-size: 0.9rem; color: #dc2626; border-color: #fecaca;">🗑️ Delete Job</button>
+                </div>
+              `;
+            }
             
             card.innerHTML = `
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
@@ -23012,10 +23042,7 @@ meta.textContent =
                 <span style="padding: 0.25rem 0.75rem; background: #10b98120; color: #10b981; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">✅ Completed</span>
               </div>
               
-              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-                ${!hasRated && otherUser ? `<button class="btn btn-primary rateWorkerBtn" data-job-id="${job.id}" data-user-id="${otherUser.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600; background: #f59e0b;">⭐ Rate Worker</button>` : ''}
-                <button class="btn btn-ghost deleteCompletedJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-size: 0.9rem; color: #dc2626; border-color: #fecaca;">🗑️ Delete</button>
-              </div>
+              ${buttonSection}
             `;
             
             // Event listeners
@@ -23024,6 +23051,12 @@ meta.textContent =
               const userId = e.target.dataset.userId;
               const jobId = e.target.dataset.jobId;
               showRateWorkerModal(userId, jobId);
+            });
+            
+            // Disabled delete button click handler
+            card.querySelector('.deleteCompletedJobBtn.disabled')?.addEventListener('click', (e) => {
+              e.stopPropagation();
+              showToast('⚠️ Please leave a review before deleting this job.');
             });
             
             card.querySelectorAll('.viewOtherUserProfile').forEach(btn => {
@@ -23036,8 +23069,18 @@ meta.textContent =
               });
             });
             
+            // View review button
+            card.querySelector('.viewReviewBtn')?.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const jobId = e.target.dataset.jobId;
+              // Open job details to show review
+              if (typeof openJobDetails === 'function') {
+                openJobDetails(jobId);
+              }
+            });
+            
             // Delete completed job (client-side only, for personal organization)
-            card.querySelector('.deleteCompletedJobBtn')?.addEventListener('click', (e) => {
+            card.querySelector('.deleteCompletedJobBtn:not(.disabled)')?.addEventListener('click', (e) => {
               e.stopPropagation();
               const jobId = e.target.dataset.jobId;
               if (confirm('Delete this completed job from your list? This will only hide it from your dashboard. The job, payment history, and messages will remain in the system.')) {

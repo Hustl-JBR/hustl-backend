@@ -476,20 +476,134 @@ async function sendPaymentReceiptEmail(email, name, payment, receiptUrl) {
       to: email,
       subject: 'Payment Receipt - Hustl',
       html: `
-        <h1>Payment Receipt</h1>
-        <p>Hi ${name},</p>
-        <p>Thank you for your payment. Here's your receipt:</p>
-        <table>
-          <tr><td>Job Amount:</td><td>$${amount.toFixed(2)}</td></tr>
-          <tr><td>Tip:</td><td>$${tip.toFixed(2)}</td></tr>
-          <tr><td>Service Fee:</td><td>$${serviceFee.toFixed(2)}</td></tr>
-          <tr><td><strong>Total:</strong></td><td><strong>$${total.toFixed(2)}</strong></td></tr>
-        </table>
-        <p><a href="${receiptUrl}">View Receipt</a></p>
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">💰 Payment Receipt</h1>
+          </div>
+          
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hi <strong>${name}</strong>! 👋
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              Thank you for using Hustl! Here's your payment receipt:
+            </p>
+            
+            <div style="background: white; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; border: 1px solid #e2e8f0;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 0.75rem 0; color: #64748b;">Job Amount:</td>
+                  <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: #1e293b;">$${amount.toFixed(2)}</td>
+                </tr>
+                ${tip > 0 ? `
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 0.75rem 0; color: #64748b;">Tip:</td>
+                  <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: #1e293b;">$${tip.toFixed(2)}</td>
+                </tr>
+                ` : ''}
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 0.75rem 0; color: #64748b;">Service Fee:</td>
+                  <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: #1e293b;">$${serviceFee.toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 0.75rem 0; font-size: 1.1rem; font-weight: 700; color: #1e293b;">Total:</td>
+                  <td style="padding: 0.75rem 0; text-align: right; font-size: 1.1rem; font-weight: 700; color: #2563eb;">$${total.toFixed(2)}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <div style="text-align: center; margin: 2rem 0;">
+              <a href="${receiptUrl}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+                View Full Receipt →
+              </a>
+            </div>
+            
+            <p style="color: #64748b; font-size: 0.9rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+              If you have any questions, please contact support.
+            </p>
+          </div>
+        </div>
       `,
     });
+    console.log('[Email] Payment receipt email sent successfully to customer:', email);
   } catch (error) {
-    console.error('Send payment receipt email error:', error);
+    console.error('[Email] Send payment receipt email error:', error);
+  }
+}
+
+async function sendHustlerPaymentReceiptEmail(email, name, jobTitle, jobId, payment, actualHours) {
+  if (!isEmailConfigured()) return;
+  try {
+    const amount = Number(payment.amount);
+    const platformFee = Number(payment.feeHustler) || (amount * 0.12);
+    const payout = amount - platformFee;
+    const viewJobUrl = `${process.env.FRONTEND_BASE_URL || 'https://hustljobs.com'}?view=job-details&jobId=${jobId}`;
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `💰 Payment Receipt - "${jobTitle}"`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">💰 Payment Receipt</h1>
+          </div>
+          
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hi <strong>${name}</strong>! 👋
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              Great work on completing <strong>"${jobTitle}"</strong>! Here's your payment receipt:
+            </p>
+            
+            <div style="background: white; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; border: 1px solid #e2e8f0;">
+              ${actualHours ? `
+              <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #e2e8f0;">
+                <div style="color: #64748b; font-size: 0.9rem; margin-bottom: 0.25rem;">⏱️ Time Worked</div>
+                <div style="font-weight: 600; color: #1e293b; font-size: 1.1rem;">${actualHours.toFixed(2)} hours</div>
+              </div>
+              ` : ''}
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 0.75rem 0; color: #64748b;">Job Amount:</td>
+                  <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: #1e293b;">$${amount.toFixed(2)}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 0.75rem 0; color: #64748b;">Platform Fee (12%):</td>
+                  <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: #1e293b;">-$${platformFee.toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 0.75rem 0; font-size: 1.1rem; font-weight: 700; color: #1e293b;">Your Payout:</td>
+                  <td style="padding: 0.75rem 0; text-align: right; font-size: 1.1rem; font-weight: 700; color: #10b981;">$${payout.toFixed(2)}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <div style="background: #d1fae5; border: 2px solid #10b981; border-radius: 12px; padding: 1rem; margin: 1.5rem 0; text-align: center;">
+              <p style="margin: 0; font-weight: 600; color: #065f46; font-size: 0.95rem;">
+                💳 Payment processed via Stripe. Funds will be transferred to your connected account.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 2rem 0;">
+              <a href="${viewJobUrl}" style="display: inline-block; padding: 1rem 2rem; background: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+                View Job Details →
+              </a>
+            </div>
+            
+            <p style="color: #64748b; font-size: 0.9rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+              If you have any questions about your payment, please contact support.
+            </p>
+          </div>
+        </div>
+      `,
+    });
+    console.log('[Email] Hustler payment receipt email sent successfully:', email);
+  } catch (error) {
+    console.error('[Email] Send hustler payment receipt email error:', error);
   }
 }
 
@@ -1215,6 +1329,7 @@ module.exports = {
   sendJobCompletionCongratsEmail,
   sendJobPostedEmail,
   sendPaymentReceiptEmail,
+  sendHustlerPaymentReceiptEmail,
   sendPayoutSentEmail,
   sendPaymentCompleteEmail,
   sendAutoCompleteEmail,

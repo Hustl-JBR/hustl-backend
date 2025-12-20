@@ -447,6 +447,42 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         });
       }
 
+      // Send email receipts to both customer and hustler (non-blocking)
+      const { sendPaymentReceiptEmail, sendHustlerPaymentReceiptEmail } = require('../services/email');
+      const jobWithUsers = await prisma.job.findUnique({
+        where: { id: jobId },
+        include: {
+          customer: { select: { id: true, email: true, name: true } },
+          hustler: { select: { id: true, email: true, name: true } },
+          payment: true
+        }
+      });
+      
+      if (jobWithUsers?.payment && jobWithUsers?.customer?.email) {
+        const receiptUrl = `${process.env.APP_BASE_URL || 'https://hustljobs.com'}/payments/receipts/${jobWithUsers.payment.id}`;
+        sendPaymentReceiptEmail(
+          jobWithUsers.customer.email,
+          jobWithUsers.customer.name,
+          jobWithUsers.payment,
+          receiptUrl
+        ).catch(emailError => {
+          console.error('[HOURLY JOB] Error sending customer receipt email:', emailError);
+        });
+      }
+      
+      if (jobWithUsers?.payment && jobWithUsers?.hustler?.email) {
+        sendHustlerPaymentReceiptEmail(
+          jobWithUsers.hustler.email,
+          jobWithUsers.hustler.name,
+          jobWithUsers.title,
+          jobId,
+          jobWithUsers.payment,
+          job.payType === 'hourly' ? actualHours : null
+        ).catch(emailError => {
+          console.error('[HOURLY JOB] Error sending hustler receipt email:', emailError);
+        });
+      }
+
       // Mark completion as verified and update job status to PAID (allows reviews)
       const updatedJob = await prisma.job.update({
         where: { id: jobId },
