@@ -530,8 +530,9 @@ router.patch('/me', authenticate, [
           } else {
             const escapedTools = String(toolsToSave).replace(/'/g, "''").replace(/\\/g, '\\\\');
             const escapedId = req.user.id.replace(/'/g, "''");
-            const sql = `UPDATE users SET tools = $1::text, updated_at = NOW() WHERE id = $2::text`;
-            await prisma.$executeRawUnsafe(sql, escapedTools, escapedId);
+            // Use direct SQL string interpolation (escaping is done above)
+            const sql = `UPDATE users SET tools = '${escapedTools}', updated_at = NOW() WHERE id = '${escapedId}'`;
+            await prisma.$executeRawUnsafe(sql);
             user.tools = toolsToSave;
             console.log('[PATCH /users/me] Tools saved via fallback unsafe method:', toolsToSave);
           }

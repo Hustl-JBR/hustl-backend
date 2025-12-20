@@ -2750,7 +2750,7 @@
       cursor: pointer;
       transition: color 0.2s;
     }
-    
+
     .footer-links a:hover {
       text-decoration: underline;
       color: #93c5fd !important;
@@ -4814,8 +4814,8 @@
             <div class="chat-header">
               <button class="chat-back-btn" id="chatBackBtn" style="display: none;">←</button>
               <div class="chat-header-content">
-                <div id="conversationTitle" style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem;">Select a conversation</div>
-                <div id="conversationJobSummary" style="font-size: 0.8rem; color: var(--text-muted);"></div>
+              <div id="conversationTitle" style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem;">Select a conversation</div>
+              <div id="conversationJobSummary" style="font-size: 0.8rem; color: var(--text-muted);"></div>
               </div>
             </div>
             <div class="chat-messages-container" id="conversationMessages">
@@ -8629,6 +8629,11 @@ window.showChangePasswordModal = function showChangePasswordModal() {
                 pricing_option: pricingOption, // Store for future use
                 deadline_preference: deadlinePreference, // Store deadline preference
                 preferredTime: preferredTime, // morning, afternoon, evening, anytime
+                // Include equipment data
+                equipmentNeeded: equipmentNeeded.length > 0 ? equipmentNeeded : null,
+                equipment_needed: equipmentNeeded.length > 0 ? equipmentNeeded : null,
+                customEquipment: customEquipment || null,
+                custom_equipment: customEquipment || null,
               },
             };
             
@@ -8842,7 +8847,7 @@ async function fetchWithRetry(url, options = {}, maxRetries = 2, timeout = 10000
       
       // For other errors, try to parse JSON but don't throw
       try {
-        return await response.json();
+      return await response.json();
       } catch (e) {
         return { error: `Request failed with status ${response.status}`, status: response.status };
       }
@@ -9946,7 +9951,7 @@ async function renderJobs(reset = false) {
       const now = new Date();
       if (j.expiresAt) {
         try {
-          const expirationDate = new Date(j.expiresAt);
+        const expirationDate = new Date(j.expiresAt);
           if (!isNaN(expirationDate.getTime()) && expirationDate <= now) {
             console.log('[renderJobs] Filtering out expired job:', j.id, 'expired at:', j.expiresAt);
             return false; // Expired
@@ -18046,7 +18051,7 @@ async function renderJobs(reset = false) {
             console.warn('Could not fetch sender info:', e);
           }
         }
-        
+
         messages.forEach((m) => {
           const isMe = m.senderId === user.id;
           const sender = senderMap.get(m.senderId);
@@ -19284,7 +19289,7 @@ async function renderJobs(reset = false) {
       // Redirect to the standardized Browse Jobs profile popup
       if (typeof window.showHustlerProfilePopup === 'function') {
         await window.showHustlerProfilePopup(userId);
-      } else {
+        } else {
         showToast("Profile view not available.");
       }
     };
@@ -20243,8 +20248,8 @@ async function renderJobs(reset = false) {
         
         const token = localStorage.getItem('hustl_token');
         const response = await fetch(`${API_BASE}/jobs/my-jobs`, {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        });
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                  });
         
         if (!response.ok) throw new Error('Failed to fetch jobs');
         const allJobs = await response.json();
@@ -20321,22 +20326,22 @@ async function renderJobs(reset = false) {
             jobCard.style.transform = 'translateX(0)';
           });
           
-          jobCard.innerHTML = `
+                jobCard.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: flex-start; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
               <div style="flex: 1; min-width: 0;">
                 <div style="font-weight: 700; color: #1e293b; font-size: 1rem; margin-bottom: 0.25rem; word-wrap: break-word; line-height: 1.4;">${job.title || 'Untitled Job'}</div>
                 <div style="font-size: 0.85rem; color: #64748b; line-height: 1.4;">${isCustomer ? 'Hustler' : 'Customer'}: ${otherPersonName}</div>
-              </div>
+                      </div>
               ${showPrice ? `
                 <div style="text-align: right; margin-left: 1rem; flex-shrink: 0;">
                   <div style="font-size: 1.1rem; font-weight: 700; color: ${isWin ? '#10b981' : '#ef4444'}; line-height: 1.4;">
                     ${isWin ? '+' : '-'}$${price.toFixed(2)}
+                    </div>
+                      </div>
+                      ` : ''}
                   </div>
-                </div>
-              ` : ''}
-            </div>
-          `;
-          
+                `;
+                
           jobsList.appendChild(jobCard);
         }
         
@@ -20364,15 +20369,15 @@ async function renderJobs(reset = false) {
             <div style="text-align: center; padding: 2rem; color: #64748b; font-family: inherit;">
               <div style="font-size: 2rem; margin-bottom: 0.5rem;">📋</div>
               <div>No jobs yet.</div>
-            </div>
-          `;
+                </div>
+              `;
         }
         
         jobsList.dataset.loaded = 'true';
-      } catch (error) {
+          } catch (error) {
         console.error("Error loading profile jobs:", error);
         jobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: #64748b; font-family: inherit;'>Error loading jobs.</div>";
-      }
+          }
     }
   }, 200);
   
@@ -20840,29 +20845,29 @@ async function renderJobs(reset = false) {
       // Handle old feedback button if it exists
       const btn = document.getElementById("feedbackButton");
       if (btn) {
-        btn.addEventListener("click", () => {
+      btn.addEventListener("click", () => {
           const name = document.getElementById("feedbackName")?.value.trim() || '';
           const email = document.getElementById("feedbackEmail")?.value.trim() || '';
           const message = document.getElementById("feedbackMessage")?.value.trim() || '';
-          if (!message) {
-            showToast("Please type a bit of feedback first.");
-            return;
-          }
+        if (!message) {
+          showToast("Please type a bit of feedback first.");
+          return;
+        }
           if (state && state.feedback) {
-            state.feedback.push({
-              id: generateId("f"),
-              name,
-              email,
-              message,
-              createdAt: Date.now(),
-            });
-            saveState();
+        state.feedback.push({
+          id: generateId("f"),
+          name,
+          email,
+          message,
+          createdAt: Date.now(),
+        });
+        saveState();
           }
           if (document.getElementById("feedbackMessage")) {
-            document.getElementById("feedbackMessage").value = "";
+        document.getElementById("feedbackMessage").value = "";
           }
-          showToast("Feedback saved (demo). In a live app this would email Hustl.");
-        });
+        showToast("Feedback saved (demo). In a live app this would email Hustl.");
+      });
       }
       
       // Handle new feedback form in About view
@@ -20940,12 +20945,12 @@ async function openUserProfile(userId) {
   // Use the standardized profile popup (same one used in Browse Jobs)
   if (typeof window.showHustlerProfilePopup === 'function') {
     window.showHustlerProfilePopup(userId);
-    return;
+        return;
   }
   
   // Fallback if showHustlerProfilePopup doesn't exist
   showToast("Profile view not available.");
-  return;
+    return;
 }
 
 
@@ -21618,11 +21623,11 @@ meta.textContent =
                 <div style="padding: 1.25rem; background: #f0fdf4; border-radius: 8px; border: 1px solid #10b98140; text-align: center; margin-bottom: 0.75rem;">
                   <div style="font-size: 2.5rem; font-weight: 700; color: #059669; line-height: 1; margin-bottom: 0.25rem;">${offerCount}</div>
                   <div style="font-size: 0.9rem; color: #047857; font-weight: 600;">${offerCount === 1 ? 'Applicant' : 'Applicants'}</div>
-                </div>
+                    </div>
                 <div style="display: flex; gap: 0.5rem;">
                   <button class="btn btn-primary viewJobBtn" data-job-id="${job.id}" style="flex: 1; padding: 0.75rem; font-size: 0.9rem; font-weight: 600; border-radius: 8px;">
                     View Applicants
-                  </button>
+                    </button>
                   ${(job.status === 'OPEN' || ((job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified)) ? `
                   <button class="btn btn-ghost cancelJobBtn" data-job-id="${job.id}" style="padding: 0.75rem; font-weight: 600; border-radius: 8px; color: #dc2626; border-color: #fecaca; font-size: 0.9rem; min-width: 48px;">🗑️</button>
                   ` : ''}
@@ -22057,8 +22062,8 @@ meta.textContent =
                       </div>
                     </div>
                     <div style="padding: 0.25rem 0.75rem; background: ${job.status === 'IN_PROGRESS' ? '#f59e0b20' : '#3b82f620'}; color: ${job.status === 'IN_PROGRESS' ? '#f59e0b' : '#3b82f6'}; border-radius: 6px; font-weight: 600; font-size: 0.85rem; display: inline-block; margin-bottom: 0.5rem;">${job.status === 'IN_PROGRESS' ? 'In Progress' : 'Scheduled'}</div>
-                  </div>
-                </div>
+                    </div>
+                    </div>
                 ${startCodeSection}
                 ${completionCodeSection}
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
@@ -22104,7 +22109,7 @@ meta.textContent =
                       ${job.status === 'IN_PROGRESS' && job.payType === 'hourly' && requirements.startedAt ? `
                         <div id="activeJobTimer-${job.id}" style="padding: 0.5rem; background: #fef3c7; border-radius: 6px; font-weight: 600; font-size: 0.9rem; color: #92400e; font-family: 'Courier New', monospace;">
                           ⏱️ <span id="activeJobTimerText-${job.id}">Calculating...</span>
-                        </div>
+                    </div>
                       ` : ''}
                       <div style="padding: 0.25rem 0.75rem; background: ${job.status === 'IN_PROGRESS' ? '#f59e0b20' : '#3b82f620'}; color: ${job.status === 'IN_PROGRESS' ? '#f59e0b' : '#3b82f6'}; border-radius: 6px; font-weight: 600; font-size: 0.85rem; display: inline-block; width: fit-content;">${job.status === 'IN_PROGRESS' ? 'In Progress' : 'Scheduled'}</div>
                     </div>
@@ -22631,8 +22636,8 @@ meta.textContent =
                   <span>👥 ${workersDisplay}</span>
                   <span>•</span>
                   <span>📋 ${applicantCountText}</span>
-                </div>
               </div>
+                </div>
               <div style="text-align: right; flex-shrink: 0; margin-left: 1rem;">
                 <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary);">${priceDisplay}</div>
               </div>
@@ -23694,7 +23699,7 @@ meta.textContent =
                     })}
                     <div style="flex: 1;">
                       <div style="font-weight: 700; font-size: 1.15rem; color: #111827; margin-bottom: 0.25rem; letter-spacing: -0.01em;">${hustler.name || 'Unknown'}</div>
-                    </div>
+                      </div>
                     <button class="btn btn-primary messageHustlerBtn" data-job-id="${job.id}" style="padding: 0.875rem 1.5rem; font-weight: 700; font-size: 0.95rem; color: white; background: var(--primary); border: none; border-radius: 8px;">💬 Message</button>
                   </div>
                 </div>
@@ -24634,8 +24639,8 @@ meta.textContent =
                           <div style="font-size: 0.9rem; color: #4a4a4a; font-weight: 600; margin-bottom: 0.5rem; text-align: center;">📍 Location</div>
                           <div id="miniMap_${job.id}" style="width: 100%; height: 150px; border-radius: 12px; overflow: hidden; border: 2px solid #e5e7eb; background: #e5e7eb; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" data-lat="${lat}" data-lng="${lng}">
                             <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; color: #6a6a6a; font-size: 0.85rem;">Loading map...</div>
+                            </div>
                           </div>
-                        </div>
                         `;
                       }
                       return `<div style="font-size: 1rem; color: #4a4a4a; font-weight: 600;">📍 ${locationDisplay}</div>`;
@@ -24657,7 +24662,7 @@ meta.textContent =
                 <div style="margin-bottom: 2rem;">
                   <h3 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 2rem 0; color: #1a1a1a; letter-spacing: -0.01em; text-align: center;">
                     👥 Applicants${pendingOffers.length > 0 ? ` (${pendingOffers.length})` : ''}
-                  </h3>
+                    </h3>
                   ${pendingOffers.length > 0 ? `
                   
                   <div id="applicantsListContainer" style="display: flex; flex-direction: column; gap: 2rem; max-width: 800px; margin: 0 auto;">
@@ -24709,19 +24714,19 @@ meta.textContent =
                           <div style="text-align: center; margin-bottom: 1.25rem;">
                             <div style="display: inline-block; margin-bottom: 0.75rem;">
                               ${renderUserAvatar(hustler, 80, { 
-                                className: 'viewApplicantProfile',
-                                style: 'cursor: pointer;'
-                              })}
-                            </div>
+                              className: 'viewApplicantProfile',
+                              style: 'cursor: pointer;'
+                            })}
+                              </div>
                             <div>
                               <div style="font-weight: 700; color: #1a1a1a; font-size: 1.5rem; cursor: pointer; letter-spacing: -0.01em; margin-bottom: 0.5rem;" class="viewApplicantProfile" data-user-id="${hustler.id}">${hustler.name || 'Unknown'}</div>
                               <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0;">
                                 <span style="font-size: 1.1rem;">${'⭐'.repeat(Math.floor(rating))}${rating % 1 >= 0.5 ? '⭐' : ''}</span>
                                 <span style="color: #4a4a4a; font-size: 1rem; font-weight: 600;">${rating.toFixed(1)} (${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})</span>
                               </div>
-                            </div>
-                          </div>
-                          
+                                        </div>
+                                      </div>
+                                      
                           <!-- Customer's Original Price -->
                           <div style="padding: 1rem; background: #f0f9ff; border-radius: 12px; border: 2px solid #3b82f6; margin-bottom: 1rem; text-align: center;">
                             <div style="font-size: 0.85rem; color: #1e40af; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: 0.5px;">YOUR PRICE</div>
@@ -24735,13 +24740,13 @@ meta.textContent =
                             <div style="font-size: 0.85rem; color: #92400e; font-weight: 700; margin-bottom: 0.375rem; letter-spacing: 0.5px; text-transform: uppercase;">💡 Suggested New Price from Hustler</div>
                             <div style="font-size: 1.75rem; font-weight: 700; color: #b45309; line-height: 1.2;">${suggestedPriceDisplay}</div>
                             <div style="font-size: 0.75rem; color: #92400e; margin-top: 0.375rem; font-style: italic;">If you accept this hustler, this becomes the official price</div>
-                          </div>
+                                  </div>
                           ` : `
                           <!-- No Price Suggestion - Show Original Price -->
                           <div style="padding: 1rem; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 12px; border: 2px solid #10b981; margin-bottom: 1rem; text-align: center; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);">
                             <div style="font-size: 0.9rem; color: #047857; font-weight: 700; margin-bottom: 0.375rem; letter-spacing: 0.5px;">Hustler Accepted Your Price</div>
                             <div style="font-size: 1.25rem; font-weight: 700; color: #059669; line-height: 1.3;">${acceptedPriceDisplay}</div>
-                          </div>
+                                </div>
                           `}
                           
                           <!-- Why I'm a good fit -->
@@ -24749,14 +24754,14 @@ meta.textContent =
                           <div style="padding: 1.25rem; background: #f0fdf4; border-radius: 12px; border: 2px solid #10b98140; margin-bottom: 1.25rem;">
                             <div style="font-size: 1.1rem; color: #047857; margin-bottom: 0.75rem; font-weight: 700; letter-spacing: -0.01em; text-align: center;">💬 Why I'm a good fit:</div>
                             <div style="color: #2a2a2a; line-height: 1.7; font-size: 1rem; font-weight: 500; text-align: left;">${offer.note}</div>
-                          </div>
-                          ` : ''}
+                                  </div>
+                                ` : ''}
                           
                           <!-- Accept/Deny Buttons -->
                           <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
                             <button class="btn btn-primary acceptApplicantBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="flex: 1; min-width: 180px; padding: 1.25rem; font-weight: 700; font-size: 1.1rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">✅ Accept</button>
                             <button class="btn btn-ghost declineApplicantBtn" data-offer-id="${offer.id}" data-job-id="${job.id}" style="flex: 1; min-width: 180px; padding: 1.25rem; font-weight: 700; font-size: 1.1rem; color: #dc2626; border-color: #fecaca; border-radius: 12px; border-width: 2px;">❌ Deny</button>
-                          </div>
+                              </div>
                         </div>
                       `;
                     }).join('')}
@@ -24766,10 +24771,10 @@ meta.textContent =
                     <div style="font-size: 3rem; margin-bottom: 1rem;">👤</div>
                     <div style="font-size: 1.2rem; font-weight: 600; color: #4a4a4a; margin-bottom: 0.5rem;">No applicants yet</div>
                     <div style="font-size: 1rem; color: #6a6a6a;">Share your job to get more applicants!</div>
-                  </div>
-                  `}
                 </div>
-                ` : ''}
+                  `}
+                    </div>
+                    ` : ''}
               </div>
             </div>
           `;
@@ -26086,7 +26091,7 @@ meta.textContent =
     }
     
     async function verifyCompletionCode(jobId, code) {
-      const token = localStorage.getItem('hustl_token');
+        const token = localStorage.getItem('hustl_token');
       
       // Helper function to check if job is completed and show success modal
       const checkAndShowSuccess = async () => {
@@ -26471,11 +26476,11 @@ meta.textContent =
           }, 300);
         } else {
           // Navigate to completed jobs if modal function not available
-          setView('manage-jobs');
-          setTimeout(() => {
-            loadCompletedJobs();
+        setView('manage-jobs');
+        setTimeout(() => {
+          loadCompletedJobs();
             showToast('Please write your review from the Completed Jobs section');
-          }, 100);
+        }, 100);
         }
       });
       
@@ -26517,7 +26522,7 @@ meta.textContent =
       modal.querySelector('#closeCompletionModalBtn')?.addEventListener('click', () => {
         markModalDismissed();
         if (modal.parentNode) {
-          document.body.removeChild(modal);
+        document.body.removeChild(modal);
         }
         document.body.style.overflow = '';
         
@@ -26531,7 +26536,7 @@ meta.textContent =
         if (e.target === modal) {
           markModalDismissed();
           if (modal.parentNode) {
-            document.body.removeChild(modal);
+          document.body.removeChild(modal);
           }
           document.body.style.overflow = '';
           
@@ -26822,13 +26827,13 @@ meta.textContent =
           
           thankYouModal.querySelector('#thankYouCloseBtn').addEventListener('click', () => {
             document.body.removeChild(thankYouModal);
-            document.body.style.overflow = '';
+          document.body.style.overflow = '';
             document.body.removeChild(modal);
-            
-            // Refresh completed jobs to show the review
-            if (typeof loadCompletedJobs === 'function') {
-              loadCompletedJobs();
-            }
+          
+          // Refresh completed jobs to show the review
+          if (typeof loadCompletedJobs === 'function') {
+            loadCompletedJobs();
+          }
           });
         } catch (error) {
           console.error('❌ Error submitting review:', error);
@@ -29212,7 +29217,7 @@ meta.textContent =
           filtersOverlay.style.opacity = '0';
           setTimeout(() => {
             if (filtersOverlay) {
-              filtersOverlay.style.display = 'none';
+            filtersOverlay.style.display = 'none';
               filtersOverlay.style.visibility = 'hidden';
               filtersOverlay.style.pointerEvents = 'none';
             }
