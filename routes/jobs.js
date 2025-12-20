@@ -564,10 +564,10 @@ router.post('/', authenticate, requireRole('CUSTOMER'), [
     
     // Calculate payment amounts (will be required when accepting an offer)
     const jobAmount = parseFloat(amount);
-    const tipPercent = Math.min(parseFloat(req.body.tipPercent || 0), 25); // Max 25%
-    const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50); // Max $50 tip
-    const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10); // 3% customer fee min $1, max $10
-    const total = jobAmount + tipAmount + customerFee;
+    // TIPS ARE NOT INCLUDED IN AUTHORIZATION - They happen after completion
+    // Customer fee is 6.5% (no min/max cap)
+    const customerFee = jobAmount * 0.065;
+    const total = jobAmount + customerFee;
 
     // NO PAYMENT REQUIRED UPFRONT - Jobs can be posted for free
     // Payment will be required when accepting an offer (industry standard)
@@ -619,7 +619,7 @@ router.post('/', authenticate, requireRole('CUSTOMER'), [
       ...job,
       paymentAmounts: {
         amount: jobAmount,
-        tip: tipAmount,
+        tip: 0, // Tips happen after completion, not in authorization
         fee: customerFee,
         total: total,
       },
@@ -1538,7 +1538,7 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
           // Calculate new total with fees
           const tipPercent = Math.min(parseFloat(job.tipPercent || 0), 25);
           const tipAmount = Math.min(newJobAmount * (tipPercent / 100), 50);
-          const customerFee = Math.min(Math.max(newJobAmount * 0.03, 1), 10);
+          const customerFee = newJobAmount * 0.065; // 6.5% customer fee
           const newTotal = newJobAmount + tipAmount + customerFee;
 
           // Only update if payment intent is in a state that allows updates
@@ -1645,7 +1645,7 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
         where: { id: job.payment.id },
         data: {
           amount: newJobAmount,
-          tip: tipAmount,
+          tip: 0, // Tips happen after completion, not in authorization
           feeCustomer: customerFee,
           total
         }

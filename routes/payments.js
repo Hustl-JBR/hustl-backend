@@ -314,7 +314,7 @@ router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER
           customerId: req.user.id,
           hustlerId: offer.hustlerId,
           amount: jobAmount.toString(),
-          tip: tipAmount.toString(),
+          tip: '0', // Tips happen after completion, not in authorization
           customerFee: customerFee.toString(),
           payType: offer.job.payType || 'flat', // Store pay type for reference
         },
@@ -431,12 +431,10 @@ router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), a
     // In test mode, log that we're skipping the check
     console.log('[TEST MODE] Skipping Stripe account check for hustler:', offer.hustler.id);
 
-    // Calculate payment amounts (3% customer fee)
+    // Calculate payment amounts (6.5% customer fee, no tips in authorization)
     const jobAmount = Number(offer.job.amount);
-    const tipPercent = Math.min(parseFloat(req.body.tipPercent || 0), 25);
-    const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50);
-    const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10);
-    const total = jobAmount + tipAmount + customerFee;
+    const customerFee = jobAmount * 0.065;
+    const total = jobAmount + customerFee;
 
     const origin = process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || 
                    req.get('origin') || `${req.protocol}://${req.get('host')}`;
@@ -605,7 +603,7 @@ router.post('/confirm-payment', authenticate, requireRole('CUSTOMER'), async (re
       
       jobAmount = Number(testOffer.job.amount);
       tipAmount = 0;
-      customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10);
+      customerFee = jobAmount * 0.065; // 6.5% customer fee
       
       // Create fake payment intent object - always succeeded in test mode
       paymentIntent = {
@@ -921,7 +919,7 @@ router.post('/create-intent/job/:jobId', authenticate, requireRole('CUSTOMER'), 
     // Calculate payment amounts
     const jobAmount = Number(job.amount);
     const tipAmount = Number(job.payment?.tip || 0);
-    const customerFee = Number(job.payment?.feeCustomer || Math.min(Math.max(jobAmount * 0.03, 1), 10));
+    const customerFee = Number(job.payment?.feeCustomer || jobAmount * 0.065);
     const total = jobAmount + tipAmount + customerFee;
 
     // Create payment intent

@@ -726,10 +726,10 @@ router.post('/job/:jobId/extend-hours', authenticate, async (req, res) => {
       // Calculate additional amount needed
       const hourlyRate = Number(job.hourlyRate);
       const additionalAmount = hoursToAdd * hourlyRate;
-      const tipPercent = Math.min(parseFloat(job.tipPercent || 0), 25);
-      const tipAmount = Math.min(additionalAmount * (tipPercent / 100), 50);
-      const customerFee = Math.min(Math.max(additionalAmount * 0.03, 1), 10);
-      const totalAdditional = additionalAmount + tipAmount + customerFee;
+      // TIPS ARE NOT INCLUDED IN EXTENSIONS - They happen after completion
+      // Customer fee is 6.5% (no min/max cap)
+      const customerFee = additionalAmount * 0.065;
+      const totalAdditional = additionalAmount + customerFee;
 
       // Create new payment intent for extension amount
       const { createPaymentIntent } = require('../services/stripe');
@@ -754,7 +754,7 @@ router.post('/job/:jobId/extend-hours', authenticate, async (req, res) => {
               customerId: userId,
               hustlerId: job.hustlerId,
               amount: additionalAmount.toString(),
-              tip: tipAmount.toString(),
+              tip: '0', // Tips happen after completion, not in extensions
               customerFee: customerFee.toString(),
               payType: 'hourly',
               extension: 'true',
@@ -780,7 +780,7 @@ router.post('/job/:jobId/extend-hours', authenticate, async (req, res) => {
         paymentIntentId: extensionPaymentIntentId,
         hours: hoursToAdd,
         amount: additionalAmount,
-        tip: tipAmount,
+        tip: 0, // Tips happen after completion, not in extensions
         customerFee: customerFee,
         total: totalAdditional,
         createdAt: new Date().toISOString()
@@ -801,11 +801,12 @@ router.post('/job/:jobId/extend-hours', authenticate, async (req, res) => {
       });
 
       // Update payment record total (for reference, actual capture happens on completion)
+      // Note: Tips are NOT included in extensions - they happen after completion
       await prisma.payment.update({
         where: { id: job.payment.id },
         data: {
           amount: Number(job.payment.amount) + additionalAmount,
-          tip: Number(job.payment.tip) + tipAmount,
+          tip: Number(job.payment.tip) || 0, // Keep existing tip, don't add to extension
           feeCustomer: Number(job.payment.feeCustomer) + customerFee,
           total: Number(job.payment.total) + totalAdditional,
         }

@@ -480,10 +480,10 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       maxAmount = jobAmount; // For flat jobs, max = actual
     }
     
-    const tipPercent = Math.min(parseFloat(offer.job.tipPercent || 0), 25);
-    const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50);
-    const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10);
-    const total = jobAmount + tipAmount + customerFee;
+    // TIPS ARE NOT INCLUDED IN AUTHORIZATION - They happen after completion
+    // Customer fee is 6.5% (no min/max cap)
+    const customerFee = jobAmount * 0.065;
+    const total = jobAmount + customerFee;
 
     // Create or update payment record with PREAUTHORIZED status (held in escrow)
     if (existingPayment) {
@@ -493,7 +493,7 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
         data: {
           hustlerId: offer.hustlerId,
           amount: jobAmount,
-          tip: tipAmount,
+          tip: 0, // Tips happen after completion, not in authorization
           feeCustomer: customerFee,
           feeHustler: 0, // Will be calculated on release (12% of jobAmount)
           total,
@@ -509,7 +509,7 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
           customerId: req.user.id,
           hustlerId: offer.hustlerId,
           amount: jobAmount,
-          tip: tipAmount,
+          tip: 0, // Tips happen after completion, not in authorization
           feeCustomer: customerFee,
           feeHustler: 0, // Will be calculated on release (12% of jobAmount)
           total,
@@ -1075,10 +1075,10 @@ router.post('/:id/accept-negotiation', authenticate, requireRole('HUSTLER'), asy
 
     // Create or update payment record (use negotiated amount)
     const jobAmount = parseFloat(offer.proposedAmount);
-    const tipPercent = Math.min(parseFloat(offer.job.tipPercent || 0), 25);
-    const tipAmount = Math.min(jobAmount * (tipPercent / 100), 50);
-    const customerFee = Math.min(Math.max(jobAmount * 0.03, 1), 10);
-    const total = jobAmount + tipAmount + customerFee;
+    // TIPS ARE NOT INCLUDED IN AUTHORIZATION - They happen after completion
+    // Customer fee is 6.5% (no min/max cap)
+    const customerFee = jobAmount * 0.065;
+    const total = jobAmount + customerFee;
 
     let existingPayment = await prisma.payment.findUnique({
       where: { jobId: offer.job.id },
@@ -1090,7 +1090,7 @@ router.post('/:id/accept-negotiation', authenticate, requireRole('HUSTLER'), asy
         data: {
           hustlerId: offer.hustlerId,
           amount: jobAmount,
-          tip: tipAmount,
+          tip: 0, // Tips happen after completion, not in authorization
           feeCustomer: customerFee,
           total,
         },
@@ -1102,7 +1102,7 @@ router.post('/:id/accept-negotiation', authenticate, requireRole('HUSTLER'), asy
           customerId: offer.job.customerId,
           hustlerId: offer.hustlerId,
           amount: jobAmount,
-          tip: tipAmount,
+          tip: 0, // Tips happen after completion, not in authorization
           feeCustomer: customerFee,
           feeHustler: 0,
           total,

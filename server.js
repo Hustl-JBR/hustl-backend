@@ -277,6 +277,7 @@ const supportRouter = require("./routes/support");
 const analyticsRouter = require("./routes/analytics");
 const verificationRouter = require("./routes/verification");
 const testPaymentsRouter = require("./routes/test-payments");
+const tipsRouter = require("./routes/tips");
 
 // CRITICAL: API Routes MUST come BEFORE static files to ensure they're matched first
 app.use("/auth", authLimiter, authRouter); // Stricter rate limiting for auth
@@ -298,6 +299,7 @@ app.use("/support", supportRouter);
 app.use("/analytics", analyticsRouter);
 app.use("/verification", verificationRouter);
 app.use("/test-payments", testPaymentsRouter); // Test endpoints (only works in test mode)
+app.use("/tips", tipsRouter);
 
 // Serve static files from /public folder (AFTER API routes)
 const publicPath = path.join(__dirname, "public");
