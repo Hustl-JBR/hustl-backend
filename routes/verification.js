@@ -337,26 +337,35 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
     }
 
     // Release payment to hustler (capture payment intent and transfer to hustler)
-    const { capturePaymentIntent, transferToHustler, createRefund } = require('../services/stripe');
+    const { capturePaymentIntent, transferToHustler } = require('../services/stripe');
     const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
     
     try {
-      // For hourly jobs: Capture actual amount from all payment intents
+      // For hourly jobs: Capture ONLY the actual amount worked (actualHours × hourlyRate)
+      // Stripe will automatically release the remaining authorized amount - no refund needed
       if (job.payType === 'hourly' && job.payment.providerId) {
         const requirements = job.requirements || {};
         const extensionPaymentIntents = requirements.extensionPaymentIntents || [];
+        const hourlyRate = Number(job.hourlyRate); // Get hourly rate for logging
         
         // Calculate how much to capture from original payment intent
         const originalAuthorized = Number(job.payment.amount);
         let remainingToCapture = actualJobAmount;
-        let capturedFromOriginal = 0;
+        let totalCaptured = 0;
         
         // First, capture from original payment intent (up to its authorized amount)
         if (remainingToCapture > 0 && originalAuthorized > 0) {
-          capturedFromOriginal = Math.min(remainingToCapture, originalAuthorized);
+          const capturedFromOriginal = Math.min(remainingToCapture, originalAuthorized);
           await capturePaymentIntent(job.payment.providerId, capturedFromOriginal);
           remainingToCapture -= capturedFromOriginal;
-          console.log(`[HOURLY JOB] Captured $${capturedFromOriginal.toFixed(2)} from original payment intent`);
+          totalCaptured += capturedFromOriginal;
+          console.log(`[HOURLY JOB] Captured $${capturedFromOriginal.toFixed(2)} from original payment intent (authorized: $${originalAuthorized.toFixed(2)})`);
+          
+          // Note: Stripe automatically releases the unused portion back to customer
+          const unusedFromOriginal = originalAuthorized - capturedFromOriginal;
+          if (unusedFromOriginal > 0.01) {
+            console.log(`[HOURLY JOB] Stripe will automatically release $${unusedFromOriginal.toFixed(2)} unused amount from original payment intent`);
+          }
         }
         
         // Then capture from extension payment intents if needed
@@ -364,7 +373,6 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
           if (remainingToCapture <= 0) break;
           
           const extAmount = Number(ext.amount || 0);
-          const extTotal = Number(ext.total || 0);
           const extPaymentIntentId = ext.paymentIntentId;
           
           if (extPaymentIntentId && extAmount > 0) {
@@ -372,33 +380,24 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
             const captureFromExt = Math.min(remainingToCapture, extAmount);
             await capturePaymentIntent(extPaymentIntentId, captureFromExt);
             remainingToCapture -= captureFromExt;
-            console.log(`[HOURLY JOB] Captured $${captureFromExt.toFixed(2)} from extension payment intent ${extPaymentIntentId}`);
+            totalCaptured += captureFromExt;
+            console.log(`[HOURLY JOB] Captured $${captureFromExt.toFixed(2)} from extension payment intent ${extPaymentIntentId} (authorized: $${extAmount.toFixed(2)})`);
             
-            // Refund unused portion of this extension
+            // Note: Stripe automatically releases the unused portion
             const unusedFromExt = extAmount - captureFromExt;
-            if (unusedFromExt > 0.01) { // Only refund if more than 1 cent
-              try {
-                await createRefund(extPaymentIntentId, unusedFromExt);
-                console.log(`[HOURLY JOB] Refunded $${unusedFromExt.toFixed(2)} from extension payment intent`);
-              } catch (refundError) {
-                console.error(`[HOURLY JOB] Error refunding extension:`, refundError);
-              }
+            if (unusedFromExt > 0.01) {
+              console.log(`[HOURLY JOB] Stripe will automatically release $${unusedFromExt.toFixed(2)} unused amount from extension payment intent`);
             }
           }
         }
         
-        // Refund unused portion of original payment intent
-        const unusedFromOriginal = originalAuthorized - capturedFromOriginal;
-        if (unusedFromOriginal > 0.01) { // Only refund if more than 1 cent
-          try {
-            await createRefund(job.payment.providerId, unusedFromOriginal);
-            console.log(`[HOURLY JOB] Refunded $${unusedFromOriginal.toFixed(2)} from original payment intent`);
-          } catch (refundError) {
-            console.error(`[HOURLY JOB] Error refunding original:`, refundError);
-          }
+        // Verify we captured exactly the actual amount (within rounding tolerance)
+        const captureDifference = Math.abs(totalCaptured - actualJobAmount);
+        if (captureDifference > 0.01) {
+          console.warn(`[HOURLY JOB] Warning: Captured amount ($${totalCaptured.toFixed(2)}) differs from calculated amount ($${actualJobAmount.toFixed(2)}) by $${captureDifference.toFixed(2)}`);
         }
         
-        console.log(`[HOURLY JOB] Total captured: $${actualJobAmount.toFixed(2)}`);
+        console.log(`[HOURLY JOB] Total captured: $${totalCaptured.toFixed(2)} (actual work: ${actualHours} hrs × $${hourlyRate}/hr = $${actualJobAmount.toFixed(2)})`);
       } else if (job.payment.providerId) {
         // Full capture for flat jobs
         await capturePaymentIntent(job.payment.providerId);
