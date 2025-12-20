@@ -480,28 +480,65 @@ router.patch('/me', authenticate, [
     // Save tools using raw SQL if tools were provided
     if (toolsToSave !== undefined) {
       try {
+        // Use Prisma.sql for safer parameterized queries
+        const { Prisma } = require('@prisma/client');
+        
         if (toolsToSave === null || toolsToSave === '') {
           // Clear tools
-          await prisma.$executeRawUnsafe(
-            `UPDATE users SET tools = NULL, updated_at = NOW() WHERE id = $1`,
-            req.user.id
+          await prisma.$executeRaw(
+            Prisma.sql`UPDATE users SET tools = NULL, updated_at = NOW() WHERE id = ${req.user.id}`
           );
           console.log('[PATCH /users/me] Tools cleared via raw SQL');
+          user.tools = null;
         } else {
           // Save tools
-          await prisma.$executeRawUnsafe(
-            `UPDATE users SET tools = $1, updated_at = NOW() WHERE id = $2`,
-            toolsToSave,
-            req.user.id
+          await prisma.$executeRaw(
+            Prisma.sql`UPDATE users SET tools = ${toolsToSave}, updated_at = NOW() WHERE id = ${req.user.id}`
           );
           console.log('[PATCH /users/me] Tools saved via raw SQL:', toolsToSave);
+          user.tools = toolsToSave;
         }
-        // Update user object with tools value
-        user.tools = toolsToSave;
+        
+        // Fetch the updated user to ensure we have the latest tools value
+        try {
+          const updatedUser = await prisma.$queryRaw(
+            Prisma.sql`SELECT tools FROM users WHERE id = ${req.user.id}`
+          );
+          if (updatedUser && Array.isArray(updatedUser) && updatedUser.length > 0) {
+            user.tools = updatedUser[0].tools;
+            console.log('[PATCH /users/me] Verified tools from database:', user.tools);
+          }
+        } catch (fetchError) {
+          console.warn('[PATCH /users/me] Could not verify tools from database:', fetchError);
+          // Keep the value we set
+        }
       } catch (toolsError) {
         console.error('[PATCH /users/me] Error saving tools via raw SQL:', toolsError);
-        // If tools column doesn't exist, set to null in response
-        user.tools = null;
+        console.error('[PATCH /users/me] Tools error details:', {
+          message: toolsError.message,
+          code: toolsError.code,
+          stack: toolsError.stack
+        });
+        // Try fallback with unsafe method if Prisma.sql fails
+        try {
+          if (toolsToSave === null || toolsToSave === '') {
+            await prisma.$executeRawUnsafe(
+              `UPDATE users SET tools = NULL, updated_at = NOW() WHERE id = '${req.user.id.replace(/'/g, "''")}'`
+            );
+            user.tools = null;
+          } else {
+            const escapedTools = String(toolsToSave).replace(/'/g, "''");
+            const escapedId = req.user.id.replace(/'/g, "''");
+            await prisma.$executeRawUnsafe(
+              `UPDATE users SET tools = '${escapedTools}', updated_at = NOW() WHERE id = '${escapedId}'`
+            );
+            user.tools = toolsToSave;
+          }
+          console.log('[PATCH /users/me] Tools saved via fallback unsafe method');
+        } catch (fallbackError) {
+          console.error('[PATCH /users/me] Fallback method also failed:', fallbackError);
+          user.tools = null;
+        }
       }
     }
 
