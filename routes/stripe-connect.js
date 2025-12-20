@@ -214,7 +214,11 @@ const handleOnboardingLink = async (req, res) => {
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
-});
+};
+
+// Support both GET and POST for onboarding-link (frontend uses POST)
+router.get('/onboarding-link', handleOnboardingLink);
+router.post('/onboarding-link', handleOnboardingLink);
 
 // GET /stripe-connect/status - Check the status of the connected Stripe account
 router.get('/status', async (req, res) => {
