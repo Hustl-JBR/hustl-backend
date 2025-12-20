@@ -67,6 +67,7 @@ router.post('/create-account', async (req, res) => {
 });
 
 // GET /stripe-connect/onboarding-link - Get a link to onboard or manage the Stripe account
+// POST /stripe-connect/onboarding-link - Create account and get onboarding link (if account doesn't exist)
 router.get('/onboarding-link', async (req, res) => {
   try {
     const user = req.user;
@@ -80,11 +81,39 @@ router.get('/onboarding-link', async (req, res) => {
       });
     }
 
+    // If account doesn't exist, create it first
     if (!user.stripeAccountId) {
-      return res.status(400).json({ 
-        error: 'Stripe account not created. Please create account first.',
-        hint: 'Call POST /stripe-connect/create-account first, then call this endpoint'
+      console.log('[STRIPE CONNECT] Account not found, creating new account for user:', user.id);
+      
+      // Create account first
+      const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+      let accountId;
+      
+      if (skipStripeCheck) {
+        accountId = `acct_test_${user.id.substring(0, 24)}`;
+        console.log('[SKIP_STRIPE_CHECK] Creating fake Stripe account:', accountId);
+      } else {
+        try {
+          const account = await createConnectedAccount(user.email);
+          accountId = account.id;
+          console.log('[STRIPE CONNECT] Created account:', accountId);
+        } catch (stripeError) {
+          console.error('[STRIPE CONNECT] Error creating account:', stripeError);
+          return res.status(500).json({ 
+            error: 'Failed to create Stripe account',
+            message: stripeError.message
+          });
+        }
+      }
+
+      // Save account ID
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { stripeAccountId: accountId },
       });
+      
+      // Update user object for next step
+      user.stripeAccountId = accountId;
     }
 
     // Check if we should skip Stripe (only if explicitly set)
