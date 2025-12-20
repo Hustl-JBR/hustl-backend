@@ -331,19 +331,14 @@ router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER
       jobAmount = hourlyRate * maxHours; // Max possible charge (authorized, not charged yet)
       console.log(`[PAYMENT INTENT] Hourly job - authorizing max: $${jobAmount} ($${hourlyRate}/hr × ${maxHours} hrs)`);
     } else {
-      // Use proposedAmount ONLY if negotiation was explicitly accepted (job.amount was updated)
-      // Otherwise, always use job.amount (the original or accepted price)
-      const jobRequirements = offer.job.requirements || {};
-      const negotiationAccepted = jobRequirements.negotiationAccepted;
-      
-      // If negotiation was accepted, the job.amount should already be updated to the negotiated price
-      // So we always use job.amount as the source of truth
-      jobAmount = Number(offer.job.amount);
-      console.log(`[PAYMENT INTENT] Using job price: $${jobAmount} (job.amount)`);
-      
-      // Log if there was a negotiation for debugging
-      if (negotiationAccepted) {
-        console.log(`[PAYMENT INTENT] Negotiation was accepted, job.amount reflects negotiated price`);
+      // For flat jobs: use proposedAmount if it exists (hustler's proposed price), otherwise use job.amount
+      // If hustler proposed a price, that's what the customer is accepting
+      if (offer.proposedAmount && offer.proposedAmount > 0) {
+        jobAmount = Number(offer.proposedAmount);
+        console.log(`[PAYMENT INTENT] Using hustler's proposed price: $${jobAmount} (proposedAmount)`);
+      } else {
+        jobAmount = Number(offer.job.amount);
+        console.log(`[PAYMENT INTENT] Using original job price: $${jobAmount} (job.amount)`);
       }
     }
     

@@ -478,10 +478,15 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       jobAmount = maxAmount; // Authorize the max amount, but we'll capture actual amount later
       console.log(`[HOURLY JOB] Authorizing max amount: $${maxAmount} ($${hourlyRate}/hr × ${maxHours} hrs)`);
     } else {
-      // Always use job.amount as the source of truth
-      // If negotiation was accepted, job.amount should already be updated to the negotiated price
-      jobAmount = parseFloat(offer.job.amount || 0);
-      console.log(`[OFFER ACCEPT] Using job price: $${jobAmount} (job.amount)`);
+      // For flat jobs: use proposedAmount if it exists (hustler's proposed price), otherwise use job.amount
+      // If hustler proposed a price, that's what the customer is accepting
+      if (offer.proposedAmount && offer.proposedAmount > 0) {
+        jobAmount = parseFloat(offer.proposedAmount);
+        console.log(`[OFFER ACCEPT] Using hustler's proposed price: $${jobAmount} (proposedAmount)`);
+      } else {
+        jobAmount = parseFloat(offer.job.amount || 0);
+        console.log(`[OFFER ACCEPT] Using original job price: $${jobAmount} (job.amount)`);
+      }
       maxAmount = jobAmount; // For flat jobs, max = actual
     }
     
