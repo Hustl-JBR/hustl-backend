@@ -76,8 +76,13 @@ async function createConnectedAccount(email, country = 'US') {
 // Stripe Connect: Create account link for onboarding
 async function createAccountLink(accountId, returnUrl, refreshUrl) {
   try {
+    console.log('[STRIPE] Creating account link for account:', accountId);
+    console.log('[STRIPE] Return URL:', returnUrl);
+    console.log('[STRIPE] Refresh URL:', refreshUrl);
+    
     // First verify the account exists
-    await stripe.accounts.retrieve(accountId);
+    const account = await stripe.accounts.retrieve(accountId);
+    console.log('[STRIPE] Account retrieved:', account.id, 'Type:', account.type);
     
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
@@ -86,9 +91,13 @@ async function createAccountLink(accountId, returnUrl, refreshUrl) {
       type: 'account_onboarding',
     });
     
+    console.log('[STRIPE] Account link created:', accountLink.url);
     return accountLink;
   } catch (error) {
     console.error('[STRIPE] Error creating account link:', error);
+    console.error('[STRIPE] Error type:', error.type);
+    console.error('[STRIPE] Error code:', error.code);
+    console.error('[STRIPE] Error message:', error.message);
     throw error;
   }
 }

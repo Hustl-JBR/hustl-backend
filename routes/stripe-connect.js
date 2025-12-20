@@ -29,10 +29,12 @@ router.post('/create-account', async (req, res) => {
     }
 
     if (user.stripeAccountId) {
-      return res.status(400).json({ 
-        error: 'Stripe account already connected',
+      // Account already exists - that's fine, just return it
+      console.log('[STRIPE CONNECT] Account already exists:', user.stripeAccountId);
+      return res.json({ 
         accountId: user.stripeAccountId,
-        message: 'Account already exists. Use GET /stripe-connect/onboarding-link to get onboarding URL.'
+        message: 'Stripe account already exists. Use GET /stripe-connect/onboarding-link to get onboarding URL.',
+        alreadyExists: true
       });
     }
 
