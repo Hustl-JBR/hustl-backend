@@ -30936,8 +30936,16 @@ try {
     const sessionId = urlParams.get('session_id');
     const offerId = urlParams.get('offerId');
     const jobId = urlParams.get('jobId');
+    const resetToken = urlParams.get('token');
     
-    if (paymentStatus === 'success' && sessionId) {
+    // Check if this is a password reset link
+    if (resetToken) {
+      // Show password reset form
+      showPasswordResetModal(resetToken);
+      // Clean URL
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    } else if (paymentStatus === 'success' && sessionId) {
       // Payment completed - show success and refresh
       if (typeof showToast === 'function') {
         showToast('✅ Payment successful! Hustler accepted and job activated.');
