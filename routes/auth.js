@@ -730,15 +730,34 @@ router.post('/verify-email', [
       });
     }
 
-    // Verify email
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        emailVerified: true,
-        emailVerificationCode: null, // Clear code after verification
-        emailVerificationExpiry: null,
-      },
-    });
+    // Verify email - try Prisma first, fallback to raw SQL
+    try {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerified: true,
+          emailVerificationCode: null, // Clear code after verification
+          emailVerificationExpiry: null,
+        },
+      });
+    } catch (updateError) {
+      // If Prisma update fails, try raw SQL
+      console.warn('[verify-email] Prisma update failed, trying raw SQL:', updateError.message);
+      try {
+        const { Prisma } = require('@prisma/client');
+        await prisma.$executeRaw`
+          UPDATE users 
+          SET email_verified = true,
+              email_verification_code = NULL,
+              email_verification_expiry = NULL
+          WHERE id = ${user.id}
+        `;
+        console.log('[verify-email] ✅ Email verified via raw SQL');
+      } catch (sqlError) {
+        console.error('[verify-email] ❌ Could not verify email:', sqlError.message);
+        throw sqlError;
+      }
+    }
 
     // Generate new token with verified status
     const token = jwt.sign(
