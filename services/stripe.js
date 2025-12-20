@@ -58,17 +58,9 @@ async function createConnectedAccount(email, country = 'US') {
     },
   });
   
-  // In test mode, accept TOS automatically to make onboarding smoother
-  // This allows the account to be used immediately for testing
-  const isTestMode = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_');
-  if (isTestMode) {
-    await stripe.accounts.update(account.id, {
-      tos_acceptance: {
-        date: Math.floor(Date.now() / 1000),
-        ip: '127.0.0.1',
-      },
-    });
-  }
+  // Note: We cannot accept TOS on behalf of Express accounts
+  // The user must complete onboarding through Stripe's onboarding flow
+  // This is required by Stripe for compliance reasons
   
   return account;
 }
