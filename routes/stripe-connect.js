@@ -1,7 +1,7 @@
 const express = require('express');
 const prisma = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
-const { createConnectedAccount, createAccountLink } = require('../services/stripe');
+const { createConnectedAccount, verifyStripeAccount, createAccountLink } = require('../services/stripe');
 
 const router = express.Router();
 

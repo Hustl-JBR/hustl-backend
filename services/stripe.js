@@ -73,6 +73,17 @@ async function createConnectedAccount(email, country = 'US') {
   return account;
 }
 
+// Stripe Connect: Verify account exists
+async function verifyStripeAccount(accountId) {
+  try {
+    const account = await stripe.accounts.retrieve(accountId);
+    return account;
+  } catch (error) {
+    console.error('[STRIPE] Error verifying account:', accountId, error.message);
+    throw error;
+  }
+}
+
 // Stripe Connect: Create account link for onboarding
 async function createAccountLink(accountId, returnUrl, refreshUrl) {
   try {
