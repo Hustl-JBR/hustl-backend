@@ -6664,7 +6664,9 @@ window.showChangePasswordModal = function showChangePasswordModal() {
           const data = await response.json();
           
           if (response.ok) {
-            showToast("✅ Password reset email sent! Check your inbox.");
+            showToast("✅ Password reset email sent! Check your inbox. You will need to use the link in the email to reset your password.");
+            // IMPORTANT: Do NOT auto-login - user must use the reset link from email
+            // Stay on login page - user will click the link in their email
           } else {
             showToast(data.error || "Could not send reset email. Please try again.");
           }

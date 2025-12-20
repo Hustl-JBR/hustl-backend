@@ -149,21 +149,19 @@ const { email, password, name, username, city, zip, role, referralCode } = req.b
       }
     }
 
-    // Send welcome email (non-blocking)
+    // Send welcome email (non-blocking) - fire and forget for faster response
     console.log('[signup] About to send welcome email to:', user.email);
-    try {
-      await sendSignupEmail(user.email, user.name);
+    sendSignupEmail(user.email, user.name).then(() => {
       console.log('[signup] ✅ Welcome email sent successfully');
-    } catch (welcomeEmailError) {
+    }).catch(welcomeEmailError => {
       console.error('[signup] ❌ Failed to send welcome email:', welcomeEmailError.message);
-    }
+    });
     
-    // Send email verification email with code
+    // Send email verification email with code (non-blocking) - fire and forget for faster response
     console.log('[signup] About to send verification email to:', user.email, 'with code:', verificationCode);
-    try {
-      await sendEmailVerificationEmail(user.email, user.name, verificationCode);
+    sendEmailVerificationEmail(user.email, user.name, verificationCode).then(() => {
       console.log('[signup] ✅ Verification email sent successfully to:', user.email);
-    } catch (emailError) {
+    }).catch(emailError => {
       console.error('[signup] ❌ Failed to send verification email:', emailError.message);
       console.error('[signup] Email error details:', {
         message: emailError.message,
@@ -173,7 +171,7 @@ const { email, password, name, username, city, zip, role, referralCode } = req.b
       });
       // Still allow signup to continue, but log the error
       // User can use "Resend Code" button if email doesn't arrive
-    }
+    });
 
     // Generate token (but user won't be able to post jobs until verified)
     const jwtSecret = process.env.JWT_SECRET || 'fallback-secret-change-me';
@@ -353,9 +351,15 @@ router.post('/forgot-password', [
       );
 
       const resetUrl = `${process.env.APP_BASE_URL || 'https://hustljobs.com'}/reset-password?token=${resetToken}`;
-      await sendPasswordResetEmail(user.email, user.name, resetUrl);
+      
+      // Send email asynchronously (non-blocking) for faster response
+      sendPasswordResetEmail(user.email, user.name, resetUrl).catch(emailError => {
+        console.error('[FORGOT PASSWORD] Error sending reset email:', emailError);
+        // Don't fail the request if email fails - user can request again
+      });
     }
 
+    // Return immediately - don't wait for email to send
     res.json({ message: 'If an account exists, a password reset link has been sent' });
   } catch (error) {
     console.error('Forgot password error:', error);
