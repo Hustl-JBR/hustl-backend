@@ -784,7 +784,8 @@ router.post('/confirm-payment', authenticate, requireRole('CUSTOMER'), async (re
 });
 
 // GET /payments/config - Get Stripe publishable key for Payment Element
-router.get('/config', authenticate, async (req, res) => {
+// Public endpoint - publishable keys are safe to expose
+router.get('/config', async (req, res) => {
   try {
     let publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
     
