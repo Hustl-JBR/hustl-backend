@@ -12024,8 +12024,10 @@ async function renderJobs(reset = false) {
                     if (confirm(`Accept ${hustler.name || 'this applicant'} for this job?`)) {
                       try {
                         acceptBtn.disabled = true;
-                        acceptBtn.textContent = "Accepting...";
-                        const response = await fetch(`${API_BASE}/offers/${offerId}/accept`, {
+                        acceptBtn.textContent = "Processing...";
+                        
+                        // Step 1: Create payment intent
+                        const intentRes = await fetch(`${API_BASE}/payments/create-intent/offer/${offerId}`, {
                           method: 'POST',
                           headers: {
                             'Authorization': `Bearer ${token}`,
@@ -12033,20 +12035,50 @@ async function renderJobs(reset = false) {
                           }
                         });
                         
-                        if (!response.ok) {
-                          const error = await response.json();
-                          throw new Error(error.error || 'Failed to accept applicant');
+                        if (!intentRes.ok) {
+                          const error = await intentRes.json();
+                          throw new Error(error.error || 'Failed to create payment');
                         }
                         
-                        showToast('✅ Applicant accepted!');
-                        // Close modal and refresh
-                        document.body.removeChild(modalOverlay);
-                        document.body.style.overflow = "";
-                        window._viewingFromPostedTab = false;
-                        // Refresh posted jobs
-                        if (typeof loadPostedJobs === 'function') {
-                          loadPostedJobs();
-                        }
+                        const paymentData = await intentRes.json();
+                        
+                        // Step 2: Show payment modal
+                        await showStripePaymentModal(paymentData.clientSecret, job.id, async (paymentIntentId) => {
+                          // Step 3: Accept offer
+                          try {
+                            const acceptRes = await fetch(`${API_BASE}/offers/${offerId}/accept`, {
+                              method: 'POST',
+                              headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify({
+                                paymentIntentId: paymentIntentId
+                              })
+                            });
+                            
+                            if (!acceptRes.ok) {
+                              const error = await acceptRes.json();
+                              throw new Error(error.error || 'Failed to accept applicant');
+                            }
+                            
+                            showToast('✅ Applicant accepted!');
+                            // Close modal and refresh
+                            document.body.removeChild(modalOverlay);
+                            document.body.style.overflow = "";
+                            window._viewingFromPostedTab = false;
+                            // Refresh posted jobs
+                            if (typeof loadPostedJobs === 'function') {
+                              loadPostedJobs();
+                            }
+                          } catch (error) {
+                            console.error('Error accepting offer:', error);
+                            showToast(error.message || 'Failed to accept applicant');
+                          }
+                        });
+                        
+                        acceptBtn.disabled = false;
+                        acceptBtn.textContent = "✅ Accept";
                       } catch (error) {
                         console.error('Error accepting applicant:', error);
                         showToast(error.message || 'Failed to accept applicant');
