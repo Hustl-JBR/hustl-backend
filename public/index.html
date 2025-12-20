@@ -15612,7 +15612,9 @@ async function renderJobs(reset = false) {
                         } catch (acceptError) {
                           showToast("Error accepting offer: " + (acceptError.message || "Unknown error"));
                         }
-                      });
+                      },
+                      paymentData.amount // Pass amount breakdown
+                    );
                       
                       return;
                     }
@@ -16929,7 +16931,9 @@ async function renderJobs(reset = false) {
                         } catch (acceptError) {
                           showToast("Error accepting offer: " + (acceptError.message || "Unknown error"));
                         }
-                      });
+                      },
+                      paymentData.amount // Pass amount breakdown
+                    );
                       
                       return;
                     }
@@ -17682,7 +17686,9 @@ async function renderJobs(reset = false) {
                         } catch (acceptError) {
                           showToast("Error accepting offer: " + (acceptError.message || "Unknown error"));
                         }
-                      });
+                      },
+                      paymentData.amount // Pass amount breakdown
+                    );
                       
                       return;
                     }
