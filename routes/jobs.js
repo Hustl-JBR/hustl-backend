@@ -425,6 +425,24 @@ router.post('/', authenticate, requireRole('CUSTOMER'), [
       recurrenceEndDate,
       keepActiveFor, // Days to keep job active (1, 3, 7, 14, 30)
     } = req.body;
+    
+    // Parse requirements if it's a string
+    let parsedRequirements = requirements;
+    if (typeof requirements === 'string') {
+      try {
+        parsedRequirements = JSON.parse(requirements);
+      } catch (e) {
+        console.error('[POST /jobs] Error parsing requirements:', e);
+        parsedRequirements = {};
+      }
+    }
+    
+    // Ensure equipmentNeeded is preserved from request body
+    // Check both camelCase and snake_case versions
+    const equipmentNeeded = parsedRequirements.equipmentNeeded || parsedRequirements.equipment_needed || req.body.equipmentNeeded || req.body.equipment_needed || [];
+    const customEquipment = parsedRequirements.customEquipment || parsedRequirements.custom_equipment || req.body.customEquipment || req.body.custom_equipment || null;
+    
+    console.log('[POST /jobs] Equipment data - equipmentNeeded:', equipmentNeeded, 'customEquipment:', customEquipment);
 
     // Content moderation - check for prohibited content
     const notes = requirements.notes || '';
@@ -499,11 +517,16 @@ router.post('/', authenticate, requireRole('CUSTOMER'), [
       estHours: estHours ? parseInt(estHours) : null,
       expiresAt: expiresAt, // Store as DateTime field (UTC)
       requirements: {
-        ...requirements,
+        ...parsedRequirements,
         teamSize: parseInt(teamSize) || 1,
         keepActiveFor: keepActiveFor ? parseInt(keepActiveFor) : null,
         expiresAt: expiresAt.toISOString(), // Also keep in requirements for backward compatibility
         preferredTime: preferredTime, // morning, afternoon, evening, anytime
+        // Ensure equipment is saved
+        equipmentNeeded: Array.isArray(equipmentNeeded) && equipmentNeeded.length > 0 ? equipmentNeeded : null,
+        equipment_needed: Array.isArray(equipmentNeeded) && equipmentNeeded.length > 0 ? equipmentNeeded : null, // Also include snake_case for compatibility
+        customEquipment: customEquipment || null,
+        custom_equipment: customEquipment || null, // Also include snake_case for compatibility
       },
       status: 'OPEN',
       recurrencePaused: false,
@@ -1204,12 +1227,44 @@ router.patch('/:id', authenticate, requireRole('CUSTOMER'), [
 
     // Handle requirements merge
     if (requirements !== undefined) {
+      // Parse requirements if it's a string
+      let parsedRequirements = requirements;
+      if (typeof requirements === 'string') {
+        try {
+          parsedRequirements = JSON.parse(requirements);
+        } catch (e) {
+          console.error('[PATCH /jobs/:id] Error parsing requirements:', e);
+          parsedRequirements = {};
+        }
+      }
+      
       const existingRequirements = job.requirements || {};
+      // Parse existing requirements if it's a string
+      let parsedExisting = existingRequirements;
+      if (typeof existingRequirements === 'string') {
+        try {
+          parsedExisting = JSON.parse(existingRequirements);
+        } catch (e) {
+          parsedExisting = {};
+        }
+      }
+      
+      // Ensure equipmentNeeded is preserved
+      const equipmentNeeded = parsedRequirements.equipmentNeeded || parsedRequirements.equipment_needed || parsedExisting.equipmentNeeded || parsedExisting.equipment_needed || null;
+      const customEquipment = parsedRequirements.customEquipment || parsedRequirements.custom_equipment || parsedExisting.customEquipment || parsedExisting.custom_equipment || null;
+      
       // Deep merge to preserve nested properties
       updateData.requirements = {
-        ...existingRequirements,
-        ...requirements
+        ...parsedExisting,
+        ...parsedRequirements,
+        // Ensure equipment is always included if it exists
+        equipmentNeeded: Array.isArray(equipmentNeeded) && equipmentNeeded.length > 0 ? equipmentNeeded : (equipmentNeeded || null),
+        equipment_needed: Array.isArray(equipmentNeeded) && equipmentNeeded.length > 0 ? equipmentNeeded : (equipmentNeeded || null),
+        customEquipment: customEquipment || null,
+        custom_equipment: customEquipment || null,
       };
+      
+      console.log('[PATCH /jobs/:id] Equipment preserved - equipmentNeeded:', equipmentNeeded, 'customEquipment:', customEquipment);
     }
     
     // Handle teamSize - it's stored in requirements, not as a direct field

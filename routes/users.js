@@ -246,12 +246,16 @@ router.patch('/me', authenticate, [
       // Allow empty string to clear gender
       updateData.gender = (gender === '' || gender === null) ? null : gender;
     }
+    // Handle tools separately using raw SQL to ensure it's saved even if Prisma has issues
+    let toolsToSave = null;
     if (tools !== undefined) {
       // Allow empty string to clear tools
-      updateData.tools = (tools === '' || tools === null) ? null : tools.trim();
+      toolsToSave = (tools === '' || tools === null) ? null : tools.trim();
+      // Don't add to updateData yet - we'll use raw SQL
     }
 
     console.log('[PATCH /users/me] Prepared updateData:', JSON.stringify(updateData, null, 2));
+    console.log('[PATCH /users/me] Tools to save:', toolsToSave);
 
     let user;
     try {
@@ -473,8 +477,36 @@ router.patch('/me', authenticate, [
       }
     }
 
+    // Save tools using raw SQL if tools were provided
+    if (toolsToSave !== undefined) {
+      try {
+        if (toolsToSave === null || toolsToSave === '') {
+          // Clear tools
+          await prisma.$executeRawUnsafe(
+            `UPDATE users SET tools = NULL, updated_at = NOW() WHERE id = $1`,
+            req.user.id
+          );
+          console.log('[PATCH /users/me] Tools cleared via raw SQL');
+        } else {
+          // Save tools
+          await prisma.$executeRawUnsafe(
+            `UPDATE users SET tools = $1, updated_at = NOW() WHERE id = $2`,
+            toolsToSave,
+            req.user.id
+          );
+          console.log('[PATCH /users/me] Tools saved via raw SQL:', toolsToSave);
+        }
+        // Update user object with tools value
+        user.tools = toolsToSave;
+      } catch (toolsError) {
+        console.error('[PATCH /users/me] Error saving tools via raw SQL:', toolsError);
+        // If tools column doesn't exist, set to null in response
+        user.tools = null;
+      }
+    }
+
     console.log('[PATCH /users/me] Successfully updated user:', user.id);
-    console.log('[PATCH /users/me] User data - name:', user.name, 'bio:', JSON.stringify(user.bio), 'bio type:', typeof user.bio, 'gender:', user.gender, 'photoUrl:', user.photoUrl);
+    console.log('[PATCH /users/me] User data - name:', user.name, 'bio:', JSON.stringify(user.bio), 'bio type:', typeof user.bio, 'gender:', user.gender, 'tools:', user.tools, 'photoUrl:', user.photoUrl);
     res.json(user);
   } catch (error) {
     console.error('[PATCH /users/me] Update user error:', error);
