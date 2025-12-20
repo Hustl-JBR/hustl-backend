@@ -2265,7 +2265,28 @@ router.post('/:id/confirm-complete', authenticate, requireRole('CUSTOMER'), asyn
       });
     }
 
-    res.json(updated);
+    // Even if no payment, return success response for completion modal
+    const finalJobNoPayment = await prisma.job.findUnique({
+      where: { id: req.params.id },
+      include: {
+        payment: true,
+        hustler: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+    
+    return res.json({
+      ...finalJobNoPayment,
+      success: true,
+      paymentReleased: false,
+      customerId: finalJobNoPayment.customerId,
+      hustlerId: finalJobNoPayment.hustlerId
+    });
   } catch (error) {
     console.error('Confirm complete error:', error);
     res.status(500).json({ error: 'Internal server error' });
