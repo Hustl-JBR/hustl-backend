@@ -376,6 +376,8 @@ router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER
           tip: '0', // Tips happen after completion, not in authorization
           customerFee: customerFee.toString(),
           payType: offer.job.payType || 'flat', // Store pay type for reference
+          refundable: 'true', // Payment is refundable until start code is entered
+          refundPolicy: 'Fully refundable until hustler enters start code. After start code, payment held in escrow until job completion.',
         },
       });
 
