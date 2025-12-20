@@ -103,6 +103,30 @@ const { email, password, name, username, city, zip, role, referralCode } = req.b
             createdAt: true,
           },
         });
+        
+        // Try to save verification code using raw SQL as fallback
+        try {
+          const { Prisma } = require('@prisma/client');
+          await prisma.$executeRaw`
+            UPDATE users 
+            SET email_verification_code = ${verificationCode},
+                email_verification_expiry = ${verificationCodeExpiry}
+            WHERE id = ${user.id}
+          `;
+          console.log('[signup] ✅ Verification code saved via raw SQL fallback');
+        } catch (sqlError) {
+          console.error('[signup] ⚠️ Could not save verification code via raw SQL:', sqlError.message);
+          // Try unsafe method as last resort
+          try {
+            await prisma.$executeRawUnsafe(
+              `UPDATE users SET email_verification_code = '${verificationCode.replace(/'/g, "''")}', email_verification_expiry = '${verificationCodeExpiry.toISOString()}' WHERE id = '${user.id.replace(/'/g, "''")}'`
+            );
+            console.log('[signup] ✅ Verification code saved via unsafe SQL fallback');
+          } catch (unsafeError) {
+            console.error('[signup] ❌ Could not save verification code at all:', unsafeError.message);
+            // Continue anyway - user can request resend
+          }
+        }
       } else {
         throw createError;
       }
@@ -570,13 +594,47 @@ router.post('/verify-email', [
         },
       });
     } catch (schemaError) {
-      // If emailVerified column doesn't exist, try without it
-      console.warn('[verify-email] emailVerified column may not exist:', schemaError.message);
+      // If emailVerified column doesn't exist, try fetching with raw SQL
+      console.warn('[verify-email] emailVerified column may not exist, trying raw SQL:', schemaError.message);
       if (email) {
-        user = await prisma.user.findUnique({
-          where: { email },
-          select: { id: true, email: true, name: true, username: true, roles: true },
-        });
+        try {
+          // Try to fetch user with verification code using raw SQL
+          const { Prisma } = require('@prisma/client');
+          const rawUser = await prisma.$queryRaw`
+            SELECT id, email, name, username, roles, 
+                   email_verification_code, email_verification_expiry
+            FROM users 
+            WHERE email = ${email} 
+              AND (email_verified = false OR email_verified IS NULL)
+            LIMIT 1
+          `;
+          
+          if (rawUser && Array.isArray(rawUser) && rawUser.length > 0) {
+            user = {
+              id: rawUser[0].id,
+              email: rawUser[0].email,
+              name: rawUser[0].name,
+              username: rawUser[0].username,
+              roles: rawUser[0].roles,
+              emailVerificationCode: rawUser[0].email_verification_code,
+              emailVerificationExpiry: rawUser[0].email_verification_expiry,
+            };
+          } else {
+            // Fallback to basic user lookup
+            user = await prisma.user.findUnique({
+              where: { email },
+              select: { id: true, email: true, name: true, username: true, roles: true },
+            });
+          }
+        } catch (rawError) {
+          console.error('[verify-email] Raw SQL also failed, trying basic lookup:', rawError.message);
+          if (email) {
+            user = await prisma.user.findUnique({
+              where: { email },
+              select: { id: true, email: true, name: true, username: true, roles: true },
+            });
+          }
+        }
       }
     }
 
