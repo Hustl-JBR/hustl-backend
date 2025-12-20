@@ -19832,25 +19832,49 @@ async function renderJobs(reset = false) {
             if (cleanUpdates.tools !== undefined) {
               const sentTools = cleanUpdates.tools === null || cleanUpdates.tools === '' ? null : cleanUpdates.tools;
               const receivedTools = updatedUser.tools === null || updatedUser.tools === '' ? null : updatedUser.tools;
+              const finalTools = receivedTools || sentTools; // Use received if available, otherwise use sent
+              
               if (sentTools !== receivedTools) {
                 console.warn('[PROFILE SAVE] Tools mismatch! Sent:', JSON.stringify(cleanUpdates.tools), 'Got:', JSON.stringify(updatedUser.tools));
                 // Force update tools in localStorage with what we sent (it should be saved)
                 const storedUser = JSON.parse(localStorage.getItem('hustl_user') || '{}');
                 storedUser.tools = sentTools;
                 localStorage.setItem('hustl_user', JSON.stringify(storedUser));
-                // Also update the input field
-                const toolsInput = document.getElementById("basicInfoTools");
-                if (toolsInput) {
-                  toolsInput.value = sentTools || '';
-                }
               } else {
                 console.log('[PROFILE SAVE] Tools match:', receivedTools);
-                // Update the input field with saved value
-                const toolsInput = document.getElementById("basicInfoTools");
-                if (toolsInput) {
-                  toolsInput.value = receivedTools || '';
-                }
               }
+              
+              // Update the input field with saved value
+              const toolsInput = document.getElementById("basicInfoTools");
+              if (toolsInput) {
+                toolsInput.value = finalTools || '';
+              }
+              
+              // Update all profile cards on the page for this user
+              const profileCards = document.querySelectorAll(`[data-user-id="${user.id}"], .profile-card[data-user-id="${user.id}"]`);
+              profileCards.forEach(card => {
+                // Find the tools element in the card
+                const toolsElement = card.querySelector('[style*="🔧"], [style*="Tools"]');
+                if (toolsElement) {
+                  if (finalTools && finalTools.trim()) {
+                    toolsElement.textContent = `🔧 ${finalTools}`;
+                    toolsElement.style.display = '';
+                  } else {
+                    toolsElement.style.display = 'none';
+                  }
+                } else if (finalTools && finalTools.trim()) {
+                  // If tools element doesn't exist, find the location element and add tools after it
+                  const locationElement = card.querySelector('[style*="📍"]');
+                  if (locationElement && locationElement.parentElement) {
+                    const toolsDiv = document.createElement('div');
+                    toolsDiv.style.cssText = 'font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;';
+                    toolsDiv.textContent = `🔧 ${finalTools}`;
+                    locationElement.parentElement.insertBefore(toolsDiv, locationElement.nextSibling);
+                  }
+                }
+              });
+              
+              console.log('[PROFILE SAVE] Updated', profileCards.length, 'profile cards for user', user.id);
             }
             
             // Update cached user in auth object
