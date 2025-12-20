@@ -1374,8 +1374,8 @@ router.patch('/:id', authenticate, requireRole('CUSTOMER'), [
   }
 });
 
-// POST /jobs/:id/propose-price-change - Customer proposes price change (before start code)
-router.post('/:id/propose-price-change', authenticate, requireRole('CUSTOMER'), [
+// POST /jobs/:id/propose-price-change - Hustler proposes price change (before start code)
+router.post('/:id/propose-price-change', authenticate, requireRole('HUSTLER'), [
   body('amount').optional().isFloat({ min: 0 }),
   body('hourlyRate').optional().isFloat({ min: 0 }),
   body('estHours').optional().isInt({ min: 1 }),
@@ -1393,7 +1393,7 @@ router.post('/:id/propose-price-change', authenticate, requireRole('CUSTOMER'), 
       where: { id: req.params.id },
       include: { 
         payment: true,
-        hustler: { select: { id: true, name: true, email: true } }
+        customer: { select: { id: true, name: true, email: true } }
       }
     });
 
@@ -1401,8 +1401,8 @@ router.post('/:id/propose-price-change', authenticate, requireRole('CUSTOMER'), 
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    if (job.customerId !== req.user.id) {
-      return res.status(403).json({ error: 'Forbidden' });
+    if (job.hustlerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden - You can only propose price changes for jobs assigned to you' });
     }
 
     // Price changes only allowed before start code
@@ -1445,16 +1445,16 @@ router.post('/:id/propose-price-change', authenticate, requireRole('CUSTOMER'), 
         }
       },
       include: {
-        hustler: { select: { id: true, name: true, email: true } }
+        customer: { select: { id: true, name: true, email: true } }
       }
     });
 
-    // Send notification email to hustler (non-blocking)
+    // Send notification email to customer (non-blocking)
     const { sendPriceChangeProposalEmail } = require('../services/email');
     try {
       await sendPriceChangeProposalEmail(
-        job.hustler.email,
-        job.hustler.name,
+        job.customer.email,
+        job.customer.name,
         job.title,
         job.id,
         proposedPrice
@@ -1477,15 +1477,16 @@ router.post('/:id/propose-price-change', authenticate, requireRole('CUSTOMER'), 
   }
 });
 
-// POST /jobs/:id/accept-price-change - Hustler accepts price change
+// POST /jobs/:id/accept-price-change - Customer accepts price change
 // If price increases, customer must authorize additional payment
-router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), async (req, res) => {
+// If price decreases, customer gets refund notification
+router.post('/:id/accept-price-change', authenticate, requireRole('CUSTOMER'), async (req, res) => {
   try {
     const job = await prisma.job.findUnique({
       where: { id: req.params.id },
       include: { 
         payment: true,
-        customer: { select: { id: true, name: true, email: true } }
+        hustler: { select: { id: true, name: true, email: true } }
       }
     });
 
@@ -1493,8 +1494,8 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    if (job.hustlerId !== req.user.id) {
-      return res.status(403).json({ error: 'Forbidden' });
+    if (job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden - You can only accept price changes for your own jobs' });
     }
 
     // Price changes only allowed before start code
@@ -1698,12 +1699,12 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
       });
     }
 
-    // Send notification email
+    // Send notification email to hustler
     const { sendPriceChangeAcceptedEmail } = require('../services/email');
     try {
       await sendPriceChangeAcceptedEmail(
-        job.customer.email,
-        job.customer.name,
+        job.hustler.email,
+        job.hustler.name,
         job.title,
         job.id,
         newJobAmount
@@ -1712,11 +1713,19 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
       console.error('Error sending price change accepted email:', emailError);
     }
 
+    // If price decreased, return refund info
+    const refundInfo = priceDifference < -0.01 ? {
+      refunded: true,
+      amount: Math.abs(totalDifference),
+      message: `You'll be refunded $${Math.abs(totalDifference).toFixed(2)}. The refund will appear in your account within 5-10 business days.`
+    } : null;
+
     res.json({ 
       success: true,
       job: updatedJob,
       newAmount: newJobAmount,
-      requiresPayment: false
+      requiresPayment: false,
+      refund: refundInfo
     });
   } catch (error) {
     console.error('[PRICE CHANGE] Accept price change error:', error);
@@ -1728,12 +1737,12 @@ router.post('/:id/accept-price-change', authenticate, requireRole('HUSTLER'), as
 });
 
 // POST /jobs/:id/decline-price-change - Hustler declines price change
-router.post('/:id/decline-price-change', authenticate, requireRole('HUSTLER'), async (req, res) => {
+router.post('/:id/decline-price-change', authenticate, requireRole('CUSTOMER'), async (req, res) => {
   try {
     const job = await prisma.job.findUnique({
       where: { id: req.params.id },
       include: { 
-        customer: { select: { id: true, name: true, email: true } }
+        hustler: { select: { id: true, name: true, email: true } }
       }
     });
 
@@ -1741,8 +1750,8 @@ router.post('/:id/decline-price-change', authenticate, requireRole('HUSTLER'), a
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    if (job.hustlerId !== req.user.id) {
-      return res.status(403).json({ error: 'Forbidden' });
+    if (job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden - You can only decline price changes for your own jobs' });
     }
 
     if (job.startCodeVerified) {
@@ -1792,12 +1801,12 @@ router.post('/:id/decline-price-change', authenticate, requireRole('HUSTLER'), a
       }
     });
 
-    // Send notification email
+    // Send notification email to hustler
     const { sendPriceChangeDeclinedEmail } = require('../services/email');
     try {
       await sendPriceChangeDeclinedEmail(
-        job.customer.email,
-        job.customer.name,
+        job.hustler.email,
+        job.hustler.name,
         job.title,
         job.id
       );

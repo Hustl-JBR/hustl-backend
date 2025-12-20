@@ -11444,9 +11444,9 @@ async function renderJobs(reset = false) {
           proposedPriceChange: proposedPriceChangeHustler,
           statusCheck: proposedPriceChangeHustler?.status
         });
-        // Price change feature disabled - hide this section
-        if (false && isHustler && job.hustlerId === user?.id && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified && proposedPriceChangeHustler && proposedPriceChangeHustler.status === 'PENDING') {
-          console.log('[PRICE CHANGE] Price change feature disabled');
+        // Show price change proposal to CUSTOMER (hustler proposed, customer needs to accept/decline)
+        if (isCustomer && job.customerId === user?.id && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified && proposedPriceChangeHustler && proposedPriceChangeHustler.status === 'PENDING') {
+          console.log('[PRICE CHANGE] Showing price change proposal to customer');
           const priceChangeSectionHustler = document.createElement("div");
           priceChangeSectionHustler.style.cssText = "margin-bottom: 1rem; padding: 1rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 2px solid #f59e0b;";
           
@@ -11537,21 +11537,69 @@ async function renderJobs(reset = false) {
                   const data = await response.json();
                   
                   if (response.ok) {
-                    // If price increased, customer needs to authorize additional payment
+                    // If price increased, show payment modal for the difference
                     if (data.requiresPayment && data.clientSecret) {
-                      showToast('Price increase requires customer payment authorization. Waiting for customer...');
                       acceptBtn.disabled = false;
-                      acceptBtn.textContent = '✓ Accept Updated Price';
-                      // The customer will see a payment modal - we'll refresh when they complete it
-                    } else {
-                      showToast('✅ Price change accepted! Payment authorization updated.');
-                      // Close existing modal first
+                      acceptBtn.textContent = '✓ Accept & Pay Difference';
+                      
+                      // Show payment modal for the difference
+                      await showStripePaymentModal(
+                        data.clientSecret,
+                        job.id,
+                        async (paymentIntentId) => {
+                          // After payment authorized, finalize the price change
+                          try {
+                            const finalizeResponse = await fetch(`${apiBase}/jobs/${job.id}/finalize-price-change`, {
+                              method: 'POST',
+                              headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify({ paymentIntentId })
+                            });
+                            
+                            if (finalizeResponse.ok) {
+                              showToast('✅ Price change accepted! Payment authorized.');
+                              // Close modal and refresh
+                              const existingModal = document.getElementById('jobDetailModal');
+                              if (existingModal) {
+                                document.body.removeChild(existingModal);
+                                document.body.style.overflow = '';
+                              }
+                              setTimeout(() => {
+                                window.openJobDetails(job.id);
+                              }, 100);
+                            } else {
+                              const error = await finalizeResponse.json();
+                              showToast(error.error || 'Failed to finalize price change');
+                            }
+                          } catch (error) {
+                            console.error('Error finalizing price change:', error);
+                            showToast('Error finalizing price change. Please try again.');
+                          }
+                        },
+                        data.amount
+                      );
+                    } else if (data.refund && data.refund.refunded) {
+                      // Price decreased - show refund success popup
+                      showToast(`✅ Price change accepted! ${data.refund.message}`, 8000);
+                      // Close modal and refresh
                       const existingModal = document.getElementById('jobDetailModal');
                       if (existingModal) {
                         document.body.removeChild(existingModal);
                         document.body.style.overflow = '';
                       }
-                      // Small delay to ensure modal is closed, then reopen with fresh data
+                      setTimeout(() => {
+                        window.openJobDetails(job.id);
+                      }, 100);
+                    } else {
+                      showToast('✅ Price change accepted!');
+                      // Close modal and refresh
+                      const existingModal = document.getElementById('jobDetailModal');
+                      if (existingModal) {
+                        document.body.removeChild(existingModal);
+                        document.body.style.overflow = '';
+                      }
                       setTimeout(() => {
                         window.openJobDetails(job.id);
                       }, 100);
@@ -11559,7 +11607,7 @@ async function renderJobs(reset = false) {
                   } else {
                     showToast(data.error || 'Failed to accept price change');
                     acceptBtn.disabled = false;
-                    acceptBtn.textContent = '✓ Accept Updated Price';
+                    acceptBtn.textContent = '✓ Accept & Pay Difference';
                   }
                 } catch (error) {
                   console.error('Error accepting price change:', error);
