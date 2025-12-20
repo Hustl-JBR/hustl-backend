@@ -321,23 +321,19 @@ router.post('/create-intent/offer/:offerId', authenticate, requireRole('CUSTOMER
       jobAmount = hourlyRate * maxHours; // Max possible charge (authorized, not charged yet)
       console.log(`[PAYMENT INTENT] Hourly job - authorizing max: $${jobAmount} ($${hourlyRate}/hr × ${maxHours} hrs)`);
     } else {
-      // Use proposedAmount ONLY if there was a negotiation (customer proposed a price)
-      // Check if negotiation was accepted by looking at job requirements
+      // Use proposedAmount ONLY if negotiation was explicitly accepted (job.amount was updated)
+      // Otherwise, always use job.amount (the original or accepted price)
       const jobRequirements = offer.job.requirements || {};
-      const hasNegotiation = jobRequirements.negotiationAccepted || 
-                            (offer.proposedAmount && offer.proposedAmount !== Number(offer.job.amount));
+      const negotiationAccepted = jobRequirements.negotiationAccepted;
       
-      // Only use proposedAmount if it's different from job amount (meaning it was negotiated)
-      // OR if the job amount was already updated to match proposedAmount (negotiation was accepted)
-      if (offer.proposedAmount && offer.proposedAmount > 0 && 
-          (hasNegotiation || offer.proposedAmount !== Number(offer.job.amount))) {
-        jobAmount = Number(offer.proposedAmount);
-        console.log(`[PAYMENT INTENT] Using negotiated price: $${jobAmount} (proposedAmount)`);
-      } else {
-        // Use the job's current amount (which may have been updated if negotiation was accepted)
-        // or the original job amount
-        jobAmount = Number(offer.job.amount);
-        console.log(`[PAYMENT INTENT] Using job price: $${jobAmount} (job.amount)`);
+      // If negotiation was accepted, the job.amount should already be updated to the negotiated price
+      // So we always use job.amount as the source of truth
+      jobAmount = Number(offer.job.amount);
+      console.log(`[PAYMENT INTENT] Using job price: $${jobAmount} (job.amount)`);
+      
+      // Log if there was a negotiation for debugging
+      if (negotiationAccepted) {
+        console.log(`[PAYMENT INTENT] Negotiation was accepted, job.amount reflects negotiated price`);
       }
     }
     
