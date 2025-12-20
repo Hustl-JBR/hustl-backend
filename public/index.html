@@ -8507,7 +8507,16 @@ window.showChangePasswordModal = function showChangePasswordModal() {
           } else {
             workersNeeded = Number(workersNeededValue) || 1;
           }
+          // Collect equipment
+          const equipmentNeeded = [];
+          document.querySelectorAll('input[name="equipment"]:checked').forEach(cb => {
+            equipmentNeeded.push(cb.value);
+          });
+          // Add custom equipment if provided
           const customEquipment = document.getElementById("customEquipment")?.value.trim() || "";
+          if (customEquipment) {
+            equipmentNeeded.push(customEquipment);
+          }
           
           // Collect keepActiveFor (jobDuration)
           const jobDuration = document.getElementById("jobDuration")?.value || "3";
