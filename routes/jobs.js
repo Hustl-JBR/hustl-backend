@@ -314,6 +314,7 @@ router.get('/completed', authenticate, async (req, res) => {
           select: {
             id: true,
             amount: true,
+            tip: true,
             status: true,
           },
         },

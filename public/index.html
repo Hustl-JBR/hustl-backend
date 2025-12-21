@@ -24003,88 +24003,50 @@ meta.textContent =
                          (user.roles && Array.isArray(user.roles) && user.roles.some(r => r.toUpperCase() === 'HUSTLER'));
         console.log("🔵 User role check - role:", userRole, "roles:", user.roles, "isCustomer:", isCustomer, "isHustler:", isHustler);
         
-        // Fetch completed jobs - use /jobs/active which returns jobs for both customer and hustler roles
-        let allJobs = [];
+        // Fetch completed jobs using the dedicated /jobs/completed endpoint
+        console.log("🔵 Fetching completed jobs from /jobs/completed");
+        let completedJobs = [];
         
-        // Fetch from /jobs/active (works for both customers and hustlers)
-        console.log("🔵 Fetching completed jobs from /jobs/active");
-        const activeJobsResponse = await fetch(`${API_BASE}/jobs/active`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (activeJobsResponse.ok) {
-          const activeJobs = await activeJobsResponse.json();
-          if (Array.isArray(activeJobs)) {
-            allJobs = allJobs.concat(activeJobs);
-          }
-        } else {
-          console.warn("⚠️ Failed to fetch from /jobs/active:", activeJobsResponse.status);
-        }
-        
-        // Also fetch from /jobs/user-posted for customer jobs
-        if (isCustomer) {
-          console.log("🔵 Fetching customer completed jobs from /jobs/user-posted");
-          const customerJobs = await safeFetch(`${API_BASE}/jobs/user-posted`, {
+        try {
+          const completedJobsResponse = await fetch(`${API_BASE}/jobs/completed`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
-          if (customerJobs && Array.isArray(customerJobs)) {
-            allJobs = allJobs.concat(customerJobs);
+          
+          if (completedJobsResponse.ok) {
+            const jobs = await completedJobsResponse.json();
+            if (Array.isArray(jobs)) {
+              completedJobs = jobs;
+              console.log("✅ Fetched completed jobs:", completedJobs.length, "jobs");
+              if (completedJobs.length > 0) {
+                console.log("🔵 Sample completed job:", {
+                  id: completedJobs[0].id,
+                  status: completedJobs[0].status,
+                  completionCodeVerified: completedJobs[0].completionCodeVerified,
+                  customerId: completedJobs[0].customerId,
+                  hustlerId: completedJobs[0].hustlerId
+                });
+              }
+            } else {
+              console.warn("⚠️ Response is not an array:", jobs);
+              completedJobs = [];
+            }
+          } else {
+            const errorText = await completedJobsResponse.text();
+            console.error("❌ Failed to fetch completed jobs:", completedJobsResponse.status, errorText);
+            completedJobsList.innerHTML = `<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Failed to load completed jobs (${completedJobsResponse.status}). Please try again.</div>`;
+            completedJobsList.dataset.loading = 'false';
+            return;
           }
-        }
-        
-        if (!isCustomer && !isHustler) {
-          completedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Invalid user role.</div>";
+        } catch (error) {
+          console.error("❌ Error fetching completed jobs:", error);
+          completedJobsList.innerHTML = `<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Error loading completed jobs: ${error.message}. Please try again.</div>`;
           completedJobsList.dataset.loading = 'false';
           return;
         }
         
-        // Remove duplicates by job ID
-        const uniqueJobs = [];
-        const seenJobIds = new Set();
-        for (const job of allJobs) {
-          if (!seenJobIds.has(job.id)) {
-            seenJobIds.add(job.id);
-            uniqueJobs.push(job);
-          }
-        }
+        console.log("🔵 Completed jobs count:", completedJobs.length);
         
-        const jobs = uniqueJobs;
-        
-        console.log("🔵 Fetched jobs:", jobs?.length || 0, "jobs");
-        if (jobs && jobs.length > 0) {
-          console.log("🔵 Sample job statuses:", jobs.slice(0, 5).map(j => ({ id: j.id, status: j.status, completionCodeVerified: j.completionCodeVerified })));
-        }
-        
-        if (!jobs || !Array.isArray(jobs)) {
-          console.warn("❌ Failed to fetch jobs or invalid response");
-          completedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Failed to load jobs. Please try again.</div>";
-          completedJobsList.dataset.loading = 'false';
-          return;
-        }
-        
-        // Filter for completed jobs
-        const completedJobs = jobs.filter(job => {
-          if (isCustomer) {
-            // Customer: jobs they posted that are PAID or COMPLETED
-            const isCompleted = (job.status === 'PAID' || (job.status === 'COMPLETED_BY_HUSTLER' && job.completionCodeVerified));
-            if (isCompleted) {
-              console.log("✅ Found completed job (customer):", job.id, job.status, job.completionCodeVerified);
-            }
-            return isCompleted;
-          } else if (isHustler) {
-            // Hustler: jobs they completed (status PAID or COMPLETED_BY_HUSTLER with completionCodeVerified)
-            const isCompleted = (job.status === 'PAID' || (job.status === 'COMPLETED_BY_HUSTLER' && job.completionCodeVerified));
-            if (isCompleted) {
-              console.log("✅ Found completed job (hustler):", job.id, job.status, job.completionCodeVerified);
-            }
-            return isCompleted;
-          }
-          return false;
-        });
-        
-        console.log("🔵 Completed jobs after filtering:", completedJobs.length);
-        
-        // Sort by completion date (most recent first)
+        // Jobs are already sorted by updatedAt desc from the API, but we can ensure it
         completedJobs.sort((a, b) => {
           const dateA = new Date(a.updatedAt || a.completedAt || a.createdAt);
           const dateB = new Date(b.updatedAt || b.completedAt || b.createdAt);
