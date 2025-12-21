@@ -98,6 +98,7 @@ router.get('/me', authenticate, async (req, res) => {
     }
     
     // Calculate completed jobs count (only jobs where user was the hustler)
+    // Count jobs that are completed - be more flexible with conditions
     const completedJobsCount = await prisma.job.count({
       where: {
         AND: [
@@ -107,50 +108,74 @@ router.get('/me', authenticate, async (req, res) => {
           {
             OR: [
               { 
-                status: 'PAID',
-                completionCodeVerified: true
+                status: 'PAID'
               },
               { 
                 status: 'COMPLETED_BY_HUSTLER',
                 completionCodeVerified: true
               }
             ]
-          },
-          {
-            payment: {
-              status: 'CAPTURED'
-            }
           }
         ]
       }
     });
+    
+    console.log('[GET /users/me] Completed jobs count query result:', completedJobsCount);
 
     // Calculate total earned (for hustlers - sum of payments where they are the hustler, minus platform fee)
     let totalEarned = 0;
     try {
-      const payments = await prisma.payment.findMany({
+      // First, get all completed jobs where user is hustler
+      const completedJobs = await prisma.job.findMany({
         where: {
-          job: {
-            hustlerId: req.user.id,
-            status: 'PAID',
-            completionCodeVerified: true
-          },
-          status: 'CAPTURED'
+          hustlerId: req.user.id,
+          OR: [
+            { status: 'PAID' },
+            { 
+              status: 'COMPLETED_BY_HUSTLER',
+              completionCodeVerified: true
+            }
+          ]
         },
         select: {
+          id: true,
           amount: true,
-          feeHustler: true
+          hourlyRate: true,
+          estHours: true,
+          payType: true,
+          payment: {
+            select: {
+              amount: true,
+              feeHustler: true,
+              status: true
+            }
+          }
         }
       });
-      // Calculate total earned: payment amount minus platform fee (or use feeHustler if available)
-      totalEarned = payments.reduce((sum, p) => {
-        const paymentAmount = Number(p.amount) || 0;
-        const platformFee = Number(p.feeHustler) || (paymentAmount * 0.12); // 12% platform fee
-        const hustlerEarned = paymentAmount - platformFee;
-        return sum + hustlerEarned;
-      }, 0);
+      
+      console.log('[GET /users/me] Found completed jobs:', completedJobs.length);
+      
+      // Calculate total earned from payments
+      completedJobs.forEach(job => {
+        if (job.payment && job.payment.status === 'CAPTURED') {
+          const paymentAmount = Number(job.payment.amount) || 0;
+          const platformFee = Number(job.payment.feeHustler) || (paymentAmount * 0.12); // 12% platform fee
+          const hustlerEarned = paymentAmount - platformFee;
+          totalEarned += hustlerEarned;
+        } else if (job.payment) {
+          // If payment exists but not captured, still calculate based on job amount
+          const jobAmount = job.payType === 'flat' 
+            ? Number(job.amount || 0)
+            : (Number(job.hourlyRate || 0) * Number(job.estHours || 0));
+          const platformFee = jobAmount * 0.12;
+          const hustlerEarned = jobAmount - platformFee;
+          totalEarned += hustlerEarned;
+        }
+      });
+      
+      console.log('[GET /users/me] Total earned calculated:', totalEarned);
     } catch (error) {
-      console.warn('[GET /users/me] Error calculating totalEarned:', error);
+      console.error('[GET /users/me] Error calculating totalEarned:', error);
       totalEarned = 0;
     }
     
