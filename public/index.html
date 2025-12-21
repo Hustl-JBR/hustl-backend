@@ -11810,22 +11810,29 @@ async function renderJobs(reset = false) {
                     return;
                   }
                   
-                  // Open price adjustment modal
+                  // Show inline form in the job popup instead of separate modal
+                  const existingForm = priceChangeSection.querySelector('.priceProposalForm');
+                  if (existingForm) {
+                    existingForm.style.display = existingForm.style.display === 'none' ? 'block' : 'none';
+                    return;
+                  }
+                  
+                  // Create inline price proposal form
                   const payType = job.payType || 'flat';
                   const hourlyRate = parseFloat(job.hourlyRate || 0);
                   const maxHours = Number(job.estHours) || Number(parsedRequirements.maxHours) || 0;
                   const jobAmount = parseFloat(job.amount || 0);
-                  
-                  const adjustModal = document.createElement('div');
-                  adjustModal.id = 'priceProposalModal';
-                  adjustModal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10002; display: flex; align-items: center; justify-content: center; padding: 1rem;';
                   const currentAmount = payType === 'hourly' ? (hourlyRate * maxHours) : jobAmount;
                   const currentTotal = currentAmount + (currentAmount * 0.065);
                   
-                  adjustModal.innerHTML = `
-                    <div style="background: white; border-radius: 16px; max-width: 500px; width: 100%; padding: 2rem; position: relative; max-height: 90vh; overflow-y: auto;">
-                      <button class="closeAdjustModal" style="position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; border-radius: 50%; border: none; background: #f3f4f6; cursor: pointer; font-size: 1.25rem;">×</button>
-                      <h3 style="font-size: 1.25rem; font-weight: 700; margin: 0 0 1rem 0;">💰 Propose Price Change</h3>
+                  // Hide the button and show the form inline
+                  proposeBtn.style.display = 'none';
+                  
+                  const proposalForm = document.createElement('div');
+                  proposalForm.className = 'priceProposalForm';
+                  proposalForm.style.cssText = 'margin-top: 1rem; padding: 1rem; background: #f9fafb; border-radius: 8px; border: 2px solid #f59e0b;';
+                  proposalForm.innerHTML = `
+                    <h4 style="font-size: 1rem; font-weight: 700; margin: 0 0 1rem 0; color: #92400e;">💰 Propose Price Change</h4>
                       
                       <!-- Important Warning -->
                       <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.9rem; line-height: 1.6;">
@@ -11889,7 +11896,7 @@ async function renderJobs(reset = false) {
                       </div>
                     </div>
                   `;
-                  document.body.appendChild(adjustModal);
+                  priceChangeSection.appendChild(proposalForm);
                   
                   // Add real-time price preview
                   const updatePricePreview = () => {
@@ -11937,13 +11944,11 @@ async function renderJobs(reset = false) {
                   // Initial preview
                   setTimeout(updatePricePreview, 100);
                   
-                  adjustModal.querySelector('.closeAdjustModal')?.addEventListener('click', () => {
-                    document.body.removeChild(adjustModal);
+                  proposalForm.querySelector(`.cancelPriceBtn-${job.id}`)?.addEventListener('click', () => {
+                    proposalForm.remove();
+                    proposeBtn.style.display = 'block';
                   });
-                  adjustModal.querySelector(`.cancelPriceBtn-${job.id}`)?.addEventListener('click', () => {
-                    document.body.removeChild(adjustModal);
-                  });
-                  adjustModal.querySelector(`.savePriceBtn-${job.id}`)?.addEventListener('click', async () => {
+                  proposalForm.querySelector(`.savePriceBtn-${job.id}`)?.addEventListener('click', async () => {
                     try {
                       const token = localStorage.getItem('hustl_token');
                       const proposalData = {};
@@ -11962,7 +11967,7 @@ async function renderJobs(reset = false) {
                         return;
                       }
                       
-                      const saveBtn = adjustModal.querySelector(`.savePriceBtn-${job.id}`);
+                      const saveBtn = proposalForm.querySelector(`.savePriceBtn-${job.id}`);
                       saveBtn.disabled = true;
                       saveBtn.textContent = 'Sending...';
                       
@@ -11977,7 +11982,6 @@ async function renderJobs(reset = false) {
                       
                       if (response.ok) {
                         showToast('Price change proposal sent! The customer must accept it before the price changes.');
-                        document.body.removeChild(adjustModal);
                         // Close job details modal and reopen to refresh
                         const existingModal = document.getElementById('jobDetailModal');
                         if (existingModal) {
@@ -11998,7 +12002,7 @@ async function renderJobs(reset = false) {
                     } catch (error) {
                       console.error('Error proposing price change:', error);
                       showToast('Error proposing price change. Please try again.');
-                      const saveBtn = adjustModal.querySelector(`.savePriceBtn-${job.id}`);
+                      const saveBtn = proposalForm.querySelector(`.savePriceBtn-${job.id}`);
                       saveBtn.disabled = false;
                       saveBtn.textContent = 'Send Proposal';
                     }
@@ -22183,6 +22187,7 @@ meta.textContent =
                 <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">💰 ${payDisplay.length > 40 ? payDisplay.substring(0, 40) + '...' : payDisplay}</div>
                 <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">${categoryDisplay}</div>
                 <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">📅 ${timeAgo}</div>
+                ${priceProposalBadge}
                 ${offerCount > 0 ? `
                 <div style="padding: 1.25rem; background: #f0fdf4; border-radius: 8px; border: 1px solid #10b98140; text-align: center; margin-bottom: 0.75rem;">
                   <div style="font-size: 2.5rem; font-weight: 700; color: #059669; line-height: 1; margin-bottom: 0.25rem;">${offerCount}</div>
