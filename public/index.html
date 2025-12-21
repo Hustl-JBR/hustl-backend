@@ -11689,10 +11689,12 @@ async function renderJobs(reset = false) {
           modalContent.appendChild(priceChangeSectionHustler);
         }
         
-        // 8.6. PRICE CHANGE PROPOSAL UI (for customer when job is scheduled/assigned)
+        // 8.6. PRICE CHANGE PROPOSAL UI (for HUSTLER to propose price changes)
         // Note: requirements and parsedRequirements are already declared above
         const proposedPriceChange = parsedRequirements.proposedPriceChange;
-        if (isOwner && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified) {
+        const isAssignedHustler = job.hustlerId && job.hustlerId === user?.id && 
+                                 (job.status === 'SCHEDULED' || job.status === 'ASSIGNED');
+        if (isAssignedHustler && !job.startCodeVerified && !proposedPriceChange) {
           const priceChangeSection = document.createElement("div");
           priceChangeSection.style.cssText = "margin-bottom: 1rem; padding: 1rem; background: #fef3c7; border-radius: 12px; border: 2px solid #fbbf24;";
           
@@ -11718,7 +11720,7 @@ async function renderJobs(reset = false) {
             priceChangeSection.innerHTML = `
               <div style="font-size: 0.9rem; color: #991b1b; margin-bottom: 0.75rem; font-weight: 700;">❌ Price Change Declined</div>
               <div style="font-size: 0.85rem; color: #7f1d1d; margin-bottom: 1rem;">
-                The hustler declined your price change proposal. The job will remain at the original agreed price.
+                The customer declined your price change proposal. The job will remain at the original agreed price.
               </div>
               <div style="display: flex; gap: 0.75rem;">
                 <button id="unassignAfterDeclineBtn-${job.id}" class="btn btn-primary" style="flex: 1; padding: 0.875rem; font-weight: 700; background: #dc2626; border: none; border-radius: 8px; color: white; cursor: pointer;">
@@ -11782,11 +11784,11 @@ async function renderJobs(reset = false) {
               }
             }, 100);
           } else {
-            // No proposal yet - show button to propose price change
+            // No proposal yet - show button to propose price change (for HUSTLER)
             priceChangeSection.innerHTML = `
               <div style="font-size: 0.9rem; color: #92400e; margin-bottom: 0.75rem; font-weight: 700;">💰 Adjust Price</div>
               <div style="font-size: 0.85rem; color: #78350f; margin-bottom: 0.75rem; line-height: 1.5;">
-                Need to change the price? Propose a new price to the hustler. They must accept before the price changes.
+                Need to change the price? Propose a new price to the customer. They must accept before the price changes.
               </div>
               <div style="font-size: 0.8rem; color: #92400e; margin-bottom: 1rem; padding: 0.625rem; background: #fef3c7; border-radius: 6px; border: 1px solid #fbbf24;">
                 ⚠️ <strong>Important:</strong> Only propose a price change if necessary and after messaging with the hustler to discuss the change.
