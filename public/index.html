@@ -23338,10 +23338,10 @@ meta.textContent =
                       <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                      ${customer ? renderUserAvatar(customer, 40, { className: 'viewCustomerProfileBtn', onClick: `document.querySelectorAll('.viewCustomerProfileBtn[data-user-id="${customer.id}"]').forEach(btn => btn.click())` }) : '<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); cursor: pointer;" class="viewCustomerProfileBtn" data-user-id="' + customerId + '">C</div>'}
+                      ${customer && customer.id ? renderUserAvatar(customer, 40, { className: 'viewCustomerProfileBtn', 'data-user-id': customer.id }) : '<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); cursor: pointer;" class="viewCustomerProfileBtn" data-user-id="' + (customerId || '') + '">' + (customer?.name ? customer.name.charAt(0).toUpperCase() : 'C') + '</div>'}
                       <div>
                         <div style="font-size: 0.85rem; color: var(--text-muted);">Customer</div>
-                        <div style="font-weight: 600; color: var(--text-main); cursor: pointer;" class="viewCustomerProfileBtn" data-user-id="${customer.id || customerId}">${customer.name || 'Unknown'}</div>
+                        <div style="font-weight: 600; color: var(--text-main); cursor: pointer;" class="viewCustomerProfileBtn" data-user-id="${customer?.id || customerId || ''}">${customer?.name || 'Unknown'}</div>
                       </div>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
