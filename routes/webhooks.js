@@ -61,6 +61,11 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
 });
 
 async function handleCheckoutSessionCompleted(session) {
+  // Check if this is a tip payment
+  if (session.metadata?.type === 'tip') {
+    return await handleTipCheckoutCompleted(session);
+  }
+
   // Handle Stripe checkout completion - accept offer if offerId is in metadata
   const offerId = session.metadata?.offerId;
   if (!offerId) return;
@@ -157,6 +162,65 @@ async function handleCheckoutSessionCompleted(session) {
     console.log('Offer accepted via Stripe checkout:', offerId);
   } catch (error) {
     console.error('Error handling checkout session completion:', error);
+  }
+}
+
+async function handleTipCheckoutCompleted(session) {
+  const jobId = session.metadata?.jobId;
+  if (!jobId) {
+    console.log('[TIP CHECKOUT] No jobId in session metadata');
+    return;
+  }
+
+  try {
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: {
+        payment: true,
+      },
+    });
+
+    if (!job) {
+      console.error('[TIP CHECKOUT] Job not found:', jobId);
+      return;
+    }
+
+    // Check if tip already added
+    if (job.payment?.tip && job.payment.tip > 0) {
+      console.log('[TIP CHECKOUT] Tip already added for job:', jobId);
+      return;
+    }
+
+    const tipAmount = Number(session.metadata?.tipAmount || session.amount_total / 100 || 0);
+
+    // Update payment record with tip (or create if doesn't exist)
+    if (job.payment) {
+      await prisma.payment.update({
+        where: { id: job.payment.id },
+        data: {
+          tip: tipAmount,
+          // Payment intent from checkout session
+          providerId: session.payment_intent || job.payment.providerId,
+        },
+      });
+    } else {
+      // Create payment record if it doesn't exist
+      await prisma.payment.create({
+        data: {
+          jobId: job.id,
+          customerId: job.customerId,
+          hustlerId: job.hustlerId,
+          amount: Number(job.amount || 0),
+          tip: tipAmount,
+          status: 'CAPTURED',
+          providerId: session.payment_intent,
+        },
+      });
+    }
+
+    console.log(`[TIP CHECKOUT] Tip of $${tipAmount.toFixed(2)} added to job ${jobId} via checkout session ${session.id}`);
+  } catch (error) {
+    console.error('[TIP CHECKOUT] Error handling tip checkout completion:', error);
   }
 }
 

@@ -11,6 +11,174 @@ const Stripe = require('stripe');
 const router = express.Router();
 router.use(authenticate);
 
+// POST /tips/create-checkout/job/:jobId - Create Stripe Checkout Session for tip (redirects to Stripe)
+router.post('/create-checkout/job/:jobId', requireRole('CUSTOMER'), async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const { tipAmount } = req.body;
+
+    if (!tipAmount || tipAmount <= 0) {
+      return res.status(400).json({ error: 'Tip amount is required and must be greater than 0' });
+    }
+
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      select: {
+        id: true,
+        title: true,
+        customerId: true,
+        hustlerId: true,
+        status: true,
+        completionCodeVerified: true,
+        amount: true,
+        payment: {
+          select: {
+            id: true,
+            amount: true,
+            tip: true,
+            status: true,
+            providerId: true
+          }
+        },
+        customer: { select: { id: true, email: true, name: true } },
+        hustler: { 
+          select: { 
+            id: true, 
+            email: true, 
+            name: true, 
+            stripeAccountId: true 
+          } 
+        }
+      }
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (job.customerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Job must be completed
+    const isCompleted = job.status === 'PAID' || 
+                       (job.status === 'COMPLETED_BY_HUSTLER' && job.completionCodeVerified === true);
+    
+    if (!isCompleted) {
+      return res.status(400).json({ 
+        error: 'Job must be completed before adding a tip',
+        jobStatus: job.status,
+        completionCodeVerified: job.completionCodeVerified
+      });
+    }
+
+    // Check if tip already added
+    if (job.payment?.tip && job.payment.tip > 0) {
+      return res.status(400).json({ 
+        error: 'Tip already added for this job',
+        existingTip: job.payment.tip
+      });
+    }
+
+    // Calculate tip amount (max $50)
+    const finalTipAmount = Math.min(parseFloat(tipAmount), 50);
+    const jobAmount = Number(job.payment?.amount || job.amount || 0);
+    const maxTip = Math.min(jobAmount * 0.25, 50);
+    
+    if (finalTipAmount > maxTip) {
+      return res.status(400).json({ 
+        error: `Maximum tip is $${maxTip.toFixed(2)}`,
+        maxTip: maxTip
+      });
+    }
+
+    if (!job.hustler?.stripeAccountId) {
+      return res.status(400).json({ error: 'Hustler has not set up payment account' });
+    }
+
+    // Create Stripe Checkout Session
+    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+    
+    if (skipStripeCheck || !stripe) {
+      return res.json({
+        checkoutUrl: `${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || 'http://localhost:3000'}/?tip_success=true&jobId=${jobId}&test=true`,
+        isTestMode: true,
+        tipAmount: finalTipAmount
+      });
+    }
+
+    const origin = process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || req.get('origin') || `${req.protocol}://${req.get('host')}`;
+    const base = origin.replace(/\/+$/, '');
+
+    try {
+      // Create checkout session with direct charge to hustler's Connect account
+      const session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: `Tip for job: ${job.title}`,
+                description: `Thank you tip for completed job`
+              },
+              unit_amount: Math.round(finalTipAmount * 100), // Convert to cents
+            },
+            quantity: 1,
+          },
+        ],
+        customer_email: job.customer.email,
+        metadata: {
+          jobId: job.id,
+          customerId: req.user.id,
+          hustlerId: job.hustlerId,
+          type: 'tip',
+          tipAmount: finalTipAmount.toString()
+        },
+        // Transfer 100% to hustler (no platform fee on tips)
+        payment_intent_data: {
+          application_fee_amount: 0, // No platform fee
+          transfer_data: {
+            destination: job.hustler.stripeAccountId,
+          },
+          metadata: {
+            jobId: job.id,
+            customerId: req.user.id,
+            hustlerId: job.hustlerId,
+            type: 'tip',
+            jobAmount: jobAmount.toString(),
+            tipAmount: finalTipAmount.toString(),
+            description: `Tip for job: ${job.title}`
+          }
+        },
+        success_url: `${base}/?tip_success=true&jobId=${jobId}&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${base}/?tip_cancelled=true&jobId=${jobId}`,
+      });
+
+      console.log(`[TIP CHECKOUT] Created checkout session: ${session.id} for $${finalTipAmount.toFixed(2)} tip to hustler ${job.hustler.stripeAccountId}`);
+
+      res.json({
+        checkoutUrl: session.url,
+        sessionId: session.id,
+        tipAmount: finalTipAmount
+      });
+    } catch (stripeError) {
+      console.error('[TIP CHECKOUT] Error creating checkout session:', stripeError);
+      return res.status(500).json({ 
+        error: 'Failed to create tip checkout session',
+        message: stripeError.message
+      });
+    }
+  } catch (error) {
+    console.error('Create tip checkout error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message 
+    });
+  }
+});
+
 // POST /tips/create-intent/job/:jobId - Create payment intent for tip (without confirming)
 router.post('/create-intent/job/:jobId', requireRole('CUSTOMER'), async (req, res) => {
   try {

@@ -24737,141 +24737,35 @@ meta.textContent =
           <button class="quickTipBtn" data-amount="${Math.min(jobAmount * 0.25, 50).toFixed(2)}" style="flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; background: white; color: var(--text-main); font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f9fafb'; this.style.borderColor='var(--primary)'" onmouseout="this.style.background='white'; this.style.borderColor='var(--border)'">25% ($${Math.min(jobAmount * 0.25, 50).toFixed(2)})</button>
         </div>
         
-        <div id="tipPaymentElement" style="margin-bottom: 1rem;"></div>
-        
-        <button id="submitTipBtn" style="width: 100%; padding: 0.875rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s; display: none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Pay Tip</button>
+        <button id="submitTipBtn" style="width: 100%; padding: 0.875rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">💝 Tip</button>
       `;
       
       modal.appendChild(modalContent);
       document.body.appendChild(modal);
       document.body.style.overflow = 'hidden';
       
-      let stripe = null;
-      let elements = null;
-      let paymentElement = null;
-      let currentClientSecret = null;
-      
-      // Load Stripe publishable key
-      let publishableKey = null;
-      try {
-        const configResponse = await fetch(`${API_BASE}/payments/config`);
-        if (configResponse.ok) {
-          const config = await configResponse.json();
-          publishableKey = config.publishableKey;
-        }
-      } catch (e) {
-        console.error('Error fetching Stripe key:', e);
-      }
-      
-      if (!publishableKey) {
-        showToast('Payment system not available. Please try again later.');
-        document.body.removeChild(modal);
-        document.body.style.overflow = '';
-        return;
-      }
-      
-      // Initialize Stripe
-      if (typeof window.Stripe === 'undefined') {
-        const script = document.createElement('script');
-        script.src = 'https://js.stripe.com/v3/';
-        script.onload = initializeStripePayment;
-        document.head.appendChild(script);
-      } else {
-        initializeStripePayment();
-      }
-      
-      function initializeStripePayment() {
-        stripe = window.Stripe(publishableKey);
-        
-        // Quick tip buttons - update amount and create payment intent
-        modal.querySelectorAll('.quickTipBtn').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            const amount = parseFloat(btn.dataset.amount);
-            document.getElementById('tipAmountInput').value = amount.toFixed(2);
-            await createPaymentIntent(amount);
-          });
+      // Quick tip buttons - update amount input
+      modal.querySelectorAll('.quickTipBtn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const amount = parseFloat(btn.dataset.amount);
+          document.getElementById('tipAmountInput').value = amount.toFixed(2);
         });
-        
-        // Amount input change handler
-        document.getElementById('tipAmountInput').addEventListener('input', async (e) => {
-          const amount = parseFloat(e.target.value);
-          if (amount && amount > 0 && amount <= maxTip) {
-            await createPaymentIntent(amount);
-          }
-        });
-      }
-      
-      async function createPaymentIntent(tipAmount) {
-        try {
-          const response = await fetch(`${API_BASE}/tips/create-intent/job/${jobId}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ tipAmount })
-          });
-          
-          const result = await response.json();
-          
-          if (!response.ok) {
-            throw new Error(result.error || 'Failed to create payment intent');
-          }
-          
-          if (result.isTestMode) {
-            // Test mode - skip Stripe Elements
-            document.getElementById('submitTipBtn').style.display = 'block';
-            document.getElementById('submitTipBtn').textContent = `Pay $${tipAmount.toFixed(2)} Tip`;
-            return;
-          }
-          
-          currentClientSecret = result.clientSecret;
-          
-          // Destroy existing elements if any
-          if (paymentElement) {
-            paymentElement.unmount();
-            paymentElement = null;
-          }
-          if (elements) {
-            elements = null;
-          }
-          
-          // Create new elements
-          elements = stripe.elements({
-            clientSecret: currentClientSecret,
-            appearance: { theme: 'stripe' }
-          });
-          
-          paymentElement = elements.create('payment', { layout: 'tabs' });
-          paymentElement.mount('#tipPaymentElement');
-          
-          paymentElement.on('ready', () => {
-            document.getElementById('submitTipBtn').style.display = 'block';
-            document.getElementById('submitTipBtn').textContent = `Pay $${tipAmount.toFixed(2)} Tip`;
-          });
-          
-        } catch (error) {
-          console.error('Error creating payment intent:', error);
-          showToast(error.message || 'Failed to initialize payment. Please try again.');
-        }
-      }
+      });
       
       // Close button
       modal.querySelector('#closeTipModal')?.addEventListener('click', () => {
-        if (paymentElement) paymentElement.unmount();
         document.body.removeChild(modal);
         document.body.style.overflow = '';
       });
       
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
-          if (paymentElement) paymentElement.unmount();
           document.body.removeChild(modal);
           document.body.style.overflow = '';
         }
       });
       
-      // Submit button
+      // Submit button - opens Stripe Checkout
       modal.querySelector('#submitTipBtn')?.addEventListener('click', async () => {
         const tipAmount = parseFloat(document.getElementById('tipAmountInput').value);
         
@@ -24887,77 +24781,36 @@ meta.textContent =
         
         const submitBtn = modal.querySelector('#submitTipBtn');
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Processing...';
+        submitBtn.textContent = 'Opening checkout...';
         
         try {
-          // Test mode
-          if (!currentClientSecret || currentClientSecret.includes('_test_')) {
-            // For test mode, call confirm endpoint directly
-            const response = await fetch(`${API_BASE}/tips/job/${jobId}`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({ paymentIntentId: `pi_test_${Date.now()}` })
-            });
-            
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'Failed to add tip');
-            
-            showToast(`✅ Tip of $${tipAmount.toFixed(2)} added successfully!`);
-            document.body.removeChild(modal);
-            document.body.style.overflow = '';
-            if (typeof loadCompletedJobs === 'function') {
-              loadCompletedJobs(true);
-            }
-            return;
-          }
-          
-          // Confirm payment with Stripe
-          const { error, paymentIntent } = await stripe.confirmPayment({
-            elements,
-            confirmParams: {
-              return_url: `${window.location.origin}/?tip_success=true&jobId=${jobId}`
+          // Create Stripe Checkout Session
+          const response = await fetch(`${API_BASE}/tips/create-checkout/job/${jobId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
             },
-            redirect: 'if_required'
+            body: JSON.stringify({ tipAmount })
           });
           
-          if (error) {
-            throw new Error(error.message);
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to create checkout session');
           }
           
-          if (paymentIntent && paymentIntent.status === 'succeeded') {
-            // Confirm tip on backend
-            const response = await fetch(`${API_BASE}/tips/job/${jobId}`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({ paymentIntentId: paymentIntent.id })
-            });
-            
-            const result = await response.json();
-            
-            if (!response.ok) {
-              throw new Error(result.error || 'Failed to confirm tip');
-            }
-            
-            showToast(`✅ Tip of $${tipAmount.toFixed(2)} added successfully!`);
-            
-            document.body.removeChild(modal);
-            document.body.style.overflow = '';
-            
-            if (typeof loadCompletedJobs === 'function') {
-              loadCompletedJobs(true);
-            }
+          // Redirect to Stripe Checkout
+          if (result.checkoutUrl) {
+            window.location.href = result.checkoutUrl;
+          } else {
+            throw new Error('No checkout URL returned');
           }
         } catch (error) {
-          console.error('Error processing tip:', error);
+          console.error('Error creating tip checkout:', error);
           showToast(error.message || 'Failed to process tip. Please try again.');
           submitBtn.disabled = false;
-          submitBtn.textContent = `Pay $${tipAmount.toFixed(2)} Tip`;
+          submitBtn.textContent = '💝 Tip';
         }
       });
     }
@@ -29323,8 +29176,15 @@ meta.textContent =
         updateSubmitButton();
       });
       
-      // Submit review
-        submitBtn.addEventListener('click', async () => {
+      // Submit review - check if button is disabled before proceeding
+      submitBtn.addEventListener('click', async (e) => {
+        // Prevent click if button is disabled
+        if (submitBtn.disabled) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        
         console.log('📤 Submitting review with rating:', selectedRating);
         console.log('📤 Review text length:', reviewText.value.trim().length);
         
@@ -29339,6 +29199,7 @@ meta.textContent =
           return;
         }
         
+        // Disable button and show loading state
         submitBtn.disabled = true;
         submitBtn.textContent = 'Submitting...';
         
@@ -33408,6 +33269,8 @@ try {
   setTimeout(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get('payment');
+    const tipSuccess = urlParams.get('tip_success');
+    const tipCancelled = urlParams.get('tip_cancelled');
     const sessionId = urlParams.get('session_id');
     const offerId = urlParams.get('offerId');
     const jobId = urlParams.get('jobId');
@@ -33417,6 +33280,31 @@ try {
     if (resetToken) {
       // Show password reset form
       showPasswordResetModal(resetToken);
+      // Clean URL
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    } else if (tipSuccess) {
+      // Tip payment completed
+      if (typeof showToast === 'function') {
+        showToast('✅ Tip added successfully! Thank you for showing appreciation.');
+      }
+      
+      // Clean URL
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+      
+      // Refresh completed jobs if on manage-jobs view
+      setTimeout(() => {
+        if (typeof activeView !== 'undefined' && activeView === 'manage-jobs') {
+          if (typeof loadCompletedJobs === 'function') loadCompletedJobs(true);
+        }
+      }, 1000);
+    } else if (tipCancelled) {
+      // Tip payment cancelled
+      if (typeof showToast === 'function') {
+        showToast('Tip cancelled. You can add a tip anytime from the completed jobs tab.');
+      }
+      
       // Clean URL
       const cleanUrl = window.location.pathname;
       window.history.replaceState({}, document.title, cleanUrl);
