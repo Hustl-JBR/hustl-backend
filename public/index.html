@@ -24445,53 +24445,6 @@ meta.textContent =
     window.loadCompletedJobs = loadCompletedJobs;
     window.openCompletedJobDetails = openCompletedJobDetails;
     
-    // Initialize manage tabs event delegation
-    setTimeout(() => {
-      const manageTabs = document.querySelectorAll('.manage-tab[data-manage-tab]');
-      manageTabs.forEach(tab => {
-        tab.addEventListener('click', (e) => {
-          e.preventDefault();
-          const tabName = tab.dataset.manageTab;
-          
-          // Hide all tab contents
-          document.querySelectorAll('.profile-tab-content').forEach(content => {
-            content.style.display = 'none';
-            content.classList.remove('active');
-          });
-          
-          // Remove active class from all tabs
-          manageTabs.forEach(t => {
-            t.classList.remove('active');
-            const indicator = t.querySelector('.tab-indicator');
-            if (indicator) indicator.style.display = 'none';
-          });
-          
-          // Show selected tab content
-          const tabContent = document.getElementById(`manageTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
-          if (tabContent) {
-            tabContent.style.display = 'block';
-            tabContent.classList.add('active');
-          }
-          
-          // Add active class to clicked tab
-          tab.classList.add('active');
-          const indicator = tab.querySelector('.tab-indicator');
-          if (indicator) indicator.style.display = 'block';
-          
-          // Load appropriate data
-          if (tabName === 'posted') {
-            if (typeof loadPostedJobs === 'function') loadPostedJobs();
-          } else if (tabName === 'active') {
-            if (typeof loadActiveJobs === 'function') loadActiveJobs();
-          } else if (tabName === 'completed') {
-            if (typeof loadCompletedJobs === 'function') loadCompletedJobs(true);
-          } else if (tabName === 'applied') {
-            if (typeof loadAppliedJobs === 'function') loadAppliedJobs();
-          }
-        });
-      });
-    }, 500);
-    
     // Load Applied Jobs (Hustler only)
     async function loadAppliedJobs() {
       console.log("🔵 loadAppliedJobs called");
