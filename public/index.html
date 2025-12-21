@@ -11694,10 +11694,11 @@ async function renderJobs(reset = false) {
         
         // 8.6. PRICE CHANGE PROPOSAL UI (for HUSTLER to propose price changes)
         // Note: requirements and parsedRequirements are already declared above
-        const proposedPriceChange = parsedRequirements.proposedPriceChange;
+        const proposedPriceChange = parsedRequirements?.proposedPriceChange;
         const isAssignedHustler = job.hustlerId && job.hustlerId === user?.id && 
                                  (job.status === 'SCHEDULED' || job.status === 'ASSIGNED');
-        if (isAssignedHustler && !job.startCodeVerified && !proposedPriceChange) {
+        // Show price change section if hustler is assigned and start code not verified
+        if (isAssignedHustler && !job.startCodeVerified) {
           const priceChangeSection = document.createElement("div");
           priceChangeSection.style.cssText = "margin-bottom: 1rem; padding: 1rem; background: #fef3c7; border-radius: 12px; border: 2px solid #fbbf24;";
           
