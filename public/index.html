@@ -5613,7 +5613,7 @@
         
         const reviewStars = document.createElement("span");
         reviewStars.style.cssText = "margin-left: auto; font-size: 0.9rem; color: #fbbf24;";
-        reviewStars.textContent = "★".repeat(review.rating || review.stars || 5);
+        reviewStars.textContent = "★".repeat(review.stars || review.rating || 0);
         
         reviewerInfo.appendChild(reviewerPic);
         reviewerInfo.appendChild(reviewerName);
@@ -5662,7 +5662,7 @@
                       <div style="font-weight: 600; color: var(--text-main);">${review.reviewer?.name || 'Anonymous'}</div>
                       <div style="font-size: 0.85rem; color: var(--text-muted);">${new Date(review.createdAt).toLocaleDateString()}</div>
                     </div>
-                    <div style="font-size: 1.25rem; color: #fbbf24;">${'★'.repeat(review.stars || 5)}</div>
+                    <div style="font-size: 1.25rem; color: #fbbf24;">${'★'.repeat(review.stars || review.rating || 0)}</div>
                   </div>
                   ${review.text ? `<div style="color: var(--text-main); line-height: 1.5; margin-bottom: 0.5rem;">${review.text}</div>` : ''}
                   ${review.job ? `<div style="font-size: 0.8rem; color: var(--text-muted);">${review.job.title || 'Untitled Job'}</div>` : ''}
@@ -13630,7 +13630,7 @@ async function renderJobs(reset = false) {
           
           const reviewStars = document.createElement("span");
           reviewStars.style.cssText = "margin-left: auto; font-size: 0.9rem; color: #fbbf24;";
-          reviewStars.textContent = "★".repeat(review.rating || review.stars || 5);
+          reviewStars.textContent = "★".repeat(review.stars || review.rating || 0);
           
           reviewerInfo.appendChild(reviewerPic);
           reviewerInfo.appendChild(reviewerName);
@@ -20624,8 +20624,8 @@ async function renderJobs(reset = false) {
                 margin-bottom: 1rem;
               ">
                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                  <span style="font-size: 1.2rem;">${'⭐'.repeat(review.stars || 5)}</span>
-                  <span style="font-weight: 600;">${review.stars || 5}/5</span>
+                  <span style="font-size: 1.2rem;">${'⭐'.repeat(review.stars || review.rating || 0)}</span>
+                  <span style="font-weight: 600;">${review.stars || review.rating || 0}/5</span>
                 </div>
                 ${review.comment ? `<div style="color: var(--text-main); margin-bottom: 0.5rem;">${review.comment}</div>` : ''}
                 ${review.job ? `<div style="font-size: 0.85rem; color: var(--text-muted);">Job: ${review.job.title || 'Untitled'}</div>` : ''}
@@ -21456,7 +21456,7 @@ async function renderJobs(reset = false) {
                   
                   const reviewStars = document.createElement("span");
                   reviewStars.style.cssText = "margin-left: auto; font-size: 0.9rem; color: #fbbf24;";
-                  reviewStars.textContent = "★".repeat(review.rating || 5);
+                  reviewStars.textContent = "★".repeat(review.stars || review.rating || 0);
                   
                   reviewerInfo.appendChild(reviewerPic);
                   reviewerInfo.appendChild(reviewerName);
@@ -24254,6 +24254,9 @@ meta.textContent =
           return;
         }
         
+        // Fetch job data if not provided
+        let job = jobData;
+        
         // Determine user role for THIS SPECIFIC JOB (not general roles)
         // Check if user is customer or hustler for this particular job
         if (isCustomer === null || isHustler === null) {
@@ -24262,9 +24265,6 @@ meta.textContent =
         }
         
         console.log('🔵 Job role check - customerId:', job.customerId, 'hustlerId:', job.hustlerId, 'userId:', user.id, 'isCustomer:', isCustomer, 'isHustler:', isHustler);
-        
-        // Fetch job data if not provided
-        let job = jobData;
         if (!job) {
           const jobResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -24449,7 +24449,7 @@ meta.textContent =
               <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
                 <div style="font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 1rem;">⭐ Your Review</div>
                 <div style="font-size: 0.95rem; color: #78350f; line-height: 1.6;">
-                  <div style="margin-bottom: 0.75rem;">Rating: <strong style="font-size: 1.1rem;">${'⭐'.repeat(userReview.stars || 0)} ${userReview.stars || 0}/5</strong></div>
+                  <div style="margin-bottom: 0.75rem;">Rating: <strong style="font-size: 1.1rem;">${'⭐'.repeat(userReview.stars || userReview.rating || 0)} ${userReview.stars || userReview.rating || 0}/5</strong></div>
                   ${userReview.text ? `<div style="padding: 1rem; background: white; border-radius: 8px; white-space: pre-wrap; color: var(--text-main);">${userReview.text}</div>` : ''}
                 </div>
               </div>
@@ -24549,7 +24549,7 @@ meta.textContent =
               <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
                 <div style="font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 1rem;">⭐ Your Review</div>
                 <div style="font-size: 0.95rem; color: #78350f; line-height: 1.6;">
-                  <div style="margin-bottom: 0.75rem;">Rating: <strong style="font-size: 1.1rem;">${'⭐'.repeat(userReview.stars || 0)} ${userReview.stars || 0}/5</strong></div>
+                  <div style="margin-bottom: 0.75rem;">Rating: <strong style="font-size: 1.1rem;">${'⭐'.repeat(userReview.stars || userReview.rating || 0)} ${userReview.stars || userReview.rating || 0}/5</strong></div>
                   ${userReview.text ? `<div style="padding: 1rem; background: white; border-radius: 8px; white-space: pre-wrap; color: var(--text-main);">${userReview.text}</div>` : ''}
                 </div>
               </div>
@@ -27388,8 +27388,8 @@ meta.textContent =
             reviewsHTML = last5Reviews.map(review => `
               <div style="padding: 1rem; border-bottom: 1px solid var(--border);">
                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                  <span style="font-size: 1.1rem;">${'⭐'.repeat(review.stars || 5)}</span>
-                  <span style="font-weight: 600; color: var(--text-main);">${review.stars || 5}/5</span>
+                  <span style="font-size: 1.1rem;">${'⭐'.repeat(review.stars || review.rating || 0)}</span>
+                  <span style="font-weight: 600; color: var(--text-main);">${review.stars || review.rating || 0}/5</span>
                   ${review.reviewer ? `<span style="font-size: 0.85rem; color: var(--text-muted);">by ${review.reviewer.name || 'Anonymous'}</span>` : ''}
                 </div>
                 ${review.text ? `<div style="color: var(--text-main); margin-bottom: 0.5rem; line-height: 1.5;">${review.text}</div>` : ''}
