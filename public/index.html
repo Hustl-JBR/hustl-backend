@@ -1729,11 +1729,13 @@
       padding: 0.6rem 0.85rem;
       border-radius: 18px;
       max-width: 75%;
-      margin-bottom: 0.25rem;
+      margin-bottom: 0.5rem;
       word-wrap: break-word;
       line-height: 1.4;
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
       position: relative;
+      clear: both;
+      display: block;
     }
 
     .chat-msg.me {
@@ -22566,6 +22568,31 @@ meta.textContent =
             const dateStr = jobDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             const timeStr = jobDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
             
+            // Calculate current/updated price (check for proposed price change)
+            let parsedRequirements = job.requirements || {};
+            if (typeof parsedRequirements === 'string') {
+              try { parsedRequirements = JSON.parse(parsedRequirements); } catch { parsedRequirements = {}; }
+            }
+            const proposedPriceChange = parsedRequirements.proposedPriceChange;
+            let currentPrice = 0;
+            if (payType === 'hourly') {
+              const hourlyRate = parseFloat(job.hourlyRate || 0);
+              const estHours = parseFloat(job.estHours || 0);
+              if (proposedPriceChange && proposedPriceChange.status === 'PENDING') {
+                const newRate = proposedPriceChange.hourlyRate !== null ? proposedPriceChange.hourlyRate : hourlyRate;
+                const newHours = proposedPriceChange.estHours !== null ? proposedPriceChange.estHours : estHours;
+                currentPrice = newRate * newHours;
+              } else {
+                currentPrice = hourlyRate * estHours;
+              }
+            } else {
+              if (proposedPriceChange && proposedPriceChange.status === 'PENDING') {
+                currentPrice = proposedPriceChange.amount !== null ? proposedPriceChange.amount : parseFloat(job.amount || 0);
+              } else {
+                currentPrice = parseFloat(job.amount || 0);
+              }
+            }
+            
             const card = document.createElement("div");
             card.style.cssText = "padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.2s; cursor: pointer;";
             card.onmouseenter = () => { card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; };
@@ -22585,8 +22612,11 @@ meta.textContent =
               // Customer View: Shows hired hustler
               const hustler = job.hustler || {};
               
-              // Start code display for customer (if job is scheduled/assigned and not started)
-              const startCodeSection = (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && job.startCode && !job.startCodeVerified ? `
+              // Check if price proposal is pending - if so, replace start code section
+              const hasPendingPriceProposal = proposedPriceChange && proposedPriceChange.status === 'PENDING';
+              
+              // Start code display for customer (if job is scheduled/assigned and not started) - BUT hide if price proposal pending
+              const startCodeSection = !hasPendingPriceProposal && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && job.startCode && !job.startCodeVerified ? `
                 <div style="padding: 1rem; background: #fef3c7; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #fbbf24;">
                   <div style="font-weight: 700; font-size: 0.95rem; color: #92400e; margin-bottom: 0.5rem;">🔐 Your Start Code</div>
                   <div style="font-size: 1.75rem; font-weight: 700; letter-spacing: 0.3em; color: #92400e; text-align: center; padding: 0.75rem; background: white; border-radius: 6px; font-family: 'Courier New', monospace; margin-bottom: 0.5rem;">${job.startCode}</div>
@@ -22628,6 +22658,14 @@ meta.textContent =
                     </div>
                     <div style="padding: 0.25rem 0.75rem; background: ${job.status === 'IN_PROGRESS' ? '#f59e0b20' : '#3b82f620'}; color: ${job.status === 'IN_PROGRESS' ? '#f59e0b' : '#3b82f6'}; border-radius: 6px; font-weight: 600; font-size: 0.85rem; display: inline-block; margin-bottom: 0.5rem;">${job.status === 'IN_PROGRESS' ? 'In Progress' : 'Scheduled'}</div>
                     </div>
+                    ${currentPrice > 0 ? `
+                    <div style="text-align: right; flex-shrink: 0; margin-left: 1rem;">
+                      <div style="font-size: 1.75rem; font-weight: 700; color: var(--primary); line-height: 1.2;">$${currentPrice.toFixed(2)}</div>
+                      ${hasPendingPriceProposal ? `
+                      <div style="font-size: 0.7rem; color: #f59e0b; font-weight: 600; margin-top: 0.25rem;">💰 Pending</div>
+                      ` : ''}
+                    </div>
+                    ` : ''}
                     </div>
                 ${startCodeSection}
                 ${completionCodeSection}
