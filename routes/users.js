@@ -154,16 +154,21 @@ router.get('/me', authenticate, async (req, res) => {
       totalEarned = 0;
     }
     
+    // Rating is already included in user object from the select statement
+    const ratingAvg = user.ratingAvg || 0;
+    
     console.log('[GET /users/me] Returning user with stats:', {
       photoUrl: user.photoUrl,
       jobsCompleted: completedJobsCount,
-      totalEarned
+      totalEarned,
+      ratingAvg
     });
 
     res.json({
       ...user,
       jobsCompleted: completedJobsCount,
-      totalEarned: totalEarned
+      totalEarned: totalEarned,
+      ratingAvg: ratingAvg  // Ensure ratingAvg is included (already in user object)
     });
   } catch (error) {
     console.error('Get user error:', error);
