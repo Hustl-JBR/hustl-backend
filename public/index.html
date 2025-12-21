@@ -18814,7 +18814,7 @@ async function renderJobs(reset = false) {
           // Create wrapper for message bubble
           const wrapper = document.createElement("div");
           wrapper.className = "chat-msg-wrapper " + (isMe ? "me" : "them");
-          wrapper.style.cssText = "display: flex; align-items: flex-end; gap: 0.5rem; margin-bottom: 0.75rem; width: 100%; clear: both; " + (isMe ? "flex-direction: row-reverse; justify-content: flex-end;" : "flex-direction: row; justify-content: flex-start;");
+          wrapper.style.cssText = "display: flex; align-items: flex-end; gap: 0.75rem; margin-bottom: 1.5rem; width: 100%; clear: both; " + (isMe ? "flex-direction: row-reverse; justify-content: flex-end;" : "flex-direction: row; justify-content: flex-start;");
           wrapper.dataset.messageId = m.id;
           wrapper.dataset.senderId = m.senderId;
           
