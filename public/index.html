@@ -5706,9 +5706,22 @@
     
     // Render user avatar with fallback to initials
     function renderUserAvatar(user, size = 40, options = {}) {
-      if (!user) {
-        const name = '?';
-        const initials = name[0].toUpperCase();
+      // Helper to get initials from name
+      function getInitials(name) {
+        if (!name || typeof name !== 'string') return '?';
+        const parts = name.trim().split(/\s+/);
+        if (parts.length >= 2) {
+          // First letter of first name + first letter of last name
+          return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        } else if (parts.length === 1 && parts[0].length > 0) {
+          // Just first letter if single name
+          return parts[0][0].toUpperCase();
+        }
+        return '?';
+      }
+      
+      if (!user || (!user.name && !user.username)) {
+        const initials = '?';
         const bgColor = '#6366f1';
         const styleStr = `width: ${size}px; height: ${size}px; border-radius: 50%; background: ${bgColor}; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: ${size * 0.4}px; flex-shrink: 0; ${options.style || ''}`;
         let attrs = '';
@@ -5719,20 +5732,25 @@
       
       const photoUrl = user.photoUrl;
       const name = user.name || user.username || 'User';
-      const initials = name[0].toUpperCase();
+      const initials = getInitials(name);
       const bgColor = '#6366f1';
       
-      // Build style string
-      let styleStr = `width: ${size}px; height: ${size}px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: ${size * 0.4}px; flex-shrink: 0;`;
+      // Build style string for fallback
+      let fallbackStyleStr = `width: ${size}px; height: ${size}px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: ${size * 0.4}px; flex-shrink: 0; background: ${bgColor};`;
+      
+      // Build style string for image
+      let imageStyleStr = `width: 100%; height: 100%; border-radius: 50%; object-fit: cover; flex-shrink: 0;`;
       
       // Add border if specified
       if (options.showBorder) {
-        styleStr += ` border: ${options.borderWidth || '2px'} solid ${options.borderColor || '#e5e7eb'};`;
+        const borderStyle = `border: ${options.borderWidth || '2px'} solid ${options.borderColor || '#e5e7eb'};`;
+        fallbackStyleStr += ` ${borderStyle}`;
+        imageStyleStr += ` ${borderStyle}`;
       }
       
       // Add custom style if provided
       if (options.style) {
-        styleStr += ` ${options.style}`;
+        imageStyleStr += ` ${options.style}`;
       }
       
       // Build attributes
@@ -5742,20 +5760,29 @@
       }
       if (options['data-user-id']) {
         attrs += ` data-user-id="${options['data-user-id']}"`;
+      } else if (user.id) {
+        attrs += ` data-user-id="${user.id}"`;
       }
       
-      // If photoUrl exists and is valid, use it with error fallback
-      if (photoUrl && photoUrl.trim() !== '' && photoUrl !== 'null' && photoUrl !== 'undefined') {
-        const avatarUrl = photoUrl;
+      // Check if photoUrl is valid
+      const hasValidPhoto = photoUrl && 
+                           typeof photoUrl === 'string' && 
+                           photoUrl.trim() !== '' && 
+                           photoUrl !== 'null' && 
+                           photoUrl !== 'undefined' &&
+                           (photoUrl.startsWith('http://') || photoUrl.startsWith('https://') || photoUrl.startsWith('data:'));
+      
+      if (hasValidPhoto) {
+        const avatarUrl = photoUrl.trim();
         // Use a wrapper div to handle image errors gracefully
         const uniqueId = 'avatar_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         return `<div style="position: relative; width: ${size}px; height: ${size}px; flex-shrink: 0;" ${attrs}>
-          <img id="${uniqueId}_img" src="${avatarUrl}" alt="${name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; ${options.showBorder ? `border: ${options.borderWidth || '2px'} solid ${options.borderColor || '#e5e7eb'};` : ''} ${options.style || ''}" onerror="const img = document.getElementById('${uniqueId}_img'); if (img) { img.style.display = 'none'; const fallback = document.getElementById('${uniqueId}_fallback'); if (fallback) fallback.style.display = 'flex'; }" />
-          <div id="${uniqueId}_fallback" style="${styleStr} background: ${bgColor}; position: absolute; top: 0; left: 0; display: none;">${initials}</div>
+          <img id="${uniqueId}_img" src="${avatarUrl}" alt="${name}" style="${imageStyleStr}" onerror="(function(){ const img = document.getElementById('${uniqueId}_img'); const fallback = document.getElementById('${uniqueId}_fallback'); if (img && fallback) { img.style.display = 'none'; fallback.style.display = 'flex'; } })();" />
+          <div id="${uniqueId}_fallback" style="${fallbackStyleStr} position: absolute; top: 0; left: 0; display: none;">${initials}</div>
         </div>`;
       } else {
         // No photo, use initials
-        return `<div style="${styleStr} background: ${bgColor};" ${attrs}>${initials}</div>`;
+        return `<div style="${fallbackStyleStr}" ${attrs}>${initials}</div>`;
       }
     }
     
@@ -6135,9 +6162,11 @@
         // Update profile quick stats
         const profileQuickStats = document.getElementById('profileQuickStats');
         if (profileQuickStats) {
-          const jobsCompleted = userData.jobsCompleted || 0;
-          const totalEarned = userData.totalEarned || 0;
-          const ratingAvg = userData.ratingAvg || 5.0;
+          const jobsCompleted = Number(userData.jobsCompleted) || 0;
+          const totalEarned = Number(userData.totalEarned) || 0;
+          const ratingAvg = Number(userData.ratingAvg) || 0;
+          
+          console.log('[PROFILE STATS] Rendering stats:', { jobsCompleted, totalEarned, ratingAvg, userData });
           
           profileQuickStats.innerHTML = `
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
@@ -6153,7 +6182,7 @@
               </div>
               <div style="padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid #e5e7eb; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                 <div style="font-size: 2rem; margin-bottom: 0.5rem;">⭐</div>
-                <div style="font-size: 2rem; font-weight: 700; color: #fbbf24; margin-bottom: 0.25rem;">${ratingAvg.toFixed(1)}</div>
+                <div style="font-size: 2rem; font-weight: 700; color: #fbbf24; margin-bottom: 0.25rem;">${ratingAvg > 0 ? ratingAvg.toFixed(1) : '0.0'}</div>
                 <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600;">Rating</div>
               </div>
             </div>
