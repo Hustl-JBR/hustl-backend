@@ -97,15 +97,12 @@ router.get('/me', authenticate, async (req, res) => {
       user.photoUrl = null;
     }
     
-    // Calculate completed jobs count
+    // Calculate completed jobs count (only jobs where user was the hustler)
     const completedJobsCount = await prisma.job.count({
       where: {
         AND: [
           {
-            OR: [
-              { customerId: req.user.id },
-              { hustlerId: req.user.id }
-            ]
+            hustlerId: req.user.id  // Only count jobs where user was the hustler
           },
           {
             OR: [

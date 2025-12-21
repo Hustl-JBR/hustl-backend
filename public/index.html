@@ -6160,27 +6160,42 @@
         // Update profile quick stats
         const profileQuickStats = document.getElementById('profileQuickStats');
         if (profileQuickStats) {
+          // Get stats from API response (default to 0 if not present)
           const jobsCompleted = Number(userData.jobsCompleted) || 0;
           const totalEarned = Number(userData.totalEarned) || 0;
           const ratingAvg = Number(userData.ratingAvg) || 0;
           
-          console.log('[PROFILE STATS] Rendering stats:', { jobsCompleted, totalEarned, ratingAvg, userData });
+          console.log('[PROFILE STATS] Rendering stats from API:', { 
+            jobsCompleted, 
+            totalEarned, 
+            ratingAvg, 
+            rawData: {
+              jobsCompleted: userData.jobsCompleted,
+              totalEarned: userData.totalEarned,
+              ratingAvg: userData.ratingAvg
+            }
+          });
+          
+          // Format display values
+          const jobsDisplay = jobsCompleted > 0 ? jobsCompleted : 0;
+          const earnedDisplay = totalEarned > 0 ? `$${totalEarned.toFixed(2)}` : '$0.00';
+          const ratingDisplay = ratingAvg > 0 ? ratingAvg.toFixed(1) : '0.0';
           
           profileQuickStats.innerHTML = `
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
               <div style="padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid #e5e7eb; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                 <div style="font-size: 2rem; margin-bottom: 0.5rem;">✅</div>
-                <div style="font-size: 2rem; font-weight: 700; color: var(--primary); margin-bottom: 0.25rem;">${jobsCompleted}</div>
+                <div style="font-size: 2rem; font-weight: 700; color: var(--primary); margin-bottom: 0.25rem;">${jobsDisplay}</div>
                 <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600;">Jobs Done</div>
               </div>
               <div style="padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid #e5e7eb; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                 <div style="font-size: 2rem; margin-bottom: 0.5rem;">💸</div>
-                <div style="font-size: 2rem; font-weight: 700; color: #10b981; margin-bottom: 0.25rem;">$${totalEarned.toFixed(2)}</div>
+                <div style="font-size: 2rem; font-weight: 700; color: #10b981; margin-bottom: 0.25rem;">${earnedDisplay}</div>
                 <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600;">Earned</div>
               </div>
               <div style="padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid #e5e7eb; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                 <div style="font-size: 2rem; margin-bottom: 0.5rem;">⭐</div>
-                <div style="font-size: 2rem; font-weight: 700; color: #fbbf24; margin-bottom: 0.25rem;">${ratingAvg > 0 ? ratingAvg.toFixed(1) : '0.0'}</div>
+                <div style="font-size: 2rem; font-weight: 700; color: #fbbf24; margin-bottom: 0.25rem;">${ratingDisplay}</div>
                 <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600;">Rating</div>
               </div>
             </div>
