@@ -11892,7 +11892,7 @@ async function renderJobs(reset = false) {
                 </div>
               </div>
             `;
-          } else if (proposedPriceChange && proposedPriceChange.status === 'DECLINED') {
+          } else if (proposedPriceChange && proposedPriceChange.status === 'DECLINED' && !priceChangeSection.dataset.continueClicked) {
             priceChangeSection.style.background = "#fee2e2";
             priceChangeSection.style.borderColor = "#dc2626";
             priceChangeSection.innerHTML = `
