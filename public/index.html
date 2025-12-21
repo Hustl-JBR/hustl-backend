@@ -24344,133 +24344,234 @@ meta.textContent =
           position: relative;
         `;
         
-        // Payment details
-        let paymentDetailsHTML = '';
-        if (isCustomer) {
-          // Customer view: show what they paid
-          const serviceFee = jobAmount * 0.065;
-          const totalPaid = jobAmount + serviceFee;
-          paymentDetailsHTML = `
-            <div style="padding: 1.5rem; background: #dcfce7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #10b981;">
-              <div style="font-weight: 700; font-size: 1.1rem; color: #059669; margin-bottom: 1rem;">💳 Payment Details</div>
-              <div style="font-size: 0.95rem; color: #047857; line-height: 1.8;">
-                <div style="margin-bottom: 0.5rem;">Job Amount: <strong>$${jobAmount.toFixed(2)}</strong></div>
-                <div style="margin-bottom: 0.5rem;">Service Fee (6.5%): <strong>$${serviceFee.toFixed(2)}</strong></div>
-                <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 2px solid #10b981; font-weight: 700; font-size: 1.1rem;">
-                  Total Paid: <strong style="color: #059669;">$${totalPaid.toFixed(2)}</strong>
-                </div>
-                ${payment && payment.paymentMethod ? `
-                  <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #10b981; font-size: 0.9rem;">
-                    Payment Method: <strong>${payment.paymentMethod}</strong>
-                  </div>
-                ` : ''}
-              </div>
-            </div>
-          `;
-        } else if (isHustler) {
-          // Hustler view: show what they earned
-          const platformFee = jobAmount * 0.12;
-          const earnings = jobAmount - platformFee;
-          paymentDetailsHTML = `
-            <div style="padding: 1.5rem; background: #dcfce7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #10b981;">
-              <div style="font-weight: 700; font-size: 1.1rem; color: #059669; margin-bottom: 1rem;">💰 Earnings Details</div>
-              <div style="font-size: 0.95rem; color: #047857; line-height: 1.8;">
-                <div style="margin-bottom: 0.5rem;">Job Amount: <strong>$${jobAmount.toFixed(2)}</strong></div>
-                <div style="margin-bottom: 0.5rem;">Platform Fee (12%): <strong>$${platformFee.toFixed(2)}</strong></div>
-                <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 2px solid #10b981; font-weight: 700; font-size: 1.1rem;">
-                  You Earned: <strong style="color: #059669;">$${earnings.toFixed(2)}</strong>
-                </div>
-                ${user.stripeAccountId ? `
-                  <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #10b981; font-size: 0.9rem;">
-                    Sent to: <strong>Stripe Account (${user.stripeAccountId.substring(0, 20)}...)</strong>
-                  </div>
-                ` : `
-                  <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #fbbf24; font-size: 0.9rem; color: #92400e;">
-                    ⚠️ Stripe account not connected. Connect in Profile settings to receive payments.
-                  </div>
-                `}
-              </div>
-            </div>
-          `;
-        }
-        
-        // Reviews section
-        let reviewsHTML = '';
-        const reviews = job.reviews || [];
-        const userReview = reviews.find(r => r.reviewerId === user.id);
-        
-        if (userReview) {
-          reviewsHTML = `
-            <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
-              <div style="font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 1rem;">⭐ Your Review</div>
-              <div style="font-size: 0.95rem; color: #78350f; line-height: 1.6;">
-                <div style="margin-bottom: 0.5rem;">Rating: <strong>${'⭐'.repeat(userReview.stars || 0)} ${userReview.stars || 0}/5</strong></div>
-                ${userReview.text ? `<div style="margin-top: 0.75rem; padding: 0.75rem; background: white; border-radius: 6px; white-space: pre-wrap;">${userReview.text}</div>` : ''}
-              </div>
-            </div>
-          `;
-        } else {
-          reviewsHTML = `
-            <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
-              <div style="font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 0.5rem;">⭐ Rate ${isCustomer ? 'Hustler' : 'Customer'}</div>
-              <div style="font-size: 0.9rem; color: #78350f; margin-bottom: 1rem;">Share your experience to help others!</div>
-              <button class="btn btn-primary rateCompletedJobBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.875rem; font-weight: 600;">⭐ ${isCustomer ? 'Rate Hustler' : 'Rate Customer'}</button>
-            </div>
-          `;
-        }
-        
         // Format completion date
         const completedDate = job.updatedAt || job.completedAt || job.createdAt;
         const completedDateObj = new Date(completedDate);
         const completedDateStr = completedDateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
         
-        modalContent.innerHTML = `
-          <button id="closeCompletedJobModal" style="position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px; border-radius: 50%; border: none; background: #f3f4f6; color: var(--text-main); font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; z-index: 1;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">×</button>
+        // Reviews section
+        const reviews = job.reviews || [];
+        const userReview = reviews.find(r => r.reviewerId === user.id);
+        
+        // Build modal content based on user role
+        let modalHTML = '';
+        
+        if (isCustomer) {
+          // CUSTOMER VIEW: Full payment details, Tip, Review, Completed by, Job info
+          const serviceFee = jobAmount * 0.065;
+          const totalPaid = jobAmount + serviceFee;
+          const tipAmount = payment?.tip || 0;
           
-          <div style="margin-bottom: 1.5rem;">
-            <h2 style="font-size: 1.75rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.5rem 0;">${job.title || 'Untitled Job'}</h2>
-            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">Completed: ${completedDateStr}</div>
-          </div>
-          
-          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; padding: 1rem; background: #f9fafb; border-radius: 12px; border: 2px solid var(--border);">
-            ${otherUser && otherUser.id ? renderUserAvatar(otherUser, 60, { 
-              className: isCustomer ? 'viewHustlerProfileBtn' : 'viewCustomerProfileBtn',
-              'data-user-id': otherUser.id
-            }) : '<div style="width: 60px; height: 60px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); font-size: 1.5rem;">' + (isCustomer ? 'H' : 'C') + '</div>'}
-            <div style="flex: 1;">
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">${isCustomer ? 'Completed by Hustler' : 'Completed for Customer'}</div>
-              <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main); cursor: pointer;" class="${isCustomer ? 'viewHustlerProfileBtn' : 'viewCustomerProfileBtn'}" data-user-id="${otherUser?.id || ''}">${otherUser?.name || 'Unknown'}</div>
+          modalHTML = `
+            <button id="closeCompletedJobModal" style="position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px; border-radius: 50%; border: none; background: #f3f4f6; color: var(--text-main); font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; z-index: 1;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">×</button>
+            
+            <div style="margin-bottom: 1.5rem;">
+              <h2 style="font-size: 1.75rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.5rem 0;">${job.title || 'Untitled Job'}</h2>
+              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">Completed: ${completedDateStr}</div>
             </div>
-          </div>
-          
-          ${paymentDetailsHTML}
-          
-          ${isCustomer ? `
+            
+            <!-- Completed by Hustler Section -->
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding: 1.25rem; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 12px; border: 2px solid #10b981;">
+              ${otherUser && otherUser.id ? renderUserAvatar(otherUser, 70, { 
+                className: 'viewHustlerProfileBtn',
+                'data-user-id': otherUser.id
+              }) : '<div style="width: 70px; height: 70px; border-radius: 50%; background: #10b981; display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; font-size: 1.75rem;">H</div>'}
+              <div style="flex: 1;">
+                <div style="font-size: 0.85rem; color: #047857; margin-bottom: 0.25rem; font-weight: 600;">✅ Completed by Hustler</div>
+                <div style="font-weight: 700; font-size: 1.2rem; color: var(--text-main); cursor: pointer;" class="viewHustlerProfileBtn" data-user-id="${otherUser?.id || ''}">${otherUser?.name || 'Unknown'}</div>
+              </div>
+            </div>
+            
+            <!-- Full Payment Details -->
+            <div style="padding: 1.5rem; background: #eff6ff; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #3b82f6;">
+              <div style="font-weight: 700; font-size: 1.2rem; color: #1e40af; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                💳 Payment Details
+              </div>
+              <div style="font-size: 0.95rem; color: #1e3a8a; line-height: 2;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+                  <span>Job Amount:</span>
+                  <strong>$${jobAmount.toFixed(2)}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+                  <span>Service Fee (6.5%):</span>
+                  <strong>$${serviceFee.toFixed(2)}</strong>
+                </div>
+                ${tipAmount > 0 ? `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #93c5fd;">
+                  <span>💝 Tip:</span>
+                  <strong style="color: #059669;">+$${tipAmount.toFixed(2)}</strong>
+                </div>
+                ` : ''}
+                <div style="display: flex; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #3b82f6; font-weight: 700; font-size: 1.15rem;">
+                  <span>Total Paid:</span>
+                  <strong style="color: #1e40af; font-size: 1.3rem;">$${(totalPaid + tipAmount).toFixed(2)}</strong>
+                </div>
+                ${payment && payment.paymentMethod ? `
+                  <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #93c5fd; font-size: 0.85rem; color: #475569;">
+                    Payment Method: <strong>${payment.paymentMethod}</strong>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+            
+            <!-- Tip Section (Customer Only) -->
             ${hasTipped ? `
               <div style="padding: 1.5rem; background: #dcfce7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #10b981;">
-                <div style="font-weight: 700; font-size: 1.1rem; color: #059669; margin-bottom: 0.5rem;">✅ Tip Added</div>
-                <div style="font-size: 0.9rem; color: #047857;">You've already tipped $${payment.tip.toFixed(2)} for this job. Thank you for your appreciation!</div>
+                <div style="font-weight: 700; font-size: 1.1rem; color: #059669; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                  ✅ Tip Added Successfully
+                </div>
+                <div style="font-size: 0.95rem; color: #047857;">
+                  You tipped <strong>$${tipAmount.toFixed(2)}</strong> for this job. Thank you for your appreciation!
+                </div>
+              </div>
+            ` : `
+              <div style="padding: 1.5rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #f59e0b;">
+                <div style="font-weight: 700; font-size: 1.2rem; color: #92400e; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                  💝 Tip Your Hustler
+                </div>
+                <div style="font-size: 0.95rem; color: #78350f; margin-bottom: 1rem; line-height: 1.5;">
+                  Show your appreciation for a job well done! The tip goes directly to the hustler.
+                </div>
+                <button class="btn btn-primary tipHustlerBtn" data-job-id="${job.id}" style="width: 100%; padding: 1rem; font-weight: 600; background: #f59e0b; border-color: #f59e0b; font-size: 1rem; border-radius: 8px;">💝 Tip Your Hustler</button>
+              </div>
+            `}
+            
+            <!-- Review Section -->
+            ${userReview ? `
+              <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
+                <div style="font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 1rem;">⭐ Your Review</div>
+                <div style="font-size: 0.95rem; color: #78350f; line-height: 1.6;">
+                  <div style="margin-bottom: 0.75rem;">Rating: <strong style="font-size: 1.1rem;">${'⭐'.repeat(userReview.stars || 0)} ${userReview.stars || 0}/5</strong></div>
+                  ${userReview.text ? `<div style="padding: 1rem; background: white; border-radius: 8px; white-space: pre-wrap; color: var(--text-main);">${userReview.text}</div>` : ''}
+                </div>
               </div>
             ` : `
               <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
-                <div style="font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 0.5rem;">💝 Tip Your Hustler</div>
-                <div style="font-size: 0.9rem; color: #78350f; margin-bottom: 1rem;">Show your appreciation for a job well done!</div>
-                <button class="btn btn-primary tipHustlerBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.875rem; font-weight: 600; background: #f59e0b; border-color: #f59e0b;">💝 Tip Hustler</button>
+                <div style="font-weight: 700; font-size: 1.2rem; color: #92400e; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                  ⭐ Rate Your Hustler
+                </div>
+                <div style="font-size: 0.95rem; color: #78350f; margin-bottom: 1rem; line-height: 1.5;">
+                  Share your experience to help other customers and recognize great work!
+                </div>
+                <button class="btn btn-primary rateCompletedJobBtn" data-job-id="${job.id}" style="width: 100%; padding: 1rem; font-weight: 600; background: #f59e0b; border-color: #f59e0b; font-size: 1rem; border-radius: 8px;">⭐ Rate Your Hustler</button>
               </div>
             `}
-          ` : ''}
-          
-          ${reviewsHTML}
-          
-          <div style="padding: 1.5rem; background: #f9fafb; border-radius: 12px; margin-bottom: 1.5rem;">
-            <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 1rem;">📋 Job Information</div>
-            <div style="font-size: 0.95rem; color: var(--text-main); line-height: 1.8;">
-              <div style="margin-bottom: 0.5rem;"><strong>Category:</strong> ${job.category || 'Other'}</div>
-              <div style="margin-bottom: 0.5rem;"><strong>Description:</strong> ${job.description || 'No description'}</div>
-              <div style="margin-bottom: 0.5rem;"><strong>Completed:</strong> ${new Date(job.updatedAt || job.completedAt || job.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+            
+            <!-- Job Information -->
+            <div style="padding: 1.5rem; background: #f9fafb; border-radius: 12px; margin-bottom: 1rem; border: 1px solid var(--border);">
+              <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                📋 Job Information
+              </div>
+              <div style="font-size: 0.95rem; color: var(--text-main); line-height: 1.8;">
+                <div style="margin-bottom: 0.75rem;"><strong>Category:</strong> ${job.category || 'Other'}</div>
+                <div style="margin-bottom: 0.75rem;"><strong>Description:</strong> ${job.description || 'No description'}</div>
+                <div style="margin-bottom: 0.75rem;"><strong>Completed:</strong> ${completedDateStr}</div>
+              </div>
             </div>
-          </div>
-        `;
+          `;
+        } else if (isHustler) {
+          // HUSTLER VIEW: Earnings (How much you made), Review, Job info
+          const platformFee = jobAmount * 0.12;
+          const earnings = jobAmount - platformFee;
+          const tipAmount = payment?.tip || 0;
+          const totalEarnings = earnings + tipAmount;
+          
+          modalHTML = `
+            <button id="closeCompletedJobModal" style="position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px; border-radius: 50%; border: none; background: #f3f4f6; color: var(--text-main); font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; z-index: 1;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">×</button>
+            
+            <div style="margin-bottom: 1.5rem;">
+              <h2 style="font-size: 1.75rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.5rem 0;">${job.title || 'Untitled Job'}</h2>
+              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">Completed: ${completedDateStr}</div>
+            </div>
+            
+            <!-- Completed for Customer Section -->
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding: 1.25rem; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 12px; border: 2px solid #3b82f6;">
+              ${otherUser && otherUser.id ? renderUserAvatar(otherUser, 70, { 
+                className: 'viewCustomerProfileBtn',
+                'data-user-id': otherUser.id
+              }) : '<div style="width: 70px; height: 70px; border-radius: 50%; background: #3b82f6; display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; font-size: 1.75rem;">C</div>'}
+              <div style="flex: 1;">
+                <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.25rem; font-weight: 600;">✅ Completed for Customer</div>
+                <div style="font-weight: 700; font-size: 1.2rem; color: var(--text-main); cursor: pointer;" class="viewCustomerProfileBtn" data-user-id="${otherUser?.id || ''}">${otherUser?.name || 'Unknown'}</div>
+              </div>
+            </div>
+            
+            <!-- How Much You Made (Earnings) -->
+            <div style="padding: 1.5rem; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #10b981;">
+              <div style="font-weight: 700; font-size: 1.3rem; color: #059669; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                💰 How Much You Made
+              </div>
+              <div style="font-size: 1rem; color: #047857; line-height: 2;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+                  <span>Job Amount:</span>
+                  <strong>$${jobAmount.toFixed(2)}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+                  <span>Platform Fee (12%):</span>
+                  <strong style="color: #dc2626;">-$${platformFee.toFixed(2)}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #86efac;">
+                  <span>Base Earnings:</span>
+                  <strong>$${earnings.toFixed(2)}</strong>
+                </div>
+                ${tipAmount > 0 ? `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #86efac;">
+                  <span>💝 Tip:</span>
+                  <strong style="color: #059669;">+$${tipAmount.toFixed(2)}</strong>
+                </div>
+                ` : ''}
+                <div style="display: flex; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 3px solid #10b981; font-weight: 700; font-size: 1.4rem;">
+                  <span>Total Earnings:</span>
+                  <strong style="color: #059669; font-size: 1.6rem;">$${totalEarnings.toFixed(2)}</strong>
+                </div>
+                ${user.stripeAccountId ? `
+                  <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #86efac; font-size: 0.85rem; color: #065f46;">
+                    ✅ Paid to: <strong>Stripe Account (${user.stripeAccountId.substring(0, 20)}...)</strong>
+                  </div>
+                ` : `
+                  <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #fbbf24; font-size: 0.9rem; color: #92400e; background: #fef3c7; padding: 0.75rem; border-radius: 6px;">
+                    ⚠️ Stripe account not connected. Connect in Profile settings to receive payments.
+                  </div>
+                `}
+              </div>
+            </div>
+            
+            <!-- Review Section (Hustler) -->
+            ${userReview ? `
+              <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
+                <div style="font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 1rem;">⭐ Your Review</div>
+                <div style="font-size: 0.95rem; color: #78350f; line-height: 1.6;">
+                  <div style="margin-bottom: 0.75rem;">Rating: <strong style="font-size: 1.1rem;">${'⭐'.repeat(userReview.stars || 0)} ${userReview.stars || 0}/5</strong></div>
+                  ${userReview.text ? `<div style="padding: 1rem; background: white; border-radius: 8px; white-space: pre-wrap; color: var(--text-main);">${userReview.text}</div>` : ''}
+                </div>
+              </div>
+            ` : `
+              <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
+                <div style="font-weight: 700; font-size: 1.2rem; color: #92400e; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                  ⭐ Rate Your Customer
+                </div>
+                <div style="font-size: 0.95rem; color: #78350f; margin-bottom: 1rem; line-height: 1.5;">
+                  Share your experience working with this customer to help other hustlers!
+                </div>
+                <button class="btn btn-primary rateCompletedJobBtn" data-job-id="${job.id}" style="width: 100%; padding: 1rem; font-weight: 600; background: #f59e0b; border-color: #f59e0b; font-size: 1rem; border-radius: 8px;">⭐ Rate Your Customer</button>
+              </div>
+            `}
+            
+            <!-- Job Information -->
+            <div style="padding: 1.5rem; background: #f9fafb; border-radius: 12px; margin-bottom: 1rem; border: 1px solid var(--border);">
+              <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                📋 Job Information
+              </div>
+              <div style="font-size: 0.95rem; color: var(--text-main); line-height: 1.8;">
+                <div style="margin-bottom: 0.75rem;"><strong>Category:</strong> ${job.category || 'Other'}</div>
+                <div style="margin-bottom: 0.75rem;"><strong>Description:</strong> ${job.description || 'No description'}</div>
+                <div style="margin-bottom: 0.75rem;"><strong>Completed:</strong> ${completedDateStr}</div>
+              </div>
+            </div>
+          `;
+        }
+        
+        modalContent.innerHTML = modalHTML;
         
         modal.appendChild(modalContent);
         document.body.appendChild(modal);
