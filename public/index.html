@@ -24003,9 +24003,25 @@ meta.textContent =
                          (user.roles && Array.isArray(user.roles) && user.roles.some(r => r.toUpperCase() === 'HUSTLER'));
         console.log("🔵 User role check - role:", userRole, "roles:", user.roles, "isCustomer:", isCustomer, "isHustler:", isHustler);
         
-        // Fetch completed jobs - if user has both roles, fetch from both endpoints
+        // Fetch completed jobs - use /jobs/active which returns jobs for both customer and hustler roles
         let allJobs = [];
         
+        // Fetch from /jobs/active (works for both customers and hustlers)
+        console.log("🔵 Fetching completed jobs from /jobs/active");
+        const activeJobsResponse = await fetch(`${API_BASE}/jobs/active`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (activeJobsResponse.ok) {
+          const activeJobs = await activeJobsResponse.json();
+          if (Array.isArray(activeJobs)) {
+            allJobs = allJobs.concat(activeJobs);
+          }
+        } else {
+          console.warn("⚠️ Failed to fetch from /jobs/active:", activeJobsResponse.status);
+        }
+        
+        // Also fetch from /jobs/user-posted for customer jobs
         if (isCustomer) {
           console.log("🔵 Fetching customer completed jobs from /jobs/user-posted");
           const customerJobs = await safeFetch(`${API_BASE}/jobs/user-posted`, {
@@ -24013,16 +24029,6 @@ meta.textContent =
           });
           if (customerJobs && Array.isArray(customerJobs)) {
             allJobs = allJobs.concat(customerJobs);
-          }
-        }
-        
-        if (isHustler) {
-          console.log("🔵 Fetching hustler completed jobs from /jobs/user-active");
-          const hustlerJobs = await safeFetch(`${API_BASE}/jobs/user-active`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (hustlerJobs && Array.isArray(hustlerJobs)) {
-            allJobs = allJobs.concat(hustlerJobs);
           }
         }
         
