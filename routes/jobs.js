@@ -2724,20 +2724,13 @@ async function processRefundIfNeeded(job, reason, actorId, actorName, ipAddress 
             customer.email,
             customer.name,
             job.title,
-            Number(job.payment.total)
+            refundAmount
           );
         }
       } catch (emailError) {
         console.error('Error sending refund email:', emailError);
       }
 
-      return { 
-        refunded: true, 
-        amount: refundAmount, 
-        message: `Full refund of $${refundAmount.toFixed(2)} has been processed. It may take 5-10 business days to appear in your account.`
-      };
-    }
-    
       // Send admin notification
       try {
         const payment = await prisma.payment.findUnique({
