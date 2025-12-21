@@ -23,8 +23,23 @@ router.post('/create-intent/job/:jobId', requireRole('CUSTOMER'), async (req, re
 
     const job = await prisma.job.findUnique({
       where: { id: jobId },
-      include: {
-        payment: true,
+      select: {
+        id: true,
+        title: true,
+        customerId: true,
+        hustlerId: true,
+        status: true,
+        completionCodeVerified: true,
+        amount: true,
+        payment: {
+          select: {
+            id: true,
+            amount: true,
+            tip: true,
+            status: true,
+            providerId: true
+          }
+        },
         customer: { select: { id: true, email: true, name: true } },
         hustler: { 
           select: { 
@@ -45,12 +60,19 @@ router.post('/create-intent/job/:jobId', requireRole('CUSTOMER'), async (req, re
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    // Job must be completed and paid
-    if (job.status !== 'PAID' && job.payment?.status !== 'CAPTURED') {
+    // Job must be completed (PAID or COMPLETED_BY_HUSTLER with completion code verified)
+    // For completed jobs, we allow tips even if payment processing is delayed
+    const isCompleted = job.status === 'PAID' || 
+                       (job.status === 'COMPLETED_BY_HUSTLER' && job.completionCodeVerified === true);
+    
+    if (!isCompleted) {
       return res.status(400).json({ 
-        error: 'Job must be completed and paid before adding a tip',
+        error: 'Job must be completed before adding a tip',
         jobStatus: job.status,
-        paymentStatus: job.payment?.status
+        completionCodeVerified: job.completionCodeVerified,
+        paymentStatus: job.payment?.status,
+        hint: 'Job must have status PAID or COMPLETED_BY_HUSTLER with completionCodeVerified=true',
+        jobId: job.id
       });
     }
 

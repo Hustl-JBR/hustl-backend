@@ -228,8 +228,40 @@ router.post('/jobs/:jobId/confirm', requireRole('CUSTOMER'), async (req, res) =>
   }
 });
 
-// GET /payments/jobs/:jobId - Get payment for a job
-router.get('/jobs/:jobId', async (req, res) => {
+// GET /payments/job/:jobId - Get payment for a job (also supports /payments/jobs/:jobId)
+router.get('/job/:jobId', authenticate, async (req, res) => {
+  try {
+    const { jobId } = req.params;
+
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: {
+        payment: true,
+      },
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    // Verify user is involved in the job
+    if (job.customerId !== req.user.id && job.hustlerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    if (!job.payment) {
+      return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    res.json(job.payment);
+  } catch (error) {
+    console.error('Get payment error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /payments/jobs/:jobId - Get payment for a job (alias for compatibility)
+router.get('/jobs/:jobId', authenticate, async (req, res) => {
   try {
     const { jobId } = req.params;
 

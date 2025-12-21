@@ -24081,18 +24081,9 @@ meta.textContent =
           if (completedJobsLoaded.includes(job.id)) continue;
           completedJobsLoaded.push(job.id);
           
-          // Fetch payment info
-          let payment = null;
-          try {
-            const paymentResponse = await fetch(`${API_BASE}/payments/job/${job.id}`, {
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (paymentResponse.ok) {
-              payment = await paymentResponse.json();
-            }
-          } catch (e) {
-            console.error("Error fetching payment:", e);
-          }
+          // Payment is already included in job from /jobs/completed endpoint
+          // Use it directly - it may be null for some completed jobs
+          const payment = job.payment || null;
           
           // Determine role for THIS SPECIFIC JOB (not just user's general roles)
           const isCustomerForThisJob = job.customerId === user.id;
@@ -24659,20 +24650,25 @@ meta.textContent =
         return;
       }
       
-      // Fetch payment if not provided
-      let payment = paymentData;
-      if (!payment) {
+      // Fetch job data to get current payment info
+      let job = jobData;
+      if (!job) {
         try {
-          const paymentResponse = await fetch(`${API_BASE}/payments/job/${jobId}`, {
+          const jobResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
-          if (paymentResponse.ok) {
-            payment = await paymentResponse.json();
+          if (jobResponse.ok) {
+            job = await jobResponse.json();
           }
         } catch (e) {
-          console.error("Error fetching payment:", e);
+          console.error("Error fetching job:", e);
+          showToast('Failed to load job information.');
+          return;
         }
       }
+      
+      // Use payment from job or provided payment data
+      let payment = paymentData || job?.payment || null;
       
       // Check if already tipped
       if (payment && payment.tip && payment.tip > 0) {
@@ -24680,17 +24676,16 @@ meta.textContent =
         return;
       }
       
-      // Ensure user is customer (only customers can tip)
-      const userRole = user.role || (user.roles && Array.isArray(user.roles) ? user.roles[0] : null);
-      const isCustomer = userRole === 'CUSTOMER' || userRole === 'customer' || 
-                        (user.roles && Array.isArray(user.roles) && user.roles.some(r => r.toUpperCase() === 'CUSTOMER'));
+      // Ensure user is customer for THIS job (only customers can tip)
+      const isCustomerForJob = job.customerId === user.id;
       
-      if (!isCustomer) {
-        showToast('Only customers can tip hustlers.');
+      if (!isCustomerForJob) {
+        showToast('Only the customer for this job can tip the hustler.');
         return;
       }
       
-      const jobAmount = Number(payment?.amount || jobData.amount || 0);
+      // Calculate max tip based on job amount (from payment or job itself)
+      const jobAmount = Number(payment?.amount || job?.amount || 0);
       const maxTip = Math.min(jobAmount * 0.25, 50); // 25% or $50, whichever is lower
       
       const modal = document.createElement('div');
