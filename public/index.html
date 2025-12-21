@@ -23851,6 +23851,585 @@ meta.textContent =
       }
     }
     
+    // Load Completed Jobs with pagination
+    let completedJobsPage = 1;
+    let completedJobsLoaded = [];
+    let hasMoreCompletedJobs = true;
+    
+    async function loadCompletedJobs(reset = false) {
+      console.log("🔵 loadCompletedJobs called");
+      
+      const completedJobsList = document.getElementById("manageCompletedJobsList");
+      
+      if (!completedJobsList) {
+        console.error("❌ manageCompletedJobsList element not found");
+        setTimeout(() => {
+          const retry = document.getElementById("manageCompletedJobsList");
+          if (retry) {
+            console.log("✅ Found on retry, calling loadCompletedJobs again");
+            loadCompletedJobs();
+          }
+        }, 200);
+        return;
+      }
+      
+      // Prevent duplicate calls
+      if (completedJobsList.dataset.loading === 'true') {
+        console.log("⏸️ loadCompletedJobs already in progress, skipping");
+        return;
+      }
+      
+      if (reset) {
+        completedJobsPage = 1;
+        completedJobsLoaded = [];
+        hasMoreCompletedJobs = true;
+        completedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Loading...</div>";
+      }
+      
+      completedJobsList.dataset.loading = 'true';
+      
+      try {
+        const user = await window.hustlAPI.auth.getCurrentUser();
+        if (!user) {
+          completedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Please log in to view your completed jobs.</div>";
+          completedJobsList.dataset.loading = 'false';
+          return;
+        }
+        
+        const token = localStorage.getItem('hustl_token');
+        if (!token) {
+          completedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Please log in to view your completed jobs.</div>";
+          completedJobsList.dataset.loading = 'false';
+          return;
+        }
+        
+        const isCustomer = user.role === 'CUSTOMER' || user.role === 'customer';
+        const isHustler = user.role === 'HUSTLER' || user.role === 'hustler';
+        
+        // Fetch completed jobs - for customers: jobs they posted that are PAID or COMPLETED
+        // For hustlers: jobs they completed (status PAID or COMPLETED_BY_HUSTLER with completionCodeVerified)
+        let endpoint = '';
+        if (isCustomer) {
+          endpoint = `${API_BASE}/jobs/user-posted`;
+        } else if (isHustler) {
+          endpoint = `${API_BASE}/jobs/user-active`;
+        } else {
+          completedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Invalid user role.</div>";
+          completedJobsList.dataset.loading = 'false';
+          return;
+        }
+        
+        const jobs = await safeFetch(endpoint, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!jobs || !Array.isArray(jobs)) {
+          console.warn("❌ Failed to fetch jobs or invalid response");
+          completedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Failed to load jobs. Please try again.</div>";
+          completedJobsList.dataset.loading = 'false';
+          return;
+        }
+        
+        // Filter for completed jobs
+        const completedJobs = jobs.filter(job => {
+          if (isCustomer) {
+            // Customer: jobs they posted that are PAID or COMPLETED
+            return (job.status === 'PAID' || (job.status === 'COMPLETED_BY_HUSTLER' && job.completionCodeVerified));
+          } else if (isHustler) {
+            // Hustler: jobs they completed (status PAID or COMPLETED_BY_HUSTLER with completionCodeVerified)
+            return (job.status === 'PAID' || (job.status === 'COMPLETED_BY_HUSTLER' && job.completionCodeVerified));
+          }
+          return false;
+        });
+        
+        // Sort by completion date (most recent first)
+        completedJobs.sort((a, b) => {
+          const dateA = new Date(a.updatedAt || a.completedAt || a.createdAt);
+          const dateB = new Date(b.updatedAt || b.completedAt || b.createdAt);
+          return dateB - dateA;
+        });
+        
+        // Pagination: show 5 jobs initially, then load more
+        const jobsToShow = reset ? completedJobs.slice(0, 5) : completedJobs.slice(0, completedJobsPage * 5);
+        hasMoreCompletedJobs = completedJobs.length > jobsToShow.length;
+        
+        if (reset) {
+          completedJobsList.innerHTML = "";
+          completedJobsLoaded = [];
+        }
+        
+        if (jobsToShow.length === 0 && completedJobsLoaded.length === 0) {
+          completedJobsList.innerHTML = `
+            <div style="text-align: center; padding: 3rem 1rem;">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+              <div style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">No completed jobs yet</div>
+              <div style="color: var(--text-muted);">Complete your first job to see it here!</div>
+            </div>
+          `;
+          completedJobsList.dataset.loaded = 'true';
+          completedJobsList.dataset.loading = 'false';
+          return;
+        }
+        
+        // Render job cards
+        for (const job of jobsToShow) {
+          // Skip if already rendered
+          if (completedJobsLoaded.includes(job.id)) continue;
+          completedJobsLoaded.push(job.id);
+          
+          // Fetch payment info
+          let payment = null;
+          try {
+            const paymentResponse = await fetch(`${API_BASE}/payments/job/${job.id}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (paymentResponse.ok) {
+              payment = await paymentResponse.json();
+            }
+          } catch (e) {
+            console.error("Error fetching payment:", e);
+          }
+          
+          // Get other user info
+          const otherUser = isCustomer ? (job.hustler || {}) : (job.customer || {});
+          
+          // Calculate amounts
+          const payType = job.payType || 'flat';
+          const jobAmount = payType === 'hourly' 
+            ? (parseFloat(job.hourlyRate || 0) * parseFloat(job.estHours || 0))
+            : parseFloat(job.amount || 0);
+          
+          const categoryIcons = {
+            'Moving / Hauling': '🚚', 'moving': '🚚',
+            'Yard work / Outdoor': '🌿', 'yard-work': '🌿', 'yard': '🌿',
+            'Cleaning / Organizing': '🧹', 'cleaning': '🧹',
+            'Furniture / Assembly': '🛠', 'furniture-assembly': '🛠', 'furniture': '🛠',
+            'Other': '⭐', 'other': '⭐'
+          };
+          const categoryIcon = categoryIcons[job.category] || '📋';
+          
+          const card = document.createElement("div");
+          card.style.cssText = "padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.2s; cursor: pointer;";
+          card.onmouseenter = () => { card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; };
+          card.onmouseleave = () => { card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)'; };
+          
+          // Format completion date
+          const completedDate = job.updatedAt || job.completedAt || job.createdAt;
+          const completedDateObj = new Date(completedDate);
+          const completedDateStr = completedDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          
+          card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+              <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                  <span style="font-size: 1.5rem;">${categoryIcon}</span>
+                  <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                  ${otherUser && otherUser.id ? renderUserAvatar(otherUser, 40, { 
+                    className: isCustomer ? 'viewHustlerProfileBtn' : 'viewCustomerProfileBtn',
+                    'data-user-id': otherUser.id
+                  }) : '<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary);">' + (isCustomer ? 'H' : 'C') + '</div>'}
+                  <div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">${isCustomer ? 'Hustler' : 'Customer'}</div>
+                    <div style="font-weight: 600; color: var(--text-main); cursor: pointer;" class="${isCustomer ? 'viewHustlerProfileBtn' : 'viewCustomerProfileBtn'}" data-user-id="${otherUser?.id || ''}">${otherUser?.name || 'Unknown'}</div>
+                  </div>
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">Completed: ${completedDateStr}</div>
+              </div>
+              <div style="text-align: right; flex-shrink: 0; margin-left: 1rem; padding-left: 1rem;">
+                <div style="font-size: 1.75rem; font-weight: 700; color: var(--primary); line-height: 1.2; white-space: nowrap;">$${jobAmount.toFixed(2)}</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <button class="btn btn-primary viewCompletedJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">🔍 View Details</button>
+              ${(() => {
+                // Check if user has already rated
+                const hasRated = job.reviews && job.reviews.some(r => 
+                  (isCustomer && r.customerId === user.id) || 
+                  (isHustler && r.hustlerId === user.id)
+                );
+                if (!hasRated) {
+                  return `<button class="btn btn-ghost rateCompletedJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600; border: 2px solid var(--primary); color: var(--primary);">⭐ ${isCustomer ? 'Rate Hustler' : 'Rate Customer'}</button>`;
+                }
+                return '';
+              })()}
+            </div>
+          `;
+          
+          // Event listeners
+          card.querySelector('.viewCompletedJobBtn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openCompletedJobDetails(job.id, job, payment, isCustomer, isHustler);
+          });
+          
+          card.querySelector('.rateCompletedJobBtn')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const jobId = e.target.dataset.jobId;
+            // Open rating modal
+            if (typeof window.showRatingModal === 'function') {
+              window.showRatingModal(jobId, isCustomer ? job.hustlerId : job.customerId, isCustomer ? 'hustler' : 'customer');
+            } else {
+              showToast('Rating feature coming soon!');
+            }
+          });
+          
+          card.querySelectorAll('.viewHustlerProfileBtn, .viewCustomerProfileBtn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const userId = btn.dataset.userId;
+              if (userId && typeof window.showHustlerProfilePopup === 'function') {
+                window.showHustlerProfilePopup(userId);
+              }
+            });
+          });
+          
+          // Make card clickable
+          card.addEventListener('click', (e) => {
+            if (!e.target.closest('button') && !e.target.closest('.viewHustlerProfileBtn') && !e.target.closest('.viewCustomerProfileBtn')) {
+              openCompletedJobDetails(job.id, job, payment, isCustomer, isHustler);
+            }
+          });
+          
+          completedJobsList.appendChild(card);
+        }
+        
+        // Add "Load More" button if there are more jobs
+        if (hasMoreCompletedJobs) {
+          const existingLoadMore = completedJobsList.querySelector('.loadMoreCompletedJobsBtn');
+          if (existingLoadMore) {
+            existingLoadMore.remove();
+          }
+          
+          const loadMoreBtn = document.createElement('button');
+          loadMoreBtn.className = 'loadMoreCompletedJobsBtn btn btn-ghost';
+          loadMoreBtn.style.cssText = 'width: 100%; padding: 1rem; margin-top: 1rem; font-weight: 600; border: 2px solid var(--primary); color: var(--primary);';
+          loadMoreBtn.textContent = `Load More (${completedJobs.length - jobsToShow.length} remaining)`;
+          loadMoreBtn.addEventListener('click', () => {
+            completedJobsPage++;
+            loadCompletedJobs(false);
+          });
+          completedJobsList.appendChild(loadMoreBtn);
+        } else {
+          const existingLoadMore = completedJobsList.querySelector('.loadMoreCompletedJobsBtn');
+          if (existingLoadMore) {
+            existingLoadMore.remove();
+          }
+        }
+        
+        completedJobsList.dataset.loaded = 'true';
+        completedJobsList.dataset.loading = 'false';
+        
+      } catch (error) {
+        console.error("Error loading completed jobs:", error);
+        completedJobsList.innerHTML = `
+          <div style='text-align: center; padding: 2rem; color: var(--text-muted);'>
+            <div style="font-size: 1.1rem; font-weight: 600; color: #dc2626; margin-bottom: 0.5rem;">Error loading completed jobs</div>
+            <div style="margin-bottom: 1rem; font-size: 0.9rem;">${error.message || 'Please refresh and try again.'}</div>
+            <button class="btn btn-primary" onclick="loadCompletedJobs(true)" style="padding: 0.75rem 1.5rem;">Retry</button>
+          </div>
+        `;
+        completedJobsList.dataset.loading = 'false';
+      }
+    }
+    
+    // Open completed job details popup
+    async function openCompletedJobDetails(jobId, jobData = null, paymentData = null, isCustomer = null, isHustler = null) {
+      try {
+        const user = await window.hustlAPI.auth.getCurrentUser();
+        if (!user) {
+          showToast('Please log in to view job details.');
+          return;
+        }
+        
+        const token = localStorage.getItem('hustl_token');
+        if (!token) {
+          showToast('Please log in to view job details.');
+          return;
+        }
+        
+        // Determine user role if not provided
+        if (isCustomer === null || isHustler === null) {
+          isCustomer = user.role === 'CUSTOMER' || user.role === 'customer';
+          isHustler = user.role === 'HUSTLER' || user.role === 'hustler';
+        }
+        
+        // Fetch job data if not provided
+        let job = jobData;
+        if (!job) {
+          const jobResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!jobResponse.ok) {
+            throw new Error('Failed to fetch job details');
+          }
+          job = await jobResponse.json();
+        }
+        
+        // Fetch payment data if not provided
+        let payment = paymentData;
+        if (!payment) {
+          try {
+            const paymentResponse = await fetch(`${API_BASE}/payments/job/${jobId}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (paymentResponse.ok) {
+              payment = await paymentResponse.json();
+            }
+          } catch (e) {
+            console.error("Error fetching payment:", e);
+          }
+        }
+        
+        // Get other user
+        const otherUser = isCustomer ? (job.hustler || {}) : (job.customer || {});
+        
+        // Calculate amounts
+        const payType = job.payType || 'flat';
+        const jobAmount = payType === 'hourly' 
+          ? (parseFloat(job.hourlyRate || 0) * parseFloat(job.estHours || 0))
+          : parseFloat(job.amount || 0);
+        
+        // Create modal
+        const modal = document.createElement('div');
+        modal.id = 'completedJobDetailModal';
+        modal.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.75);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10000;
+          padding: 1rem;
+          overflow-y: auto;
+        `;
+        
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = `
+          background: white;
+          border-radius: 16px;
+          padding: 2rem;
+          max-width: 600px;
+          width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+          position: relative;
+        `;
+        
+        // Payment details
+        let paymentDetailsHTML = '';
+        if (isCustomer) {
+          // Customer view: show what they paid
+          const serviceFee = jobAmount * 0.065;
+          const totalPaid = jobAmount + serviceFee;
+          paymentDetailsHTML = `
+            <div style="padding: 1.5rem; background: #dcfce7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #10b981;">
+              <div style="font-weight: 700; font-size: 1.1rem; color: #059669; margin-bottom: 1rem;">💳 Payment Details</div>
+              <div style="font-size: 0.95rem; color: #047857; line-height: 1.8;">
+                <div style="margin-bottom: 0.5rem;">Job Amount: <strong>$${jobAmount.toFixed(2)}</strong></div>
+                <div style="margin-bottom: 0.5rem;">Service Fee (6.5%): <strong>$${serviceFee.toFixed(2)}</strong></div>
+                <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 2px solid #10b981; font-weight: 700; font-size: 1.1rem;">
+                  Total Paid: <strong style="color: #059669;">$${totalPaid.toFixed(2)}</strong>
+                </div>
+                ${payment && payment.paymentMethod ? `
+                  <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #10b981; font-size: 0.9rem;">
+                    Payment Method: <strong>${payment.paymentMethod}</strong>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        } else if (isHustler) {
+          // Hustler view: show what they earned
+          const platformFee = jobAmount * 0.12;
+          const earnings = jobAmount - platformFee;
+          paymentDetailsHTML = `
+            <div style="padding: 1.5rem; background: #dcfce7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #10b981;">
+              <div style="font-weight: 700; font-size: 1.1rem; color: #059669; margin-bottom: 1rem;">💰 Earnings Details</div>
+              <div style="font-size: 0.95rem; color: #047857; line-height: 1.8;">
+                <div style="margin-bottom: 0.5rem;">Job Amount: <strong>$${jobAmount.toFixed(2)}</strong></div>
+                <div style="margin-bottom: 0.5rem;">Platform Fee (12%): <strong>$${platformFee.toFixed(2)}</strong></div>
+                <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 2px solid #10b981; font-weight: 700; font-size: 1.1rem;">
+                  You Earned: <strong style="color: #059669;">$${earnings.toFixed(2)}</strong>
+                </div>
+                ${user.stripeAccountId ? `
+                  <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #10b981; font-size: 0.9rem;">
+                    Sent to: <strong>Stripe Account (${user.stripeAccountId.substring(0, 20)}...)</strong>
+                  </div>
+                ` : `
+                  <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #fbbf24; font-size: 0.9rem; color: #92400e;">
+                    ⚠️ Stripe account not connected. Connect in Profile settings to receive payments.
+                  </div>
+                `}
+              </div>
+            </div>
+          `;
+        }
+        
+        // Reviews section
+        let reviewsHTML = '';
+        const reviews = job.reviews || [];
+        const userReview = reviews.find(r => 
+          (isCustomer && r.customerId === user.id) || 
+          (isHustler && r.hustlerId === user.id)
+        );
+        
+        if (userReview) {
+          reviewsHTML = `
+            <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
+              <div style="font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 1rem;">⭐ Your Review</div>
+              <div style="font-size: 0.95rem; color: #78350f; line-height: 1.6;">
+                <div style="margin-bottom: 0.5rem;">Rating: <strong>${'⭐'.repeat(userReview.rating)} ${userReview.rating}/5</strong></div>
+                ${userReview.comment ? `<div style="margin-top: 0.75rem; padding: 0.75rem; background: white; border-radius: 6px;">${userReview.comment}</div>` : ''}
+              </div>
+            </div>
+          `;
+        } else {
+          reviewsHTML = `
+            <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
+              <div style="font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 0.5rem;">⭐ Rate ${isCustomer ? 'Hustler' : 'Customer'}</div>
+              <div style="font-size: 0.9rem; color: #78350f; margin-bottom: 1rem;">Share your experience to help others!</div>
+              <button class="btn btn-primary rateCompletedJobBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.875rem; font-weight: 600;">⭐ ${isCustomer ? 'Rate Hustler' : 'Rate Customer'}</button>
+            </div>
+          `;
+        }
+        
+        modalContent.innerHTML = `
+          <button id="closeCompletedJobModal" style="position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px; border-radius: 50%; border: none; background: #f3f4f6; color: var(--text-main); font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">×</button>
+          
+          <div style="margin-bottom: 1.5rem;">
+            <h2 style="font-size: 1.75rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.5rem 0;">${job.title || 'Untitled Job'}</h2>
+            <div style="font-size: 0.9rem; color: var(--text-muted);">Completed Job Details</div>
+          </div>
+          
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; padding: 1rem; background: #f9fafb; border-radius: 12px;">
+            ${otherUser && otherUser.id ? renderUserAvatar(otherUser, 60, { 
+              className: isCustomer ? 'viewHustlerProfileBtn' : 'viewCustomerProfileBtn',
+              'data-user-id': otherUser.id
+            }) : '<div style="width: 60px; height: 60px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); font-size: 1.5rem;">' + (isCustomer ? 'H' : 'C') + '</div>'}
+            <div style="flex: 1;">
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">${isCustomer ? 'Hustler' : 'Customer'}</div>
+              <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main); cursor: pointer;" class="${isCustomer ? 'viewHustlerProfileBtn' : 'viewCustomerProfileBtn'}" data-user-id="${otherUser?.id || ''}">${otherUser?.name || 'Unknown'}</div>
+            </div>
+          </div>
+          
+          ${paymentDetailsHTML}
+          
+          ${reviewsHTML}
+          
+          <div style="padding: 1.5rem; background: #f9fafb; border-radius: 12px; margin-bottom: 1.5rem;">
+            <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 1rem;">📋 Job Information</div>
+            <div style="font-size: 0.95rem; color: var(--text-main); line-height: 1.8;">
+              <div style="margin-bottom: 0.5rem;"><strong>Category:</strong> ${job.category || 'Other'}</div>
+              <div style="margin-bottom: 0.5rem;"><strong>Description:</strong> ${job.description || 'No description'}</div>
+              <div style="margin-bottom: 0.5rem;"><strong>Completed:</strong> ${new Date(job.updatedAt || job.completedAt || job.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+            </div>
+          </div>
+        `;
+        
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+        document.body.style.overflow = 'hidden';
+        
+        // Event listeners
+        modal.querySelector('#closeCompletedJobModal')?.addEventListener('click', () => {
+          document.body.removeChild(modal);
+          document.body.style.overflow = '';
+        });
+        
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            document.body.removeChild(modal);
+            document.body.style.overflow = '';
+          }
+        });
+        
+        modal.querySelector('.rateCompletedJobBtn')?.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const jobId = e.target.dataset.jobId;
+          // Close modal first
+          document.body.removeChild(modal);
+          document.body.style.overflow = '';
+          // Open rating modal
+          if (typeof window.showRatingModal === 'function') {
+            window.showRatingModal(jobId, isCustomer ? job.hustlerId : job.customerId, isCustomer ? 'hustler' : 'customer');
+          } else {
+            showToast('Rating feature coming soon!');
+          }
+        });
+        
+        modal.querySelectorAll('.viewHustlerProfileBtn, .viewCustomerProfileBtn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const userId = btn.dataset.userId;
+            if (userId && typeof window.showHustlerProfilePopup === 'function') {
+              window.showHustlerProfilePopup(userId);
+            }
+          });
+        });
+        
+      } catch (error) {
+        console.error('Error opening completed job details:', error);
+        showToast('Failed to load job details. Please try again.');
+      }
+    }
+    
+    // Expose functions globally
+    window.loadCompletedJobs = loadCompletedJobs;
+    window.openCompletedJobDetails = openCompletedJobDetails;
+    
+    // Initialize manage tabs event delegation
+    setTimeout(() => {
+      const manageTabs = document.querySelectorAll('.manage-tab[data-manage-tab]');
+      manageTabs.forEach(tab => {
+        tab.addEventListener('click', (e) => {
+          e.preventDefault();
+          const tabName = tab.dataset.manageTab;
+          
+          // Hide all tab contents
+          document.querySelectorAll('.profile-tab-content').forEach(content => {
+            content.style.display = 'none';
+            content.classList.remove('active');
+          });
+          
+          // Remove active class from all tabs
+          manageTabs.forEach(t => {
+            t.classList.remove('active');
+            const indicator = t.querySelector('.tab-indicator');
+            if (indicator) indicator.style.display = 'none';
+          });
+          
+          // Show selected tab content
+          const tabContent = document.getElementById(`manageTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+          if (tabContent) {
+            tabContent.style.display = 'block';
+            tabContent.classList.add('active');
+          }
+          
+          // Add active class to clicked tab
+          tab.classList.add('active');
+          const indicator = tab.querySelector('.tab-indicator');
+          if (indicator) indicator.style.display = 'block';
+          
+          // Load appropriate data
+          if (tabName === 'posted') {
+            if (typeof loadPostedJobs === 'function') loadPostedJobs();
+          } else if (tabName === 'active') {
+            if (typeof loadActiveJobs === 'function') loadActiveJobs();
+          } else if (tabName === 'completed') {
+            if (typeof loadCompletedJobs === 'function') loadCompletedJobs(true);
+          } else if (tabName === 'applied') {
+            if (typeof loadAppliedJobs === 'function') loadAppliedJobs();
+          }
+        });
+      });
+    }, 500);
+    
     // Load Applied Jobs (Hustler only)
     async function loadAppliedJobs() {
       console.log("🔵 loadAppliedJobs called");
