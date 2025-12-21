@@ -23985,9 +23985,13 @@ meta.textContent =
           return;
         }
         
-        const isCustomer = user.role === 'CUSTOMER' || user.role === 'customer';
-        const isHustler = user.role === 'HUSTLER' || user.role === 'hustler';
-        console.log("🔵 isCustomer:", isCustomer, "isHustler:", isHustler);
+        // Check user role - handle both role (string) and roles (array)
+        const userRole = user.role || (user.roles && Array.isArray(user.roles) ? user.roles[0] : null);
+        const isCustomer = userRole === 'CUSTOMER' || userRole === 'customer' || 
+                          (user.roles && Array.isArray(user.roles) && user.roles.some(r => r.toUpperCase() === 'CUSTOMER'));
+        const isHustler = userRole === 'HUSTLER' || userRole === 'hustler' || 
+                         (user.roles && Array.isArray(user.roles) && user.roles.some(r => r.toUpperCase() === 'HUSTLER'));
+        console.log("🔵 User role check - role:", userRole, "roles:", user.roles, "isCustomer:", isCustomer, "isHustler:", isHustler);
         
         // Fetch completed jobs - for customers: jobs they posted that are PAID or COMPLETED
         // For hustlers: jobs they completed (status PAID or COMPLETED_BY_HUSTLER with completionCodeVerified)
