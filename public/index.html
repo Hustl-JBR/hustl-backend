@@ -11900,30 +11900,34 @@ async function renderJobs(reset = false) {
               <div style="font-size: 0.85rem; color: #7f1d1d; margin-bottom: 1rem;">
                 The customer declined your price change proposal. The job will remain at the original agreed price.
               </div>
-              <div style="display: flex; gap: 0.75rem;">
-                <button id="unassignAfterDeclineBtn-${job.id}" class="btn btn-primary" style="flex: 1; padding: 0.875rem; font-weight: 700; background: #dc2626; border: none; border-radius: 8px; color: white; cursor: pointer;">
-                  🔓 Unassign Hustler
+              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <button id="leaveJobAfterDeclineBtn-${job.id}" class="btn btn-primary" style="flex: 1; min-width: 120px; padding: 0.875rem; font-weight: 700; background: #dc2626; border: none; border-radius: 8px; color: white; cursor: pointer;">
+                  Leave Job
                 </button>
-                <button id="proposeNewPriceBtn-${job.id}" class="btn btn-ghost" style="flex: 1; padding: 0.875rem; font-weight: 700; border: 2px solid #3b82f6; color: #3b82f6; border-radius: 8px; background: white; cursor: pointer;">
+                <button id="continueAfterDeclineBtn-${job.id}" class="btn btn-ghost" style="flex: 1; min-width: 120px; padding: 0.875rem; font-weight: 700; border: 2px solid #10b981; color: #10b981; border-radius: 8px; background: white; cursor: pointer;">
+                  Continue
+                </button>
+                <button id="proposeNewPriceBtn-${job.id}" class="btn btn-ghost" style="flex: 1; min-width: 120px; padding: 0.875rem; font-weight: 700; border: 2px solid #3b82f6; color: #3b82f6; border-radius: 8px; background: white; cursor: pointer;">
                   💰 Propose New Price
                 </button>
               </div>
             `;
             
             setTimeout(() => {
-              const unassignBtn = document.getElementById(`unassignAfterDeclineBtn-${job.id}`);
+              const leaveBtn = document.getElementById(`leaveJobAfterDeclineBtn-${job.id}`);
+              const continueBtn = document.getElementById(`continueAfterDeclineBtn-${job.id}`);
               const proposeBtn = document.getElementById(`proposeNewPriceBtn-${job.id}`);
               
-              if (unassignBtn) {
-                unassignBtn.addEventListener('click', async () => {
-                  if (!confirm('Are you sure you want to unassign this hustler? You can then select another hustler for this job.')) {
+              if (leaveBtn) {
+                leaveBtn.addEventListener('click', async () => {
+                  if (!confirm('Are you sure you want to leave this job? The customer will receive a full refund.')) {
                     return;
                   }
-                  unassignBtn.disabled = true;
-                  unassignBtn.textContent = 'Unassigning...';
+                  leaveBtn.disabled = true;
+                  leaveBtn.textContent = 'Leaving...';
                   try {
                     const token = localStorage.getItem('hustl_token');
-                    const response = await fetch(`${API_BASE}/jobs/${job.id}/unassign`, {
+                    const response = await fetch(`${API_BASE}/jobs/${job.id}/leave`, {
                       method: 'POST',
                       headers: {
                         'Authorization': `Bearer ${token}`,
@@ -11932,20 +11936,37 @@ async function renderJobs(reset = false) {
                     });
                     
                     if (response.ok) {
-                      showToast('Hustler unassigned. You can now select another hustler.');
-                      window.openJobDetails(job.id);
+                      showToast('You have left the job. The customer will receive a full refund.');
+                      // Close modal and refresh
+                      const existingModal = document.getElementById('jobDetailModal');
+                      if (existingModal) {
+                        document.body.removeChild(existingModal);
+                        document.body.style.overflow = '';
+                      }
+                      // Refresh the page or navigate away
+                      setTimeout(() => {
+                        window.location.reload();
+                      }, 1000);
                     } else {
                       const error = await response.json();
-                      showToast(error.error || 'Failed to unassign hustler');
-                      unassignBtn.disabled = false;
-                      unassignBtn.textContent = '🔓 Unassign Hustler';
+                      showToast(error.error || 'Failed to leave job');
+                      leaveBtn.disabled = false;
+                      leaveBtn.textContent = 'Leave Job';
                     }
                   } catch (error) {
-                    console.error('Error unassigning hustler:', error);
-                    showToast('Error unassigning hustler. Please try again.');
-                    unassignBtn.disabled = false;
-                    unassignBtn.textContent = '🔓 Unassign Hustler';
+                    console.error('Error leaving job:', error);
+                    showToast('Error leaving job. Please try again.');
+                    leaveBtn.disabled = false;
+                    leaveBtn.textContent = 'Leave Job';
                   }
+                });
+              }
+              
+              if (continueBtn) {
+                continueBtn.addEventListener('click', () => {
+                  // Just hide the price change section and continue with the job
+                  priceChangeSection.style.display = 'none';
+                  showToast('Continuing with job at original price.');
                 });
               }
               
