@@ -5773,9 +5773,10 @@
       if (hasValidPhoto) {
         const avatarUrl = photoUrl.trim();
         // Use a wrapper div to handle image errors gracefully
+        // Create a more robust error handler that works with innerHTML
         const uniqueId = 'avatar_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         return `<div style="position: relative; width: ${size}px; height: ${size}px; flex-shrink: 0;" ${attrs}>
-          <img id="${uniqueId}_img" src="${avatarUrl}" alt="${name}" style="${imageStyleStr}" onerror="(function(){ const img = document.getElementById('${uniqueId}_img'); const fallback = document.getElementById('${uniqueId}_fallback'); if (img && fallback) { img.style.display = 'none'; fallback.style.display = 'flex'; } })();" />
+          <img id="${uniqueId}_img" src="${avatarUrl}" alt="${name}" style="${imageStyleStr}" onerror="this.onerror=null; this.style.display='none'; const fallback = document.getElementById('${uniqueId}_fallback'); if (fallback) fallback.style.display='flex';" onload="const fallback = document.getElementById('${uniqueId}_fallback'); if (fallback) fallback.style.display='none';" />
           <div id="${uniqueId}_fallback" style="${fallbackStyleStr} position: absolute; top: 0; left: 0; display: none;">${initials}</div>
         </div>`;
       } else {
@@ -23687,6 +23688,29 @@ meta.textContent =
             }
             
             activeJobsList.appendChild(card);
+            
+            // Fix any broken avatar images after insertion
+            setTimeout(() => {
+              const avatarImages = card.querySelectorAll('img[id^="avatar_"]');
+              avatarImages.forEach(img => {
+                if (!img.complete || img.naturalHeight === 0) {
+                  // Image failed to load or is broken
+                  img.style.display = 'none';
+                  const fallbackId = img.id.replace('_img', '_fallback');
+                  const fallback = document.getElementById(fallbackId);
+                  if (fallback) {
+                    fallback.style.display = 'flex';
+                  }
+                } else {
+                  // Image loaded successfully, hide fallback
+                  const fallbackId = img.id.replace('_img', '_fallback');
+                  const fallback = document.getElementById(fallbackId);
+                  if (fallback) {
+                    fallback.style.display = 'none';
+                  }
+                }
+              });
+            }, 100);
           }
           activeJobsList.dataset.loaded = 'true';
         }
