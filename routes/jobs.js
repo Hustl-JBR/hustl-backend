@@ -2738,6 +2738,33 @@ async function processRefundIfNeeded(job, reason, actorId, actorName, ipAddress 
       };
     }
     
+      // Send admin notification
+      try {
+        const payment = await prisma.payment.findUnique({
+          where: { id: job.payment.id },
+          include: { 
+            customer: { select: { id: true, email: true, name: true } }, 
+            hustler: { select: { id: true, email: true, name: true } }, 
+            job: true 
+          },
+        });
+        await sendAdminRefundNotification(
+          payment,
+          refundAmount,
+          reason,
+          actorName || 'System'
+        );
+      } catch (adminError) {
+        console.error('Error sending admin refund notification:', adminError);
+      }
+      
+      return { 
+        refunded: true, 
+        amount: refundAmount, 
+        message: `Full refund of $${refundAmount.toFixed(2)} has been processed. It may take 5-10 business days to appear in your account.`
+      };
+    }
+    
     // No refund needed (payment already processed or no payment)
     return { refunded: false, amount: 0, message: 'No refund processed' };
   } catch (error) {
@@ -2745,18 +2772,6 @@ async function processRefundIfNeeded(job, reason, actorId, actorName, ipAddress 
     return { refunded: false, amount: 0, message: 'Error processing refund' };
   }
 }
-        await sendAdminRefundNotification(
-          payment,
-          Number(job.payment.total),
-          reason,
-          actorName || 'System'
-        );
-      } catch (adminError) {
-        console.error('Error sending admin refund notification:', adminError);
-      }
-    }
-  } catch (error) {
-    console.error('Error processing refund:', error);
     // Continue even if refund fails - don't block the operation
   }
 }
