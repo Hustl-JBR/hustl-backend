@@ -11832,14 +11832,13 @@ async function renderJobs(reset = false) {
                   const proposalForm = document.createElement('div');
                   proposalForm.className = 'priceProposalForm';
                   proposalForm.style.cssText = 'margin-top: 1rem; padding: 1rem; background: #f9fafb; border-radius: 8px; border: 2px solid #f59e0b;';
-                  // Calculate hustler earnings (after 12% platform fee)
-                  const currentHustlerEarnings = currentAmount * 0.88; // 12% platform fee
+                  // Calculate hustler earnings (job amount - 12% platform fee)
+                  const currentHustlerEarnings = currentAmount * 0.88;
                   
                   proposalForm.innerHTML = `
                     <h4 style="font-size: 1rem; font-weight: 700; margin: 0 0 0.75rem 0; color: #92400e;">💰 Propose New Price</h4>
                     <div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 6px; padding: 0.75rem; margin-bottom: 1rem; font-size: 0.85rem; line-height: 1.5;">
-                      <strong>Current Price:</strong> $${currentAmount.toFixed(2)}<br>
-                      <strong>You Currently Earn:</strong> $${currentHustlerEarnings.toFixed(2)} (after 12% platform fee)
+                      <strong>Current Price:</strong> $${currentAmount.toFixed(2)} (You earn: $${currentHustlerEarnings.toFixed(2)} after 12% platform fee)
                     </div>
                     
                     <div style="margin-bottom: 1rem;">
@@ -11875,7 +11874,7 @@ async function renderJobs(reset = false) {
                   `;
                   priceChangeSection.appendChild(proposalForm);
                   
-                  // Add real-time price preview (showing hustler earnings)
+                  // Add real-time price preview
                   const updatePricePreview = () => {
                     let newAmount = 0;
                     if (payType === 'hourly') {
@@ -11887,22 +11886,21 @@ async function renderJobs(reset = false) {
                     }
                     
                     if (newAmount > 0) {
-                      // Calculate hustler earnings (after 12% platform fee)
-                      const newHustlerEarnings = newAmount * 0.88;
-                      const earningsDifference = newHustlerEarnings - currentHustlerEarnings;
-                      const platformFee = newAmount * 0.12;
+                      const newFee = newAmount * 0.065;
+                      const newTotal = newAmount + newFee;
+                      const difference = newTotal - currentTotal;
                       
-                      document.getElementById(`newTotalPreview-${job.id}`).textContent = `$${newAmount.toFixed(2)}`;
+                      document.getElementById(`newTotalPreview-${job.id}`).textContent = `$${newTotal.toFixed(2)}`;
                       
-                      if (Math.abs(earningsDifference) < 0.01) {
-                        document.getElementById(`priceChangePreview-${job.id}`).textContent = 'No change in your earnings';
+                      if (Math.abs(difference) < 0.01) {
+                        document.getElementById(`priceChangePreview-${job.id}`).textContent = 'No change';
                         document.getElementById(`priceChangePreview-${job.id}`).style.color = '#6b7280';
-                      } else if (earningsDifference > 0) {
-                        document.getElementById(`priceChangePreview-${job.id}`).textContent = `You will earn $${newHustlerEarnings.toFixed(2)} ($${earningsDifference.toFixed(2)} more) • Platform fee (12%): $${platformFee.toFixed(2)}`;
-                        document.getElementById(`priceChangePreview-${job.id}`).style.color = '#10b981';
-                      } else {
-                        document.getElementById(`priceChangePreview-${job.id}`).textContent = `You will earn $${newHustlerEarnings.toFixed(2)} ($${Math.abs(earningsDifference).toFixed(2)} less) • Platform fee (12%): $${platformFee.toFixed(2)}`;
+                      } else if (difference > 0) {
+                        document.getElementById(`priceChangePreview-${job.id}`).textContent = `You'll be charged an additional $${difference.toFixed(2)}`;
                         document.getElementById(`priceChangePreview-${job.id}`).style.color = '#dc2626';
+                      } else {
+                        document.getElementById(`priceChangePreview-${job.id}`).textContent = `You'll be refunded $${Math.abs(difference).toFixed(2)}`;
+                        document.getElementById(`priceChangePreview-${job.id}`).style.color = '#10b981';
                       }
                     } else {
                       document.getElementById(`newTotalPreview-${job.id}`).textContent = '$0.00';
