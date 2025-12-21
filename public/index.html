@@ -11964,27 +11964,146 @@ async function renderJobs(reset = false) {
               
               if (continueBtn) {
                 continueBtn.addEventListener('click', () => {
-                  // Hide the declined price change section and show the "propose new price" section
-                  priceChangeSection.style.display = 'none';
+                  // Replace the declined section with the "propose new price" section inline
+                  priceChangeSection.style.background = "#fef3c7";
+                  priceChangeSection.style.borderColor = "#fbbf24";
+                  priceChangeSection.innerHTML = `
+                    <div style="font-size: 0.9rem; color: #92400e; margin-bottom: 0.75rem; font-weight: 700;">💰 Adjust Price</div>
+                    <div style="font-size: 0.85rem; color: #78350f; margin-bottom: 0.75rem; line-height: 1.5;">
+                      Need to change the price? Propose a new price to the customer. They must accept before the price changes.
+                    </div>
+                    <div style="font-size: 0.8rem; color: #92400e; margin-bottom: 1rem; padding: 0.75rem; background: #fef3c7; border-radius: 6px; border: 1px solid #fbbf24;">
+                      <strong>⚠️ Before proposing:</strong> Message the customer first to discuss why you need a price change. If they disagree, they can unassign you or you can leave the job (customer gets full refund).
+                    </div>
+                    <button id="proposePriceChangeBtn-${job.id}" class="btn btn-primary" style="width: 100%; padding: 0.875rem; font-weight: 700; background: #f59e0b; border: none; border-radius: 8px; color: white; cursor: pointer;">
+                      ✏️ Propose Price Change
+                    </button>
+                  `;
                   
-                  // Show the "propose new price" section by removing the declined status from requirements
-                  // This will make the else block (no proposal yet) show up
-                  // We need to refresh the job details modal to show the propose price section
-                  showToast('Continuing with job at original price.');
+                  showToast('Continuing with job at original price. You can propose a new price if needed.');
                   
-                  // Close and reopen the job details to refresh the UI
-                  const existingModal = document.getElementById('jobDetailModal');
-                  if (existingModal) {
-                    const jobId = job.id;
-                    document.body.removeChild(existingModal);
-                    document.body.style.overflow = '';
-                    // Reopen job details after a short delay
-                    setTimeout(() => {
-                      if (typeof window.openJobDetails === 'function') {
-                        window.openJobDetails(jobId);
+                  // Attach event handler to the new propose button (reuse existing logic from below)
+                  setTimeout(() => {
+                    const proposeBtn = priceChangeSection.querySelector(`#proposePriceChangeBtn-${job.id}`);
+                    if (proposeBtn) {
+                      // Find the existing propose button handler logic and reuse it
+                      const existingProposeHandler = document.querySelector(`#proposePriceChangeBtn-${job.id}`);
+                      if (!existingProposeHandler) {
+                        // Use the same logic as the else block below
+                        proposeBtn.addEventListener('click', async () => {
+                          if (!confirm('⚠️ Important: Only propose a price change if necessary and after discussing with the customer via messages. Proceed with price change proposal?')) {
+                            return;
+                          }
+                          
+                          const existingForm = priceChangeSection.querySelector('.priceProposalForm');
+                          if (existingForm) {
+                            existingForm.style.display = existingForm.style.display === 'none' ? 'block' : 'none';
+                            return;
+                          }
+                          
+                          // Create inline form (same as below)
+                          const form = document.createElement('div');
+                          form.className = 'priceProposalForm';
+                          form.style.cssText = 'margin-top: 1rem; padding: 1rem; background: white; border-radius: 8px; border: 2px solid #fbbf24;';
+                          
+                          if (job.payType === 'hourly') {
+                            form.innerHTML = `
+                              <div style="margin-bottom: 1rem;">
+                                <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #92400e; margin-bottom: 0.5rem;">New Hourly Rate</label>
+                                <input type="number" id="newHourlyRate_${job.id}" step="0.01" min="0" value="${job.hourlyRate || ''}" style="width: 100%; padding: 0.75rem; border: 2px solid #fbbf24; border-radius: 6px; font-size: 1rem;">
+                              </div>
+                              <div style="margin-bottom: 1rem;">
+                                <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #92400e; margin-bottom: 0.5rem;">New Estimated Hours</label>
+                                <input type="number" id="newEstHours_${job.id}" step="1" min="1" value="${job.estHours || ''}" style="width: 100%; padding: 0.75rem; border: 2px solid #fbbf24; border-radius: 6px; font-size: 1rem;">
+                              </div>
+                              <div style="display: flex; gap: 0.75rem;">
+                                <button id="cancelProposalBtn_${job.id}" class="btn btn-ghost" style="flex: 1; padding: 0.75rem;">Cancel</button>
+                                <button id="submitProposalBtn_${job.id}" class="btn btn-primary" style="flex: 1; padding: 0.75rem; background: #f59e0b; border: none; color: white; font-weight: 700;">Send Proposal</button>
+                              </div>
+                            `;
+                          } else {
+                            form.innerHTML = `
+                              <div style="margin-bottom: 1rem;">
+                                <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #92400e; margin-bottom: 0.5rem;">New Flat Rate</label>
+                                <input type="number" id="newAmount_${job.id}" step="0.01" min="0" value="${job.amount || ''}" style="width: 100%; padding: 0.75rem; border: 2px solid #fbbf24; border-radius: 6px; font-size: 1rem;">
+                              </div>
+                              <div style="display: flex; gap: 0.75rem;">
+                                <button id="cancelProposalBtn_${job.id}" class="btn btn-ghost" style="flex: 1; padding: 0.75rem;">Cancel</button>
+                                <button id="submitProposalBtn_${job.id}" class="btn btn-primary" style="flex: 1; padding: 0.75rem; background: #f59e0b; border: none; color: white; font-weight: 700;">Send Proposal</button>
+                              </div>
+                            `;
+                          }
+                          
+                          priceChangeSection.appendChild(form);
+                          
+                          form.querySelector(`#cancelProposalBtn_${job.id}`).addEventListener('click', () => {
+                            form.remove();
+                          });
+                          
+                          form.querySelector(`#submitProposalBtn_${job.id}`).addEventListener('click', async () => {
+                            const token = localStorage.getItem('hustl_token');
+                            const apiBase = window.API_BASE || API_BASE || 'https://hustl-production.up.railway.app';
+                            
+                            let proposalData = {};
+                            if (job.payType === 'hourly') {
+                              const newRate = parseFloat(form.querySelector(`#newHourlyRate_${job.id}`).value);
+                              const newHours = parseInt(form.querySelector(`#newEstHours_${job.id}`).value);
+                              if (!newRate || !newHours) {
+                                showToast('Please enter both hourly rate and estimated hours.');
+                                return;
+                              }
+                              proposalData = { hourlyRate: newRate, estHours: newHours };
+                            } else {
+                              const newAmount = parseFloat(form.querySelector(`#newAmount_${job.id}`).value);
+                              if (!newAmount || newAmount <= 0) {
+                                showToast('Please enter a valid price amount.');
+                                return;
+                              }
+                              proposalData = { amount: newAmount };
+                            }
+                            
+                            const submitBtn = form.querySelector(`#submitProposalBtn_${job.id}`);
+                            submitBtn.disabled = true;
+                            submitBtn.textContent = 'Sending...';
+                            
+                            try {
+                              const response = await fetch(`${apiBase}/jobs/${job.id}/propose-price-change`, {
+                                method: 'POST',
+                                headers: {
+                                  'Authorization': `Bearer ${token}`,
+                                  'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(proposalData)
+                              });
+                              
+                              const result = await response.json();
+                              
+                              if (response.ok) {
+                                showToast('✅ Price change proposal sent! Waiting for customer response.');
+                                const existingModal = document.getElementById('jobDetailModal');
+                                if (existingModal) {
+                                  document.body.removeChild(existingModal);
+                                  document.body.style.overflow = '';
+                                }
+                                setTimeout(() => {
+                                  window.openJobDetails(job.id);
+                                }, 100);
+                              } else {
+                                showToast(result.error || 'Failed to send proposal');
+                                submitBtn.disabled = false;
+                                submitBtn.textContent = 'Send Proposal';
+                              }
+                            } catch (error) {
+                              console.error('Error sending proposal:', error);
+                              showToast('Error sending proposal. Please try again.');
+                              submitBtn.disabled = false;
+                              submitBtn.textContent = 'Send Proposal';
+                            }
+                          });
+                        });
                       }
-                    }, 100);
-                  }
+                    }
+                  }, 100);
                 });
               }
               
