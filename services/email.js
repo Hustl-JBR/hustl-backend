@@ -349,7 +349,7 @@ async function sendJobAssignedEmail(email, name, jobTitle, jobId, customerName) 
           
           <div style="background: #f0fdf4; border: 2px solid #10b981; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
             <p style="font-size: 1.05rem; color: #065f46; margin: 0 0 0.5rem 0; font-weight: 600;">
-              You were picked as the Hustler for this job:
+              Customer accepted you for this job:
             </p>
             <h2 style="color: #047857; font-size: 1.5rem; margin: 0.5rem 0;">
               ${jobTitle}
@@ -358,7 +358,7 @@ async function sendJobAssignedEmail(email, name, jobTitle, jobId, customerName) 
           </div>
           
           <p style="color: #374151; line-height: 1.6; margin: 1.5rem 0;">
-            Great news! The customer has selected you for this job. You can now:
+            Great news! The customer accepted you for this job. You can now:
           </p>
           
           <ul style="color: #374151; line-height: 1.8; margin: 1rem 0; padding-left: 1.5rem;">
@@ -1207,7 +1207,7 @@ async function sendPriceChangeProposalEmail(email, name, jobTitle, jobId, propos
             </p>
             
             <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
-              The customer has proposed a price change for the job <strong>"${jobTitle}"</strong>.
+              The hustler proposed a new price for the job <strong>"${jobTitle}"</strong>.
             </p>
             
             <div style="background: white; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; border: 2px solid #fbbf24;">
@@ -1246,11 +1246,11 @@ async function sendPriceChangeAcceptedEmail(email, name, jobTitle, jobId, newAmo
     await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
-      subject: `✅ Hustler Accepted Price Change for "${jobTitle}"`,
+      subject: `✅ Customer Accepted Your Price for "${jobTitle}"`,
       html: `
         <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
           <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 1.75rem;">✅ Hustler Accepted Price Change</h1>
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">✅ Customer Accepted Your Price</h1>
           </div>
           
           <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
@@ -1259,7 +1259,7 @@ async function sendPriceChangeAcceptedEmail(email, name, jobTitle, jobId, newAmo
             </p>
             
             <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
-              Great news! The hustler has accepted your price change proposal for <strong>"${jobTitle}"</strong>.
+              Great news! The customer accepted your price for <strong>"${jobTitle}"</strong>.
             </p>
             
             <div style="background: white; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; border: 2px solid #10b981;">
@@ -1307,7 +1307,7 @@ async function sendPriceChangeDeclinedEmail(email, name, jobTitle, jobId) {
             </p>
             
             <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
-              The hustler has declined your price change proposal for <strong>"${jobTitle}"</strong>.
+              The customer declined your price change proposal for <strong>"${jobTitle}"</strong>.
             </p>
             
             <div style="background: white; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; border: 2px solid #fca5a5;">
