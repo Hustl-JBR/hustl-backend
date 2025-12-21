@@ -128,7 +128,7 @@ router.get('/me', authenticate, async (req, res) => {
       }
     });
 
-    // Calculate total earned (for hustlers - sum of payments where they are the hustler)
+    // Calculate total earned (for hustlers - sum of payments where they are the hustler, minus platform fee)
     let totalEarned = 0;
     try {
       const payments = await prisma.payment.findMany({
@@ -141,10 +141,17 @@ router.get('/me', authenticate, async (req, res) => {
           status: 'CAPTURED'
         },
         select: {
-          amount: true
+          amount: true,
+          feeHustler: true
         }
       });
-      totalEarned = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      // Calculate total earned: payment amount minus platform fee (or use feeHustler if available)
+      totalEarned = payments.reduce((sum, p) => {
+        const paymentAmount = Number(p.amount) || 0;
+        const platformFee = Number(p.feeHustler) || (paymentAmount * 0.12); // 12% platform fee
+        const hustlerEarned = paymentAmount - platformFee;
+        return sum + hustlerEarned;
+      }, 0);
     } catch (error) {
       console.warn('[GET /users/me] Error calculating totalEarned:', error);
       totalEarned = 0;
