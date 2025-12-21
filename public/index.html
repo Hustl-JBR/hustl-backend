@@ -17655,6 +17655,54 @@ async function renderJobs(reset = false) {
           actionsSection.appendChild(confirmBanner);
         }
         
+        // Show review button for completed jobs (PAID status)
+        if (job.status === 'PAID' && user) {
+          const isCustomer = user.id === job.customerId;
+          const isHustler = user.id === job.hustlerId;
+          
+          if (isCustomer || isHustler) {
+            const reviewSection = document.createElement("div");
+            reviewSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #f0f9ff; border-radius: 12px; border: 2px solid #3b82f6;";
+            
+            const reviewTitle = document.createElement("div");
+            reviewTitle.style.cssText = "font-weight: 700; font-size: 1.1rem; color: #1e40af; margin-bottom: 0.75rem;";
+            reviewTitle.textContent = "⭐ Rate Your Experience";
+            reviewSection.appendChild(reviewTitle);
+            
+            const reviewText = document.createElement("div");
+            reviewText.style.cssText = "font-size: 0.9rem; color: #1e3a8a; margin-bottom: 1rem; line-height: 1.5;";
+            reviewText.textContent = `Help others by sharing your experience. Your feedback helps build trust in the Hustl community.`;
+            reviewSection.appendChild(reviewText);
+            
+            const reviewButton = document.createElement("button");
+            reviewButton.className = "btn btn-primary";
+            reviewButton.style.cssText = "width: 100%; padding: 0.875rem; font-weight: 700; font-size: 1rem; background: #3b82f6; border: none; border-radius: 8px; color: white; cursor: pointer;";
+            reviewButton.textContent = isCustomer ? "⭐ Rate Hustler" : "⭐ Rate Customer";
+            reviewButton.addEventListener("click", () => {
+              const targetUserId = isCustomer ? job.hustlerId : job.customerId;
+              const targetUserName = isCustomer ? (job.hustler?.name || "Hustler") : (job.customer?.name || "Customer");
+              
+              // Close job details modal
+              const modalOverlay = document.getElementById('jobDetailModal') || document.querySelector('.modal-overlay');
+              if (modalOverlay) {
+                modalOverlay.remove();
+                document.body.style.overflow = "";
+              }
+              
+              // Show review modal
+              if (typeof window.showReviewModal === 'function') {
+                window.showReviewModal(job.id, targetUserId, targetUserName);
+              } else if (typeof showReviewModal === 'function') {
+                showReviewModal(job.id, targetUserId, targetUserName);
+              } else {
+                showToast("Review feature is loading...");
+              }
+            });
+            reviewSection.appendChild(reviewButton);
+            
+            actionsSection.appendChild(reviewSection);
+          }
+        }
         
         const canDelete = job.status === "OPEN" && !job.hustlerId;
         
