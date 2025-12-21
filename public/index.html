@@ -5454,13 +5454,23 @@
             if (indicator) indicator.style.display = 'block';
             
             // Load appropriate data
+            console.log("🔵 Tab clicked:", tabName);
             if (tabName === 'posted') {
+              console.log("🔵 Loading posted jobs");
               if (typeof loadPostedJobs === 'function') loadPostedJobs();
             } else if (tabName === 'active') {
+              console.log("🔵 Loading active jobs");
               if (typeof loadActiveJobs === 'function') loadActiveJobs();
             } else if (tabName === 'completed') {
-              if (typeof loadCompletedJobs === 'function') loadCompletedJobs(true);
+              console.log("🔵 Loading completed jobs");
+              if (typeof loadCompletedJobs === 'function') {
+                console.log("🔵 loadCompletedJobs function exists, calling...");
+                loadCompletedJobs(true);
+              } else {
+                console.error("❌ loadCompletedJobs function not found!");
+              }
             } else if (tabName === 'applied') {
+              console.log("🔵 Loading applied jobs");
               if (typeof loadAppliedJobs === 'function') loadAppliedJobs();
             }
           });
@@ -23919,7 +23929,7 @@ meta.textContent =
     let hasMoreCompletedJobs = true;
     
     async function loadCompletedJobs(reset = false) {
-      console.log("🔵 loadCompletedJobs called");
+      console.log("🔵 loadCompletedJobs called, reset:", reset);
       
       const completedJobsList = document.getElementById("manageCompletedJobsList");
       
@@ -23929,7 +23939,7 @@ meta.textContent =
           const retry = document.getElementById("manageCompletedJobsList");
           if (retry) {
             console.log("✅ Found on retry, calling loadCompletedJobs again");
-            loadCompletedJobs();
+            loadCompletedJobs(reset);
           }
         }, 200);
         return;
@@ -23952,6 +23962,7 @@ meta.textContent =
       
       try {
         const user = await window.hustlAPI.auth.getCurrentUser();
+        console.log("🔵 User:", user?.id, "Role:", user?.role);
         if (!user) {
           completedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Please log in to view your completed jobs.</div>";
           completedJobsList.dataset.loading = 'false';
@@ -23967,6 +23978,7 @@ meta.textContent =
         
         const isCustomer = user.role === 'CUSTOMER' || user.role === 'customer';
         const isHustler = user.role === 'HUSTLER' || user.role === 'hustler';
+        console.log("🔵 isCustomer:", isCustomer, "isHustler:", isHustler);
         
         // Fetch completed jobs - for customers: jobs they posted that are PAID or COMPLETED
         // For hustlers: jobs they completed (status PAID or COMPLETED_BY_HUSTLER with completionCodeVerified)
@@ -23981,9 +23993,15 @@ meta.textContent =
           return;
         }
         
+        console.log("🔵 Fetching from endpoint:", endpoint);
         const jobs = await safeFetch(endpoint, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
+        
+        console.log("🔵 Fetched jobs:", jobs?.length || 0, "jobs");
+        if (jobs && jobs.length > 0) {
+          console.log("🔵 Sample job statuses:", jobs.slice(0, 5).map(j => ({ id: j.id, status: j.status, completionCodeVerified: j.completionCodeVerified })));
+        }
         
         if (!jobs || !Array.isArray(jobs)) {
           console.warn("❌ Failed to fetch jobs or invalid response");
@@ -23996,13 +24014,23 @@ meta.textContent =
         const completedJobs = jobs.filter(job => {
           if (isCustomer) {
             // Customer: jobs they posted that are PAID or COMPLETED
-            return (job.status === 'PAID' || (job.status === 'COMPLETED_BY_HUSTLER' && job.completionCodeVerified));
+            const isCompleted = (job.status === 'PAID' || (job.status === 'COMPLETED_BY_HUSTLER' && job.completionCodeVerified));
+            if (isCompleted) {
+              console.log("✅ Found completed job (customer):", job.id, job.status, job.completionCodeVerified);
+            }
+            return isCompleted;
           } else if (isHustler) {
             // Hustler: jobs they completed (status PAID or COMPLETED_BY_HUSTLER with completionCodeVerified)
-            return (job.status === 'PAID' || (job.status === 'COMPLETED_BY_HUSTLER' && job.completionCodeVerified));
+            const isCompleted = (job.status === 'PAID' || (job.status === 'COMPLETED_BY_HUSTLER' && job.completionCodeVerified));
+            if (isCompleted) {
+              console.log("✅ Found completed job (hustler):", job.id, job.status, job.completionCodeVerified);
+            }
+            return isCompleted;
           }
           return false;
         });
+        
+        console.log("🔵 Completed jobs after filtering:", completedJobs.length);
         
         // Sort by completion date (most recent first)
         completedJobs.sort((a, b) => {
@@ -24181,17 +24209,21 @@ meta.textContent =
         
         completedJobsList.dataset.loaded = 'true';
         completedJobsList.dataset.loading = 'false';
+        console.log("✅ loadCompletedJobs completed successfully. Rendered", jobsToShow.length, "jobs");
         
       } catch (error) {
-        console.error("Error loading completed jobs:", error);
-        completedJobsList.innerHTML = `
-          <div style='text-align: center; padding: 2rem; color: var(--text-muted);'>
-            <div style="font-size: 1.1rem; font-weight: 600; color: #dc2626; margin-bottom: 0.5rem;">Error loading completed jobs</div>
-            <div style="margin-bottom: 1rem; font-size: 0.9rem;">${error.message || 'Please refresh and try again.'}</div>
-            <button class="btn btn-primary" onclick="loadCompletedJobs(true)" style="padding: 0.75rem 1.5rem;">Retry</button>
-          </div>
-        `;
-        completedJobsList.dataset.loading = 'false';
+        console.error("❌ Error loading completed jobs:", error);
+        console.error("Error stack:", error.stack);
+        if (completedJobsList) {
+          completedJobsList.innerHTML = `
+            <div style='text-align: center; padding: 2rem; color: var(--text-muted);'>
+              <div style="font-size: 1.1rem; font-weight: 600; color: #dc2626; margin-bottom: 0.5rem;">Error loading completed jobs</div>
+              <div style="margin-bottom: 1rem; font-size: 0.9rem;">${error.message || 'Please refresh and try again.'}</div>
+              <button class="btn btn-primary" onclick="if(typeof loadCompletedJobs === 'function') loadCompletedJobs(true)" style="padding: 0.75rem 1.5rem;">Retry</button>
+            </div>
+          `;
+          completedJobsList.dataset.loading = 'false';
+        }
       }
     }
     
