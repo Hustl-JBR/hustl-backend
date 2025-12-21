@@ -11919,7 +11919,10 @@ async function renderJobs(reset = false) {
               const proposeBtn = document.getElementById(`proposeNewPriceBtn-${job.id}`);
               
               if (leaveBtn) {
-                leaveBtn.addEventListener('click', async () => {
+                leaveBtn.addEventListener('click', async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('[PRICE DECLINE] Leave button clicked for job:', job.id);
                   if (!confirm('Are you sure you want to leave this job? The customer will receive a full refund.')) {
                     return;
                   }
@@ -11927,7 +11930,8 @@ async function renderJobs(reset = false) {
                   leaveBtn.textContent = 'Leaving...';
                   try {
                     const token = localStorage.getItem('hustl_token');
-                    const response = await fetch(`${API_BASE}/jobs/${job.id}/leave`, {
+                    const apiBase = window.API_BASE || API_BASE || 'https://hustl-production.up.railway.app';
+                    const response = await fetch(`${apiBase}/jobs/${job.id}/leave`, {
                       method: 'POST',
                       headers: {
                         'Authorization': `Bearer ${token}`,
@@ -11963,7 +11967,10 @@ async function renderJobs(reset = false) {
               }
               
               if (continueBtn) {
-                continueBtn.addEventListener('click', () => {
+                continueBtn.addEventListener('click', (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('[PRICE DECLINE] Continue button clicked for job:', job.id);
                   // Replace the declined section with the "propose new price" section inline
                   priceChangeSection.style.background = "#fef3c7";
                   priceChangeSection.style.borderColor = "#fbbf24";
