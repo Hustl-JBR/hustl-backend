@@ -15247,64 +15247,87 @@ async function renderJobs(reset = false) {
       modalContent.appendChild(contentSection);
 
       // Customer view: Show start code if hustler is accepted but not started (NOT for completed jobs)
+      // Check if there's a pending price proposal - if so, hide start code section
+      const hasPendingPriceProposal = parsedRequirements?.proposedPriceChange && 
+                                      parsedRequirements.proposedPriceChange.status === 'PENDING';
+      
       if (user && user.id === job.postedByUserId && job.hustlerId && job.startCode && !job.startCodeVerified && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && job.status !== 'PAID') {
-        const startCodeSection = document.createElement("div");
-        startCodeSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #fef3c7; border-radius: 12px; border: 2px solid #fbbf24;";
-        
-        const startCodeTitle = document.createElement("div");
-        startCodeTitle.style.cssText = "font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 0.75rem;";
-        startCodeTitle.textContent = "🔐 Start Code (Give to Hustler)";
-        startCodeSection.appendChild(startCodeTitle);
-        
-        const startCodeDisplay = document.createElement("div");
-        startCodeDisplay.style.cssText = "font-size: 2rem; font-weight: 700; letter-spacing: 0.3em; color: #92400e; text-align: center; padding: 1rem; background: white; border-radius: 8px; font-family: 'Courier New', monospace; margin-bottom: 0.75rem;";
-        startCodeDisplay.textContent = job.startCode;
-        startCodeSection.appendChild(startCodeDisplay);
-        
-        // Safety warning
-        const safetyWarning = document.createElement("div");
-        safetyWarning.style.cssText = "padding: 0.75rem; background: #fee2e2; border-left: 4px solid #dc2626; border-radius: 6px; margin-bottom: 0.75rem;";
-        safetyWarning.innerHTML = `<div style="font-weight: 600; color: #991b1b; margin-bottom: 0.25rem;">⚠️ Safety Warning</div><div style="font-size: 0.85rem; color: #991b1b;">Do not give the Start Code until the hustler is physically there and ready to begin the job.</div>`;
-        startCodeSection.appendChild(safetyWarning);
-        
-        const startCodeInstructions = document.createElement("div");
-        startCodeInstructions.style.cssText = "font-size: 0.9rem; color: #92400e; line-height: 1.5; margin-bottom: 0.75rem;";
-        const expiresAt = job.startCodeExpiresAt ? new Date(job.startCodeExpiresAt) : null;
-        const hoursLeft = expiresAt ? Math.max(0, Math.floor((expiresAt - new Date()) / (1000 * 60 * 60))) : 78;
-        startCodeInstructions.innerHTML = `
-          <div style="margin-bottom: 0.5rem;">Share this 6-digit code with your hustler when they arrive to start the job.</div>
-          <div style="font-weight: 600;">⏰ Code expires in ${hoursLeft} hours. If not used, job will be cancelled and you'll be refunded.</div>
-        `;
-        startCodeSection.appendChild(startCodeInstructions);
-        
-        // Regenerate button
-        const regenerateBtn = document.createElement("button");
-        regenerateBtn.className = "btn btn-ghost";
-        regenerateBtn.textContent = "🔄 Regenerate Code";
-        regenerateBtn.style.cssText = "width: 100%; padding: 0.5rem; font-size: 0.85rem;";
-        regenerateBtn.addEventListener("click", async () => {
-          if (!confirm("Regenerate the start code? The old code will no longer work.")) return;
-          try {
-            const token = localStorage.getItem("hustl_token");
-            const response = await fetch(`${API_BASE}/verification/job/${job.id}/regenerate-start-code`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-              }
-            });
-            if (!response.ok) throw new Error("Failed to regenerate");
-            showToast("✅ Start code regenerated!");
-            document.body.removeChild(modalOverlay);
-            document.body.style.overflow = "";
-            openJobDetails(job.id);
-          } catch (error) {
-            showToast("Error regenerating code: " + error.message);
-          }
-        });
-        startCodeSection.appendChild(regenerateBtn);
-        
-        contentSection.appendChild(startCodeSection);
+        // If there's a pending price proposal, show a message instead of the start code
+        if (hasPendingPriceProposal) {
+          const priceProposalNotice = document.createElement("div");
+          priceProposalNotice.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 2px solid #f59e0b;";
+          
+          const noticeTitle = document.createElement("div");
+          noticeTitle.style.cssText = "font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 0.75rem; text-align: center;";
+          noticeTitle.textContent = "💰 Hustler Proposed a New Price";
+          priceProposalNotice.appendChild(noticeTitle);
+          
+          const noticeMessage = document.createElement("div");
+          noticeMessage.style.cssText = "font-size: 0.95rem; color: #92400e; text-align: center; line-height: 1.5; margin-bottom: 1rem;";
+          noticeMessage.textContent = "Please accept or decline the price change proposal above. Once you respond, the start code will be available.";
+          priceProposalNotice.appendChild(noticeMessage);
+          
+          contentSection.appendChild(priceProposalNotice);
+        } else {
+          // No pending proposal - show start code as normal
+          const startCodeSection = document.createElement("div");
+          startCodeSection.style.cssText = "margin-bottom: 1.5rem; padding: 1.5rem; background: #fef3c7; border-radius: 12px; border: 2px solid #fbbf24;";
+          
+          const startCodeTitle = document.createElement("div");
+          startCodeTitle.style.cssText = "font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 0.75rem;";
+          startCodeTitle.textContent = "🔐 Start Code (Give to Hustler)";
+          startCodeSection.appendChild(startCodeTitle);
+          
+          const startCodeDisplay = document.createElement("div");
+          startCodeDisplay.style.cssText = "font-size: 2rem; font-weight: 700; letter-spacing: 0.3em; color: #92400e; text-align: center; padding: 1rem; background: white; border-radius: 8px; font-family: 'Courier New', monospace; margin-bottom: 0.75rem;";
+          startCodeDisplay.textContent = job.startCode;
+          startCodeSection.appendChild(startCodeDisplay);
+          
+          // Safety warning
+          const safetyWarning = document.createElement("div");
+          safetyWarning.style.cssText = "padding: 0.75rem; background: #fee2e2; border-left: 4px solid #dc2626; border-radius: 6px; margin-bottom: 0.75rem;";
+          safetyWarning.innerHTML = `<div style="font-weight: 600; color: #991b1b; margin-bottom: 0.25rem;">⚠️ Safety Warning</div><div style="font-size: 0.85rem; color: #991b1b;">Do not give the Start Code until the hustler is physically there and ready to begin the job.</div>`;
+          startCodeSection.appendChild(safetyWarning);
+          
+          const startCodeInstructions = document.createElement("div");
+          startCodeInstructions.style.cssText = "font-size: 0.9rem; color: #92400e; line-height: 1.5; margin-bottom: 0.75rem;";
+          const expiresAt = job.startCodeExpiresAt ? new Date(job.startCodeExpiresAt) : null;
+          const hoursLeft = expiresAt ? Math.max(0, Math.floor((expiresAt - new Date()) / (1000 * 60 * 60))) : 78;
+          startCodeInstructions.innerHTML = `
+            <div style="margin-bottom: 0.5rem;">Share this 6-digit code with your hustler when they arrive to start the job.</div>
+            <div style="font-weight: 600;">⏰ Code expires in ${hoursLeft} hours. If not used, job will be cancelled and you'll be refunded.</div>
+          `;
+          startCodeSection.appendChild(startCodeInstructions);
+          
+          // Regenerate button
+          const regenerateBtn = document.createElement("button");
+          regenerateBtn.className = "btn btn-ghost";
+          regenerateBtn.textContent = "🔄 Regenerate Code";
+          regenerateBtn.style.cssText = "width: 100%; padding: 0.5rem; font-size: 0.85rem;";
+          regenerateBtn.addEventListener("click", async () => {
+            if (!confirm("Regenerate the start code? The old code will no longer work.")) return;
+            try {
+              const token = localStorage.getItem("hustl_token");
+              const response = await fetch(`${API_BASE}/verification/job/${job.id}/regenerate-start-code`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${token}`
+                }
+              });
+              if (!response.ok) throw new Error("Failed to regenerate");
+              showToast("✅ Start code regenerated!");
+              document.body.removeChild(modalOverlay);
+              document.body.style.overflow = "";
+              openJobDetails(job.id);
+            } catch (error) {
+              showToast("Error regenerating code: " + error.message);
+            }
+          });
+          startCodeSection.appendChild(regenerateBtn);
+          
+          contentSection.appendChild(startCodeSection);
+        }
       }
       
       // Customer view: Show completion code after job is started (IN_PROGRESS, NOT for completed jobs)
