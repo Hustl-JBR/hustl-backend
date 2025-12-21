@@ -22891,6 +22891,16 @@ meta.textContent =
               timeAgo = postedText;
             }
             
+            // Check for pending price proposal (for customer view)
+            let priceProposalBadge = '';
+            if (job.requirements?.proposedPriceChange && job.requirements.proposedPriceChange.status === 'PENDING') {
+              priceProposalBadge = `
+                <div style="padding: 0.5rem; background: #fef3c7; border-radius: 6px; border: 1px solid #fbbf24; margin-bottom: 0.75rem; text-align: center;">
+                  <div style="font-size: 0.85rem; font-weight: 600; color: #92400e;">💰 Price Change Proposal Pending</div>
+                </div>
+              `;
+            }
+            
             // Detect mobile for simpler card layout
             const isMobile = window.innerWidth <= 768;
             
@@ -23993,23 +24003,46 @@ meta.textContent =
                          (user.roles && Array.isArray(user.roles) && user.roles.some(r => r.toUpperCase() === 'HUSTLER'));
         console.log("🔵 User role check - role:", userRole, "roles:", user.roles, "isCustomer:", isCustomer, "isHustler:", isHustler);
         
-        // Fetch completed jobs - for customers: jobs they posted that are PAID or COMPLETED
-        // For hustlers: jobs they completed (status PAID or COMPLETED_BY_HUSTLER with completionCodeVerified)
-        let endpoint = '';
+        // Fetch completed jobs - if user has both roles, fetch from both endpoints
+        let allJobs = [];
+        
         if (isCustomer) {
-          endpoint = `${API_BASE}/jobs/user-posted`;
-        } else if (isHustler) {
-          endpoint = `${API_BASE}/jobs/user-active`;
-        } else {
+          console.log("🔵 Fetching customer completed jobs from /jobs/user-posted");
+          const customerJobs = await safeFetch(`${API_BASE}/jobs/user-posted`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (customerJobs && Array.isArray(customerJobs)) {
+            allJobs = allJobs.concat(customerJobs);
+          }
+        }
+        
+        if (isHustler) {
+          console.log("🔵 Fetching hustler completed jobs from /jobs/user-active");
+          const hustlerJobs = await safeFetch(`${API_BASE}/jobs/user-active`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (hustlerJobs && Array.isArray(hustlerJobs)) {
+            allJobs = allJobs.concat(hustlerJobs);
+          }
+        }
+        
+        if (!isCustomer && !isHustler) {
           completedJobsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Invalid user role.</div>";
           completedJobsList.dataset.loading = 'false';
           return;
         }
         
-        console.log("🔵 Fetching from endpoint:", endpoint);
-        const jobs = await safeFetch(endpoint, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        // Remove duplicates by job ID
+        const uniqueJobs = [];
+        const seenJobIds = new Set();
+        for (const job of allJobs) {
+          if (!seenJobIds.has(job.id)) {
+            seenJobIds.add(job.id);
+            uniqueJobs.push(job);
+          }
+        }
+        
+        const jobs = uniqueJobs;
         
         console.log("🔵 Fetched jobs:", jobs?.length || 0, "jobs");
         if (jobs && jobs.length > 0) {
@@ -24427,6 +24460,14 @@ meta.textContent =
           
           ${paymentDetailsHTML}
           
+          ${isCustomer ? `
+            <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
+              <div style="font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 0.5rem;">💝 Tip Your Hustler</div>
+              <div style="font-size: 0.9rem; color: #78350f; margin-bottom: 1rem;">Show your appreciation for a job well done!</div>
+              <button class="btn btn-primary tipHustlerBtn" data-job-id="${job.id}" data-hustler-id="${job.hustlerId || ''}" style="width: 100%; padding: 0.875rem; font-weight: 600; background: #f59e0b; border-color: #f59e0b;">💝 Tip Hustler</button>
+            </div>
+          ` : ''}
+          
           ${reviewsHTML}
           
           <div style="padding: 1.5rem; background: #f9fafb; border-radius: 12px; margin-bottom: 1.5rem;">
@@ -24478,6 +24519,21 @@ meta.textContent =
               window.showHustlerProfilePopup(userId);
             }
           });
+        });
+        
+        modal.querySelector('.tipHustlerBtn')?.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const jobId = e.target.dataset.jobId;
+          const hustlerId = e.target.dataset.hustlerId;
+          if (!hustlerId) {
+            showToast('Hustler information not available.');
+            return;
+          }
+          // Close modal first
+          document.body.removeChild(modal);
+          document.body.style.overflow = '';
+          // Show tip modal (to be implemented)
+          showToast('Tip feature coming soon! You can contact support at team.hustlapp@outlook.com to send a tip.');
         });
         
       } catch (error) {
