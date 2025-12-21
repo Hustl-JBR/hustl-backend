@@ -22521,13 +22521,22 @@ meta.textContent =
               tabContent.classList.add('active');
               
               // Load content for that tab
+              console.log("🔵 Tab content loading for:", tabName);
               if (tabName === 'posted') {
+                console.log("🔵 Calling loadPostedJobs");
                 loadPostedJobs();
               } else if (tabName === 'active') {
+                console.log("🔵 Calling loadActiveJobs");
                 loadActiveJobs();
               } else if (tabName === 'completed') {
-                loadCompletedJobs();
+                console.log("🔵 Calling loadCompletedJobs with reset=true");
+                if (typeof loadCompletedJobs === 'function') {
+                  loadCompletedJobs(true);
+                } else {
+                  console.error("❌ loadCompletedJobs function not found!");
+                }
               } else if (tabName === 'applied') {
+                console.log("🔵 Calling loadAppliedJobs");
                 loadAppliedJobs();
               }
             }
