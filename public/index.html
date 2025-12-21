@@ -11964,9 +11964,27 @@ async function renderJobs(reset = false) {
               
               if (continueBtn) {
                 continueBtn.addEventListener('click', () => {
-                  // Just hide the price change section and continue with the job
+                  // Hide the declined price change section and show the "propose new price" section
                   priceChangeSection.style.display = 'none';
+                  
+                  // Show the "propose new price" section by removing the declined status from requirements
+                  // This will make the else block (no proposal yet) show up
+                  // We need to refresh the job details modal to show the propose price section
                   showToast('Continuing with job at original price.');
+                  
+                  // Close and reopen the job details to refresh the UI
+                  const existingModal = document.getElementById('jobDetailModal');
+                  if (existingModal) {
+                    const jobId = job.id;
+                    document.body.removeChild(existingModal);
+                    document.body.style.overflow = '';
+                    // Reopen job details after a short delay
+                    setTimeout(() => {
+                      if (typeof window.openJobDetails === 'function') {
+                        window.openJobDetails(jobId);
+                      }
+                    }, 100);
+                  }
                 });
               }
               
@@ -22950,9 +22968,12 @@ meta.textContent =
                 toolsDisplay = customEquipment;
               }
               
+              // Check if price proposal is pending for hustler view
+              const hasPendingPriceProposalHustler = proposedPriceChange && proposedPriceChange.status === 'PENDING';
+              
               card.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-                  <div style="flex: 1;">
+                  <div style="flex: 1; min-width: 0;">
                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
                       <span style="font-size: 1.5rem;">${categoryIcon}</span>
                       <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
@@ -22975,6 +22996,14 @@ meta.textContent =
                       <div style="padding: 0.25rem 0.75rem; background: ${job.status === 'IN_PROGRESS' ? '#f59e0b20' : '#3b82f620'}; color: ${job.status === 'IN_PROGRESS' ? '#f59e0b' : '#3b82f6'}; border-radius: 6px; font-weight: 600; font-size: 0.85rem; display: inline-block; width: fit-content;">${job.status === 'IN_PROGRESS' ? 'In Progress' : 'Scheduled'}</div>
                     </div>
                   </div>
+                  ${currentPrice > 0 || (pricingOption !== 'hustlers_quote' && (payType === 'hourly' || payType === 'flat')) ? `
+                  <div style="text-align: right; flex-shrink: 0; margin-left: 1rem; padding-left: 1rem;">
+                    <div style="font-size: 1.75rem; font-weight: 700; color: var(--primary); line-height: 1.2; white-space: nowrap;">$${(currentPrice || 0).toFixed(2)}</div>
+                    ${hasPendingPriceProposalHustler ? `
+                    <div style="font-size: 0.7rem; color: #f59e0b; font-weight: 600; margin-top: 0.25rem; white-space: nowrap;">💰 Pending</div>
+                    ` : ''}
+                  </div>
+                  ` : ''}
                 </div>
                 ${(job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && job.startCode && !job.startCodeVerified ? `
                 <div style="padding: 0.875rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #3b82f6;">
