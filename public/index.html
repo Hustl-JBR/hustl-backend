@@ -24168,9 +24168,10 @@ meta.textContent =
             e.stopPropagation();
             const jobId = e.target.dataset.jobId;
             const revieweeId = isCustomerForThisJob ? job.hustlerId : job.customerId;
-            // Open review modal
-            if (typeof window.showRatingModal === 'function') {
-              window.showRatingModal(jobId, revieweeId, isCustomerForThisJob ? 'hustler' : 'customer');
+            const revieweeName = isCustomerForThisJob ? (job.hustler?.name || 'Hustler') : (job.customer?.name || 'Customer');
+            // Open review modal with proper star rating
+            if (typeof window.showReviewModal === 'function') {
+              window.showReviewModal(jobId, revieweeId, revieweeName);
             } else {
               // Fallback: show review input directly
               showReviewInputModal(jobId, revieweeId, isCustomerForThisJob ? 'hustler' : 'customer');
@@ -24601,12 +24602,14 @@ meta.textContent =
         modal.querySelector('.rateCompletedJobBtn')?.addEventListener('click', async (e) => {
           e.stopPropagation();
           const jobId = e.target.dataset.jobId;
+          const revieweeId = isCustomer ? job.hustlerId : job.customerId;
+          const revieweeName = isCustomer ? (job.hustler?.name || 'Hustler') : (job.customer?.name || 'Customer');
           // Close modal first
           document.body.removeChild(modal);
           document.body.style.overflow = '';
-          // Open rating modal
-          if (typeof window.showRatingModal === 'function') {
-            window.showRatingModal(jobId, isCustomer ? job.hustlerId : job.customerId, isCustomer ? 'hustler' : 'customer');
+          // Open review modal with proper star rating
+          if (typeof window.showReviewModal === 'function') {
+            window.showReviewModal(jobId, revieweeId, revieweeName);
           } else {
             showToast('Rating feature coming soon!');
           }
@@ -25216,6 +25219,8 @@ meta.textContent =
     window.showTipInputModal = showTipInputModal;
     window.showReviewInputModal = showReviewInputModal;
     window.showReviewDetailsModal = showReviewDetailsModal;
+    // Alias for compatibility
+    window.showRatingModal = window.showReviewModal;
     
     // Load Applied Jobs (Hustler only)
     async function loadAppliedJobs() {
