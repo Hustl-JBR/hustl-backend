@@ -11790,8 +11790,8 @@ async function renderJobs(reset = false) {
               <div style="font-size: 0.85rem; color: #78350f; margin-bottom: 0.75rem; line-height: 1.5;">
                 Need to change the price? Propose a new price to the customer. They must accept before the price changes.
               </div>
-              <div style="font-size: 0.8rem; color: #92400e; margin-bottom: 1rem; padding: 0.625rem; background: #fef3c7; border-radius: 6px; border: 1px solid #fbbf24;">
-                ⚠️ <strong>Important:</strong> Only propose a price change if necessary and after messaging with the hustler to discuss the change.
+              <div style="font-size: 0.8rem; color: #92400e; margin-bottom: 1rem; padding: 0.75rem; background: #fef3c7; border-radius: 6px; border: 1px solid #fbbf24;">
+                <strong>⚠️ Before proposing:</strong> Message the customer first to discuss why you need a price change. If they disagree, they can unassign you or you can leave the job (customer gets full refund).
               </div>
               <button id="proposePriceChangeBtn-${job.id}" class="btn btn-primary" style="width: 100%; padding: 0.875rem; font-weight: 700; background: #f59e0b; border: none; border-radius: 8px; color: white; cursor: pointer;">
                 ✏️ Propose Price Change
@@ -11821,23 +11821,35 @@ async function renderJobs(reset = false) {
                   adjustModal.innerHTML = `
                     <div style="background: white; border-radius: 16px; max-width: 500px; width: 100%; padding: 2rem; position: relative; max-height: 90vh; overflow-y: auto;">
                       <button class="closeAdjustModal" style="position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; border-radius: 50%; border: none; background: #f3f4f6; cursor: pointer; font-size: 1.25rem;">×</button>
-                      <h3 style="font-size: 1.25rem; font-weight: 700; margin: 0 0 1rem 0;">Propose Price Change</h3>
+                      <h3 style="font-size: 1.25rem; font-weight: 700; margin: 0 0 1rem 0;">💰 Propose Price Change</h3>
+                      
+                      <!-- Important Warning -->
+                      <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.9rem; line-height: 1.6;">
+                        <div style="font-weight: 700; color: #92400e; margin-bottom: 0.5rem; font-size: 1rem;">⚠️ Important: Talk to Customer First</div>
+                        <div style="color: #78350f;">
+                          <div style="margin-bottom: 0.5rem;">• <strong>Always message the customer first</strong> to discuss why you need a price change</div>
+                          <div style="margin-bottom: 0.5rem;">• <strong>Explain your reasoning</strong> - unexpected materials, more work than expected, etc.</div>
+                          <div style="margin-bottom: 0.5rem;">• <strong>Customer can still unassign you</strong> if they disagree with the price change</div>
+                          <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #fbbf24; font-weight: 600;">If the customer disagrees, you can leave the job and they'll receive a full refund.</div>
+                        </div>
+                      </div>
                       
                       <!-- How It Works Explanation -->
                       <div style="background: #eff6ff; border: 1px solid #93c5fd; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.85rem; line-height: 1.6;">
                         <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.5rem;">ℹ️ How Price Changes Work:</div>
                         <div style="color: #1e3a8a;">
                           <div style="margin-bottom: 0.5rem;"><strong>Current Price:</strong> $${currentAmount.toFixed(2)} + $${(currentAmount * 0.065).toFixed(2)} fee = $${currentTotal.toFixed(2)} total</div>
-                          <div style="margin-bottom: 0.75rem;"><strong>When Available:</strong> Only before the hustler enters the start code. Price is locked once work begins.</div>
+                          <div style="margin-bottom: 0.75rem;"><strong>When Available:</strong> Only before you enter the start code. Price is locked once work begins.</div>
                           <div style="margin-bottom: 0.5rem;"><strong>Process:</strong></div>
                           <ol style="margin: 0.5rem 0 0.5rem 1.25rem; padding: 0;">
-                            <li>You propose a new price</li>
-                            <li>Hustler must accept or decline</li>
+                            <li>You propose a new price (after discussing with customer)</li>
+                            <li>Customer must accept or decline</li>
                             <li>If accepted, payment is automatically updated</li>
+                            <li>If declined, job continues at original price or customer can unassign you</li>
                           </ol>
                           <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #93c5fd;">
-                            <div style="margin-bottom: 0.25rem;"><strong>If price goes UP:</strong> You'll be charged the difference</div>
-                            <div><strong>If price goes DOWN:</strong> You'll be refunded the difference</div>
+                            <div style="margin-bottom: 0.25rem;"><strong>If price goes UP:</strong> Customer will be charged the difference</div>
+                            <div><strong>If price goes DOWN:</strong> Customer will be refunded the difference</div>
                           </div>
                         </div>
                       </div>
@@ -11866,14 +11878,6 @@ async function renderJobs(reset = false) {
                         </div>
                       </div>
                       
-                      <div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 0.875rem; margin-bottom: 1.5rem; font-size: 0.85rem; color: #92400e;">
-                        <div style="font-weight: 600; margin-bottom: 0.25rem;">⚠️ Important:</div>
-                        <div style="line-height: 1.5;">
-                          • Only propose if necessary and after discussing with the hustler<br>
-                          • Hustler must accept before the price changes<br>
-                          • Price is locked once the start code is entered
-                        </div>
-                      </div>
                       
                       <div style="display: flex; gap: 0.75rem;">
                         <button class="btn btn-primary savePriceBtn-${job.id}" style="flex: 1; padding: 0.75rem; font-weight: 600;">Send Proposal</button>
@@ -22679,7 +22683,10 @@ meta.textContent =
                 ` : ''}
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
                   <button class="btn btn-primary messageBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">💬 Message</button>
-                  ${(job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && !job.startCodeVerified ? `<button class="btn btn-primary leaveJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.875rem; font-weight: 700; font-size: 0.95rem; color: white; background: #dc2626; border: none; border-radius: 8px;">🚪 Leave Job</button>` : ''}
+                  ${(job.status === 'ASSIGNED' || job.status === 'SCHEDULED') && !job.startCodeVerified ? `
+                    <button class="btn btn-primary proposePriceBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.875rem; font-weight: 700; font-size: 0.95rem; color: white; background: #f59e0b; border: none; border-radius: 8px;">💰 Propose New Price</button>
+                    <button class="btn btn-primary leaveJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.875rem; font-weight: 700; font-size: 0.95rem; color: white; background: #dc2626; border: none; border-radius: 8px;">🚪 Leave Job</button>
+                  ` : ''}
                 </div>
               `;
             }
@@ -22834,6 +22841,32 @@ meta.textContent =
             });
             
             // Leave job button (hustler view for scheduled/assigned jobs)
+            // Propose New Price button - opens job details and scrolls to price change section
+            card.querySelector('.proposePriceBtn')?.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              if (typeof window.openJobDetails === 'function') {
+                window.openJobDetails(job.id);
+                // Wait for modal to open, then scroll to price change section
+                setTimeout(() => {
+                  const modal = document.getElementById('jobDetailModal');
+                  if (modal) {
+                    const priceChangeSection = modal.querySelector('[style*="💰 Adjust Price"]')?.closest('div[style*="margin-bottom: 1rem"]');
+                    if (priceChangeSection) {
+                      priceChangeSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      // Highlight the section briefly
+                      priceChangeSection.style.transition = 'box-shadow 0.3s';
+                      priceChangeSection.style.boxShadow = '0 0 0 4px rgba(245, 158, 11, 0.3)';
+                      setTimeout(() => {
+                        priceChangeSection.style.boxShadow = '';
+                      }, 2000);
+                    }
+                  }
+                }, 500);
+              } else if (typeof openJobDetails === 'function') {
+                openJobDetails(job.id);
+              }
+            });
+            
             card.querySelector('.leaveJobBtn')?.addEventListener('click', async (e) => {
               e.stopPropagation();
               if (confirm('Are you sure you want to leave this job? The job will be open for other applicants.')) {
