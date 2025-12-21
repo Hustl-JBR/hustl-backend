@@ -97,9 +97,70 @@ router.get('/me', authenticate, async (req, res) => {
       user.photoUrl = null;
     }
     
-    console.log('[GET /users/me] Returning user with photoUrl:', user.photoUrl);
+    // Calculate completed jobs count
+    const completedJobsCount = await prisma.job.count({
+      where: {
+        AND: [
+          {
+            OR: [
+              { customerId: req.user.id },
+              { hustlerId: req.user.id }
+            ]
+          },
+          {
+            OR: [
+              { 
+                status: 'PAID',
+                completionCodeVerified: true
+              },
+              { 
+                status: 'COMPLETED_BY_HUSTLER',
+                completionCodeVerified: true
+              }
+            ]
+          },
+          {
+            payment: {
+              status: 'CAPTURED'
+            }
+          }
+        ]
+      }
+    });
 
-    res.json(user);
+    // Calculate total earned (for hustlers - sum of payments where they are the hustler)
+    let totalEarned = 0;
+    try {
+      const payments = await prisma.payment.findMany({
+        where: {
+          job: {
+            hustlerId: req.user.id,
+            status: 'PAID',
+            completionCodeVerified: true
+          },
+          status: 'CAPTURED'
+        },
+        select: {
+          amount: true
+        }
+      });
+      totalEarned = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    } catch (error) {
+      console.warn('[GET /users/me] Error calculating totalEarned:', error);
+      totalEarned = 0;
+    }
+    
+    console.log('[GET /users/me] Returning user with stats:', {
+      photoUrl: user.photoUrl,
+      jobsCompleted: completedJobsCount,
+      totalEarned
+    });
+
+    res.json({
+      ...user,
+      jobsCompleted: completedJobsCount,
+      totalEarned: totalEarned
+    });
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Internal server error' });

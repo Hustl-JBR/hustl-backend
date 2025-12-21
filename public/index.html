@@ -6014,6 +6014,13 @@
             }
           }, 500);
         }
+        
+        // Render profile stats when profile view is shown
+        if (view === 'profile') {
+          setTimeout(async () => {
+            await renderProfileStats();
+          }, 100);
+        }
       }
       
       // Don't re-initialize hamburger menu - it uses event delegation and doesn't need re-initialization
@@ -6033,6 +6040,74 @@
     }
     // Expose setView globally immediately after definition
     window.setView = setView;
+    
+    // Render profile stats (Jobs Done, Earned, Rating)
+    async function renderProfileStats() {
+      try {
+        const user = await window.hustlAPI.auth.getCurrentUser();
+        if (!user) return;
+        
+        // Fetch fresh user data with stats
+        const token = localStorage.getItem('hustl_token');
+        const response = await fetch(`${API_BASE}/users/me`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        
+        if (!response.ok) {
+          console.error('Failed to fetch user stats');
+          return;
+        }
+        
+        const userData = await response.json();
+        
+        // Update profile basic info
+        const profileBasicInfo = document.getElementById('profileBasicInfo');
+        if (profileBasicInfo) {
+          profileBasicInfo.innerHTML = `
+            <div style="padding: 2rem; text-align: center; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 16px; margin-bottom: 1.5rem;">
+              <img src="${userData.photoUrl || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(userData.name || 'User') + '&background=6366f1&color=fff&size=128'}" 
+                   alt="${userData.name || 'User'}" 
+                   style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 4px solid white; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+              <h2 style="margin: 0 0 0.5rem 0; font-size: 1.75rem; font-weight: 700; color: var(--text-main);">${userData.name || 'User'}</h2>
+              <div style="font-size: 0.95rem; color: var(--text-muted);">${userData.city || ''} ${userData.zip || ''}</div>
+            </div>
+          `;
+        }
+        
+        // Update profile quick stats
+        const profileQuickStats = document.getElementById('profileQuickStats');
+        if (profileQuickStats) {
+          const jobsCompleted = userData.jobsCompleted || 0;
+          const totalEarned = userData.totalEarned || 0;
+          const ratingAvg = userData.ratingAvg || 5.0;
+          
+          profileQuickStats.innerHTML = `
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+              <div style="padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid #e5e7eb; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">✅</div>
+                <div style="font-size: 2rem; font-weight: 700; color: var(--primary); margin-bottom: 0.25rem;">${jobsCompleted}</div>
+                <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600;">Jobs Done</div>
+              </div>
+              <div style="padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid #e5e7eb; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">💸</div>
+                <div style="font-size: 2rem; font-weight: 700; color: #10b981; margin-bottom: 0.25rem;">$${totalEarned.toFixed(2)}</div>
+                <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600;">Earned</div>
+              </div>
+              <div style="padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid #e5e7eb; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">⭐</div>
+                <div style="font-size: 2rem; font-weight: 700; color: #fbbf24; margin-bottom: 0.25rem;">${ratingAvg.toFixed(1)}</div>
+                <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600;">Rating</div>
+              </div>
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('Error rendering profile stats:', error);
+      }
+    }
+    
+    // Expose renderProfileStats globally
+    window.renderProfileStats = renderProfileStats;
 
     /* ---------- Auth visibility ---------- */
 
