@@ -1757,11 +1757,13 @@
     .chat-msg-wrapper {
       display: flex;
       flex-direction: row;
-      margin-bottom: 0.5rem;
       width: 100%;
       align-items: flex-end;
       min-height: auto;
       height: auto;
+      margin-bottom: 0.5rem;
+      clear: both;
+      position: relative;
     }
     
     .chat-msg-wrapper.group-start {
@@ -1773,11 +1775,13 @@
     }
     
     .chat-msg-wrapper.me {
+      justify-content: flex-end;
       align-items: flex-end;
     }
     
     .chat-msg-wrapper.them {
-      align-items: flex-start;
+      justify-content: flex-start;
+      align-items: flex-end;
     }
     
     .chat-msg-timestamp {
@@ -1950,7 +1954,7 @@
       padding: 1rem;
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0;
       background: #f8f9fa;
     }
     
@@ -18846,7 +18850,7 @@ async function renderJobs(reset = false) {
             // Create wrapper for message bubble
             const wrapper = document.createElement("div");
             wrapper.className = "chat-msg-wrapper " + (isMe ? "me" : "them") + (isFirstInGroup ? " group-start" : " group-continued");
-            wrapper.style.cssText = "display: flex; align-items: flex-end; gap: 0.5rem; margin-bottom: 0; " + (isMe ? "flex-direction: row-reverse; justify-content: flex-end;" : "flex-direction: row; justify-content: flex-start;");
+            wrapper.style.cssText = "display: flex; align-items: flex-end; gap: 0.5rem; margin-bottom: 0.5rem; width: 100%; clear: both; " + (isMe ? "flex-direction: row-reverse; justify-content: flex-end;" : "flex-direction: row; justify-content: flex-start;");
             wrapper.dataset.messageId = m.id;
             wrapper.dataset.senderId = m.senderId;
             
@@ -18870,7 +18874,7 @@ async function renderJobs(reset = false) {
             
             // Message content container
             const contentContainer = document.createElement("div");
-            contentContainer.style.cssText = "display: flex; flex-direction: column; gap: 0.25rem; max-width: 75%; min-width: 0;";
+            contentContainer.style.cssText = "display: flex; flex-direction: column; gap: 0.25rem; max-width: 75%; min-width: 0; flex-shrink: 0;";
             
             // Create message bubble
             const bubble = document.createElement("div");
