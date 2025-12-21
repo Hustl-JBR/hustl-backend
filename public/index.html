@@ -5414,6 +5414,68 @@
       }, 300);
     }
     
+    // Initialize manage jobs tabs when manage-jobs view is shown
+    if (view === 'manage-jobs') {
+      setTimeout(() => {
+        // Initialize tab switching
+        const manageTabs = document.querySelectorAll('.manage-tab[data-manage-tab]');
+        manageTabs.forEach(tab => {
+          // Remove existing listeners to avoid duplicates
+          const newTab = tab.cloneNode(true);
+          tab.parentNode.replaceChild(newTab, tab);
+          
+          newTab.addEventListener('click', (e) => {
+            e.preventDefault();
+            const tabName = newTab.dataset.manageTab;
+            
+            // Hide all tab contents
+            document.querySelectorAll('.profile-tab-content').forEach(content => {
+              content.style.display = 'none';
+              content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.manage-tab[data-manage-tab]').forEach(t => {
+              t.classList.remove('active');
+              const indicator = t.querySelector('.tab-indicator');
+              if (indicator) indicator.style.display = 'none';
+            });
+            
+            // Show selected tab content
+            const tabContent = document.getElementById(`manageTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+            if (tabContent) {
+              tabContent.style.display = 'block';
+              tabContent.classList.add('active');
+            }
+            
+            // Add active class to clicked tab
+            newTab.classList.add('active');
+            const indicator = newTab.querySelector('.tab-indicator');
+            if (indicator) indicator.style.display = 'block';
+            
+            // Load appropriate data
+            if (tabName === 'posted') {
+              if (typeof loadPostedJobs === 'function') loadPostedJobs();
+            } else if (tabName === 'active') {
+              if (typeof loadActiveJobs === 'function') loadActiveJobs();
+            } else if (tabName === 'completed') {
+              if (typeof loadCompletedJobs === 'function') loadCompletedJobs(true);
+            } else if (tabName === 'applied') {
+              if (typeof loadAppliedJobs === 'function') loadAppliedJobs();
+            }
+          });
+        });
+        
+        // Load default tab (posted)
+        const defaultTab = document.querySelector('.manage-tab[data-manage-tab="posted"]');
+        if (defaultTab) {
+          defaultTab.click();
+        } else if (typeof loadPostedJobs === 'function') {
+          loadPostedJobs();
+        }
+      }, 100);
+    }
+    
     // Call renderAll if available
     if (typeof window.renderAll === 'function') {
       setTimeout(async () => {
