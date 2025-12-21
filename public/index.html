@@ -22575,7 +22575,10 @@ meta.textContent =
             }
             const proposedPriceChange = parsedRequirements.proposedPriceChange;
             let currentPrice = 0;
-            if (payType === 'hourly') {
+            if (pricingOption === 'hustlers_quote') {
+              // Hustler suggests price - don't show price
+              currentPrice = 0;
+            } else if (payType === 'hourly') {
               const hourlyRate = parseFloat(job.hourlyRate || 0);
               const estHours = parseFloat(job.estHours || 0);
               if (proposedPriceChange && proposedPriceChange.status === 'PENDING') {
@@ -22586,6 +22589,7 @@ meta.textContent =
                 currentPrice = hourlyRate * estHours;
               }
             } else {
+              // Flat rate
               if (proposedPriceChange && proposedPriceChange.status === 'PENDING') {
                 currentPrice = proposedPriceChange.amount !== null ? proposedPriceChange.amount : parseFloat(job.amount || 0);
               } else {
@@ -22641,7 +22645,7 @@ meta.textContent =
               
               card.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-                  <div style="flex: 1;">
+                  <div style="flex: 1; min-width: 0;">
                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
                       <span style="font-size: 1.5rem;">${categoryIcon}</span>
                       <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
@@ -22657,16 +22661,16 @@ meta.textContent =
                       </div>
                     </div>
                     <div style="padding: 0.25rem 0.75rem; background: ${job.status === 'IN_PROGRESS' ? '#f59e0b20' : '#3b82f620'}; color: ${job.status === 'IN_PROGRESS' ? '#f59e0b' : '#3b82f6'}; border-radius: 6px; font-weight: 600; font-size: 0.85rem; display: inline-block; margin-bottom: 0.5rem;">${job.status === 'IN_PROGRESS' ? 'In Progress' : 'Scheduled'}</div>
-                    </div>
-                    ${currentPrice > 0 ? `
-                    <div style="text-align: right; flex-shrink: 0; margin-left: 1rem;">
-                      <div style="font-size: 1.75rem; font-weight: 700; color: var(--primary); line-height: 1.2;">$${currentPrice.toFixed(2)}</div>
-                      ${hasPendingPriceProposal ? `
-                      <div style="font-size: 0.7rem; color: #f59e0b; font-weight: 600; margin-top: 0.25rem;">💰 Pending</div>
-                      ` : ''}
-                    </div>
+                  </div>
+                  ${currentPrice > 0 || (pricingOption !== 'hustlers_quote' && (payType === 'hourly' || payType === 'flat')) ? `
+                  <div style="text-align: right; flex-shrink: 0; margin-left: 1rem; padding-left: 1rem;">
+                    <div style="font-size: 1.75rem; font-weight: 700; color: var(--primary); line-height: 1.2; white-space: nowrap;">$${(currentPrice || 0).toFixed(2)}</div>
+                    ${hasPendingPriceProposal ? `
+                    <div style="font-size: 0.7rem; color: #f59e0b; font-weight: 600; margin-top: 0.25rem; white-space: nowrap;">💰 Pending</div>
                     ` : ''}
-                    </div>
+                  </div>
+                  ` : ''}
+                </div>
                 ${startCodeSection}
                 ${completionCodeSection}
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
