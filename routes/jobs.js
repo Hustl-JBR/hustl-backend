@@ -2765,9 +2765,6 @@ async function processRefundIfNeeded(job, reason, actorId, actorName, ipAddress 
     return { refunded: false, amount: 0, message: 'Error processing refund' };
   }
 }
-    // Continue even if refund fails - don't block the operation
-  }
-}
 
 // POST /jobs/:id/unassign - Unassign hustler (Customer only, before start code)
 router.post('/:id/unassign', authenticate, requireRole('CUSTOMER'), async (req, res) => {
