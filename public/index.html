@@ -24094,11 +24094,15 @@ meta.textContent =
             console.error("Error fetching payment:", e);
           }
           
-          // Get other user info
-          const otherUser = isCustomer ? (job.hustler || {}) : (job.customer || {});
+          // Determine role for THIS SPECIFIC JOB (not just user's general roles)
+          const isCustomerForThisJob = job.customerId === user.id;
+          const isHustlerForThisJob = job.hustlerId === user.id;
           
-          // Check if tip already added (only for customers)
-          const hasTipped = isCustomer && payment && payment.tip && payment.tip > 0;
+          // Get other user info based on role in this job
+          const otherUser = isCustomerForThisJob ? (job.hustler || {}) : (job.customer || {});
+          
+          // Check if tip already added (only for customers of this job)
+          const hasTipped = isCustomerForThisJob && payment && payment.tip && payment.tip > 0;
           
           // Check if user has already reviewed (reviews have reviewerId field)
           const hasReviewed = job.reviews && job.reviews.some(r => r.reviewerId === user.id);
@@ -24127,12 +24131,12 @@ meta.textContent =
             <div style="margin-bottom: 1rem;">
               <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.5rem; line-height: 1.3;">${job.title || 'Untitled Job'}</div>
               <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.25rem;">
-                <strong>${isCustomer ? 'Hustler' : 'Customer'}:</strong> <span style="color: var(--text-main); font-weight: 600;">${otherUser?.name || 'Unknown'}</span>
+                <strong>${isCustomerForThisJob ? 'Hustler' : 'Customer'}:</strong> <span style="color: var(--text-main); font-weight: 600;">${otherUser?.name || 'Unknown'}</span>
               </div>
               <div style="font-size: 0.85rem; color: var(--text-muted);">Completed: ${completedDateStr}</div>
             </div>
             <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-              ${isCustomer ? `
+              ${isCustomerForThisJob ? `
                 ${hasTipped ? `
                   <button class="btn btn-ghost tipBtnDisabled" data-job-id="${job.id}" disabled style="flex: 1; min-width: 120px; padding: 0.75rem 1rem; font-size: 0.9rem; font-weight: 600; border: 2px solid #10b981; color: #10b981; background: #dcfce7; cursor: not-allowed; opacity: 0.9; border-radius: 8px;">✅ Tip Successful</button>
                 ` : `
@@ -24163,13 +24167,13 @@ meta.textContent =
           card.querySelector('.reviewBtn')?.addEventListener('click', async (e) => {
             e.stopPropagation();
             const jobId = e.target.dataset.jobId;
-            const revieweeId = isCustomer ? job.hustlerId : job.customerId;
+            const revieweeId = isCustomerForThisJob ? job.hustlerId : job.customerId;
             // Open review modal
             if (typeof window.showRatingModal === 'function') {
-              window.showRatingModal(jobId, revieweeId, isCustomer ? 'hustler' : 'customer');
+              window.showRatingModal(jobId, revieweeId, isCustomerForThisJob ? 'hustler' : 'customer');
             } else {
               // Fallback: show review input directly
-              showReviewInputModal(jobId, revieweeId, isCustomer ? 'hustler' : 'customer');
+              showReviewInputModal(jobId, revieweeId, isCustomerForThisJob ? 'hustler' : 'customer');
             }
           });
           
@@ -24184,7 +24188,7 @@ meta.textContent =
           // Make card clickable to open details popup
           card.addEventListener('click', (e) => {
             if (!e.target.closest('button')) {
-              openCompletedJobDetails(job.id, job, payment, isCustomer, isHustler);
+              openCompletedJobDetails(job.id, job, payment, isCustomerForThisJob, isHustlerForThisJob);
             }
           });
           
@@ -24249,14 +24253,14 @@ meta.textContent =
           return;
         }
         
-        // Determine user role if not provided
+        // Determine user role for THIS SPECIFIC JOB (not general roles)
+        // Check if user is customer or hustler for this particular job
         if (isCustomer === null || isHustler === null) {
-          const userRole = user.role || (user.roles && Array.isArray(user.roles) ? user.roles[0] : null);
-          isCustomer = userRole === 'CUSTOMER' || userRole === 'customer' || 
-                      (user.roles && Array.isArray(user.roles) && user.roles.some(r => r.toUpperCase() === 'CUSTOMER'));
-          isHustler = userRole === 'HUSTLER' || userRole === 'hustler' || 
-                     (user.roles && Array.isArray(user.roles) && user.roles.some(r => r.toUpperCase() === 'HUSTLER'));
+          isCustomer = job.customerId === user.id;
+          isHustler = job.hustlerId === user.id;
         }
+        
+        console.log('🔵 Job role check - customerId:', job.customerId, 'hustlerId:', job.hustlerId, 'userId:', user.id, 'isCustomer:', isCustomer, 'isHustler:', isHustler);
         
         // Fetch job data if not provided
         let job = jobData;
@@ -24301,11 +24305,13 @@ meta.textContent =
           }
         }
         
-        // Get other user
+        // Get other user based on role in THIS job
         const otherUser = isCustomer ? (job.hustler || {}) : (job.customer || {});
         
-        // Check if tip already added (only for customers)
+        // Check if tip already added (only for customers of this job)
         const hasTipped = isCustomer && payment && payment.tip && payment.tip > 0;
+        
+        console.log('🔵 Popup role check - isCustomer:', isCustomer, 'isHustler:', isHustler, 'hasTipped:', hasTipped);
         
         // Calculate amounts
         const payType = job.payType || 'flat';
