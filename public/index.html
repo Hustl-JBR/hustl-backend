@@ -11452,8 +11452,8 @@ async function renderJobs(reset = false) {
         // Show price change proposal to CUSTOMER (hustler proposed, customer needs to accept/decline)
         if (isCustomer && job.customerId === user?.id && (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') && !job.startCodeVerified && proposedPriceChangeHustler && proposedPriceChangeHustler.status === 'PENDING') {
           console.log('[PRICE CHANGE] Showing price change proposal to customer');
-          const priceChangeSectionHustler = document.createElement("div");
-          priceChangeSectionHustler.style.cssText = "margin-bottom: 1rem; padding: 1rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 2px solid #f59e0b;";
+          const priceChangeSectionCustomer = document.createElement("div");
+          priceChangeSectionCustomer.style.cssText = "margin-bottom: 1rem; padding: 1rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 2px solid #f59e0b;";
           
           const currentPrice = job.payType === 'hourly' 
             ? (Number(job.hourlyRate || 0) * Number(job.estHours || 0))
