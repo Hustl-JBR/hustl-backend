@@ -11892,7 +11892,7 @@ async function renderJobs(reset = false) {
                 </div>
               </div>
             `;
-          } else if (proposedPriceChange && proposedPriceChange.status === 'DECLINED' && !priceChangeSection.dataset.continueClicked) {
+          } else if (proposedPriceChange && proposedPriceChange.status === 'DECLINED' && !localStorage.getItem(`priceDeclineDismissed_${job.id}`)) {
             priceChangeSection.style.background = "#fee2e2";
             priceChangeSection.style.borderColor = "#dc2626";
             priceChangeSection.innerHTML = `
@@ -11971,9 +11971,211 @@ async function renderJobs(reset = false) {
                   e.preventDefault();
                   e.stopPropagation();
                   console.log('[PRICE DECLINE] Continue button clicked for job:', job.id);
-                  // Hide the declined price change section completely
-                  priceChangeSection.style.display = 'none';
-                  showToast('Continuing with job at original price.');
+                  
+                  // Mark as dismissed in localStorage so it doesn't show again
+                  localStorage.setItem(`priceDeclineDismissed_${job.id}`, 'true');
+                  
+                  // Replace with the normal "Propose New Price" section
+                  priceChangeSection.style.background = "#fef3c7";
+                  priceChangeSection.style.borderColor = "#fbbf24";
+                  priceChangeSection.innerHTML = `
+                    <div style="font-size: 0.9rem; color: #92400e; margin-bottom: 0.75rem; font-weight: 700;">💰 Adjust Price</div>
+                    <div style="font-size: 0.85rem; color: #78350f; margin-bottom: 0.75rem; line-height: 1.5;">
+                      Need to change the price? Propose a new price to the customer. They must accept before the price changes.
+                    </div>
+                    <div style="font-size: 0.8rem; color: #92400e; margin-bottom: 1rem; padding: 0.75rem; background: #fef3c7; border-radius: 6px; border: 1px solid #fbbf24;">
+                      <strong>⚠️ Before proposing:</strong> Message the customer first to discuss why you need a price change. If they disagree, they can unassign you or you can leave the job (customer gets full refund).
+                    </div>
+                    <button id="proposePriceChangeBtn-${job.id}" class="btn btn-primary" style="width: 100%; padding: 0.875rem; font-weight: 700; background: #f59e0b; border: none; border-radius: 8px; color: white; cursor: pointer;">
+                      ✏️ Propose Price Change
+                    </button>
+                  `;
+                  
+                  showToast('Continuing with job at original price. You can propose a new price if needed.');
+                  
+                  // Attach event handler to the new propose button (reuse existing logic from else block)
+                  setTimeout(() => {
+                    const proposeBtn = priceChangeSection.querySelector(`#proposePriceChangeBtn-${job.id}`);
+                    if (proposeBtn) {
+                      proposeBtn.addEventListener('click', async () => {
+                        // Show confirmation with messaging reminder
+                        if (!confirm('⚠️ Important: Only propose a price change if necessary and after discussing with the customer via messages. Proceed with price change proposal?')) {
+                          return;
+                        }
+                        
+                        // Show inline form in the job popup instead of separate modal
+                        const existingForm = priceChangeSection.querySelector('.priceProposalForm');
+                        if (existingForm) {
+                          existingForm.style.display = existingForm.style.display === 'none' ? 'block' : 'none';
+                          return;
+                        }
+                        
+                        // Create inline price proposal form
+                        const payType = job.payType || 'flat';
+                        const hourlyRate = parseFloat(job.hourlyRate || 0);
+                        const maxHours = Number(job.estHours) || Number(parsedRequirements.maxHours) || 0;
+                        const jobAmount = parseFloat(job.amount || 0);
+                        const currentAmount = payType === 'hourly' ? (hourlyRate * maxHours) : jobAmount;
+                        
+                        // Hide the button and show the form inline
+                        proposeBtn.style.display = 'none';
+                        
+                        const proposalForm = document.createElement('div');
+                        proposalForm.className = 'priceProposalForm';
+                        proposalForm.style.cssText = 'margin-top: 1rem; padding: 1rem; background: #f9fafb; border-radius: 8px; border: 2px solid #f59e0b;';
+                        // Calculate hustler earnings (job amount - 12% platform fee)
+                        const currentHustlerEarnings = currentAmount * 0.88;
+                        
+                        proposalForm.innerHTML = `
+                          <h4 style="font-size: 1rem; font-weight: 700; margin: 0 0 0.75rem 0; color: #92400e;">💰 Propose New Price</h4>
+                          <div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 6px; padding: 0.75rem; margin-bottom: 1rem; font-size: 0.85rem; line-height: 1.5;">
+                            <strong>Current Price:</strong> $${currentAmount.toFixed(2)} (You earn: $${currentHustlerEarnings.toFixed(2)} after 12% platform fee)
+                          </div>
+                          
+                          <div style="margin-bottom: 1rem;">
+                            <label style="display: block; font-size: 0.9rem; color: #374151; margin-bottom: 0.5rem; font-weight: 600;">New Price</label>
+                              ${payType === 'hourly' ? `
+                                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem;">
+                                  <div>
+                                    <input type="number" id="newHourlyRate-${job.id}" placeholder="Hourly rate" min="1" step="0.01" style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem;" value="${hourlyRate || ''}">
+                                  </div>
+                                  <div>
+                                    <input type="number" id="newMaxHours-${job.id}" placeholder="Max hours" min="1" step="1" style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem;" value="${maxHours || ''}">
+                                  </div>
+                                </div>
+                              ` : `
+                                <input type="number" id="newAmount-${job.id}" placeholder="Total amount" min="1" step="0.01" style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem;" value="${jobAmount || ''}">
+                              `}
+                              <div style="margin-top: 0.75rem; font-size: 0.8rem; color: #6b7280;">
+                                <div id="pricePreview-${job.id}" style="padding: 0.5rem; background: white; border-radius: 6px; margin-top: 0.5rem; border: 1px solid #e5e7eb;">
+                                  <div>Proposed Price: <span id="newTotalPreview-${job.id}" style="font-weight: 600;">$0.00</span></div>
+                                  <div style="margin-top: 0.25rem; font-size: 0.75rem;">
+                                    <span id="priceChangePreview-${job.id}" style="color: #6b7280;">Enter new price</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            
+                            <div style="display: flex; gap: 0.75rem;">
+                              <button class="btn btn-primary savePriceBtn-${job.id}" style="flex: 1; padding: 0.75rem; font-weight: 600;">Send Proposal</button>
+                              <button class="btn btn-ghost cancelPriceBtn-${job.id}" style="flex: 1; padding: 0.75rem;">Cancel</button>
+                            </div>
+                          </div>
+                        `;
+                        priceChangeSection.appendChild(proposalForm);
+                        
+                        // Add real-time price preview (showing hustler earnings)
+                        const updatePricePreview = () => {
+                          let newAmount = 0;
+                          if (payType === 'hourly') {
+                            const newRate = parseFloat(document.getElementById(`newHourlyRate-${job.id}`)?.value || 0);
+                            const newHours = parseInt(document.getElementById(`newMaxHours-${job.id}`)?.value || 0);
+                            newAmount = newRate * newHours;
+                          } else {
+                            newAmount = parseFloat(document.getElementById(`newAmount-${job.id}`)?.value || 0);
+                          }
+                          
+                          if (newAmount > 0) {
+                            // Calculate hustler earnings (job amount - 12% platform fee)
+                            const newHustlerEarnings = newAmount * 0.88;
+                            const difference = newAmount - currentAmount;
+                            const earningsDifference = newHustlerEarnings - currentHustlerEarnings;
+                            
+                            document.getElementById(`newTotalPreview-${job.id}`).textContent = `$${newAmount.toFixed(2)}`;
+                            if (difference > 0) {
+                              document.getElementById(`priceChangePreview-${job.id}`).innerHTML = `You'll earn: <strong style="color: #16a34a;">$${newHustlerEarnings.toFixed(2)}</strong> ($${earningsDifference.toFixed(2)} more after 12% platform fee)`;
+                            } else if (difference < 0) {
+                              document.getElementById(`priceChangePreview-${job.id}`).innerHTML = `You'll earn: <strong style="color: #dc2626;">$${newHustlerEarnings.toFixed(2)}</strong> ($${Math.abs(earningsDifference).toFixed(2)} less after 12% platform fee)`;
+                            } else {
+                              document.getElementById(`priceChangePreview-${job.id}`).innerHTML = `You'll earn: <strong>$${newHustlerEarnings.toFixed(2)}</strong> (same as current after 12% platform fee)`;
+                            }
+                          } else {
+                            document.getElementById(`newTotalPreview-${job.id}`).textContent = '$0.00';
+                            document.getElementById(`priceChangePreview-${job.id}`).textContent = 'Enter new price';
+                          }
+                        };
+                        
+                        // Attach preview updates
+                        if (payType === 'hourly') {
+                          document.getElementById(`newHourlyRate-${job.id}`)?.addEventListener('input', updatePricePreview);
+                          document.getElementById(`newMaxHours-${job.id}`)?.addEventListener('input', updatePricePreview);
+                        } else {
+                          document.getElementById(`newAmount-${job.id}`)?.addEventListener('input', updatePricePreview);
+                        }
+                        
+                        // Cancel button
+                        proposalForm.querySelector(`.cancelPriceBtn-${job.id}`).addEventListener('click', () => {
+                          proposalForm.remove();
+                          proposeBtn.style.display = 'block';
+                        });
+                        
+                        // Save button
+                        proposalForm.querySelector(`.savePriceBtn-${job.id}`).addEventListener('click', async () => {
+                          const token = localStorage.getItem('hustl_token');
+                          const apiBase = window.API_BASE || API_BASE || 'https://hustl-production.up.railway.app';
+                          
+                          let proposalData = {};
+                          if (payType === 'hourly') {
+                            const newRate = parseFloat(document.getElementById(`newHourlyRate-${job.id}`).value);
+                            const newHours = parseInt(document.getElementById(`newMaxHours-${job.id}`).value);
+                            if (!newRate || !newHours) {
+                              showToast('Please enter both hourly rate and estimated hours.');
+                              return;
+                            }
+                            proposalData = { hourlyRate: newRate, estHours: newHours };
+                          } else {
+                            const newAmount = parseFloat(document.getElementById(`newAmount-${job.id}`).value);
+                            if (!newAmount || newAmount <= 0) {
+                              showToast('Please enter a valid price amount.');
+                              return;
+                            }
+                            proposalData = { amount: newAmount };
+                          }
+                          
+                          const submitBtn = proposalForm.querySelector(`.savePriceBtn-${job.id}`);
+                          submitBtn.disabled = true;
+                          submitBtn.textContent = 'Sending...';
+                          
+                          try {
+                            const response = await fetch(`${apiBase}/jobs/${job.id}/propose-price-change`, {
+                              method: 'POST',
+                              headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify(proposalData)
+                            });
+                            
+                            const result = await response.json();
+                            
+                            if (response.ok) {
+                              // Clear the dismissed flag since a new proposal was sent
+                              localStorage.removeItem(`priceDeclineDismissed_${job.id}`);
+                              showToast('✅ Price change proposal sent! Waiting for customer response.');
+                              const existingModal = document.getElementById('jobDetailModal');
+                              if (existingModal) {
+                                document.body.removeChild(existingModal);
+                                document.body.style.overflow = '';
+                              }
+                              setTimeout(() => {
+                                window.openJobDetails(job.id);
+                              }, 100);
+                            } else {
+                              showToast(result.error || 'Failed to send proposal');
+                              submitBtn.disabled = false;
+                              submitBtn.textContent = 'Send Proposal';
+                            }
+                          } catch (error) {
+                            console.error('Error sending proposal:', error);
+                            showToast('Error sending proposal. Please try again.');
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = 'Send Proposal';
+                          }
+                        });
+                      });
+                    }
+                  }, 100);
                 });
               }
               
