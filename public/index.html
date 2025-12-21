@@ -11509,29 +11509,28 @@ async function renderJobs(reset = false) {
           
           modalContent.appendChild(priceChangeSectionCustomer);
           
-          setTimeout(() => {
-            const acceptBtn = document.getElementById(`acceptPriceChangeBtn-${job.id}`);
-            const declineBtn = document.getElementById(`declinePriceChangeBtn-${job.id}`);
-            
-            console.log('[PRICE CHANGE] Looking for buttons:', `acceptPriceChangeBtn-${job.id}`, acceptBtn, declineBtn);
-            console.log('[PRICE CHANGE] Button elements found:', { acceptBtn: !!acceptBtn, declineBtn: !!declineBtn });
-            
-            if (!acceptBtn || !declineBtn) {
-              console.error('[PRICE CHANGE] Buttons not found! Retrying...');
-              // Retry after a longer delay
-              setTimeout(() => {
-                const retryAcceptBtn = document.getElementById(`acceptPriceChangeBtn-${job.id}`);
-                const retryDeclineBtn = document.getElementById(`declinePriceChangeBtn-${job.id}`);
-                console.log('[PRICE CHANGE] Retry - buttons found:', { acceptBtn: !!retryAcceptBtn, declineBtn: !!retryDeclineBtn });
-                if (retryAcceptBtn && retryDeclineBtn) {
-                  attachPriceChangeHandlers(retryAcceptBtn, retryDeclineBtn, job);
-                }
-              }, 500);
-              return;
-            }
-            
+          // Attach event handlers immediately after appending (buttons are in innerHTML)
+          const acceptBtn = priceChangeSectionCustomer.querySelector(`#acceptPriceChangeBtn-${job.id}`);
+          const declineBtn = priceChangeSectionCustomer.querySelector(`#declinePriceChangeBtn-${job.id}`);
+          
+          console.log('[PRICE CHANGE] Looking for buttons:', `acceptPriceChangeBtn-${job.id}`, acceptBtn, declineBtn);
+          console.log('[PRICE CHANGE] Button elements found:', { acceptBtn: !!acceptBtn, declineBtn: !!declineBtn });
+          
+          if (acceptBtn && declineBtn) {
             attachPriceChangeHandlers(acceptBtn, declineBtn, job);
-          }, 100);
+          } else {
+            // Fallback: try after a short delay
+            setTimeout(() => {
+              const retryAcceptBtn = priceChangeSectionCustomer.querySelector(`#acceptPriceChangeBtn-${job.id}`) || document.getElementById(`acceptPriceChangeBtn-${job.id}`);
+              const retryDeclineBtn = priceChangeSectionCustomer.querySelector(`#declinePriceChangeBtn-${job.id}`) || document.getElementById(`declinePriceChangeBtn-${job.id}`);
+              console.log('[PRICE CHANGE] Retry - buttons found:', { acceptBtn: !!retryAcceptBtn, declineBtn: !!retryDeclineBtn });
+              if (retryAcceptBtn && retryDeclineBtn) {
+                attachPriceChangeHandlers(retryAcceptBtn, retryDeclineBtn, job);
+              } else {
+                console.error('[PRICE CHANGE] Buttons still not found after retry');
+              }
+            }, 100);
+          }
           
           // Helper function to attach event handlers
           function attachPriceChangeHandlers(acceptBtn, declineBtn, job) {
