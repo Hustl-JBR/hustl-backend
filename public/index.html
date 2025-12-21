@@ -24135,100 +24135,93 @@ meta.textContent =
           // Get other user info
           const otherUser = isCustomer ? (job.hustler || {}) : (job.customer || {});
           
-          // Calculate amounts
-          const payType = job.payType || 'flat';
-          const jobAmount = payType === 'hourly' 
-            ? (parseFloat(job.hourlyRate || 0) * parseFloat(job.estHours || 0))
-            : parseFloat(job.amount || 0);
+          // Check if tip already added (only for customers)
+          const hasTipped = isCustomer && payment && payment.tip && payment.tip > 0;
           
-          const categoryIcons = {
-            'Moving / Hauling': '🚚', 'moving': '🚚',
-            'Yard work / Outdoor': '🌿', 'yard-work': '🌿', 'yard': '🌿',
-            'Cleaning / Organizing': '🧹', 'cleaning': '🧹',
-            'Furniture / Assembly': '🛠', 'furniture-assembly': '🛠', 'furniture': '🛠',
-            'Other': '⭐', 'other': '⭐'
-          };
-          const categoryIcon = categoryIcons[job.category] || '📋';
-          
-          const card = document.createElement("div");
-          card.style.cssText = "padding: 1.5rem; border: 1px solid var(--border); border-radius: 12px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.2s; cursor: pointer;";
-          card.onmouseenter = () => { card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; };
-          card.onmouseleave = () => { card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)'; };
+          // Check if user has already reviewed (reviews have reviewerId field)
+          const hasReviewed = job.reviews && job.reviews.some(r => r.reviewerId === user.id);
+          const userReview = job.reviews && job.reviews.find(r => r.reviewerId === user.id);
           
           // Format completion date
           const completedDate = job.updatedAt || job.completedAt || job.createdAt;
           const completedDateObj = new Date(completedDate);
           const completedDateStr = completedDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
           
+          // Create smaller, compact card
+          const card = document.createElement("div");
+          card.style.cssText = "padding: 1rem; border: 1px solid var(--border); border-radius: 8px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.05); transition: all 0.2s; cursor: pointer;";
+          card.onmouseenter = () => { 
+            card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'; 
+            card.style.transform = 'translateY(-2px)';
+          };
+          card.onmouseleave = () => { 
+            card.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)';
+            card.style.transform = 'translateY(0)';
+          };
+          
           card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
               <div style="flex: 1; min-width: 0;">
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                  <span style="font-size: 1.5rem;">${categoryIcon}</span>
-                  <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main);">${job.title || 'Untitled Job'}</h3>
+                <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-main); margin-bottom: 0.25rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${job.title || 'Untitled Job'}</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">
+                  ${isCustomer ? 'Hustler' : 'Customer'}: <strong style="color: var(--text-main);">${otherUser?.name || 'Unknown'}</strong>
                 </div>
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                  ${otherUser && otherUser.id ? renderUserAvatar(otherUser, 40, { 
-                    className: isCustomer ? 'viewHustlerProfileBtn' : 'viewCustomerProfileBtn',
-                    'data-user-id': otherUser.id
-                  }) : '<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary);">' + (isCustomer ? 'H' : 'C') + '</div>'}
-                  <div>
-                    <div style="font-size: 0.85rem; color: var(--text-muted);">${isCustomer ? 'Hustler' : 'Customer'}</div>
-                    <div style="font-weight: 600; color: var(--text-main); cursor: pointer;" class="${isCustomer ? 'viewHustlerProfileBtn' : 'viewCustomerProfileBtn'}" data-user-id="${otherUser?.id || ''}">${otherUser?.name || 'Unknown'}</div>
-                  </div>
-                </div>
-                <div style="font-size: 0.85rem; color: var(--text-muted);">Completed: ${completedDateStr}</div>
-              </div>
-              <div style="text-align: right; flex-shrink: 0; margin-left: 1rem; padding-left: 1rem;">
-                <div style="font-size: 1.75rem; font-weight: 700; color: var(--primary); line-height: 1.2; white-space: nowrap;">$${jobAmount.toFixed(2)}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Completed: ${completedDateStr}</div>
               </div>
             </div>
-            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-              <button class="btn btn-primary viewCompletedJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600;">🔍 View Details</button>
-              ${(() => {
-                // Check if user has already rated
-                const hasRated = job.reviews && job.reviews.some(r => 
-                  (isCustomer && r.customerId === user.id) || 
-                  (isHustler && r.hustlerId === user.id)
-                );
-                if (!hasRated) {
-                  return `<button class="btn btn-ghost rateCompletedJobBtn" data-job-id="${job.id}" style="flex: 1; min-width: 140px; padding: 0.75rem; font-weight: 600; border: 2px solid var(--primary); color: var(--primary);">⭐ ${isCustomer ? 'Rate Hustler' : 'Rate Customer'}</button>`;
-                }
-                return '';
-              })()}
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              ${isCustomer ? `
+                ${hasTipped ? `
+                  <button class="btn btn-ghost tipBtnDisabled" data-job-id="${job.id}" disabled style="flex: 1; min-width: 100px; padding: 0.5rem 0.75rem; font-size: 0.85rem; font-weight: 500; border: 1px solid #10b981; color: #10b981; background: #dcfce7; cursor: not-allowed; opacity: 0.8;">✅ Tip Successful</button>
+                ` : `
+                  <button class="btn btn-primary tipBtn" data-job-id="${job.id}" style="flex: 1; min-width: 100px; padding: 0.5rem 0.75rem; font-size: 0.85rem; font-weight: 600; border: 1px solid var(--primary);">💝 Tip</button>
+                `}
+              ` : ''}
+              ${hasReviewed ? `
+                <button class="btn btn-ghost viewReviewBtn" data-job-id="${job.id}" data-review-id="${userReview?.id || ''}" style="flex: 1; min-width: 100px; padding: 0.5rem 0.75rem; font-size: 0.85rem; font-weight: 500; border: 1px solid #f59e0b; color: #f59e0b;">📝 View Written Review</button>
+              ` : `
+                <button class="btn btn-primary reviewBtn" data-job-id="${job.id}" style="flex: 1; min-width: 100px; padding: 0.5rem 0.75rem; font-size: 0.85rem; font-weight: 600; border: 1px solid var(--primary);">⭐ Review</button>
+              `}
             </div>
           `;
           
           // Event listeners
-          card.querySelector('.viewCompletedJobBtn')?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openCompletedJobDetails(job.id, job, payment, isCustomer, isHustler);
-          });
-          
-          card.querySelector('.rateCompletedJobBtn')?.addEventListener('click', async (e) => {
+          card.querySelector('.tipBtn')?.addEventListener('click', async (e) => {
             e.stopPropagation();
             const jobId = e.target.dataset.jobId;
-            // Open rating modal
-            if (typeof window.showRatingModal === 'function') {
-              window.showRatingModal(jobId, isCustomer ? job.hustlerId : job.customerId, isCustomer ? 'hustler' : 'customer');
+            // Open tip modal
+            if (typeof window.showTipModal === 'function') {
+              window.showTipModal(jobId, job, payment);
             } else {
-              showToast('Rating feature coming soon!');
+              // Fallback: show tip input directly
+              showTipInputModal(jobId, job, payment);
             }
           });
           
-          card.querySelectorAll('.viewHustlerProfileBtn, .viewCustomerProfileBtn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-              e.stopPropagation();
-              const userId = btn.dataset.userId;
-              if (userId && typeof window.showHustlerProfilePopup === 'function') {
-                window.showHustlerProfilePopup(userId);
-              }
-            });
+          card.querySelector('.reviewBtn')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const jobId = e.target.dataset.jobId;
+            const revieweeId = isCustomer ? job.hustlerId : job.customerId;
+            // Open review modal
+            if (typeof window.showRatingModal === 'function') {
+              window.showRatingModal(jobId, revieweeId, isCustomer ? 'hustler' : 'customer');
+            } else {
+              // Fallback: show review input directly
+              showReviewInputModal(jobId, revieweeId, isCustomer ? 'hustler' : 'customer');
+            }
           });
           
-          // Make card clickable
+          card.querySelector('.viewReviewBtn')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const jobId = e.target.dataset.jobId;
+            const reviewId = e.target.dataset.reviewId;
+            // Show review in popup
+            showReviewDetailsModal(jobId, reviewId, userReview);
+          });
+          
+          // Make card clickable to open details popup
           card.addEventListener('click', (e) => {
-            if (!e.target.closest('button') && !e.target.closest('.viewHustlerProfileBtn') && !e.target.closest('.viewCustomerProfileBtn')) {
+            if (!e.target.closest('button')) {
               openCompletedJobDetails(job.id, job, payment, isCustomer, isHustler);
             }
           });
@@ -24349,6 +24342,9 @@ meta.textContent =
         // Get other user
         const otherUser = isCustomer ? (job.hustler || {}) : (job.customer || {});
         
+        // Check if tip already added (only for customers)
+        const hasTipped = isCustomer && payment && payment.tip && payment.tip > 0;
+        
         // Calculate amounts
         const payType = job.payType || 'flat';
         const jobAmount = payType === 'hourly' 
@@ -24439,18 +24435,15 @@ meta.textContent =
         // Reviews section
         let reviewsHTML = '';
         const reviews = job.reviews || [];
-        const userReview = reviews.find(r => 
-          (isCustomer && r.customerId === user.id) || 
-          (isHustler && r.hustlerId === user.id)
-        );
+        const userReview = reviews.find(r => r.reviewerId === user.id);
         
         if (userReview) {
           reviewsHTML = `
             <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
               <div style="font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 1rem;">⭐ Your Review</div>
               <div style="font-size: 0.95rem; color: #78350f; line-height: 1.6;">
-                <div style="margin-bottom: 0.5rem;">Rating: <strong>${'⭐'.repeat(userReview.rating)} ${userReview.rating}/5</strong></div>
-                ${userReview.comment ? `<div style="margin-top: 0.75rem; padding: 0.75rem; background: white; border-radius: 6px;">${userReview.comment}</div>` : ''}
+                <div style="margin-bottom: 0.5rem;">Rating: <strong>${'⭐'.repeat(userReview.stars || 0)} ${userReview.stars || 0}/5</strong></div>
+                ${userReview.text ? `<div style="margin-top: 0.75rem; padding: 0.75rem; background: white; border-radius: 6px; white-space: pre-wrap;">${userReview.text}</div>` : ''}
               </div>
             </div>
           `;
@@ -24491,11 +24484,18 @@ meta.textContent =
           ${paymentDetailsHTML}
           
           ${isCustomer ? `
-            <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
-              <div style="font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 0.5rem;">💝 Tip Your Hustler</div>
-              <div style="font-size: 0.9rem; color: #78350f; margin-bottom: 1rem;">Show your appreciation for a job well done!</div>
-              <button class="btn btn-primary tipHustlerBtn" data-job-id="${job.id}" data-hustler-id="${job.hustlerId || ''}" style="width: 100%; padding: 0.875rem; font-weight: 600; background: #f59e0b; border-color: #f59e0b;">💝 Tip Hustler</button>
-            </div>
+            ${hasTipped ? `
+              <div style="padding: 1.5rem; background: #dcfce7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #10b981;">
+                <div style="font-weight: 700; font-size: 1.1rem; color: #059669; margin-bottom: 0.5rem;">✅ Tip Added</div>
+                <div style="font-size: 0.9rem; color: #047857;">You've already tipped $${payment.tip.toFixed(2)} for this job. Thank you for your appreciation!</div>
+              </div>
+            ` : `
+              <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #fbbf24;">
+                <div style="font-weight: 700; font-size: 1.1rem; color: #92400e; margin-bottom: 0.5rem;">💝 Tip Your Hustler</div>
+                <div style="font-size: 0.9rem; color: #78350f; margin-bottom: 1rem;">Show your appreciation for a job well done!</div>
+                <button class="btn btn-primary tipHustlerBtn" data-job-id="${job.id}" style="width: 100%; padding: 0.875rem; font-weight: 600; background: #f59e0b; border-color: #f59e0b;">💝 Tip Hustler</button>
+              </div>
+            `}
           ` : ''}
           
           ${reviewsHTML}
@@ -24554,16 +24554,15 @@ meta.textContent =
         modal.querySelector('.tipHustlerBtn')?.addEventListener('click', async (e) => {
           e.stopPropagation();
           const jobId = e.target.dataset.jobId;
-          const hustlerId = e.target.dataset.hustlerId;
-          if (!hustlerId) {
-            showToast('Hustler information not available.');
-            return;
-          }
           // Close modal first
           document.body.removeChild(modal);
           document.body.style.overflow = '';
-          // Show tip modal (to be implemented)
-          showToast('Tip feature coming soon! You can contact support at team.hustlapp@outlook.com to send a tip.');
+          // Show tip modal
+          if (typeof window.showTipInputModal === 'function') {
+            window.showTipInputModal(jobId, job, payment);
+          } else {
+            showToast('Tip feature coming soon! You can contact support at team.hustlapp@outlook.com to send a tip.');
+          }
         });
         
       } catch (error) {
@@ -24572,9 +24571,425 @@ meta.textContent =
       }
     }
     
+    // Show tip input modal
+    async function showTipInputModal(jobId, jobData, paymentData) {
+      const user = await window.hustlAPI.auth.getCurrentUser();
+      if (!user) {
+        showToast('Please log in to add a tip.');
+        return;
+      }
+      
+      const token = localStorage.getItem('hustl_token');
+      if (!token) {
+        showToast('Please log in to add a tip.');
+        return;
+      }
+      
+      // Fetch payment if not provided
+      let payment = paymentData;
+      if (!payment) {
+        try {
+          const paymentResponse = await fetch(`${API_BASE}/payments/job/${jobId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (paymentResponse.ok) {
+            payment = await paymentResponse.json();
+          }
+        } catch (e) {
+          console.error("Error fetching payment:", e);
+        }
+      }
+      
+      // Check if already tipped
+      if (payment && payment.tip && payment.tip > 0) {
+        showToast(`You've already tipped $${payment.tip.toFixed(2)} for this job.`);
+        return;
+      }
+      
+      const jobAmount = Number(payment?.amount || jobData.amount || 0);
+      const maxTip = Math.min(jobAmount * 0.25, 50); // 25% or $50, whichever is lower
+      
+      const modal = document.createElement('div');
+      modal.id = 'tipModal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.75);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 1rem;
+      `;
+      
+      const modalContent = document.createElement('div');
+      modalContent.style.cssText = `
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        max-width: 400px;
+        width: 100%;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        position: relative;
+      `;
+      
+      modalContent.innerHTML = `
+        <button id="closeTipModal" style="position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; border-radius: 50%; border: none; background: #f3f4f6; color: var(--text-main); font-size: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">×</button>
+        
+        <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin: 0 0 1rem 0;">💝 Tip Your Hustler</h2>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;">Show your appreciation for a job well done!</p>
+        
+        <div style="margin-bottom: 1.5rem;">
+          <label style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">Tip Amount</label>
+          <div style="position: relative;">
+            <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-weight: 600;">$</span>
+            <input type="number" id="tipAmountInput" min="1" max="${maxTip}" step="1" placeholder="0.00" style="width: 100%; padding: 0.75rem 0.75rem 0.75rem 2rem; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; font-weight: 600;" />
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Maximum tip: $${maxTip.toFixed(2)}</div>
+        </div>
+        
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+          <button class="quickTipBtn" data-amount="${(jobAmount * 0.15).toFixed(2)}" style="flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; background: white; color: var(--text-main); font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f9fafb'; this.style.borderColor='var(--primary)'" onmouseout="this.style.background='white'; this.style.borderColor='var(--border)'">15% ($${(jobAmount * 0.15).toFixed(2)})</button>
+          <button class="quickTipBtn" data-amount="${(jobAmount * 0.20).toFixed(2)}" style="flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; background: white; color: var(--text-main); font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f9fafb'; this.style.borderColor='var(--primary)'" onmouseout="this.style.background='white'; this.style.borderColor='var(--border)'">20% ($${(jobAmount * 0.20).toFixed(2)})</button>
+          <button class="quickTipBtn" data-amount="${(jobAmount * 0.25).toFixed(2)}" style="flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; background: white; color: var(--text-main); font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f9fafb'; this.style.borderColor='var(--primary)'" onmouseout="this.style.background='white'; this.style.borderColor='var(--border)'">25% ($${(jobAmount * 0.25).toFixed(2)})</button>
+        </div>
+        
+        <button id="submitTipBtn" style="width: 100%; padding: 0.875rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Add Tip</button>
+      `;
+      
+      modal.appendChild(modalContent);
+      document.body.appendChild(modal);
+      document.body.style.overflow = 'hidden';
+      
+      // Quick tip buttons
+      modal.querySelectorAll('.quickTipBtn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const amount = parseFloat(btn.dataset.amount);
+          document.getElementById('tipAmountInput').value = amount.toFixed(2);
+        });
+      });
+      
+      // Close button
+      modal.querySelector('#closeTipModal')?.addEventListener('click', () => {
+        document.body.removeChild(modal);
+        document.body.style.overflow = '';
+      });
+      
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          document.body.removeChild(modal);
+          document.body.style.overflow = '';
+        }
+      });
+      
+      // Submit button
+      modal.querySelector('#submitTipBtn')?.addEventListener('click', async () => {
+        const tipAmount = parseFloat(document.getElementById('tipAmountInput').value);
+        
+        if (!tipAmount || tipAmount <= 0) {
+          showToast('Please enter a valid tip amount.');
+          return;
+        }
+        
+        if (tipAmount > maxTip) {
+          showToast(`Maximum tip is $${maxTip.toFixed(2)}.`);
+          return;
+        }
+        
+        const submitBtn = modal.querySelector('#submitTipBtn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Processing...';
+        
+        try {
+          const response = await fetch(`${API_BASE}/tips/job/${jobId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ tipAmount })
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to add tip');
+          }
+          
+          showToast(`✅ Tip of $${tipAmount.toFixed(2)} added successfully!`);
+          
+          // Close modal
+          document.body.removeChild(modal);
+          document.body.style.overflow = '';
+          
+          // Refresh completed jobs list
+          if (typeof loadCompletedJobs === 'function') {
+            loadCompletedJobs(true);
+          }
+        } catch (error) {
+          console.error('Error adding tip:', error);
+          showToast(error.message || 'Failed to add tip. Please try again.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Add Tip';
+        }
+      });
+    }
+    
+    // Show review input modal
+    async function showReviewInputModal(jobId, revieweeId, revieweeType) {
+      const user = await window.hustlAPI.auth.getCurrentUser();
+      if (!user) {
+        showToast('Please log in to write a review.');
+        return;
+      }
+      
+      const token = localStorage.getItem('hustl_token');
+      if (!token) {
+        showToast('Please log in to write a review.');
+        return;
+      }
+      
+      const modal = document.createElement('div');
+      modal.id = 'reviewModal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.75);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 1rem;
+        overflow-y: auto;
+      `;
+      
+      const modalContent = document.createElement('div');
+      modalContent.style.cssText = `
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 100%;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        position: relative;
+      `;
+      
+      modalContent.innerHTML = `
+        <button id="closeReviewModal" style="position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; border-radius: 50%; border: none; background: #f3f4f6; color: var(--text-main); font-size: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">×</button>
+        
+        <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin: 0 0 1rem 0;">⭐ Write a Review</h2>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;">Share your experience with this ${revieweeType}.</p>
+        
+        <div style="margin-bottom: 1.5rem;">
+          <label style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">Rating</label>
+          <div id="starRating" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+            ${[1, 2, 3, 4, 5].map(i => `
+              <button class="starBtn" data-rating="${i}" style="font-size: 2rem; background: none; border: none; cursor: pointer; color: #d1d5db; transition: color 0.2s; padding: 0;">⭐</button>
+            `).join('')}
+          </div>
+          <div id="ratingText" style="font-size: 0.85rem; color: var(--text-muted); min-height: 1.2rem;"></div>
+        </div>
+        
+        <div style="margin-bottom: 1.5rem;">
+          <label style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">Review (minimum 10 characters)</label>
+          <textarea id="reviewTextInput" rows="4" placeholder="Write your review here..." style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; font-family: inherit; resize: vertical;" maxlength="1000"></textarea>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; text-align: right;"><span id="reviewCharCount">0</span>/1000 characters</div>
+        </div>
+        
+        <button id="submitReviewBtn" style="width: 100%; padding: 0.875rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Submit Review</button>
+      `;
+      
+      modal.appendChild(modalContent);
+      document.body.appendChild(modal);
+      document.body.style.overflow = 'hidden';
+      
+      let selectedRating = 0;
+      
+      // Star rating buttons
+      modal.querySelectorAll('.starBtn').forEach((btn, index) => {
+        btn.addEventListener('click', () => {
+          selectedRating = index + 1;
+          modal.querySelectorAll('.starBtn').forEach((b, i) => {
+            if (i < selectedRating) {
+              b.style.color = '#fbbf24';
+            } else {
+              b.style.color = '#d1d5db';
+            }
+          });
+          
+          const ratingTexts = {
+            1: 'Poor',
+            2: 'Fair',
+            3: 'Good',
+            4: 'Very Good',
+            5: 'Excellent'
+          };
+          document.getElementById('ratingText').textContent = ratingTexts[selectedRating] || '';
+        });
+      });
+      
+      // Character count
+      const textarea = document.getElementById('reviewTextInput');
+      const charCount = document.getElementById('reviewCharCount');
+      textarea.addEventListener('input', () => {
+        charCount.textContent = textarea.value.length;
+      });
+      
+      // Close button
+      modal.querySelector('#closeReviewModal')?.addEventListener('click', () => {
+        document.body.removeChild(modal);
+        document.body.style.overflow = '';
+      });
+      
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          document.body.removeChild(modal);
+          document.body.style.overflow = '';
+        }
+      });
+      
+      // Submit button
+      modal.querySelector('#submitReviewBtn')?.addEventListener('click', async () => {
+        if (selectedRating === 0) {
+          showToast('Please select a rating.');
+          return;
+        }
+        
+        const reviewText = textarea.value.trim();
+        if (reviewText.length < 10) {
+          showToast('Please write at least 10 characters in your review.');
+          return;
+        }
+        
+        const submitBtn = modal.querySelector('#submitReviewBtn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+        
+        try {
+          const response = await fetch(`${API_BASE}/reviews`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              jobId,
+              revieweeId,
+              stars: selectedRating,
+              text: reviewText
+            })
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to submit review');
+          }
+          
+          showToast('✅ Review submitted successfully!');
+          
+          // Close modal
+          document.body.removeChild(modal);
+          document.body.style.overflow = '';
+          
+          // Refresh completed jobs list
+          if (typeof loadCompletedJobs === 'function') {
+            loadCompletedJobs(true);
+          }
+        } catch (error) {
+          console.error('Error submitting review:', error);
+          showToast(error.message || 'Failed to submit review. Please try again.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit Review';
+        }
+      });
+    }
+    
+    // Show review details modal
+    function showReviewDetailsModal(jobId, reviewId, reviewData) {
+      const modal = document.createElement('div');
+      modal.id = 'reviewDetailsModal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.75);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 1rem;
+      `;
+      
+      const modalContent = document.createElement('div');
+      modalContent.style.cssText = `
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 100%;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        position: relative;
+      `;
+      
+      modalContent.innerHTML = `
+        <button id="closeReviewDetailsModal" style="position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; border-radius: 50%; border: none; background: #f3f4f6; color: var(--text-main); font-size: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">×</button>
+        
+        <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin: 0 0 1rem 0;">⭐ Your Review</h2>
+        
+        <div style="padding: 1.5rem; background: #fef3c7; border-radius: 12px; border: 2px solid #fbbf24;">
+          <div style="margin-bottom: 0.75rem;">
+            <div style="font-size: 1.25rem; margin-bottom: 0.5rem;">
+              ${'⭐'.repeat(reviewData?.stars || 0)}${'☆'.repeat(5 - (reviewData?.stars || 0))}
+            </div>
+            <div style="font-size: 0.9rem; color: #78350f; font-weight: 600;">${reviewData?.stars || 0} out of 5 stars</div>
+          </div>
+          ${reviewData?.text ? `
+            <div style="padding: 1rem; background: white; border-radius: 8px; margin-top: 0.75rem;">
+              <div style="font-size: 0.95rem; color: var(--text-main); line-height: 1.6; white-space: pre-wrap;">${reviewData.text}</div>
+            </div>
+          ` : ''}
+          ${reviewData?.createdAt ? `
+            <div style="font-size: 0.75rem; color: #78350f; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #fbbf24;">
+              Reviewed on ${new Date(reviewData.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+            </div>
+          ` : ''}
+        </div>
+      `;
+      
+      modal.appendChild(modalContent);
+      document.body.appendChild(modal);
+      document.body.style.overflow = 'hidden';
+      
+      // Close button
+      modal.querySelector('#closeReviewDetailsModal')?.addEventListener('click', () => {
+        document.body.removeChild(modal);
+        document.body.style.overflow = '';
+      });
+      
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          document.body.removeChild(modal);
+          document.body.style.overflow = '';
+        }
+      });
+    }
+    
     // Expose functions globally
     window.loadCompletedJobs = loadCompletedJobs;
     window.openCompletedJobDetails = openCompletedJobDetails;
+    window.showTipModal = showTipInputModal;
+    window.showTipInputModal = showTipInputModal;
+    window.showReviewInputModal = showReviewInputModal;
+    window.showReviewDetailsModal = showReviewDetailsModal;
     
     // Load Applied Jobs (Hustler only)
     async function loadAppliedJobs() {
