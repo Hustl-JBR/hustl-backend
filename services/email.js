@@ -1012,6 +1012,15 @@ async function sendHustlerCancelledEmail(email, name, jobTitle, hustlerName, job
             <p style="color: #991b1b; margin: 0.5rem 0 0 0;">Hustler: ${hustlerName}</p>
           </div>
           
+          <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
+            <p style="font-size: 1.05rem; color: #1e40af; margin: 0 0 0.5rem 0; font-weight: 600;">
+              💰 Refund Started
+            </p>
+            <p style="color: #1e3a8a; margin: 0; line-height: 1.6;">
+              Your payment has been refunded. The refund may take 5-10 business days to appear in your account, depending on your bank.
+            </p>
+          </div>
+          
           <p style="color: #374151; line-height: 1.6; margin: 1.5rem 0;">
             The job is now open for other applicants. You can review new applications or repost the job.
           </p>

@@ -11975,9 +11975,19 @@ async function renderJobs(reset = false) {
                       });
                       
                       if (response.ok) {
-                        showToast('Price change proposal sent! The hustler must accept it before the price changes.');
+                        showToast('Price change proposal sent! The customer must accept it before the price changes.');
                         document.body.removeChild(adjustModal);
-                        window.openJobDetails(job.id);
+                        // Close job details modal and reopen to refresh
+                        const existingModal = document.getElementById('jobDetailModal');
+                        if (existingModal) {
+                          document.body.removeChild(existingModal);
+                          document.body.style.overflow = '';
+                        }
+                        setTimeout(() => {
+                          if (typeof window.openJobDetails === 'function') {
+                            window.openJobDetails(job.id);
+                          }
+                        }, 100);
                       } else {
                         const error = await response.json();
                         showToast(error.error || 'Failed to propose price change');
