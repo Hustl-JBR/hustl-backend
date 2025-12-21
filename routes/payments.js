@@ -249,8 +249,9 @@ router.get('/job/:jobId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
+    // Return payment if exists, otherwise return null (some completed jobs might not have payment yet)
     if (!job.payment) {
-      return res.status(404).json({ error: 'Payment not found' });
+      return res.json(null);
     }
 
     res.json(job.payment);
@@ -281,8 +282,9 @@ router.get('/jobs/:jobId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
+    // Return payment if exists, otherwise return null (some completed jobs might not have payment yet)
     if (!job.payment) {
-      return res.status(404).json({ error: 'Payment not found' });
+      return res.json(null);
     }
 
     res.json(job.payment);
