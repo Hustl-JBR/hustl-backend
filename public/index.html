@@ -1729,13 +1729,13 @@
       padding: 0.6rem 0.85rem;
       border-radius: 18px;
       max-width: 75%;
-      margin-bottom: 0.5rem;
       word-wrap: break-word;
       line-height: 1.4;
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
       position: relative;
       clear: both;
       display: block;
+      margin-bottom: 0;
     }
 
     .chat-msg.me {
@@ -1756,9 +1756,20 @@
     
     .chat-msg-wrapper {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       margin-bottom: 0.5rem;
       width: 100%;
+      align-items: flex-end;
+      min-height: auto;
+      height: auto;
+    }
+    
+    .chat-msg-wrapper.group-start {
+      margin-top: 0.75rem;
+    }
+    
+    .chat-msg-wrapper.group-continued {
+      margin-top: 0.25rem;
     }
     
     .chat-msg-wrapper.me {
@@ -18806,60 +18817,90 @@ async function renderJobs(reset = false) {
           }
         }
 
-        messages.forEach((m) => {
-          const isMe = m.senderId === user.id;
-          const sender = senderMap.get(m.senderId);
-          
-          // Create wrapper for message bubble and timestamp
-          const wrapper = document.createElement("div");
-          wrapper.className = "chat-msg-wrapper " + (isMe ? "me" : "them");
-          wrapper.style.cssText = "display: flex; align-items: flex-end; gap: 0.5rem; margin-bottom: 0.75rem; " + (isMe ? "flex-direction: row-reverse;" : "flex-direction: row;");
-          wrapper.dataset.messageId = m.id;
-          wrapper.dataset.senderId = m.senderId;
-          
-          // Profile picture (only show for received messages)
-          if (!isMe && sender) {
-            const avatar = document.createElement("div");
-            avatar.style.cssText = "width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; overflow: hidden;";
-            avatar.innerHTML = renderUserAvatar(sender, 32, { showBorder: false });
-            wrapper.appendChild(avatar);
-          } else if (!isMe) {
-            // Placeholder for spacing
-            const spacer = document.createElement("div");
-            spacer.style.cssText = "width: 32px; height: 32px; flex-shrink: 0;";
-            wrapper.appendChild(spacer);
+        // Group consecutive messages from the same sender
+        let lastSenderId = null;
+        let messageGroup = [];
+        const groupedMessages = [];
+        
+        messages.forEach((m, index) => {
+          const isNewGroup = m.senderId !== lastSenderId;
+          if (isNewGroup && messageGroup.length > 0) {
+            groupedMessages.push(messageGroup);
+            messageGroup = [];
           }
-          
-          // Message content container
-          const contentContainer = document.createElement("div");
-          contentContainer.style.cssText = "display: flex; flex-direction: column; gap: 0.25rem; max-width: 75%;";
-          
-          // Create message bubble
-          const bubble = document.createElement("div");
-          bubble.className = "chat-msg " + (isMe ? "me" : "them");
-          bubble.style.cssText = isMe 
-            ? "background: var(--primary); color: white; padding: 0.625rem 0.875rem; border-radius: 18px; word-wrap: break-word; font-size: 0.95rem; line-height: 1.4;"
-            : "background: #e5e7eb; color: var(--text-main); padding: 0.625rem 0.875rem; border-radius: 18px; word-wrap: break-word; font-size: 0.95rem; line-height: 1.4;";
-          bubble.textContent = m.body;
-          contentContainer.appendChild(bubble);
-          
-          // Create timestamp
-          const timestamp = document.createElement("div");
-          timestamp.className = "chat-msg-timestamp";
-          timestamp.style.cssText = "font-size: 0.7rem; color: var(--text-muted); padding: 0 0.5rem; " + (isMe ? "text-align: right;" : "text-align: left;");
-          timestamp.textContent = timeAgo(m.createdAt);
-          contentContainer.appendChild(timestamp);
-          
-          wrapper.appendChild(contentContainer);
-          
-          // Spacer for sent messages (to align right)
-          if (isMe) {
-            const spacer = document.createElement("div");
-            spacer.style.cssText = "width: 32px; height: 32px; flex-shrink: 0;";
-            wrapper.appendChild(spacer);
-          }
-          
-          convMessages.appendChild(wrapper);
+          messageGroup.push({ ...m, index });
+          lastSenderId = m.senderId;
+        });
+        if (messageGroup.length > 0) {
+          groupedMessages.push(messageGroup);
+        }
+        
+        // Render grouped messages
+        groupedMessages.forEach((group, groupIndex) => {
+          group.forEach((m, messageIndexInGroup) => {
+            const isMe = m.senderId === user.id;
+            const sender = senderMap.get(m.senderId);
+            const isLastInGroup = messageIndexInGroup === group.length - 1;
+            const isFirstInGroup = messageIndexInGroup === 0;
+            
+            // Create wrapper for message bubble
+            const wrapper = document.createElement("div");
+            wrapper.className = "chat-msg-wrapper " + (isMe ? "me" : "them") + (isFirstInGroup ? " group-start" : " group-continued");
+            wrapper.style.cssText = "display: flex; align-items: flex-end; gap: 0.5rem; margin-bottom: 0; " + (isMe ? "flex-direction: row-reverse; justify-content: flex-end;" : "flex-direction: row; justify-content: flex-start;");
+            wrapper.dataset.messageId = m.id;
+            wrapper.dataset.senderId = m.senderId;
+            
+            // Profile picture (only show on last message in group, and only for received messages)
+            if (!isMe && isLastInGroup && sender) {
+              const avatar = document.createElement("div");
+              avatar.style.cssText = "width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; overflow: hidden;";
+              avatar.innerHTML = renderUserAvatar(sender, 32, { showBorder: false });
+              wrapper.appendChild(avatar);
+            } else if (!isMe && !isLastInGroup) {
+              // Placeholder for spacing when message is not last in group
+              const spacer = document.createElement("div");
+              spacer.style.cssText = "width: 32px; height: 32px; flex-shrink: 0;";
+              wrapper.appendChild(spacer);
+            } else if (!isMe && isLastInGroup && !sender) {
+              // Placeholder if sender info not available
+              const spacer = document.createElement("div");
+              spacer.style.cssText = "width: 32px; height: 32px; flex-shrink: 0;";
+              wrapper.appendChild(spacer);
+            }
+            
+            // Message content container
+            const contentContainer = document.createElement("div");
+            contentContainer.style.cssText = "display: flex; flex-direction: column; gap: 0.25rem; max-width: 75%; min-width: 0;";
+            
+            // Create message bubble
+            const bubble = document.createElement("div");
+            bubble.className = "chat-msg " + (isMe ? "me" : "them");
+            bubble.style.cssText = isMe 
+              ? "background: var(--primary); color: white; padding: 0.625rem 0.875rem; border-radius: 18px; word-wrap: break-word; font-size: 0.95rem; line-height: 1.4; margin-bottom: 0;"
+              : "background: #e5e7eb; color: var(--text-main); padding: 0.625rem 0.875rem; border-radius: 18px; word-wrap: break-word; font-size: 0.95rem; line-height: 1.4; margin-bottom: 0;";
+            bubble.textContent = m.body;
+            contentContainer.appendChild(bubble);
+            
+            // Create timestamp (only show on last message in group)
+            if (isLastInGroup) {
+              const timestamp = document.createElement("div");
+              timestamp.className = "chat-msg-timestamp";
+              timestamp.style.cssText = "font-size: 0.7rem; color: var(--text-muted); padding: 0 0.5rem; margin-top: 0.2rem; " + (isMe ? "text-align: right;" : "text-align: left;");
+              timestamp.textContent = timeAgo(m.createdAt);
+              contentContainer.appendChild(timestamp);
+            }
+            
+            wrapper.appendChild(contentContainer);
+            
+            // Spacer for sent messages (to align right)
+            if (isMe) {
+              const spacer = document.createElement("div");
+              spacer.style.cssText = "width: 32px; height: 32px; flex-shrink: 0;";
+              wrapper.appendChild(spacer);
+            }
+            
+            convMessages.appendChild(wrapper);
+          });
         });
         
         // Set lastMessageId for lightweight refresh
