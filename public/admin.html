@@ -779,6 +779,51 @@
       }
     }
     
+    // Load Tips
+    async function loadTips() {
+      try {
+        const content = document.getElementById('tipsContent');
+        content.innerHTML = '<div class="loading">Loading tips...</div>';
+        
+        const data = await apiRequest('/admin/tips?page=1&limit=50');
+        
+        if (!data.tips || data.tips.length === 0) {
+          content.innerHTML = '<div class="empty">No tips found</div>';
+          return;
+        }
+        
+        content.innerHTML = `
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Job</th>
+                <th>From (Customer)</th>
+                <th>To (Hustler)</th>
+                <th>Tip Amount</th>
+                <th>Job Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.tips.map(tip => `
+                <tr>
+                  <td>${tip.created_at ? new Date(tip.created_at).toLocaleDateString() : 'N/A'}</td>
+                  <td>${tip.job?.title || 'N/A'}</td>
+                  <td>${tip.customer?.name || 'N/A'}<br><small style="color: #6b7280;">${tip.customer?.email || ''}</small></td>
+                  <td>${tip.hustler?.name || 'N/A'}<br><small style="color: #6b7280;">${tip.hustler?.email || ''}</small></td>
+                  <td><strong style="color: #10b981;">$${Number(tip.tip || 0).toFixed(2)}</strong></td>
+                  <td>$${Number(tip.amount || 0).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      } catch (error) {
+        document.getElementById('tipsContent').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+        showError(error.message);
+      }
+    }
+    
     // Refund Modal
     function openRefundModal(paymentId, amount) {
       document.getElementById('refundPaymentId').value = paymentId;
