@@ -147,6 +147,7 @@ router.get('/me', authenticate, async (req, res) => {
             select: {
               amount: true,
               feeHustler: true,
+              tip: true,
               status: true
             }
           }
@@ -155,22 +156,26 @@ router.get('/me', authenticate, async (req, res) => {
       
       console.log('[GET /users/me] Found completed jobs:', completedJobs.length);
       
-      // Calculate total earned from payments
+      // Calculate total earned from payments (including tips)
       completedJobs.forEach(job => {
+        let hustlerEarned = 0;
+        const tipAmount = Number(job.payment?.tip || 0);
+        
         if (job.payment && job.payment.status === 'CAPTURED') {
           const paymentAmount = Number(job.payment.amount) || 0;
           const platformFee = Number(job.payment.feeHustler) || (paymentAmount * 0.12); // 12% platform fee
-          const hustlerEarned = paymentAmount - platformFee;
-          totalEarned += hustlerEarned;
+          hustlerEarned = paymentAmount - platformFee;
         } else if (job.payment) {
           // If payment exists but not captured, still calculate based on job amount
           const jobAmount = job.payType === 'flat' 
             ? Number(job.amount || 0)
             : (Number(job.hourlyRate || 0) * Number(job.estHours || 0));
           const platformFee = jobAmount * 0.12;
-          const hustlerEarned = jobAmount - platformFee;
-          totalEarned += hustlerEarned;
+          hustlerEarned = jobAmount - platformFee;
         }
+        
+        // Add tip (100% goes to hustler, no platform fee on tips)
+        totalEarned += hustlerEarned + tipAmount;
       });
       
       console.log('[GET /users/me] Total earned calculated:', totalEarned);

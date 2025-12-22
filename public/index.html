@@ -29031,7 +29031,7 @@ meta.textContent =
             <label style="display: block; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">
               Your Review (optional but recommended)
             </label>
-            <textarea id="reviewText" placeholder="Share your experience... (minimum 10 characters)" style="
+            <textarea id="reviewText" placeholder="Share your experience..." style="
               width: 100%;
               min-height: 120px;
               padding: 0.75rem;
@@ -29041,7 +29041,10 @@ meta.textContent =
               font-size: 0.95rem;
               resize: vertical;
             "></textarea>
-            <div id="charCount" style="text-align: right; font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">0 / 1000</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.25rem;">
+              <div style="font-size: 0.85rem; color: var(--text-muted);">Minimum 10 characters required</div>
+              <div id="charCount" style="font-size: 0.85rem; color: var(--text-muted);">0 / 1000</div>
+            </div>
           </div>
           
           <div style="display: flex; gap: 0.75rem;">
