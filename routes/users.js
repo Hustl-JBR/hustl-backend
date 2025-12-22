@@ -100,7 +100,7 @@ router.get('/me', authenticate, async (req, res) => {
     }
     
     // Calculate completed jobs count (only jobs where user was the hustler)
-    // Count jobs that are completed - be more flexible with conditions
+    // Count jobs that are completed - must have completion code verified
     const completedJobsCount = await prisma.job.count({
       where: {
         AND: [
@@ -108,17 +108,18 @@ router.get('/me', authenticate, async (req, res) => {
             hustlerId: req.user.id  // Only count jobs where user was the hustler
           },
           {
+            completionCodeVerified: true  // Must have completion code verified
+          },
+          {
             OR: [
               { 
                 status: 'PAID'
               },
               { 
-                status: 'COMPLETED_BY_HUSTLER',
-                completionCodeVerified: true
+                status: 'COMPLETED_BY_HUSTLER'
               },
               {
-                status: 'AWAITING_CUSTOMER_CONFIRM',
-                completionCodeVerified: true
+                status: 'AWAITING_CUSTOMER_CONFIRM'
               }
             ]
           }
@@ -132,18 +133,22 @@ router.get('/me', authenticate, async (req, res) => {
     let totalEarned = 0;
     try {
       // First, get all completed jobs where user is hustler
+      // Must have completion code verified to count as completed
       const completedJobs = await prisma.job.findMany({
         where: {
-          hustlerId: req.user.id,
-          OR: [
-            { status: 'PAID' },
-            { 
-              status: 'COMPLETED_BY_HUSTLER',
-              completionCodeVerified: true
+          AND: [
+            {
+              hustlerId: req.user.id
             },
             {
-              status: 'AWAITING_CUSTOMER_CONFIRM',
-              completionCodeVerified: true
+              completionCodeVerified: true  // Must have completion code verified
+            },
+            {
+              OR: [
+                { status: 'PAID' },
+                { status: 'COMPLETED_BY_HUSTLER' },
+                { status: 'AWAITING_CUSTOMER_CONFIRM' }
+              ]
             }
           ]
         },
@@ -153,6 +158,7 @@ router.get('/me', authenticate, async (req, res) => {
           hourlyRate: true,
           estHours: true,
           payType: true,
+          requirements: true, // Include requirements to access actualHours for hourly jobs
           payment: {
             select: {
               amount: true,
@@ -181,7 +187,16 @@ router.get('/me', authenticate, async (req, res) => {
           jobAmount = Number(job.amount || 0);
         } else {
           // Hourly job - use actual hours worked if available, otherwise estimated
-          const actualHours = job.requirements?.actualHours || job.estHours || 0;
+          // Parse requirements if it's a string (JSON)
+          let requirements = job.requirements;
+          if (typeof requirements === 'string') {
+            try {
+              requirements = JSON.parse(requirements);
+            } catch (e) {
+              requirements = {};
+            }
+          }
+          const actualHours = requirements?.actualHours || job.estHours || 0;
           jobAmount = Number(job.hourlyRate || 0) * Number(actualHours);
         }
         
