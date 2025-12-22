@@ -1638,7 +1638,7 @@ async function sendPaymentInEscrowEmail(email, name, jobTitle, jobId, amount) {
   }
 }
 
-async function sendPaymentReleasedEmail(email, name, jobTitle, jobId, payment, receiptUrl, hustlerName) {
+async function sendPaymentReleasedEmail(email, name, jobTitle, jobId, payment, receiptUrl, hustlerName, actualHours = null, originalAuthorized = null) {
   if (!isEmailConfigured()) return;
   try {
     console.log('[Email] Sending payment released email to:', email);
@@ -1646,6 +1646,8 @@ async function sendPaymentReleasedEmail(email, name, jobTitle, jobId, payment, r
     const tipAmount = Number(payment.tip || 0);
     const serviceFee = Number(payment.feeCustomer || 0);
     const total = Number(payment.total || 0);
+    const isHourly = actualHours !== null && actualHours > 0;
+    const refundAmount = isHourly && originalAuthorized ? (originalAuthorized - jobAmount) : 0;
     
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -1668,13 +1670,34 @@ async function sendPaymentReleasedEmail(email, name, jobTitle, jobId, payment, r
               Great news! <strong>${hustlerName}</strong> has completed your job <strong>"${jobTitle}"</strong> and the payment has been released from escrow to the hustler.
             </p>
             
+            ${isHourly ? `
+            <div style="background: #eff6ff; border-radius: 8px; padding: 1rem; margin: 1.5rem 0; border-left: 4px solid #2563eb;">
+              <p style="color: #1e40af; margin: 0; font-size: 0.95rem; line-height: 1.6;">
+                <strong>⏱️ Hourly Job:</strong><br>
+                The hustler worked <strong>${actualHours.toFixed(2)} hours</strong>. You were only charged for the actual time worked, and the unused portion has been automatically refunded to your payment method.
+              </p>
+            </div>
+            ` : ''}
+            
             <div style="background: white; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; border: 1px solid #e2e8f0;">
               <div style="font-weight: 700; font-size: 1.1rem; color: #1e293b; margin-bottom: 1rem; text-align: center;">Payment Summary</div>
               <table style="width: 100%; border-collapse: collapse;">
+                ${isHourly && originalAuthorized ? `
                 <tr style="border-bottom: 1px solid #e2e8f0;">
-                  <td style="padding: 0.75rem 0; color: #64748b;">Job Amount:</td>
+                  <td style="padding: 0.75rem 0; color: #64748b;">Originally Authorized:</td>
+                  <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: #64748b;">$${originalAuthorized.toFixed(2)}</td>
+                </tr>
+                ` : ''}
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 0.75rem 0; color: #64748b;">Job Amount Charged:</td>
                   <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: #1e293b;">$${jobAmount.toFixed(2)}</td>
                 </tr>
+                ${isHourly && refundAmount > 0 ? `
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 0.75rem 0; color: #64748b;">💚 Refund (Unused Time):</td>
+                  <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: #10b981;">-$${refundAmount.toFixed(2)}</td>
+                </tr>
+                ` : ''}
                 ${tipAmount > 0 ? `
                 <tr style="border-bottom: 1px solid #e2e8f0;">
                   <td style="padding: 0.75rem 0; color: #64748b;">💝 Tip:</td>
@@ -1691,6 +1714,15 @@ async function sendPaymentReleasedEmail(email, name, jobTitle, jobId, payment, r
                 </tr>
               </table>
             </div>
+            
+            ${isHourly && refundAmount > 0 ? `
+            <div style="background: #dcfce7; border-radius: 8px; padding: 1rem; margin: 1.5rem 0; border-left: 4px solid #10b981;">
+              <p style="color: #166534; margin: 0; font-size: 0.95rem; line-height: 1.6;">
+                <strong>💚 Automatic Refund:</strong><br>
+                You were authorized for more time than was used. The unused amount of <strong>$${refundAmount.toFixed(2)}</strong> has been automatically released back to your payment method. This typically appears in your account within 5-10 business days.
+              </p>
+            </div>
+            ` : ''}
             
             <div style="background: #dcfce7; border-radius: 8px; padding: 1rem; margin: 1.5rem 0; border-left: 4px solid #10b981;">
               <p style="color: #166534; margin: 0; font-size: 0.95rem; line-height: 1.6;">

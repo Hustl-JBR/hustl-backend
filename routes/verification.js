@@ -488,6 +488,25 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         throw new Error('Hustler has not connected a Stripe account');
       }
 
+      // Calculate customer charges and refunds BEFORE updating payment record
+      const originalAuthorizedAmount = Number(job.payment.amount);
+      const customerChargedAmount = actualJobAmount; // What customer is actually charged
+      const customerRefundAmount = job.payType === 'hourly' ? (originalAuthorizedAmount - actualJobAmount) : 0; // What customer gets back (only for hourly)
+      const customerServiceFee = customerChargedAmount * 0.065; // 6.5% service fee on actual amount
+      const customerTotalCharged = customerChargedAmount + customerServiceFee;
+      
+      // For hourly jobs: log the breakdown
+      if (job.payType === 'hourly') {
+        console.log(`[HOURLY JOB] Payment Breakdown:`);
+        console.log(`  Original Authorized: $${originalAuthorizedAmount.toFixed(2)}`);
+        console.log(`  Actual Hours Worked: ${actualHours.toFixed(2)} hrs`);
+        console.log(`  Actual Amount Charged: $${customerChargedAmount.toFixed(2)}`);
+        console.log(`  Customer Service Fee (6.5%): $${customerServiceFee.toFixed(2)}`);
+        console.log(`  Customer Total Charged: $${customerTotalCharged.toFixed(2)}`);
+        console.log(`  Customer Refund (unused): $${customerRefundAmount.toFixed(2)}`);
+        console.log(`  Hustler Payout: $${hustlerPayout.toFixed(2)} (${actualJobAmount.toFixed(2)} - ${platformFee.toFixed(2)} platform fee)`);
+      }
+
       // Update payment record with actual amount (for hourly jobs)
       await prisma.payment.update({
         where: { id: job.payment.id },
@@ -495,6 +514,8 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
           status: 'CAPTURED',
           amount: actualJobAmount, // Update to actual amount charged
           feeHustler: platformFee,
+          feeCustomer: customerServiceFee, // Update service fee to match actual amount
+          total: customerTotalCharged, // Update total to match actual charge + service fee
         }
       });
       
@@ -526,6 +547,8 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       // Email to customer: Payment released from escrow
       if (jobWithUsers?.payment && jobWithUsers?.customer?.email) {
         const receiptUrl = `${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || 'https://hustljobs.com'}/payments/receipts/${jobWithUsers.payment.id}`;
+        // Get original authorized amount for hourly jobs
+        const originalAuthorized = job.payType === 'hourly' ? Number(job.payment.amount) : null;
         sendPaymentReleasedEmail(
           jobWithUsers.customer.email,
           jobWithUsers.customer.name,
@@ -533,7 +556,9 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
           jobId,
           jobWithUsers.payment,
           receiptUrl,
-          jobWithUsers.hustler?.name || 'Hustler'
+          jobWithUsers.hustler?.name || 'Hustler',
+          job.payType === 'hourly' ? actualHours : null,
+          originalAuthorized
         ).catch(emailError => {
           console.error('[JOB COMPLETION] Error sending payment released email:', emailError);
         });

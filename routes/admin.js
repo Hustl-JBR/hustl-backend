@@ -512,7 +512,9 @@ router.post('/refunds/:paymentId', [
         payment.customer.email,
         payment.customer.name,
         payment.job.title,
-        refundAmount
+        refundAmount,
+        reason || 'Refund processed by admin',
+        payment
       );
     } catch (emailError) {
       console.error('Error sending refund email:', emailError);

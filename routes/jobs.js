@@ -1103,7 +1103,9 @@ router.post('/:id/cancel', authenticate, requireRole('CUSTOMER'), async (req, re
           req.user.email,
           req.user.name,
           job.title,
-          Number(job.payment.total)
+          Number(job.payment.total),
+          'Job cancelled by customer',
+          job.payment
         );
 
         // Send admin notification
