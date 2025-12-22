@@ -24176,14 +24176,17 @@ meta.textContent =
           if (completedJobsLoaded.includes(job.id)) continue;
           completedJobsLoaded.push(job.id);
           
+          // Determine role for THIS SPECIFIC JOB (not just user's general roles)
+          const isCustomerForThisJob = job.customerId === user.id;
+          const isHustlerForThisJob = job.hustlerId === user.id;
+          
           // Payment is already included in job from /jobs/completed endpoint
           // Use it directly - it may be null for some completed jobs
           let payment = job.payment || null;
           
-          // If payment exists but tip might not be loaded, try to fetch fresh payment data
-          // This helps when webhook just processed the tip
-          if (payment && payment.id && isCustomerForThisJob) {
-            // Check if tip field exists and is valid
+          // If we're the customer and tip is 0, try fetching fresh payment data
+          // This helps when webhook just processed the tip but job data hasn't refreshed
+          if (isCustomerForThisJob && payment && payment.id) {
             const currentTip = Number(payment.tip || 0);
             if (currentTip === 0) {
               // Tip might not be updated yet - try fetching fresh payment data
@@ -24199,15 +24202,10 @@ meta.textContent =
                   }
                 }
               } catch (e) {
-                console.log('[TIP CHECK] Could not fetch fresh payment data:', e);
-                // Continue with existing payment data
+                // Silently fail - use existing payment data
               }
             }
           }
-          
-          // Determine role for THIS SPECIFIC JOB (not just user's general roles)
-          const isCustomerForThisJob = job.customerId === user.id;
-          const isHustlerForThisJob = job.hustlerId === user.id;
           
           // Get other user info based on role in this job
           const otherUser = isCustomerForThisJob ? (job.hustler || {}) : (job.customer || {});
@@ -24217,9 +24215,9 @@ meta.textContent =
           const tipAmount = payment ? Number(payment.tip || 0) : 0;
           const hasTipped = isCustomerForThisJob && tipAmount > 0;
           
-          // Debug logging
+          // Debug logging for tip detection
           if (isCustomerForThisJob) {
-            console.log(`[TIP CHECK] Job ${job.id}: payment=${!!payment}, tipAmount=${tipAmount}, hasTipped=${hasTipped}`);
+            console.log(`[TIP CHECK] Job ${job.id}: payment=${!!payment}, tipAmount=${tipAmount.toFixed(2)}, hasTipped=${hasTipped}`);
           }
           
           // Check if user has already reviewed (reviews have reviewerId field)
