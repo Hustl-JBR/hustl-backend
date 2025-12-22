@@ -149,7 +149,53 @@ router.get('/', async (req, res) => {
       });
     }
     
-    // 4. Get payment updates
+    // 4. Get tip notifications (for hustlers who received tips)
+    const tipsReceived = await prisma.payment.findMany({
+      where: {
+        hustlerId: req.user.id,
+        tip: {
+          gt: 0
+        },
+        updatedAt: {
+          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
+        },
+      },
+      include: {
+        job: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+        customer: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 10,
+    });
+    
+    for (const payment of tipsReceived) {
+      // Only show if tip was added recently (check if tip was added in last update)
+      const tipAmount = Number(payment.tip || 0);
+      if (tipAmount > 0) {
+        notifications.push({
+          id: `tip_${payment.id}_${payment.updatedAt}`,
+          type: 'TIP_RECEIVED',
+          title: '💝 Tip Received!',
+          message: `${payment.customer?.name || 'Customer'} tipped you $${tipAmount.toFixed(2)} for "${payment.job?.title || 'a job'}"`,
+          icon: '💝',
+          link: `/jobs/${payment.jobId}`,
+          createdAt: payment.updatedAt,
+          read: false,
+        });
+      }
+    }
+    
+    // 5. Get payment updates
     const paymentUpdates = await prisma.payment.findMany({
       where: {
         OR: [
@@ -174,7 +220,8 @@ router.get('/', async (req, res) => {
     });
     
     for (const payment of paymentUpdates) {
-      if (payment.hustlerId === req.user.id) {
+      if (payment.hustlerId === req.user.id && (!payment.tip || Number(payment.tip) === 0)) {
+        // Only show payout notification if there's no tip (tips have their own notification above)
         notifications.push({
           id: `payout_${payment.id}`,
           type: 'PAYOUT',

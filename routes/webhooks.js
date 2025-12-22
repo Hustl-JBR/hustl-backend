@@ -193,29 +193,64 @@ async function handleTipCheckoutCompleted(session) {
 
     const tipAmount = Number(session.metadata?.tipAmount || session.amount_total / 100 || 0);
 
+    // Get job with customer and hustler info for notification
+    const jobWithUsers = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: {
+        customer: {
+          select: { id: true, name: true, email: true }
+        },
+        hustler: {
+          select: { id: true, name: true, email: true }
+        },
+        payment: true
+      }
+    });
+
     // Update payment record with tip (or create if doesn't exist)
+    let updatedPayment;
     if (job.payment) {
-      await prisma.payment.update({
+      updatedPayment = await prisma.payment.update({
         where: { id: job.payment.id },
         data: {
           tip: tipAmount,
+          total: {
+            increment: tipAmount // Add tip to total
+          },
           // Payment intent from checkout session
           providerId: session.payment_intent || job.payment.providerId,
         },
       });
     } else {
       // Create payment record if it doesn't exist
-      await prisma.payment.create({
+      updatedPayment = await prisma.payment.create({
         data: {
           jobId: job.id,
           customerId: job.customerId,
           hustlerId: job.hustlerId,
           amount: Number(job.amount || 0),
           tip: tipAmount,
+          total: Number(job.amount || 0) + tipAmount,
           status: 'CAPTURED',
           providerId: session.payment_intent,
         },
       });
+    }
+
+    // Send email notification to hustler
+    if (jobWithUsers?.hustler) {
+      try {
+        const { sendTipReceivedEmail } = require('../services/email');
+        await sendTipReceivedEmail(
+          jobWithUsers.hustler.email,
+          jobWithUsers.hustler.name,
+          jobWithUsers.title,
+          tipAmount,
+          jobWithUsers.customer?.name || 'Customer'
+        );
+      } catch (emailError) {
+        console.error('[TIP CHECKOUT] Error sending tip notification email:', emailError);
+      }
     }
 
     console.log(`[TIP CHECKOUT] Tip of $${tipAmount.toFixed(2)} added to job ${jobId} via checkout session ${session.id}`);

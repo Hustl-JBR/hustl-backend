@@ -1382,6 +1382,63 @@ async function sendHoursExtendedEmail(email, name, jobTitle, jobId, hoursAdded, 
   }
 }
 
+async function sendTipReceivedEmail(email, name, jobTitle, tipAmount, customerName) {
+  if (!isEmailConfigured()) return;
+  try {
+    console.log('[Email] Sending tip received email to:', email);
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `💝 You received a $${tipAmount.toFixed(2)} tip!`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #ffffff; padding: 0;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">💝 You Got a Tip!</h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hey <strong>${name}</strong>! 👋
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              Great news! <strong>${customerName}</strong> just tipped you <strong style="color: #10b981; font-size: 1.2rem;">$${tipAmount.toFixed(2)}</strong> for your work on "${jobTitle}".
+            </p>
+            
+            <div style="background: white; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; border: 2px solid #10b981;">
+              <div style="text-align: center; margin-bottom: 1rem;">
+                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">💝</div>
+                <div style="font-size: 2rem; font-weight: 700; color: #10b981; margin-bottom: 0.5rem;">$${tipAmount.toFixed(2)}</div>
+                <div style="color: #64748b; font-size: 0.9rem;">Tip from ${customerName}</div>
+              </div>
+            </div>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              Your tip has been sent directly to your Stripe account. Keep up the excellent work! 🎉
+            </p>
+            
+            <div style="text-align: center; margin: 2rem 0;">
+              <a href="${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || 'https://hustljobs.com'}/?view=manage-jobs" style="display: inline-block; padding: 1rem 2rem; background: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+                View Job Details →
+              </a>
+            </div>
+            
+            <p style="color: #64748b; font-size: 0.9rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+              Thank you for being part of the Hustl community!
+            </p>
+          </div>
+        </div>
+      `,
+    });
+    console.log('[Email] Tip received email sent successfully');
+  } catch (error) {
+    console.error('[Email] Error sending tip received email:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   sendSignupEmail,
   sendEmailVerificationEmail,
@@ -1403,6 +1460,7 @@ module.exports = {
   sendStripeRequiredEmail,
   sendStripeConnectedEmail,
   sendFeedbackEmail,
+  sendTipReceivedEmail,
   sendNewMessageEmail,
   sendJobExpiringEmail,
   sendJobUnacceptedEmail,

@@ -33430,23 +33430,25 @@ try {
       window.history.replaceState({}, document.title, cleanUrl);
       
       // Refresh completed jobs if on manage-jobs view
-      setTimeout(() => {
+      // Wait a bit for webhook to process, then refresh multiple times to ensure tip shows
+      const refreshCompletedJobs = () => {
         const currentView = window.activeView || activeView;
         if (currentView === 'manage-jobs' || window.location.hash === '#manage-jobs') {
           // Switch to completed tab and refresh
           const completedTab = document.querySelector('[data-manage-tab="completed"]');
-          if (completedTab) {
+          if (completedTab && !completedTab.classList.contains('active')) {
             completedTab.click(); // Switch to completed tab
-            setTimeout(() => {
-              if (typeof loadCompletedJobs === 'function') {
-                loadCompletedJobs(true); // Reload with reset
-              }
-            }, 300);
-          } else if (typeof loadCompletedJobs === 'function') {
-            loadCompletedJobs(true);
+          }
+          if (typeof loadCompletedJobs === 'function') {
+            loadCompletedJobs(true); // Reload with reset
           }
         }
-      }, 500);
+      };
+      
+      // Refresh immediately, then again after delays (webhook might take a moment)
+      setTimeout(refreshCompletedJobs, 500);
+      setTimeout(refreshCompletedJobs, 2000);
+      setTimeout(refreshCompletedJobs, 5000);
     } else if (tipCancelled) {
       // Tip payment cancelled
       if (typeof showToast === 'function') {
