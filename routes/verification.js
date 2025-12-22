@@ -414,12 +414,23 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       });
 
       if (jobWithHustler.hustler.stripeAccountId) {
-        await transferToHustler(
-          jobWithHustler.hustler.stripeAccountId,
-          hustlerPayout,
-          job.id,
-          `Payment for job: ${job.title}`
-        );
+        try {
+          const transferResult = await transferToHustler(
+            jobWithHustler.hustler.stripeAccountId,
+            hustlerPayout,
+            job.id,
+            `Payment for job: ${job.title}`
+          );
+          console.log(`[JOB COMPLETION] Transfer successful: ${transferResult.id} for $${hustlerPayout.toFixed(2)}`);
+        } catch (transferError) {
+          console.error(`[JOB COMPLETION] Transfer failed for job ${job.id}:`, transferError);
+          // Don't fail the entire job completion if transfer fails - we can retry later
+          // But log it so we know there's an issue
+          throw new Error(`Failed to transfer payment to hustler: ${transferError.message}`);
+        }
+      } else {
+        console.warn(`[JOB COMPLETION] Hustler ${jobWithHustler.hustler.id} has no Stripe account ID - cannot transfer payment`);
+        throw new Error('Hustler has not connected a Stripe account');
       }
 
       // Update payment record with actual amount (for hourly jobs)

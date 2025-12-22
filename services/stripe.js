@@ -107,16 +107,37 @@ async function createAccountLink(accountId, returnUrl, refreshUrl) {
 
 // Stripe Connect: Transfer funds to hustler's connected account
 async function transferToHustler(connectedAccountId, amount, jobId, description) {
-  const transfer = await stripe.transfers.create({
-    amount: Math.round(amount * 100), // Convert to cents
-    currency: 'usd',
-    destination: connectedAccountId,
-    metadata: {
-      jobId: jobId,
-      description: description,
-    },
-  });
-  return transfer;
+  try {
+    console.log(`[TRANSFER] Creating transfer: $${amount.toFixed(2)} to account ${connectedAccountId} for job ${jobId}`);
+    
+    const transfer = await stripe.transfers.create({
+      amount: Math.round(amount * 100), // Convert to cents
+      currency: 'usd',
+      destination: connectedAccountId,
+      metadata: {
+        jobId: jobId,
+        description: description,
+      },
+    });
+    
+    console.log(`[TRANSFER] Transfer created successfully: ${transfer.id}, status: ${transfer.status}, amount: $${(transfer.amount / 100).toFixed(2)}`);
+    console.log(`[TRANSFER] Transfer details:`, {
+      id: transfer.id,
+      amount: transfer.amount,
+      destination: transfer.destination,
+      status: transfer.status,
+      created: transfer.created,
+      reversable: transfer.reversable
+    });
+    
+    return transfer;
+  } catch (error) {
+    console.error(`[TRANSFER] ERROR transferring $${amount.toFixed(2)} to ${connectedAccountId}:`, error);
+    console.error(`[TRANSFER] Error type:`, error.type);
+    console.error(`[TRANSFER] Error code:`, error.code);
+    console.error(`[TRANSFER] Error message:`, error.message);
+    throw error;
+  }
 }
 
 module.exports = {

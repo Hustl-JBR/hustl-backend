@@ -445,5 +445,54 @@ router.post('/refunds/:paymentId', [
   }
 });
 
+// GET /admin/transfers - List all Stripe transfers (for debugging)
+router.get('/transfers', async (req, res) => {
+  try {
+    const Stripe = require('stripe');
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    
+    const limit = parseInt(req.query.limit || '50', 10);
+    
+    // List transfers from Stripe
+    const transfers = await stripe.transfers.list({
+      limit: limit,
+    });
+    
+    // Also get balance to see what's in the platform account
+    const balance = await stripe.balance.retrieve();
+    
+    res.json({
+      transfers: transfers.data.map(t => ({
+        id: t.id,
+        amount: t.amount / 100,
+        currency: t.currency,
+        destination: t.destination,
+        status: t.status,
+        created: new Date(t.created * 1000).toISOString(),
+        metadata: t.metadata,
+        reversable: t.reversable,
+        reversed: t.reversed,
+      })),
+      balance: {
+        available: balance.available.map(b => ({
+          amount: b.amount / 100,
+          currency: b.currency,
+        })),
+        pending: balance.pending.map(b => ({
+          amount: b.amount / 100,
+          currency: b.currency,
+        })),
+      },
+      hasMore: transfers.has_more,
+    });
+  } catch (error) {
+    console.error('List transfers error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message 
+    });
+  }
+});
+
 module.exports = router;
 
