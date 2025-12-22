@@ -100,7 +100,7 @@ router.get('/me', authenticate, async (req, res) => {
     }
     
     // Calculate completed jobs count (only jobs where user was the hustler)
-    // Count jobs that are completed - must have completion code verified
+    // Count jobs that are completed - PAID status means completed, others need completionCodeVerified
     const completedJobsCount = await prisma.job.count({
       where: {
         AND: [
@@ -108,18 +108,17 @@ router.get('/me', authenticate, async (req, res) => {
             hustlerId: req.user.id  // Only count jobs where user was the hustler
           },
           {
-            completionCodeVerified: true  // Must have completion code verified
-          },
-          {
             OR: [
               { 
-                status: 'PAID'
+                status: 'PAID'  // PAID status means completed (payment captured)
               },
               { 
-                status: 'COMPLETED_BY_HUSTLER'
+                status: 'COMPLETED_BY_HUSTLER',
+                completionCodeVerified: true
               },
               {
-                status: 'AWAITING_CUSTOMER_CONFIRM'
+                status: 'AWAITING_CUSTOMER_CONFIRM',
+                completionCodeVerified: true
               }
             ]
           }
@@ -133,7 +132,7 @@ router.get('/me', authenticate, async (req, res) => {
     let totalEarned = 0;
     try {
       // First, get all completed jobs where user is hustler
-      // Must have completion code verified to count as completed
+      // PAID status means completed, others need completionCodeVerified
       const completedJobs = await prisma.job.findMany({
         where: {
           AND: [
@@ -141,13 +140,16 @@ router.get('/me', authenticate, async (req, res) => {
               hustlerId: req.user.id
             },
             {
-              completionCodeVerified: true  // Must have completion code verified
-            },
-            {
               OR: [
-                { status: 'PAID' },
-                { status: 'COMPLETED_BY_HUSTLER' },
-                { status: 'AWAITING_CUSTOMER_CONFIRM' }
+                { status: 'PAID' },  // PAID status means completed (payment captured)
+                { 
+                  status: 'COMPLETED_BY_HUSTLER',
+                  completionCodeVerified: true
+                },
+                {
+                  status: 'AWAITING_CUSTOMER_CONFIRM',
+                  completionCodeVerified: true
+                }
               ]
             }
           ]

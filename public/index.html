@@ -4999,7 +4999,7 @@
               <div style="text-align: center; padding: 2rem;">
                 <div style="font-size: 3rem; margin-bottom: 1rem;">⭐</div>
                 <div style="font-size: 2rem; font-weight: 700; color: var(--primary); margin-bottom: 0.5rem;" id="profileRatingValue">
-                  ${user.ratingAvg ? user.ratingAvg.toFixed(1) : '5.0'}
+                  ${user.ratingAvg ? user.ratingAvg.toFixed(1) : (user.ratingCount > 0 ? '0.0' : '0.0')}
                 </div>
                 <div style="color: var(--text-muted); margin-bottom: 1.5rem;" id="profileRatingCount">
                   Based on ${user.ratingCount || 0} ${user.ratingCount === 1 ? 'review' : 'reviews'}
@@ -6273,7 +6273,18 @@
           // Format display values
           const jobsDisplay = jobsCompleted > 0 ? jobsCompleted : 0;
           const earnedDisplay = totalEarned > 0 ? `$${totalEarned.toFixed(2)}` : '$0.00';
-          const ratingDisplay = ratingAvg > 0 ? ratingAvg.toFixed(1) : '0.0';
+          // Use ratingAvg from API, only show 0.0 if there are no reviews (ratingCount === 0)
+          // If ratingAvg is null/undefined but there are reviews, calculate from reviews
+          const ratingCount = Number(userData.ratingCount) || 0;
+          let finalRating = ratingAvg;
+          if (ratingAvg === 0 && ratingCount > 0) {
+            // Rating might be 0 but there are reviews - this shouldn't happen, but handle it
+            finalRating = 0;
+          } else if (ratingAvg === 0 && ratingCount === 0) {
+            // No reviews yet - show 0.0
+            finalRating = 0;
+          }
+          const ratingDisplay = finalRating > 0 ? finalRating.toFixed(1) : '0.0';
           
           profileQuickStats.innerHTML = `
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
@@ -21621,6 +21632,73 @@ async function renderJobs(reset = false) {
             const reviewsList = document.getElementById("profileReviewsList");
             if (reviewsList) {
               reviewsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Error loading reviews.</div>";
+            }
+          }
+        }
+      });
+    }
+    
+    // Populate Earnings tab when clicked - Load from API
+    const earningsTab = document.querySelector('.profile-tab[data-tab="earnings"]');
+    if (earningsTab && !earningsTab.dataset.listenerAttached) {
+      earningsTab.dataset.listenerAttached = 'true';
+      earningsTab.addEventListener('click', async () => {
+        const earningsContent = document.getElementById("profileEarningsContent");
+        if (earningsContent) {
+          try {
+            earningsContent.innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;">Loading...</div>';
+            
+            // Fetch fresh user data with stats
+            const token = localStorage.getItem('hustl_token');
+            const userResponse = await fetch(`${API_BASE}/users/me`, {
+              headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+            
+            if (!userResponse.ok) {
+              throw new Error('Failed to fetch user stats');
+            }
+            
+            const userData = await userResponse.json();
+            const totalEarned = Number(userData.totalEarned) || 0;
+            const jobsCompleted = Number(userData.jobsCompleted) || 0;
+            
+            // Fetch active jobs count
+            const activeJobsResponse = await fetch(`${API_BASE}/jobs/active`, {
+              headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+            let activeJobsCount = 0;
+            if (activeJobsResponse.ok) {
+              const activeJobs = await activeJobsResponse.json();
+              activeJobsCount = Array.isArray(activeJobs) ? activeJobs.length : 0;
+            }
+            
+            const isHustler = user.role === "HUSTLER" || user.role === "hustler";
+            earningsContent.innerHTML = `
+              <div style="text-align: center; padding: 2rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">${isHustler ? '💰' : '📊'}</div>
+                <div style="font-size: 2rem; font-weight: 700; color: var(--primary); margin-bottom: 0.5rem;">
+                  $${totalEarned.toFixed(2)}
+                </div>
+                <div style="color: var(--text-muted); margin-bottom: 1.5rem;">
+                  ${isHustler ? 'Total Earned' : 'Total Spent'}
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; text-align: left;">
+                  <div style="padding: 1rem; background: #f0fdf4; border-radius: 10px;">
+                    <div style="font-size: 1.25rem; font-weight: 700; color: #16a34a;">✅ ${jobsCompleted}</div>
+                    <div style="font-size: 0.85rem; color: #15803d;">Completed Jobs</div>
+                  </div>
+                  <div style="padding: 1rem; background: #fef3c7; border-radius: 10px;">
+                    <div style="font-size: 1.25rem; font-weight: 700; color: #d97706;">🔄 ${activeJobsCount}</div>
+                    <div style="font-size: 0.85rem; color: #b45309;">In Progress</div>
+                  </div>
+                </div>
+              </div>
+            `;
+          } catch (error) {
+            console.error('[EARNINGS TAB] Error loading earnings:', error);
+            const earningsContent = document.getElementById("profileEarningsContent");
+            if (earningsContent) {
+              earningsContent.innerHTML = '<div style="text-align: center; padding: 2rem; color: #dc2626;">Error loading earnings data.</div>';
             }
           }
         }
