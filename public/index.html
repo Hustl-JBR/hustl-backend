@@ -24305,11 +24305,11 @@ meta.textContent =
         
         console.log('🔵 Popup role check - isCustomer:', isCustomer, 'isHustler:', isHustler, 'hasTipped:', hasTipped);
         
-        // Calculate amounts
+        // Calculate amounts - ensure all are numbers
         const payType = job.payType || 'flat';
-        const jobAmount = payType === 'hourly' 
+        const jobAmount = Number(payType === 'hourly' 
           ? (parseFloat(job.hourlyRate || 0) * parseFloat(job.estHours || 0))
-          : parseFloat(job.amount || 0);
+          : parseFloat(job.amount || payment?.amount || 0));
         
         // Create modal
         const modal = document.createElement('div');
@@ -24357,9 +24357,9 @@ meta.textContent =
         
         if (isCustomer) {
           // CUSTOMER VIEW: Full payment details, Tip, Review, Completed by, Job info
-          const serviceFee = jobAmount * 0.065;
-          const totalPaid = jobAmount + serviceFee;
-          const tipAmount = payment?.tip || 0;
+          const serviceFee = Number(jobAmount * 0.065);
+          const tipAmount = Number(payment?.tip || 0);
+          const totalPaid = Number(jobAmount + serviceFee);
           
           modalHTML = `
             <button id="closeCompletedJobModal" style="position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px; border-radius: 50%; border: none; background: #f3f4f6; color: var(--text-main); font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; z-index: 1;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">×</button>
@@ -24403,7 +24403,7 @@ meta.textContent =
                 ` : ''}
                 <div style="display: flex; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #3b82f6; font-weight: 700; font-size: 1.15rem;">
                   <span>Total Paid:</span>
-                  <strong style="color: #1e40af; font-size: 1.3rem;">$${(totalPaid + tipAmount).toFixed(2)}</strong>
+                  <strong style="color: #1e40af; font-size: 1.3rem;">$${Number(totalPaid + tipAmount).toFixed(2)}</strong>
                 </div>
                 ${payment && payment.paymentMethod ? `
                   <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #93c5fd; font-size: 0.85rem; color: #475569;">
@@ -24470,10 +24470,10 @@ meta.textContent =
           `;
         } else if (isHustler) {
           // HUSTLER VIEW: Earnings (How much you made), Review, Job info
-          const platformFee = jobAmount * 0.12;
-          const earnings = jobAmount - platformFee;
-          const tipAmount = payment?.tip || 0;
-          const totalEarnings = earnings + tipAmount;
+          const platformFee = Number(jobAmount * 0.12);
+          const earnings = Number(jobAmount - platformFee);
+          const tipAmount = Number(payment?.tip || 0);
+          const totalEarnings = Number(earnings + tipAmount);
           
           modalHTML = `
             <button id="closeCompletedJobModal" style="position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px; border-radius: 50%; border: none; background: #f3f4f6; color: var(--text-main); font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; z-index: 1;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">×</button>
