@@ -24517,6 +24517,42 @@ meta.textContent =
             </div>
           `;
           
+          // If tip is in "Processing..." state, start polling for updates
+          if (hasTipped && hasPendingTip && tipAmount === 0) {
+            // Poll every 3 seconds for up to 2 minutes (40 attempts)
+            let pollAttempts = 0;
+            const maxAttempts = 40;
+            const pollInterval = setInterval(async () => {
+              pollAttempts++;
+              if (pollAttempts > maxAttempts) {
+                clearInterval(pollInterval);
+                console.log(`[TIP POLL] Stopped polling for job ${job.id} after ${maxAttempts} attempts`);
+                return;
+              }
+              
+              try {
+                const paymentResponse = await fetch(`${API_BASE}/payments/job/${job.id}`, {
+                  headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (paymentResponse.ok) {
+                  const freshPayment = await paymentResponse.json();
+                  if (freshPayment && Number(freshPayment.tip || 0) > 0) {
+                    // Tip has been processed! Refresh the completed jobs list
+                    console.log(`[TIP POLL] Tip found! Amount: $${freshPayment.tip.toFixed(2)}`);
+                    clearInterval(pollInterval);
+                    sessionStorage.removeItem(`tipPending_${job.id}`);
+                    // Reload completed jobs to show the updated tip
+                    if (typeof loadCompletedJobs === 'function') {
+                      loadCompletedJobs(true);
+                    }
+                  }
+                }
+              } catch (e) {
+                console.log('[TIP POLL] Error polling for tip:', e);
+              }
+            }, 3000); // Poll every 3 seconds
+          }
+          
           // Event listeners
           card.querySelector('.tipBtn')?.addEventListener('click', async (e) => {
             e.stopPropagation();
