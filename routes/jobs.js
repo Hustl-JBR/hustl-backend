@@ -2722,12 +2722,14 @@ async function processRefundIfNeeded(job, reason, actorId, actorName, ipAddress 
           select: { email: true, name: true }
         });
         
-        if (customer) {
+        if (customer && job.payment) {
           await sendRefundEmail(
             customer.email,
             customer.name,
             job.title,
-            refundAmount
+            refundAmount,
+            'Job expired - start code not entered within 78 hours',
+            job.payment
           );
         }
       } catch (emailError) {
