@@ -33447,19 +33447,31 @@ try {
     } else if (tipSuccess) {
       // Tip payment completed
       if (typeof showToast === 'function') {
-        showToast('✅ Tip added successfully! Thank you for showing appreciation.');
+        showToast('💚 Thanks for tipping! Your tip has been sent to the hustler.');
       }
       
       // Clean URL
-      const cleanUrl = window.location.pathname;
+      const cleanUrl = window.location.pathname + (window.location.hash || '');
       window.history.replaceState({}, document.title, cleanUrl);
       
       // Refresh completed jobs if on manage-jobs view
       setTimeout(() => {
-        if (typeof activeView !== 'undefined' && activeView === 'manage-jobs') {
-          if (typeof loadCompletedJobs === 'function') loadCompletedJobs(true);
+        const currentView = window.activeView || activeView;
+        if (currentView === 'manage-jobs' || window.location.hash === '#manage-jobs') {
+          // Switch to completed tab and refresh
+          const completedTab = document.querySelector('[data-manage-tab="completed"]');
+          if (completedTab) {
+            completedTab.click(); // Switch to completed tab
+            setTimeout(() => {
+              if (typeof loadCompletedJobs === 'function') {
+                loadCompletedJobs(true); // Reload with reset
+              }
+            }, 300);
+          } else if (typeof loadCompletedJobs === 'function') {
+            loadCompletedJobs(true);
+          }
         }
-      }, 1000);
+      }, 500);
     } else if (tipCancelled) {
       // Tip payment cancelled
       if (typeof showToast === 'function') {
