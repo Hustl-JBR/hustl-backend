@@ -14553,12 +14553,30 @@ async function renderJobs(reset = false) {
         modalContent.appendChild(breakdownDiv);
       }
       
-      // Refund policy notice
+      // Refund policy notice - check if hourly job
+      let isHourlyJob = false;
+      let hourlyRate = 0;
+      let estHours = 0;
+      try {
+        const token = localStorage.getItem('hustl_token');
+        const jobResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (jobResponse.ok) {
+          const job = await jobResponse.json();
+          isHourlyJob = job.payType === 'hourly';
+          hourlyRate = Number(job.hourlyRate || 0);
+          estHours = parseInt(job.estHours || 0);
+        }
+      } catch (e) {
+        console.error("Error fetching job for refund notice:", e);
+      }
+      
       const refundNotice = document.createElement("div");
       refundNotice.style.cssText = "padding: 0.75rem; background: #eff6ff; border: 1px solid #93c5fd; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; color: #1e40af; line-height: 1.5;";
       refundNotice.innerHTML = `
         <div style="font-weight: 600; margin-bottom: 0.25rem;">🛡️ Fully Refundable</div>
-        <div>Your payment is fully refundable until the hustler enters the start code. Once work begins, payment is held in escrow until job completion.</div>
+        <div>${isHourlyJob ? `For hourly jobs, any hours and money not used will be automatically refunded back to you. Your payment is fully refundable until the hustler enters the start code. Once work begins, payment is held in escrow until job completion.` : `Your payment is fully refundable until the hustler enters the start code. Once work begins, payment is held in escrow until job completion.`}</div>
       `;
       modalContent.appendChild(refundNotice);
       
@@ -24191,29 +24209,31 @@ meta.textContent =
           // Convert tip to number in case it's a Decimal type from Prisma
           let tipAmount = payment ? Number(payment.tip || 0) : 0;
           
-          // If we're the customer and tip is 0 or payment is null, try fetching fresh payment data
+          // If we're the customer, ALWAYS try fetching fresh payment data to check for tips
           // This helps when webhook just processed the tip but job data hasn't refreshed
           if (isCustomerForThisJob) {
-            if (!payment || !payment.id || tipAmount === 0) {
-              // Try fetching fresh payment data
-              try {
-                const paymentResponse = await fetch(`${API_BASE}/payments/job/${job.id}`, {
-                  headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (paymentResponse.ok) {
-                  const freshPayment = await paymentResponse.json();
-                  if (freshPayment) {
-                    payment = freshPayment; // Use fresh payment data
-                    tipAmount = Number(freshPayment.tip || 0);
-                    if (tipAmount > 0) {
-                      console.log(`[TIP CHECK] Found tip in fresh payment data: $${tipAmount.toFixed(2)}`);
-                    }
+            // Always fetch fresh payment data to ensure we have the latest tip information
+            try {
+              const paymentResponse = await fetch(`${API_BASE}/payments/job/${job.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              if (paymentResponse.ok) {
+                const freshPayment = await paymentResponse.json();
+                if (freshPayment) {
+                  payment = freshPayment; // Use fresh payment data
+                  const freshTipAmount = Number(freshPayment.tip || 0);
+                  if (freshTipAmount > 0) {
+                    tipAmount = freshTipAmount;
+                    console.log(`[TIP CHECK] Found tip in fresh payment data: $${tipAmount.toFixed(2)}`);
+                  } else if (tipAmount === 0) {
+                    // Keep tipAmount as 0 if no tip found
+                    tipAmount = 0;
                   }
                 }
-              } catch (e) {
-                // Silently fail - use existing payment data
-                console.log('[TIP CHECK] Could not fetch fresh payment data:', e);
               }
+            } catch (e) {
+              // Silently fail - use existing payment data
+              console.log('[TIP CHECK] Could not fetch fresh payment data:', e);
             }
           }
           
