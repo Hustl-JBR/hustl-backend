@@ -29151,16 +29151,31 @@ meta.textContent =
         const text = reviewText.value.trim();
         const hasText = text.length >= 10;
         const hasRating = selectedRating > 0;
-        submitBtn.disabled = !hasRating || !hasText;
+        const shouldEnable = hasRating && hasText;
+        
+        submitBtn.disabled = !shouldEnable;
+        
+        // Visual feedback
+        if (shouldEnable) {
+          submitBtn.style.opacity = '1';
+          submitBtn.style.cursor = 'pointer';
+        } else {
+          submitBtn.style.opacity = '0.6';
+          submitBtn.style.cursor = 'not-allowed';
+        }
         
         console.log('Submit button state:', {
           hasRating,
           hasText,
           selectedRating,
           textLength: text.length,
-          disabled: submitBtn.disabled
+          disabled: submitBtn.disabled,
+          shouldEnable
         });
       }
+      
+      // Initialize button state
+      updateSubmitButton();
       
       // Character count
       reviewText.addEventListener('input', (e) => {
@@ -29176,8 +29191,8 @@ meta.textContent =
         updateSubmitButton();
       });
       
-      // Submit review
-      submitBtn.addEventListener('click', async (e) => {
+      // Submit review - use onclick to ensure it works even if disabled
+      const handleSubmit = async (e) => {
         e.preventDefault();
         e.stopPropagation();
         
@@ -29290,16 +29305,14 @@ meta.textContent =
           // Re-enable button by updating state
           updateSubmitButton();
         }
-      });
-      
-      // Also add click handler to button directly (in case event listener doesn't work)
-      submitBtn.onclick = async function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log('📤 Submit button onclick triggered');
-        // Trigger the click event on the button to use the addEventListener handler
-        submitBtn.dispatchEvent(new Event('click'));
       };
+      
+      // Attach both addEventListener and onclick to ensure it works
+      submitBtn.addEventListener('click', handleSubmit);
+      submitBtn.onclick = handleSubmit;
+      
+      // Also make button clickable even when disabled (for better UX)
+      submitBtn.style.pointerEvents = 'auto';
       
       // Cancel button
       modal.querySelector('#cancelReviewBtn')?.addEventListener('click', () => {
