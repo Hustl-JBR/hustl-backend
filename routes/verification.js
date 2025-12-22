@@ -324,14 +324,22 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       const timeDiffMs = completionTime - startedAt;
       actualHours = timeDiffMs / (1000 * 60 * 60); // Convert to hours
       
+      // Ensure minimum of 0.01 hours (36 seconds) to prevent zero charges
+      if (actualHours < 0.01) {
+        actualHours = 0.01;
+        console.log(`[HOURLY JOB] Time worked (${timeDiffMs}ms) is less than 0.01 hours, setting to minimum 0.01 hours`);
+      }
+      
       // Round to 2 decimal places (e.g., 1.67 hours)
       actualHours = Math.round(actualHours * 100) / 100;
       
-      console.log(`[HOURLY JOB] Time calculation - startedAt: ${startedAt.toISOString()}, completionTime: ${completionTime.toISOString()}, timeDiffMs: ${timeDiffMs}, actualHours: ${actualHours}`);
+      console.log(`[HOURLY JOB] Time calculation - startedAt: ${startedAt.toISOString()}, completionTime: ${completionTime.toISOString()}, timeDiffMs: ${timeDiffMs}ms (${(timeDiffMs/1000).toFixed(2)}s), actualHours: ${actualHours}`);
       
       // Calculate actual charge: actualHours × hourlyRate
       const hourlyRate = Number(job.hourlyRate);
       actualJobAmount = actualHours * hourlyRate;
+      
+      console.log(`[HOURLY JOB] Amount calculation - actualHours: ${actualHours}, hourlyRate: $${hourlyRate}, actualJobAmount: $${actualJobAmount.toFixed(2)}`);
       
       // Get current max hours (may have been extended)
       const currentMaxHours = job.estHours || 0;
