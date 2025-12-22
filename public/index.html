@@ -11163,6 +11163,50 @@ async function renderJobs(reset = false) {
         descriptionSection.appendChild(description);
         jobDetailsBox.appendChild(descriptionSection);
         
+        // 4.5. JOB PHOTOS (if any)
+        if (job.photos && Array.isArray(job.photos) && job.photos.length > 0) {
+          const photosSection = document.createElement("div");
+          photosSection.style.cssText = "margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb;";
+          
+          const photosTitle = document.createElement("h2");
+          photosTitle.style.cssText = "margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 700; color: var(--text-main);";
+          photosTitle.textContent = "📸 Photos";
+          photosSection.appendChild(photosTitle);
+          
+          const photosContainer = document.createElement("div");
+          photosContainer.style.cssText = "display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.75rem; margin-top: 0.5rem;";
+          
+          job.photos.forEach((photoUrl, index) => {
+            const photoWrapper = document.createElement("div");
+            photoWrapper.style.cssText = "position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer; border: 2px solid #e5e7eb; transition: transform 0.2s, border-color 0.2s;";
+            photoWrapper.addEventListener("mouseenter", () => {
+              photoWrapper.style.transform = "scale(1.05)";
+              photoWrapper.style.borderColor = "#3b82f6";
+            });
+            photoWrapper.addEventListener("mouseleave", () => {
+              photoWrapper.style.transform = "scale(1)";
+              photoWrapper.style.borderColor = "#e5e7eb";
+            });
+            
+            const photo = document.createElement("img");
+            photo.src = photoUrl;
+            photo.alt = `Job photo ${index + 1}`;
+            photo.style.cssText = "width: 100%; height: 100%; object-fit: cover; display: block;";
+            photo.addEventListener("click", () => {
+              window.open(photoUrl, '_blank');
+            });
+            photo.addEventListener("error", () => {
+              photo.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23f3f4f6' width='100' height='100'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%239ca3af' font-family='sans-serif' font-size='14'%3EFailed to load%3C/text%3E%3C/svg%3E";
+            });
+            
+            photoWrapper.appendChild(photo);
+            photosContainer.appendChild(photoWrapper);
+          });
+          
+          photosSection.appendChild(photosContainer);
+          jobDetailsBox.appendChild(photosSection);
+        }
+        
         // 5. PRICING - Hourly Pay Breakdown
         const pricingSection = document.createElement("div");
         pricingSection.style.cssText = "margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; background: #f8f9fa; padding: 0.75rem; border-radius: 8px;";
