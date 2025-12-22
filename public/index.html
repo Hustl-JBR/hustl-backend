@@ -24672,10 +24672,16 @@ meta.textContent =
         console.log('🔵 Popup role check - isCustomer:', isCustomer, 'isHustler:', isHustler, 'hasTipped:', hasTipped);
         
         // Calculate amounts - ensure all are numbers
+        // Use payment.amount if available (negotiated price), otherwise use job.amount (original price)
         const payType = job.payType || 'flat';
-        const jobAmount = Number(payType === 'hourly' 
-          ? (parseFloat(job.hourlyRate || 0) * parseFloat(job.estHours || 0))
-          : parseFloat(job.amount || payment?.amount || 0));
+        let jobAmount = 0;
+        if (payType === 'hourly') {
+          jobAmount = parseFloat(job.hourlyRate || 0) * parseFloat(job.estHours || 0);
+        } else {
+          // For flat jobs, use payment.amount if it exists (negotiated price), otherwise job.amount
+          jobAmount = payment && payment.amount ? parseFloat(payment.amount) : parseFloat(job.amount || 0);
+        }
+        jobAmount = Number(jobAmount);
         
         // Create modal
         const modal = document.createElement('div');
@@ -29341,28 +29347,43 @@ meta.textContent =
           }
           
           // Wait a bit more for jobs to load, then find and click the job card to open popup
-          setTimeout(() => {
+          setTimeout(async () => {
             const jobCard = document.querySelector(`.job-card[data-job-id="${jobId}"]`);
             if (jobCard) {
               jobCard.click();
             } else {
               // If card not found, try to open the job details directly
               if (typeof openCompletedJobDetails === 'function') {
-                // Fetch the job data and open it
-                const token = localStorage.getItem('hustl_token');
-                fetch(`${API_BASE}/jobs/${jobId}`, {
-                  headers: { 'Authorization': `Bearer ${token}` }
-                })
-                .then(res => res.json())
-                .then(job => {
-                  const user = getCurrentUser();
-                  if (user && job) {
-                    const isCustomer = job.customerId === user.id;
-                    const isHustler = job.hustlerId === user.id;
-                    openCompletedJobDetails(jobId, job, job.payment, isCustomer, isHustler);
+                try {
+                  // Fetch the job data and open it
+                  const token = localStorage.getItem('hustl_token');
+                  const jobResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                  if (jobResponse.ok) {
+                    const job = await jobResponse.json();
+                    // Fetch payment data
+                    let payment = null;
+                    try {
+                      const paymentResponse = await fetch(`${API_BASE}/payments/job/${jobId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                      });
+                      if (paymentResponse.ok) {
+                        payment = await paymentResponse.json();
+                      }
+                    } catch (e) {
+                      console.error('Error fetching payment:', e);
+                    }
+                    const user = getCurrentUser();
+                    if (user && job) {
+                      const isCustomer = job.customerId === user.id;
+                      const isHustler = job.hustlerId === user.id;
+                      openCompletedJobDetails(jobId, job, payment, isCustomer, isHustler);
+                    }
                   }
-                })
-                .catch(err => console.error('Error fetching job for popup:', err));
+                } catch (err) {
+                  console.error('Error fetching job for popup:', err);
+                }
               }
             }
           }, 1000);

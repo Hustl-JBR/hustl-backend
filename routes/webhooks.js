@@ -253,6 +253,24 @@ async function handleTipCheckoutCompleted(session) {
       }
     }
 
+    // Create in-app notification for hustler
+    if (jobWithUsers?.hustler?.id) {
+      try {
+        await prisma.notification.create({
+          data: {
+            userId: jobWithUsers.hustler.id,
+            type: 'TIP_RECEIVED',
+            message: `You received a $${tipAmount.toFixed(2)} tip from ${jobWithUsers.customer?.name || 'a customer'} for "${jobWithUsers.title}"!`,
+            link: `/jobs/${jobId}`,
+            read: false,
+          },
+        });
+        console.log(`[TIP CHECKOUT] Created in-app notification for hustler ${jobWithUsers.hustler.id}`);
+      } catch (notifError) {
+        console.error('[TIP CHECKOUT] Error creating in-app notification:', notifError);
+      }
+    }
+
     console.log(`[TIP CHECKOUT] Tip of $${tipAmount.toFixed(2)} added to job ${jobId} via checkout session ${session.id}`);
   } catch (error) {
     console.error('[TIP CHECKOUT] Error handling tip checkout completion:', error);

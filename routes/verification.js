@@ -510,16 +510,19 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       const customerServiceFee = customerChargedAmount * 0.065; // 6.5% service fee on actual amount
       const customerTotalCharged = customerChargedAmount + customerServiceFee;
       
-      // For hourly jobs: log the breakdown
+      // Log payment breakdown for ALL jobs
+      console.log(`[JOB COMPLETION] Payment Breakdown for ${job.payType} job:`);
+      console.log(`  Job Amount (actual charged): $${actualJobAmount.toFixed(2)}`);
+      console.log(`  Platform Fee (12%): $${platformFee.toFixed(2)} → STAYS IN PLATFORM ACCOUNT`);
+      console.log(`  Hustler Payout: $${hustlerPayout.toFixed(2)} → TRANSFERRED TO HUSTLER`);
+      console.log(`  Customer Service Fee (6.5%): $${customerServiceFee.toFixed(2)} → STAYS IN PLATFORM ACCOUNT`);
+      console.log(`  Customer Total Charged: $${customerTotalCharged.toFixed(2)}`);
+      
+      // For hourly jobs: additional logging
       if (job.payType === 'hourly') {
-        console.log(`[HOURLY JOB] Payment Breakdown:`);
         console.log(`  Original Authorized: $${originalAuthorizedAmount.toFixed(2)}`);
         console.log(`  Actual Hours Worked: ${actualHours.toFixed(2)} hrs`);
-        console.log(`  Actual Amount Charged: $${customerChargedAmount.toFixed(2)}`);
-        console.log(`  Customer Service Fee (6.5%): $${customerServiceFee.toFixed(2)}`);
-        console.log(`  Customer Total Charged: $${customerTotalCharged.toFixed(2)}`);
         console.log(`  Customer Refund (unused): $${customerRefundAmount.toFixed(2)}`);
-        console.log(`  Hustler Payout: $${hustlerPayout.toFixed(2)} (${actualJobAmount.toFixed(2)} - ${platformFee.toFixed(2)} platform fee)`);
       }
 
       // Update payment record with actual amount (for hourly jobs)

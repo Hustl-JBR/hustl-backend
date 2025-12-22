@@ -584,22 +584,32 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     // Update job with hustler and verification codes
     // Set status to SCHEDULED (not ASSIGNED) - job is scheduled but not started yet
     // Job only becomes active (IN_PROGRESS) when Start Code is entered
+    // If hustler proposed a price, update job.amount to match the negotiated price
+    const updateData = {
+      status: 'SCHEDULED', // Scheduled, not active yet - waiting for Start Code
+      hustlerId: offer.hustlerId,
+      startCode,
+      startCodeExpiresAt,
+      completionCode,
+    };
+    
+    // If hustler proposed a price (and it's a flat job), update job.amount to match
+    if (offer.proposedAmount && offer.proposedAmount > 0 && offer.job.payType === 'flat') {
+      updateData.amount = parseFloat(offer.proposedAmount);
+      console.log(`[OFFER ACCEPT] Updating job.amount to negotiated price: $${updateData.amount}`);
+    }
+    
+    // If keepOpenUntilAccepted was set, job auto-closes now
+    if (shouldAutoClose) {
+      updateData.requirements = {
+        ...jobRequirements,
+        keepOpenUntilAccepted: false, // Clear the flag
+      };
+    }
+    
     const job = await prisma.job.update({
       where: { id: offer.job.id },
-      data: {
-        status: 'SCHEDULED', // Scheduled, not active yet - waiting for Start Code
-        hustlerId: offer.hustlerId,
-        startCode,
-        startCodeExpiresAt,
-        completionCode,
-        // If keepOpenUntilAccepted was set, job auto-closes now (status stays ASSIGNED, but we clear the flag)
-        ...(shouldAutoClose ? {
-          requirements: {
-            ...jobRequirements,
-            keepOpenUntilAccepted: false, // Clear the flag
-          }
-        } : {}),
-      },
+      data: updateData,
     });
 
     // Update payment with hustler ID (payment was created when job was posted)
