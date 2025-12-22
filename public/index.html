@@ -24484,7 +24484,10 @@ meta.textContent =
             <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
               ${isCustomerForThisJob ? `
                 ${hasTipped ? `
-                  <button class="btn btn-ghost tipBtnDisabled" data-job-id="${job.id}" disabled style="flex: 1; min-width: 120px; padding: 0.75rem 1rem; font-size: 0.9rem; font-weight: 600; border: 2px solid #10b981; color: #10b981; background: #dcfce7; cursor: not-allowed; opacity: 0.9; border-radius: 8px;">💚 Thanks for Tipping!</button>
+                  <div style="flex: 1; min-width: 120px; padding: 0.75rem 1rem; font-size: 0.9rem; font-weight: 600; border: 2px solid #10b981; color: #10b981; background: #dcfce7; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <span>💚 Thanks for tipping!</span>
+                    <button class="btn btn-ghost viewTipBtn" data-job-id="${job.id}" data-tip-amount="${tipAmount.toFixed(2)}" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; font-weight: 600; color: #059669; background: transparent; border: 1px solid #10b981; border-radius: 6px; cursor: pointer; margin-left: 0.5rem;">View Tip ($${tipAmount.toFixed(2)})</button>
+                  </div>
                 ` : `
                   <button class="btn btn-primary tipBtn" data-job-id="${job.id}" style="flex: 1; min-width: 120px; padding: 0.75rem 1rem; font-size: 0.9rem; font-weight: 600; border: 2px solid var(--primary); border-radius: 8px;">💝 Tip</button>
                 `}
@@ -24503,12 +24506,26 @@ meta.textContent =
             const jobId = e.target.dataset.jobId;
             const tipBtn = e.target;
             // Open tip modal
-            const handleTipSuccess = () => {
-              // Update button after successful tip
-              tipBtn.className = 'btn btn-ghost tipBtnDisabled';
-              tipBtn.disabled = true;
-              tipBtn.textContent = '💚 Thanks for Tipping!';
-              tipBtn.style.cssText = 'flex: 1; min-width: 120px; padding: 0.75rem 1rem; font-size: 0.9rem; font-weight: 600; border: 2px solid #10b981; color: #10b981; background: #dcfce7; cursor: not-allowed; opacity: 0.9; border-radius: 8px;';
+            const handleTipSuccess = (tipAmount = 0) => {
+              // Replace tip button with "Thanks for tipping" message and view tip button
+              const tipContainer = tipBtn.parentElement;
+              tipBtn.remove();
+              
+              const thanksDiv = document.createElement('div');
+              thanksDiv.style.cssText = 'flex: 1; min-width: 120px; padding: 0.75rem 1rem; font-size: 0.9rem; font-weight: 600; border: 2px solid #10b981; color: #10b981; background: #dcfce7; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 0.5rem;';
+              thanksDiv.innerHTML = `
+                <span>💚 Thanks for tipping!</span>
+                <button class="btn btn-ghost viewTipBtn" data-job-id="${jobId}" data-tip-amount="${tipAmount.toFixed(2)}" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; font-weight: 600; color: #059669; background: transparent; border: 1px solid #10b981; border-radius: 6px; cursor: pointer; margin-left: 0.5rem;">View Tip ($${tipAmount.toFixed(2)})</button>
+              `;
+              
+              // Add event listener for view tip button
+              const viewTipBtn = thanksDiv.querySelector('.viewTipBtn');
+              viewTipBtn?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showToast(`💚 You tipped $${tipAmount.toFixed(2)} for this job!`, 'success', 4000);
+              });
+              
+              tipContainer.appendChild(thanksDiv);
             };
             
             if (typeof window.showTipModal === 'function') {
@@ -24517,6 +24534,13 @@ meta.textContent =
               // Fallback: show tip input directly
               showTipInputModal(jobId, job, payment, handleTipSuccess);
             }
+          });
+          
+          // View tip button (shows tip amount in a toast)
+          card.querySelector('.viewTipBtn')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const tipAmount = parseFloat(e.target.dataset.tipAmount || 0);
+            showToast(`💚 You tipped $${tipAmount.toFixed(2)} for this job!`, 'success', 4000);
           });
           
           card.querySelector('.reviewBtn')?.addEventListener('click', async (e) => {
@@ -33792,15 +33816,45 @@ try {
       window.history.replaceState({}, document.title, cleanUrl);
       
       // Update tip buttons immediately if we can find them
-      const updateTipButtons = () => {
+      const updateTipButtons = async () => {
         // Find all tip buttons and update them if tip was just completed
-        document.querySelectorAll('.tipBtn').forEach(btn => {
+        document.querySelectorAll('.tipBtn').forEach(async (btn) => {
           const jobId = btn.dataset.jobId;
           if (jobId && sessionStorage.getItem(`tipPending_${jobId}`)) {
-            btn.className = 'btn btn-ghost tipBtnDisabled';
-            btn.disabled = true;
-            btn.textContent = '💚 Thanks for Tipping!';
-            btn.style.cssText = 'flex: 1; min-width: 120px; padding: 0.75rem 1rem; font-size: 0.9rem; font-weight: 600; border: 2px solid #10b981; color: #10b981; background: #dcfce7; cursor: not-allowed; opacity: 0.9; border-radius: 8px;';
+            // Fetch tip amount from payment data
+            let tipAmount = 0;
+            try {
+              const token = localStorage.getItem('hustl_token');
+              const paymentResponse = await fetch(`${API_BASE}/payments/job/${jobId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              if (paymentResponse.ok) {
+                const payment = await paymentResponse.json();
+                tipAmount = Number(payment?.tip || 0);
+              }
+            } catch (e) {
+              console.error('Error fetching tip amount:', e);
+            }
+            
+            // Replace tip button with "Thanks for tipping" message and view tip button
+            const tipContainer = btn.parentElement;
+            btn.remove();
+            
+            const thanksDiv = document.createElement('div');
+            thanksDiv.style.cssText = 'flex: 1; min-width: 120px; padding: 0.75rem 1rem; font-size: 0.9rem; font-weight: 600; border: 2px solid #10b981; color: #10b981; background: #dcfce7; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 0.5rem;';
+            thanksDiv.innerHTML = `
+              <span>💚 Thanks for tipping!</span>
+              <button class="btn btn-ghost viewTipBtn" data-job-id="${jobId}" data-tip-amount="${tipAmount.toFixed(2)}" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; font-weight: 600; color: #059669; background: transparent; border: 1px solid #10b981; border-radius: 6px; cursor: pointer; margin-left: 0.5rem;">View Tip ($${tipAmount.toFixed(2)})</button>
+            `;
+            
+            // Add event listener for view tip button
+            const viewTipBtn = thanksDiv.querySelector('.viewTipBtn');
+            viewTipBtn?.addEventListener('click', (e) => {
+              e.stopPropagation();
+              showToast(`💚 You tipped $${tipAmount.toFixed(2)} for this job!`, 'success', 4000);
+            });
+            
+            tipContainer.appendChild(thanksDiv);
             sessionStorage.removeItem(`tipPending_${jobId}`);
           }
         });
