@@ -21501,7 +21501,7 @@ async function renderJobs(reset = false) {
       </div>
       <div class="quick-stat-card">
         <div class="quick-stat-icon">⭐</div>
-        <div class="quick-stat-value">${user.rating || '5.0'}</div>
+        <div class="quick-stat-value">${user.ratingAvg ? user.ratingAvg.toFixed(1) : (user.ratingCount > 0 ? '0.0' : '0.0')}</div>
         <div class="quick-stat-label">Rating</div>
       </div>
     `;
@@ -21556,7 +21556,7 @@ async function renderJobs(reset = false) {
             
             // Always use backend data (ratingAvg, ratingCount) - single source of truth
             if (ratingValue) {
-              ratingValue.textContent = user.ratingAvg ? user.ratingAvg.toFixed(1) : (user.ratingCount > 0 ? '0.0' : '5.0');
+              ratingValue.textContent = user.ratingAvg ? user.ratingAvg.toFixed(1) : (user.ratingCount > 0 ? '0.0' : '0.0');
             }
             if (ratingCount) {
               const count = user.ratingCount || 0;
