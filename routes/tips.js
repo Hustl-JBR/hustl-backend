@@ -99,6 +99,12 @@ router.post('/create-checkout/job/:jobId', requireRole('CUSTOMER'), async (req, 
     // Create Stripe Checkout Session
     const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
     
+    // Initialize stripe if not already done
+    if (!stripe && process.env.STRIPE_SECRET_KEY) {
+      const key = process.env.STRIPE_SECRET_KEY.trim().replace(/^["']|["']$/g, '');
+      stripe = new Stripe(key);
+    }
+    
     if (skipStripeCheck || !stripe) {
       return res.json({
         checkoutUrl: `${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || 'http://localhost:3000'}/?tip_success=true&jobId=${jobId}&test=true`,
