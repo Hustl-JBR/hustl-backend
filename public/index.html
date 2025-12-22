@@ -11487,11 +11487,16 @@ async function renderJobs(reset = false) {
             const hoursRemaining = maxHours - currentHours;
             const minutesRemaining = hoursRemaining * 60;
             
-            if (minutesRemaining > 30 && isOwner) {
+            // Show info message for both customers and hustlers
+            if (minutesRemaining > 30) {
               const infoMsg = document.createElement("div");
               infoMsg.id = `timerInfo-${job.id}`;
               infoMsg.style.cssText = "font-size: 0.8rem; color: #78350f; margin-top: 0.75rem; padding: 0.625rem; background: #fef3c7; border-radius: 6px; border: 1px solid #fbbf24; line-height: 1.4;";
-              infoMsg.innerHTML = `ℹ️ <strong>Tip:</strong> You can add more hours within the last 30 minutes if needed.`;
+              if (isOwner) {
+                infoMsg.innerHTML = `ℹ️ <strong>Tip:</strong> You can add more hours within the last 30 minutes if needed.`;
+              } else {
+                infoMsg.innerHTML = `ℹ️ <strong>Tip:</strong> The customer can add more hours within the last 30 minutes if needed.`;
+              }
               timerSection.appendChild(infoMsg);
             }
             
