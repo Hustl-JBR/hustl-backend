@@ -9057,6 +9057,7 @@ window.showChangePasswordModal = function showChangePasswordModal() {
               title,
               category: finalCategory,
               description: desc,
+              photos: photos.length > 0 ? photos : [], // Include uploaded photos
               address, // Generic address string
               approximateLat,
               approximateLng,
