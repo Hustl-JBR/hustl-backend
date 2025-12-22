@@ -23708,7 +23708,11 @@ meta.textContent =
                   </div>
                   ${currentPrice > 0 || (pricingOption !== 'hustlers_quote' && (payType === 'hourly' || payType === 'flat')) ? `
                   <div style="text-align: right; flex-shrink: 0; margin-left: 1rem; padding-left: 1rem;">
+                    ${payType === 'hourly' && job.hourlyRate ? `
+                    <div style="font-size: 1.75rem; font-weight: 700; color: var(--primary); line-height: 1.2; white-space: nowrap;">$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hr</div>
+                    ` : `
                     <div style="font-size: 1.75rem; font-weight: 700; color: var(--primary); line-height: 1.2; white-space: nowrap;">$${(currentPrice || 0).toFixed(2)}</div>
+                    `}
                     ${hasPendingPriceProposalHustler ? `
                     <div style="font-size: 0.7rem; color: #f59e0b; font-weight: 600; margin-top: 0.25rem; white-space: nowrap;">💰 Pending</div>
                     ` : ''}
