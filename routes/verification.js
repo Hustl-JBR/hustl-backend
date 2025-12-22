@@ -372,8 +372,10 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       
       console.log(`[HOURLY JOB] Worked ${actualHours} hrs × $${hourlyRate}/hr = $${actualJobAmount.toFixed(2)} (max authorized: $${totalAuthorizedAmount.toFixed(2)})`);
     } else {
-      // Flat job: use the pre-authorized amount
-      actualJobAmount = Number(job.payment.amount);
+      // Flat job: use the payment amount (which should be the negotiated price if price was negotiated)
+      // This is the amount that was actually authorized/paid, not the original job.amount
+      actualJobAmount = Number(job.payment?.amount || job.amount || 0);
+      console.log(`[FLAT JOB] Using payment amount: $${actualJobAmount.toFixed(2)} (payment.amount: ${job.payment?.amount}, job.amount: ${job.amount})`);
     }
 
     // Calculate 12% platform fee on actual amount

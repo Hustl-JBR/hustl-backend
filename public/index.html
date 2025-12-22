@@ -29316,7 +29316,7 @@ meta.textContent =
       });
       
       // View completed job button
-      modal.querySelector('#viewCompletedJobBtn')?.addEventListener('click', () => {
+      modal.querySelector('#viewCompletedJobBtn')?.addEventListener('click', async () => {
         document.body.removeChild(modal);
         document.body.style.overflow = '';
         
@@ -29329,16 +29329,43 @@ meta.textContent =
           window.location.hash = '#manage-jobs';
         }
         
-        // Wait a bit for view to load, then switch to completed tab
-        setTimeout(() => {
+        // Wait a bit for view to load, then switch to completed tab and open the job popup
+        setTimeout(async () => {
           const completedTab = document.querySelector('[data-manage-tab="completed"]');
           if (completedTab) {
             completedTab.click();
           }
           // Refresh completed jobs
           if (typeof loadCompletedJobs === 'function') {
-            loadCompletedJobs(true);
+            await loadCompletedJobs(true);
           }
+          
+          // Wait a bit more for jobs to load, then find and click the job card to open popup
+          setTimeout(() => {
+            const jobCard = document.querySelector(`.job-card[data-job-id="${jobId}"]`);
+            if (jobCard) {
+              jobCard.click();
+            } else {
+              // If card not found, try to open the job details directly
+              if (typeof openCompletedJobDetails === 'function') {
+                // Fetch the job data and open it
+                const token = localStorage.getItem('hustl_token');
+                fetch(`${API_BASE}/jobs/${jobId}`, {
+                  headers: { 'Authorization': `Bearer ${token}` }
+                })
+                .then(res => res.json())
+                .then(job => {
+                  const user = getCurrentUser();
+                  if (user && job) {
+                    const isCustomer = job.customerId === user.id;
+                    const isHustler = job.hustlerId === user.id;
+                    openCompletedJobDetails(jobId, job, job.payment, isCustomer, isHustler);
+                  }
+                })
+                .catch(err => console.error('Error fetching job for popup:', err));
+              }
+            }
+          }, 1000);
         }, 500);
         if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
         
