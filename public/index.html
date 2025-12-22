@@ -6228,55 +6228,10 @@
           `;
         }
         
-        // Update profile quick stats
+        // Hide profile quick stats (removed per user request)
         const profileQuickStats = document.getElementById('profileQuickStats');
         if (profileQuickStats) {
-          // Get stats from API response (default to 0 if not present)
-          const jobsCompleted = Number(userData.jobsCompleted) || 0;
-          const totalEarned = Number(userData.totalEarned) || 0;
-          const ratingAvg = Number(userData.ratingAvg) || 0;
-          
-          console.log('[PROFILE STATS] Rendering stats from API:', { 
-            jobsCompleted, 
-            totalEarned, 
-            ratingAvg, 
-            rawData: {
-              jobsCompleted: userData.jobsCompleted,
-              totalEarned: userData.totalEarned,
-              ratingAvg: userData.ratingAvg
-            }
-          });
-          
-          // Format display values
-          const jobsDisplay = jobsCompleted > 0 ? jobsCompleted : 0;
-          const earnedDisplay = totalEarned > 0 ? `$${totalEarned.toFixed(2)}` : '$0.00';
-          // Use ratingAvg from API, only show 0.0 if there are no reviews (ratingCount === 0)
-          // If ratingAvg is null/undefined but there are reviews, calculate from reviews
-          const ratingCount = Number(userData.ratingCount) || 0;
-          let finalRating = ratingAvg;
-          if (ratingAvg === 0 && ratingCount > 0) {
-            // Rating might be 0 but there are reviews - this shouldn't happen, but handle it
-            finalRating = 0;
-          } else if (ratingAvg === 0 && ratingCount === 0) {
-            // No reviews yet - show 0.0
-            finalRating = 0;
-          }
-          const ratingDisplay = finalRating > 0 ? finalRating.toFixed(1) : '0.0';
-          
-          profileQuickStats.innerHTML = `
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin: 0 -1rem 1.5rem -1rem; padding: 0 1rem; width: calc(100% + 2rem); box-sizing: border-box;">
-              <div style="padding: 2rem; background: white; border-radius: 12px; border: 2px solid #e5e7eb; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); width: 100%; box-sizing: border-box;">
-                <div style="font-size: 3rem; margin-bottom: 0.75rem;">✅</div>
-                <div style="font-size: 3rem; font-weight: 700; color: var(--primary); margin-bottom: 0.5rem;">${jobsDisplay}</div>
-                <div style="font-size: 1.1rem; color: var(--text-muted); font-weight: 600;">Jobs Done</div>
-              </div>
-              <div style="padding: 2rem; background: white; border-radius: 12px; border: 2px solid #e5e7eb; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); width: 100%; box-sizing: border-box;">
-                <div style="font-size: 3rem; margin-bottom: 0.75rem;">⭐</div>
-                <div style="font-size: 3rem; font-weight: 700; color: #fbbf24; margin-bottom: 0.5rem;">${ratingDisplay}</div>
-                <div style="font-size: 1.1rem; color: var(--text-muted); font-weight: 600;">Rating</div>
-              </div>
-            </div>
-          `;
+          profileQuickStats.style.display = 'none';
         }
       } catch (error) {
         console.error('Error rendering profile stats:', error);
