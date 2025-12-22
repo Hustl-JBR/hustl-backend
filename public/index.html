@@ -24188,7 +24188,9 @@ meta.textContent =
           const otherUser = isCustomerForThisJob ? (job.hustler || {}) : (job.customer || {});
           
           // Check if tip already added (only for customers of this job)
-          const hasTipped = isCustomerForThisJob && payment && payment.tip && payment.tip > 0;
+          // Convert tip to number in case it's a Decimal type from Prisma
+          const tipAmount = payment ? Number(payment.tip || 0) : 0;
+          const hasTipped = isCustomerForThisJob && tipAmount > 0;
           
           // Check if user has already reviewed (reviews have reviewerId field)
           const hasReviewed = job.reviews && job.reviews.some(r => r.reviewerId === user.id);
@@ -24396,7 +24398,9 @@ meta.textContent =
         const otherUser = isCustomer ? (job.hustler || {}) : (job.customer || {});
         
         // Check if tip already added (only for customers of this job)
-        const hasTipped = isCustomer && payment && payment.tip && payment.tip > 0;
+        // Convert tip to number in case it's a Decimal type from Prisma
+        const tipAmount = payment ? Number(payment.tip || 0) : 0;
+        const hasTipped = isCustomer && tipAmount > 0;
         
         console.log('🔵 Popup role check - isCustomer:', isCustomer, 'isHustler:', isHustler, 'hasTipped:', hasTipped);
         
@@ -33407,6 +33411,31 @@ try {
     const offerId = urlParams.get('offerId');
     const jobId = urlParams.get('jobId');
     const resetToken = urlParams.get('token');
+    
+    // Handle tip success - refresh completed jobs if on manage-jobs page
+    if (tipSuccess) {
+      showToast('💚 Thanks for tipping! Your tip has been sent to the hustler.');
+      // Clean URL
+      const newUrl = window.location.pathname + (window.location.hash || '');
+      window.history.replaceState({}, '', newUrl);
+      // Refresh completed jobs if we're on the manage-jobs page
+      if (window.activeView === 'manage-jobs' || window.location.hash === '#manage-jobs') {
+        setTimeout(() => {
+          const completedTab = document.querySelector('[data-manage-tab="completed"]');
+          if (completedTab) {
+            completedTab.click(); // Switch to completed tab
+            loadCompletedJobs(true); // Reload with reset
+          }
+        }, 500);
+      }
+    }
+    
+    if (tipCancelled) {
+      showToast('Tip was cancelled.');
+      // Clean URL
+      const newUrl = window.location.pathname + (window.location.hash || '');
+      window.history.replaceState({}, '', newUrl);
+    }
     
     // Check if this is a password reset link
     if (resetToken) {
