@@ -4601,8 +4601,9 @@
           </div>
 
           <div class="field">
-            <label for="jobPhoto">Optional photo (not uploaded in this demo)</label>
-            <input id="jobPhoto" type="file" accept="image/*" />
+            <label for="jobPhoto">📸 Optional photos</label>
+            <input id="jobPhoto" type="file" accept="image/*" multiple />
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">You can select multiple photos</div>
           </div>
 
           <button class="btn btn-primary" id="postJobButton">Post job to Hustl</button>
@@ -8908,13 +8909,40 @@ window.showChangePasswordModal = function showChangePasswordModal() {
           const customCategory = document.getElementById("customCategory")?.value.trim() || "";
           const workersNeededValue = document.getElementById("workersNeeded")?.value || "1";
           let workersNeeded = 1;
-          if (workersNeededValue === "custom") {
-            const customCount = Number(document.getElementById("customWorkersCount")?.value || 1);
-            workersNeeded = Math.max(1, Math.min(20, customCount));
-          } else if (workersNeededValue === "company") {
+          if (workersNeededValue === "company") {
             workersNeeded = 0; // Special value for "Company" (insured company/crew)
           } else {
             workersNeeded = Number(workersNeededValue) || 1;
+          }
+          
+          // Upload photos if provided
+          const photoInput = document.getElementById("jobPhoto");
+          const photos = [];
+          if (photoInput && photoInput.files && photoInput.files.length > 0) {
+            try {
+              for (let i = 0; i < photoInput.files.length; i++) {
+                const file = photoInput.files[i];
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const token = localStorage.getItem('hustl_token');
+                const uploadResponse = await fetch(`${API_BASE}/r2/upload`, {
+                  method: 'POST',
+                  headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                  body: formData
+                });
+                
+                if (uploadResponse.ok) {
+                  const uploadData = await uploadResponse.json();
+                  photos.push(uploadData.publicUrl);
+                } else {
+                  console.error('Photo upload failed:', await uploadResponse.text());
+                }
+              }
+            } catch (error) {
+              console.error('Error uploading photos:', error);
+              showToast('Some photos failed to upload, but job will still be posted.');
+            }
           }
           // Collect equipment
           const equipmentNeeded = [];
