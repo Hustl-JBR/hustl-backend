@@ -7,14 +7,9 @@ const prisma = new PrismaClient();
 
 async function makeAdmin() {
   // ⚠️ CHANGE THIS to your actual email
-  const yourEmail = 'jbready88@gmail.com';
+  const yourEmail = 'team.hustljobs@outlook.com';
   
-  if (yourEmail === 'jbready88@gmail.com') {
-    console.error('❌ ERROR: Please edit this file and change "yourEmail" to your actual email address!');
-    console.error('   Open make-admin.js and change line 8:');
-    console.error('   const yourEmail = \'your-actual-email@example.com\';');
-    process.exit(1);
-  }
+  // Email is set, proceed with granting admin
   
   try {
     console.log('🔄 Looking for user:', yourEmail);
