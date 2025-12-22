@@ -30,6 +30,7 @@ router.get('/me', authenticate, async (req, res) => {
           gender: true,
           bio: true,
           tools: true, // Try to include tools
+          stripeAccountId: true, // Include Stripe Connect account ID
         },
       });
       
@@ -69,6 +70,7 @@ router.get('/me', authenticate, async (req, res) => {
             ratingCount: true,
             idVerified: true,
             createdAt: true,
+            stripeAccountId: true, // Include Stripe Connect account ID
           },
         });
         user.gender = null;

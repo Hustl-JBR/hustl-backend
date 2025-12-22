@@ -21749,28 +21749,124 @@ async function renderJobs(reset = false) {
   // Stripe Connect Content (clear first to prevent duplicates)
   if (stripeContent) {
     stripeContent.innerHTML = ''; // Clear any existing content first
-    const isConnected = user.stripeAccountId && user.stripePayoutsEnabled;
-    if (isConnected) {
-      stripeContent.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 1rem; background: #dcfce7; border-radius: 8px;">
-          <span style="font-size: 1.5rem;">✅</span>
-          <div>
-            <div style="font-weight: 600; color: #166534;">Stripe Connected</div>
-            <div style="font-size: 0.85rem; color: #15803d;">You can receive payments instantly!</div>
-          </div>
-        </div>
-      `;
-    } else {
-      stripeContent.innerHTML = `
-        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
-          Connect with Stripe to receive payments directly to your bank. Instant payouts available!
-        </p>
-        <button class="btn btn-primary" id="stripeConnectBtnInCard" style="width: 100%; background: #22c55e; border: none;">
-          💳 Connect Stripe & Start Earning
-        </button>
-      `;
+    
+    // Check Stripe Connect status - if account ID exists, fetch status from API
+    const checkStripeStatus = async () => {
+      if (!user.stripeAccountId) {
+        // No account ID - show connect button
+        stripeContent.innerHTML = `
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+            Connect with Stripe to receive payments directly to your bank. Instant payouts available!
+          </p>
+          <button class="btn btn-primary" id="stripeConnectBtnInCard" style="width: 100%; background: #22c55e; border: none;">
+            💳 Connect Stripe & Start Earning
+          </button>
+        `;
+        attachStripeButtonHandler();
+        return;
+      }
       
-      // Add click handler for Stripe button in Payment Setup card
+      // Account ID exists - check status from API
+      try {
+        const token = localStorage.getItem('hustl_token');
+        const statusResponse = await fetch(`${API_BASE}/stripe-connect/status`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        
+        if (statusResponse.ok) {
+          const status = await statusResponse.json();
+          const payoutsEnabled = status.accountDetails?.payoutsEnabled || false;
+          if (status.connected && payoutsEnabled) {
+            // Fully connected
+            stripeContent.innerHTML = `
+              <div style="display: flex; align-items: center; gap: 0.5rem; padding: 1rem; background: #dcfce7; border-radius: 8px;">
+                <span style="font-size: 1.5rem;">✅</span>
+                <div>
+                  <div style="font-weight: 600; color: #166534;">Stripe Connected</div>
+                  <div style="font-size: 0.85rem; color: #15803d;">You can receive payments instantly!</div>
+                </div>
+              </div>
+            `;
+          } else if (status.accountId) {
+            // Account exists but not fully onboarded
+            stripeContent.innerHTML = `
+              <div style="display: flex; align-items: center; gap: 0.5rem; padding: 1rem; background: #fef3c7; border-radius: 8px; margin-bottom: 1rem;">
+                <span style="font-size: 1.5rem;">⏳</span>
+                <div>
+                  <div style="font-weight: 600; color: #92400e;">Completing Setup...</div>
+                  <div style="font-size: 0.85rem; color: #78350f;">Finish connecting your Stripe account to receive payments.</div>
+                </div>
+              </div>
+              <button class="btn btn-primary" id="stripeConnectBtnInCard" style="width: 100%; background: #f59e0b; border: none;">
+                💳 Complete Stripe Setup
+              </button>
+            `;
+            attachStripeButtonHandler();
+          } else {
+            // Show connect button
+            stripeContent.innerHTML = `
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                Connect with Stripe to receive payments directly to your bank. Instant payouts available!
+              </p>
+              <button class="btn btn-primary" id="stripeConnectBtnInCard" style="width: 100%; background: #22c55e; border: none;">
+                💳 Connect Stripe & Start Earning
+              </button>
+            `;
+            attachStripeButtonHandler();
+          }
+        } else {
+          // API error - assume connected if account ID exists
+          if (user.stripeAccountId) {
+            stripeContent.innerHTML = `
+              <div style="display: flex; align-items: center; gap: 0.5rem; padding: 1rem; background: #dcfce7; border-radius: 8px;">
+                <span style="font-size: 1.5rem;">✅</span>
+                <div>
+                  <div style="font-weight: 600; color: #166534;">Stripe Connected</div>
+                  <div style="font-size: 0.85rem; color: #15803d;">You can receive payments instantly!</div>
+                </div>
+              </div>
+            `;
+          } else {
+            stripeContent.innerHTML = `
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                Connect with Stripe to receive payments directly to your bank. Instant payouts available!
+              </p>
+              <button class="btn btn-primary" id="stripeConnectBtnInCard" style="width: 100%; background: #22c55e; border: none;">
+                💳 Connect Stripe & Start Earning
+              </button>
+            `;
+            attachStripeButtonHandler();
+          }
+        }
+      } catch (error) {
+        console.error('Error checking Stripe status:', error);
+        // Fallback: if account ID exists, assume connected
+        if (user.stripeAccountId) {
+          stripeContent.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 1rem; background: #dcfce7; border-radius: 8px;">
+              <span style="font-size: 1.5rem;">✅</span>
+              <div>
+                <div style="font-weight: 600; color: #166534;">Stripe Connected</div>
+                <div style="font-size: 0.85rem; color: #15803d;">You can receive payments instantly!</div>
+              </div>
+            </div>
+          `;
+        } else {
+          stripeContent.innerHTML = `
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+              Connect with Stripe to receive payments directly to your bank. Instant payouts available!
+            </p>
+            <button class="btn btn-primary" id="stripeConnectBtnInCard" style="width: 100%; background: #22c55e; border: none;">
+              💳 Connect Stripe & Start Earning
+            </button>
+          `;
+          attachStripeButtonHandler();
+        }
+      }
+    };
+    
+    // Helper function to attach button handler
+    const attachStripeButtonHandler = () => {
       setTimeout(() => {
         const stripeBtn = document.getElementById("stripeConnectBtnInCard");
         if (stripeBtn) {
@@ -21788,7 +21884,7 @@ async function renderJobs(reset = false) {
               }
               
               // First create account if needed
-              await fetch("/stripe-connect/create-account", {
+              await fetch(`${API_BASE}/stripe-connect/create-account`, {
                 method: "POST",
                 headers: { 
                   "Authorization": "Bearer " + token,
@@ -21797,37 +21893,34 @@ async function renderJobs(reset = false) {
               });
               
               // Then get onboarding link
-              const res = await fetch("/stripe-connect/onboarding-link", {
-                headers: { "Authorization": "Bearer " + token }
-              });
-              const data = await res.json();
-              
-              if (data.url) {
-                // Open Stripe checkout in popup
-                const popup = window.open(
-                  data.url,
-                  'StripeCheckout',
-                  'width=800,height=600,scrollbars=yes,resizable=yes'
-                );
-                if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-                  // Popup blocked - fallback to redirect
-                  window.location.href = data.url;
+              const linkResponse = await fetch(`${API_BASE}/stripe-connect/onboarding-link`, {
+                method: "POST",
+                headers: { 
+                  "Authorization": "Bearer " + token,
+                  "Content-Type": "application/json"
                 }
+              });
+              
+              if (linkResponse.ok) {
+                const { url } = await linkResponse.json();
+                window.location.href = url;
               } else {
-                showToast("Could not get Stripe link. Try again.");
-                stripeBtn.disabled = false;
-                stripeBtn.textContent = "💳 Connect Stripe & Start Earning";
+                const error = await linkResponse.json();
+                throw new Error(error.message || "Failed to get Stripe link");
               }
-            } catch (e) {
-              console.error("Stripe connect error:", e);
-              showToast("Error connecting to Stripe. Please try again.");
+            } catch (error) {
+              console.error("Error connecting Stripe:", error);
+              showToast(error.message || "Failed to connect Stripe. Please try again.");
               stripeBtn.disabled = false;
               stripeBtn.textContent = "💳 Connect Stripe & Start Earning";
             }
           });
         }
       }, 100);
-    }
+    };
+    
+    // Check Stripe status
+    checkStripeStatus();
   }
 
   // Old duplicate profile form removed - using Basic Info section at top with Edit Profile button
