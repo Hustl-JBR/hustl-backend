@@ -15936,14 +15936,29 @@ async function renderJobs(reset = false) {
             // Final price breakdown
             const priceBreakdown = document.createElement("div");
             priceBreakdown.style.cssText = "padding: 0.75rem; background: white; border-radius: 6px; border: 1px solid #fbbf24; margin-bottom: 0.75rem;";
+            const hourlyRate = parseFloat(job.hourlyRate || 0);
+            const estHours = parseInt(job.estHours || 0);
             priceBreakdown.innerHTML = `
               <div style="font-weight: 600; color: #92400e; margin-bottom: 0.5rem; font-size: 0.85rem;">💰 Final Price You've Already Paid</div>
               <div style="font-size: 0.8rem; color: #78350f; line-height: 1.5;">
+                ${payType === 'hourly' && hourlyRate > 0 ? `
+                <div style="margin-bottom: 0.25rem;">Hourly Rate: <strong>$${hourlyRate.toFixed(2)}/hour</strong></div>
+                <div style="margin-bottom: 0.25rem;">Estimated Hours: <strong>${estHours} hours</strong></div>
+                <div style="margin-bottom: 0.25rem;">Estimated Total: <strong>$${currentAmount.toFixed(2)}</strong></div>
+                <div style="margin-bottom: 0.25rem;">Service Fee (6.5%): <strong>$${serviceFee.toFixed(2)}</strong></div>
+                <div style="margin-top: 0.375rem; padding-top: 0.375rem; border-top: 1px solid #fbbf24; font-weight: 600;">
+                  Total Paid: <strong style="color: #059669;">$${finalPrice.toFixed(2)}</strong>
+                </div>
+                <div style="margin-top: 0.5rem; padding: 0.5rem; background: #dcfce7; border-radius: 4px; font-size: 0.75rem; color: #059669; font-weight: 600;">
+                  💚 Any hours and money not used will be automatically refunded back to you.
+                </div>
+                ` : `
                 <div style="margin-bottom: 0.25rem;">Job Amount: <strong>$${currentAmount.toFixed(2)}</strong></div>
                 <div style="margin-bottom: 0.25rem;">Service Fee (6.5%): <strong>$${serviceFee.toFixed(2)}</strong></div>
                 <div style="margin-top: 0.375rem; padding-top: 0.375rem; border-top: 1px solid #fbbf24; font-weight: 600;">
                   Total: <strong style="color: #059669;">$${finalPrice.toFixed(2)}</strong>
                 </div>
+                `}
               </div>
             `;
             startCodeSection.appendChild(priceBreakdown);
@@ -23199,11 +23214,24 @@ meta.textContent =
                       <div style="padding: 0.75rem; background: white; border-radius: 6px; border: 1px solid #fbbf24; margin-bottom: 0.75rem;">
                         <div style="font-weight: 600; color: #92400e; margin-bottom: 0.5rem; font-size: 0.85rem;">💰 Final Price You've Already Paid</div>
                         <div style="font-size: 0.8rem; color: #78350f; line-height: 1.5;">
+                          ${payType === 'hourly' && job.hourlyRate ? `
+                          <div style="margin-bottom: 0.25rem;">Hourly Rate: <strong>$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hour</strong></div>
+                          <div style="margin-bottom: 0.25rem;">Estimated Hours: <strong>${parseInt(job.estHours || 0)} hours</strong></div>
+                          <div style="margin-bottom: 0.25rem;">Estimated Total: <strong>$${jobAmount.toFixed(2)}</strong></div>
+                          <div style="margin-bottom: 0.25rem;">Service Fee (6.5%): <strong>$${serviceFee.toFixed(2)}</strong></div>
+                          <div style="margin-top: 0.375rem; padding-top: 0.375rem; border-top: 1px solid #fbbf24; font-weight: 600;">
+                            Total Paid: <strong style="color: #059669;">$${finalPrice.toFixed(2)}</strong>
+                          </div>
+                          <div style="margin-top: 0.5rem; padding: 0.5rem; background: #dcfce7; border-radius: 4px; font-size: 0.75rem; color: #059669; font-weight: 600;">
+                            💚 Any hours and money not used will be automatically refunded back to you.
+                          </div>
+                          ` : `
                           <div style="margin-bottom: 0.25rem;">Job Amount: <strong>$${jobAmount.toFixed(2)}</strong></div>
                           <div style="margin-bottom: 0.25rem;">Service Fee (6.5%): <strong>$${serviceFee.toFixed(2)}</strong></div>
                           <div style="margin-top: 0.375rem; padding-top: 0.375rem; border-top: 1px solid #fbbf24; font-weight: 600;">
                             Total: <strong style="color: #059669;">$${finalPrice.toFixed(2)}</strong>
                           </div>
+                          `}
                         </div>
                       </div>
                       <div style="padding: 0.75rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px; margin-bottom: 0.75rem;">
@@ -23547,11 +23575,24 @@ meta.textContent =
                           <div style="padding: 0.75rem; background: white; border-radius: 6px; border: 1px solid #fbbf24; margin-bottom: 0.75rem;">
                             <div style="font-weight: 600; color: #92400e; margin-bottom: 0.5rem; font-size: 0.85rem;">💰 Final Price You've Already Paid</div>
                             <div style="font-size: 0.8rem; color: #78350f; line-height: 1.5;">
+                              ${payType === 'hourly' && job.hourlyRate ? `
+                              <div style="margin-bottom: 0.25rem;">Hourly Rate: <strong>$${parseFloat(job.hourlyRate || 0).toFixed(2)}/hour</strong></div>
+                              <div style="margin-bottom: 0.25rem;">Estimated Hours: <strong>${parseInt(job.estHours || 0)} hours</strong></div>
+                              <div style="margin-bottom: 0.25rem;">Estimated Total: <strong>$${jobAmount.toFixed(2)}</strong></div>
+                              <div style="margin-bottom: 0.25rem;">Service Fee (6.5%): <strong>$${serviceFee.toFixed(2)}</strong></div>
+                              <div style="margin-top: 0.375rem; padding-top: 0.375rem; border-top: 1px solid #fbbf24; font-weight: 600;">
+                                Total Paid: <strong style="color: #059669;">$${finalPrice.toFixed(2)}</strong>
+                              </div>
+                              <div style="margin-top: 0.5rem; padding: 0.5rem; background: #dcfce7; border-radius: 4px; font-size: 0.75rem; color: #059669; font-weight: 600;">
+                                💚 Any hours and money not used will be automatically refunded back to you.
+                              </div>
+                              ` : `
                               <div style="margin-bottom: 0.25rem;">Job Amount: <strong>$${jobAmount.toFixed(2)}</strong></div>
                               <div style="margin-bottom: 0.25rem;">Service Fee (6.5%): <strong>$${serviceFee.toFixed(2)}</strong></div>
                               <div style="margin-top: 0.375rem; padding-top: 0.375rem; border-top: 1px solid #fbbf24; font-weight: 600;">
                                 Total: <strong style="color: #059669;">$${finalPrice.toFixed(2)}</strong>
                               </div>
+                              `}
                             </div>
                           </div>
                           <div style="font-size: 0.75rem; color: #78350f; font-weight: 600; padding: 0.5rem; background: #fef3c7; border-radius: 4px;">
@@ -24237,12 +24278,11 @@ meta.textContent =
                 if (freshPayment) {
                   payment = freshPayment; // Use fresh payment data
                   const freshTipAmount = Number(freshPayment.tip || 0);
+                  tipAmount = freshTipAmount; // Always use fresh tip amount
                   if (freshTipAmount > 0) {
-                    tipAmount = freshTipAmount;
                     console.log(`[TIP CHECK] Found tip in fresh payment data: $${tipAmount.toFixed(2)}`);
-                  } else if (tipAmount === 0) {
-                    // Keep tipAmount as 0 if no tip found
-                    tipAmount = 0;
+                  } else {
+                    console.log(`[TIP CHECK] No tip found in fresh payment data`);
                   }
                 }
               }
