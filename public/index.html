@@ -29045,7 +29045,7 @@ meta.textContent =
           </div>
           
           <div style="display: flex; gap: 0.75rem;">
-            <button id="submitReviewBtn" class="btn btn-primary" style="flex: 1; padding: 0.75rem; font-weight: 600;" disabled>
+            <button id="submitReviewBtn" class="btn btn-primary" style="flex: 1; padding: 0.75rem; font-weight: 600; opacity: 0.5; cursor: not-allowed; background-color: #9ca3af;">
               Submit Review
             </button>
             <button id="cancelReviewBtn" class="btn btn-ghost" style="flex: 1; padding: 0.75rem;">
@@ -29153,15 +29153,16 @@ meta.textContent =
         const hasRating = selectedRating > 0;
         const shouldEnable = hasRating && hasText;
         
-        submitBtn.disabled = !shouldEnable;
-        
-        // Visual feedback
+        // Don't disable button - just show visual feedback
+        // Disabled buttons don't fire click events reliably
         if (shouldEnable) {
           submitBtn.style.opacity = '1';
           submitBtn.style.cursor = 'pointer';
+          submitBtn.style.backgroundColor = 'var(--primary)';
         } else {
-          submitBtn.style.opacity = '0.6';
+          submitBtn.style.opacity = '0.5';
           submitBtn.style.cursor = 'not-allowed';
+          submitBtn.style.backgroundColor = '#9ca3af';
         }
         
         console.log('Submit button state:', {
@@ -29169,7 +29170,6 @@ meta.textContent =
           hasText,
           selectedRating,
           textLength: text.length,
-          disabled: submitBtn.disabled,
           shouldEnable
         });
       }
@@ -29311,8 +29311,8 @@ meta.textContent =
       submitBtn.addEventListener('click', handleSubmit);
       submitBtn.onclick = handleSubmit;
       
-      // Also make button clickable even when disabled (for better UX)
-      submitBtn.style.pointerEvents = 'auto';
+      // Remove disabled attribute to ensure clicks work
+      submitBtn.removeAttribute('disabled');
       
       // Cancel button
       modal.querySelector('#cancelReviewBtn')?.addEventListener('click', () => {
