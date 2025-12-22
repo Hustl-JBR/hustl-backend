@@ -24217,7 +24217,7 @@ meta.textContent =
           
           // Debug logging for tip detection
           if (isCustomerForThisJob) {
-            console.log(`[TIP CHECK] Job ${job.id}: payment=${!!payment}, tipAmount=${tipAmount.toFixed(2)}, hasTipped=${hasTipped}`);
+            console.log(`[TIP CHECK] Job ${job.id}: payment=${!!payment}, tipAmount=${tipAmount.toFixed(2)}, hasTipped=${hasTipped}, payment.tip=${payment?.tip}`);
           }
           
           // Check if user has already reviewed (reviews have reviewerId field)
