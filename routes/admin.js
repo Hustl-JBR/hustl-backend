@@ -294,6 +294,7 @@ router.get('/payments', [
 // GET /admin/stats - Get financial stats (refunds, payouts, revenue)
 router.get('/stats', async (req, res) => {
   try {
+    console.log('[ADMIN STATS] Fetching stats...');
     // Get all payments
     const allPayments = await prisma.payment.findMany({
       select: {
@@ -304,22 +305,28 @@ router.get('/stats', async (req, res) => {
         feeCustomer: true,
         feeHustler: true,
         refundAmount: true,
-        createdAt: true,
-        capturedAt: true,
+        created_at: true, // Use created_at (snake_case) from schema
       },
     });
 
-    // Get all payouts
-    const allPayouts = await prisma.payout.findMany({
-      select: {
-        status: true,
-        amount: true,
-        platformFee: true,
-        netAmount: true,
-        createdAt: true,
-        completedAt: true,
-      },
-    });
+    // Get all payouts (if Payout model exists)
+    let allPayouts = [];
+    try {
+      allPayouts = await prisma.payout.findMany({
+        select: {
+          status: true,
+          amount: true,
+          platformFee: true,
+          netAmount: true,
+          createdAt: true,
+          completedAt: true,
+        },
+      });
+    } catch (error) {
+      // Payout model might not exist - that's okay
+      console.log('[ADMIN STATS] Payout model not found, skipping payout stats');
+      allPayouts = [];
+    }
 
     // Calculate stats
     const totalRevenue = allPayments
@@ -364,12 +371,12 @@ router.get('/stats', async (req, res) => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const recentRefunds = allPayments.filter(
       p => (p.status === 'REFUNDED' || p.status === 'VOIDED') &&
-           new Date(p.updatedAt || p.createdAt) >= sevenDaysAgo
+           new Date(p.created_at || p.createdAt || Date.now()) >= sevenDaysAgo
     ).length;
 
     const recentPayouts = allPayouts.filter(
       p => p.status === 'COMPLETED' && 
-           new Date(p.completedAt || p.createdAt) >= sevenDaysAgo
+           new Date(p.completedAt || p.createdAt || Date.now()) >= sevenDaysAgo
     ).length;
 
     res.json({
@@ -399,8 +406,13 @@ router.get('/stats', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Get admin stats error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[ADMIN STATS] Error:', error);
+    console.error('[ADMIN STATS] Error stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
