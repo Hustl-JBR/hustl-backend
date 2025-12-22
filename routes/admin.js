@@ -304,7 +304,6 @@ router.get('/stats', async (req, res) => {
         tip: true,
         feeCustomer: true,
         feeHustler: true,
-        refundAmount: true,
         created_at: true, // Use created_at (snake_case) from schema
       },
     });
@@ -335,7 +334,7 @@ router.get('/stats', async (req, res) => {
 
     const totalRefunds = allPayments
       .filter(p => p.status === 'REFUNDED' || p.status === 'VOIDED')
-      .reduce((sum, p) => sum + (Number(p.refundAmount) || Number(p.total)), 0);
+      .reduce((sum, p) => sum + Number(p.total || 0), 0);
 
     const totalPayouts = allPayouts
       .filter(p => p.status === 'COMPLETED')
@@ -371,12 +370,12 @@ router.get('/stats', async (req, res) => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const recentRefunds = allPayments.filter(
       p => (p.status === 'REFUNDED' || p.status === 'VOIDED') &&
-           new Date(p.created_at || p.createdAt || Date.now()) >= sevenDaysAgo
+           p.created_at && new Date(p.created_at) >= sevenDaysAgo
     ).length;
 
     const recentPayouts = allPayouts.filter(
       p => p.status === 'COMPLETED' && 
-           new Date(p.completedAt || p.createdAt || Date.now()) >= sevenDaysAgo
+           p.completedAt && new Date(p.completedAt) >= sevenDaysAgo
     ).length;
 
     res.json({
