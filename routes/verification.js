@@ -450,6 +450,11 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         }
         
         console.log(`[HOURLY JOB] Total captured: $${totalCaptured.toFixed(2)} (actual work: ${actualHours} hrs × $${hourlyRate}/hr = $${actualJobAmount.toFixed(2)})`);
+        
+        // Update actualJobAmount to match what was actually captured (in case of rounding differences)
+        if (Math.abs(totalCaptured - actualJobAmount) < 0.01) {
+          actualJobAmount = totalCaptured;
+        }
       } else if (job.payment.providerId) {
         // Full capture for flat jobs
         await capturePaymentIntent(job.payment.providerId);
@@ -627,17 +632,20 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         // Don't fail the request if emails fail
       }
 
+      // Log the response data for debugging
+      console.log(`[JOB COMPLETION] Response data - actualJobAmount: $${actualJobAmount.toFixed(2)}, actualHours: ${actualHours || 'N/A'}, hustlerPayout: $${hustlerPayout.toFixed(2)}`);
+      
       res.json({
         success: true,
         message: 'Job completed successfully! Please leave a review.',
         completionCodeVerified: true,
         jobStatus: updatedJob.status,
         paymentReleased: true,
-        actualJobAmount: actualJobAmount,
-        actualHours: job.payType === 'hourly' ? actualHours : null,
-        hustlerPayout: hustlerPayout,
-        perWorkerPayout: teamSize > 1 && job.payType === 'hourly' ? perWorkerPayout : null,
-        platformFee: platformFee,
+        actualJobAmount: Number(actualJobAmount.toFixed(2)), // Ensure it's a number with 2 decimals
+        actualHours: job.payType === 'hourly' ? Number(actualHours.toFixed(2)) : null,
+        hustlerPayout: Number(hustlerPayout.toFixed(2)), // Ensure it's a number with 2 decimals
+        perWorkerPayout: teamSize > 1 && job.payType === 'hourly' ? Number(perWorkerPayout.toFixed(2)) : null,
+        platformFee: Number(platformFee.toFixed(2)),
         jobId: jobId,
         customerId: job.customerId,
         hustlerId: job.hustlerId
