@@ -4920,7 +4920,6 @@
           <button class="profile-tab manage-tab active" data-tab="settings" style="position: relative;">⚙️ Settings</button>
           <button class="profile-tab manage-tab" data-tab="ratings" style="position: relative;">⭐ View Ratings</button>
           <button class="profile-tab manage-tab" data-tab="jobs" style="position: relative;">📋 Jobs</button>
-          <button class="profile-tab manage-tab" data-tab="earnings" style="position: relative;">💰 Earnings</button>
         </div>
         
         <!-- Settings Tab -->
@@ -5017,15 +5016,6 @@
           </div>
         </div>
         
-        <!-- Earnings Tab -->
-        <div id="profileTabEarnings" class="profile-tab-content" style="display: none;">
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">💰 Earnings Overview</div>
-            </div>
-            <div id="profileEarningsContent"></div>
-          </div>
-        </div>
       </section>
 
       <!-- OWNER VIEW -->
@@ -6287,16 +6277,11 @@
           const ratingDisplay = finalRating > 0 ? finalRating.toFixed(1) : '0.0';
           
           profileQuickStats.innerHTML = `
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
               <div style="padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid #e5e7eb; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                 <div style="font-size: 2rem; margin-bottom: 0.5rem;">✅</div>
                 <div style="font-size: 2rem; font-weight: 700; color: var(--primary); margin-bottom: 0.25rem;">${jobsDisplay}</div>
                 <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600;">Jobs Done</div>
-              </div>
-              <div style="padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid #e5e7eb; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                <div style="font-size: 2rem; margin-bottom: 0.5rem;">💸</div>
-                <div style="font-size: 2rem; font-weight: 700; color: #10b981; margin-bottom: 0.25rem;">${earnedDisplay}</div>
-                <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600;">Earned</div>
               </div>
               <div style="padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid #e5e7eb; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                 <div style="font-size: 2rem; margin-bottom: 0.5rem;">⭐</div>
@@ -21487,7 +21472,6 @@ async function renderJobs(reset = false) {
   
   // Render Quick Stats (already got quickStats above, but check again)
   if (quickStats) {
-    const isHustler = user.role === "HUSTLER" || user.role === "hustler";
     quickStats.innerHTML = `
       <div class="quick-stat-card">
         <div class="quick-stat-icon">✅</div>
@@ -21495,41 +21479,9 @@ async function renderJobs(reset = false) {
         <div class="quick-stat-label">Jobs Done</div>
       </div>
       <div class="quick-stat-card">
-        <div class="quick-stat-icon">${isHustler ? '💰' : '💸'}</div>
-        <div class="quick-stat-value">$${isHustler ? totalEarned.toFixed(0) : totalSpent.toFixed(0)}</div>
-        <div class="quick-stat-label">${isHustler ? 'Earned' : 'Spent'}</div>
-      </div>
-      <div class="quick-stat-card">
         <div class="quick-stat-icon">⭐</div>
         <div class="quick-stat-value">${user.ratingAvg ? user.ratingAvg.toFixed(1) : (user.ratingCount > 0 ? '0.0' : '0.0')}</div>
         <div class="quick-stat-label">Rating</div>
-      </div>
-    `;
-  }
-  
-  // Render Earnings Tab Content
-  const earningsContent = document.getElementById("profileEarningsContent");
-  if (earningsContent) {
-    const isHustler = user.role === "HUSTLER" || user.role === "hustler";
-    earningsContent.innerHTML = `
-      <div style="text-align: center; padding: 2rem;">
-        <div style="font-size: 3rem; margin-bottom: 1rem;">${isHustler ? '💰' : '📊'}</div>
-        <div style="font-size: 2rem; font-weight: 700; color: var(--primary); margin-bottom: 0.5rem;">
-          $${isHustler ? totalEarned.toFixed(2) : totalSpent.toFixed(2)}
-        </div>
-        <div style="color: var(--text-muted); margin-bottom: 1.5rem;">
-          ${isHustler ? 'Total Earned' : 'Total Spent'}
-        </div>
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; text-align: left;">
-          <div style="padding: 1rem; background: #f0fdf4; border-radius: 10px;">
-            <div style="font-size: 1.25rem; font-weight: 700; color: #16a34a;">✅ ${completedJobs.length}</div>
-            <div style="font-size: 0.85rem; color: #15803d;">Completed Jobs</div>
-          </div>
-          <div style="padding: 1rem; background: #fef3c7; border-radius: 10px;">
-            <div style="font-size: 1.25rem; font-weight: 700; color: #d97706;">🔄 ${activeJobs.length}</div>
-            <div style="font-size: 0.85rem; color: #b45309;">In Progress</div>
-          </div>
-        </div>
       </div>
     `;
   }
@@ -21632,103 +21584,6 @@ async function renderJobs(reset = false) {
             const reviewsList = document.getElementById("profileReviewsList");
             if (reviewsList) {
               reviewsList.innerHTML = "<div style='text-align: center; padding: 2rem; color: var(--text-muted);'>Error loading reviews.</div>";
-            }
-          }
-        }
-      });
-    }
-    
-    // Populate Earnings tab when clicked - Load from API
-    const earningsTab = document.querySelector('.profile-tab[data-tab="earnings"]');
-    if (earningsTab && !earningsTab.dataset.listenerAttached) {
-      earningsTab.dataset.listenerAttached = 'true';
-      earningsTab.addEventListener('click', async () => {
-        const earningsContent = document.getElementById("profileEarningsContent");
-        if (earningsContent) {
-          try {
-            earningsContent.innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;">Loading...</div>';
-            
-            // Fetch fresh user data with stats
-            const token = localStorage.getItem('hustl_token');
-            const userResponse = await fetch(`${API_BASE}/users/me`, {
-              headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-            });
-            
-            if (!userResponse.ok) {
-              throw new Error('Failed to fetch user stats');
-            }
-            
-            const userData = await userResponse.json();
-            const isHustler = user.role === "HUSTLER" || user.role === "hustler";
-            
-            let displayAmount = 0;
-            let displayLabel = '';
-            
-            if (isHustler) {
-              displayAmount = Number(userData.totalEarned) || 0;
-              displayLabel = 'Total Earned';
-            } else {
-              // For customers, calculate total spent from completed jobs
-              try {
-                const completedJobsResponse = await fetch(`${API_BASE}/jobs/completed`, {
-                  headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-                });
-                if (completedJobsResponse.ok) {
-                  const completedJobs = await completedJobsResponse.json();
-                  // Sum up payments where user is customer
-                  displayAmount = completedJobs
-                    .filter(job => job.customerId === user.id && job.payment)
-                    .reduce((sum, job) => {
-                      const paymentAmount = Number(job.payment?.amount || 0);
-                      const serviceFee = Number(job.payment?.feeCustomer) || (paymentAmount * 0.065);
-                      const tip = Number(job.payment?.tip || 0);
-                      return sum + paymentAmount + serviceFee + tip;
-                    }, 0);
-                }
-              } catch (error) {
-                console.error('[EARNINGS TAB] Error calculating total spent:', error);
-              }
-              displayLabel = 'Total Spent';
-            }
-            
-            const jobsCompleted = Number(userData.jobsCompleted) || 0;
-            
-            // Fetch active jobs count
-            const activeJobsResponse = await fetch(`${API_BASE}/jobs/active`, {
-              headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-            });
-            let activeJobsCount = 0;
-            if (activeJobsResponse.ok) {
-              const activeJobs = await activeJobsResponse.json();
-              activeJobsCount = Array.isArray(activeJobs) ? activeJobs.length : 0;
-            }
-            
-            earningsContent.innerHTML = `
-              <div style="text-align: center; padding: 2rem;">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">${isHustler ? '💰' : '📊'}</div>
-                <div style="font-size: 2rem; font-weight: 700; color: var(--primary); margin-bottom: 0.5rem;">
-                  $${displayAmount.toFixed(2)}
-                </div>
-                <div style="color: var(--text-muted); margin-bottom: 1.5rem;">
-                  ${displayLabel}
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; text-align: left;">
-                  <div style="padding: 1rem; background: #f0fdf4; border-radius: 10px;">
-                    <div style="font-size: 1.25rem; font-weight: 700; color: #16a34a;">✅ ${jobsCompleted}</div>
-                    <div style="font-size: 0.85rem; color: #15803d;">Completed Jobs</div>
-                  </div>
-                  <div style="padding: 1rem; background: #fef3c7; border-radius: 10px;">
-                    <div style="font-size: 1.25rem; font-weight: 700; color: #d97706;">🔄 ${activeJobsCount}</div>
-                    <div style="font-size: 0.85rem; color: #b45309;">In Progress</div>
-                  </div>
-                </div>
-              </div>
-            `;
-          } catch (error) {
-            console.error('[EARNINGS TAB] Error loading earnings:', error);
-            const earningsContent = document.getElementById("profileEarningsContent");
-            if (earningsContent) {
-              earningsContent.innerHTML = '<div style="text-align: center; padding: 2rem; color: #dc2626;">Error loading earnings data.</div>';
             }
           }
         }
@@ -24583,12 +24438,22 @@ meta.textContent =
             }
           }
           
-          // Consider it tipped if tipAmount > 0 OR if there's a pending tip in sessionStorage
-          const hasTipped = isCustomerForThisJob && (tipAmount > 0 || hasPendingTip);
+          // Only consider it tipped if tipAmount > 0 in database (ignore sessionStorage if database has value)
+          // sessionStorage is only for temporary state during processing, but if database shows tip, that's the truth
+          const hasTipped = isCustomerForThisJob && tipAmount > 0;
+          
+          // Clear any stale pending tip flags if tip is in database
+          if (hasTipped && hasPendingTip) {
+            try {
+              sessionStorage.removeItem(`tipPending_${job.id}`);
+            } catch (e) {
+              // Ignore errors
+            }
+          }
           
           // Debug logging for tip detection
           if (isCustomerForThisJob) {
-            console.log(`[TIP CHECK] Job ${job.id}: payment=${!!payment}, payment.tip=${payment?.tip}, tipAmount=${tipAmount.toFixed(2)}, hasTipped=${hasTipped}`);
+            console.log(`[TIP CHECK] Job ${job.id}: payment=${!!payment}, payment.tip=${payment?.tip}, tipAmount=${tipAmount.toFixed(2)}, hasTipped=${hasTipped}, hasPendingTip=${hasPendingTip}`);
           }
           
           // Check if user has already reviewed (reviews have reviewerId field)
@@ -24629,8 +24494,6 @@ meta.textContent =
                     <span>💚 Thanks for tipping!</span>
                     ${tipAmount > 0 ? `
                       <button class="btn btn-ghost viewTipBtn" data-job-id="${job.id}" data-tip-amount="${tipAmount.toFixed(2)}" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; font-weight: 600; color: #059669; background: transparent; border: 1px solid #10b981; border-radius: 6px; cursor: pointer; margin-left: 0.5rem;">View Tip ($${tipAmount.toFixed(2)})</button>
-                    ` : hasPendingTip ? `
-                      <span style="font-size: 0.8rem; color: #047857; font-style: italic;">Processing...</span>
                     ` : ''}
                   </div>
                 ` : `
@@ -33297,13 +33160,6 @@ try {
           if (!funcStr.includes('not ready yet')) {
             window.setView(view);
             
-            // Handle special actions
-            if (action === 'earnings') {
-              setTimeout(() => {
-                const earningsTab = document.querySelector('.profile-tab[data-tab="earnings"]');
-                if (earningsTab) earningsTab.click();
-              }, 100);
-            }
           } else {
             // Fallback if setView is stub
             document.querySelectorAll("[id^='view-']").forEach((sec) => (sec.style.display = "none"));
