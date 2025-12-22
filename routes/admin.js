@@ -282,9 +282,27 @@ router.get('/stats', async (req, res) => {
       .filter(p => p.status === 'COMPLETED')
       .reduce((sum, p) => sum + Number(p.netAmount), 0);
 
+    // Platform fees = 12% hustler fee + 6.5% customer fee (minus Stripe processing)
     const totalPlatformFees = allPayments
       .filter(p => p.status === 'CAPTURED')
-      .reduce((sum, p) => sum + (Number(p.feeHustler) || 0), 0);
+      .reduce((sum, p) => {
+        const hustlerFee = Number(p.feeHustler) || 0; // 12% platform fee
+        const customerFee = Number(p.feeCustomer) || 0; // 6.5% customer fee
+        // Customer fee goes to platform (Stripe processing is deducted automatically)
+        return sum + hustlerFee + customerFee;
+      }, 0);
+    
+    // Calculate estimated Stripe processing fees (2.9% + $0.30 per transaction)
+    const estimatedStripeFees = allPayments
+      .filter(p => p.status === 'CAPTURED')
+      .reduce((sum, p) => {
+        const total = Number(p.total) || 0;
+        const stripeFee = (total * 0.029) + 0.30; // 2.9% + $0.30
+        return sum + stripeFee;
+      }, 0);
+    
+    // Net platform earnings (after Stripe fees)
+    const netPlatformEarnings = totalPlatformFees - estimatedStripeFees;
 
     const pendingPayouts = allPayouts
       .filter(p => p.status === 'PENDING' || p.status === 'PROCESSING')
@@ -305,7 +323,9 @@ router.get('/stats', async (req, res) => {
     res.json({
       revenue: {
         total: totalRevenue,
-        platformFees: totalPlatformFees,
+        platformFees: totalPlatformFees, // Total fees collected (12% + 6.5%)
+        estimatedStripeFees: estimatedStripeFees, // Estimated Stripe processing fees
+        netPlatformEarnings: netPlatformEarnings, // Net after Stripe fees
         refunds: totalRefunds,
         net: totalRevenue - totalRefunds,
       },
