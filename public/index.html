@@ -24178,7 +24178,32 @@ meta.textContent =
           
           // Payment is already included in job from /jobs/completed endpoint
           // Use it directly - it may be null for some completed jobs
-          const payment = job.payment || null;
+          let payment = job.payment || null;
+          
+          // If payment exists but tip might not be loaded, try to fetch fresh payment data
+          // This helps when webhook just processed the tip
+          if (payment && payment.id && isCustomerForThisJob) {
+            // Check if tip field exists and is valid
+            const currentTip = Number(payment.tip || 0);
+            if (currentTip === 0) {
+              // Tip might not be updated yet - try fetching fresh payment data
+              try {
+                const paymentResponse = await fetch(`${API_BASE}/payments/job/${job.id}`, {
+                  headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (paymentResponse.ok) {
+                  const freshPayment = await paymentResponse.json();
+                  if (freshPayment && Number(freshPayment.tip || 0) > 0) {
+                    payment = freshPayment; // Use fresh payment data with tip
+                    console.log(`[TIP CHECK] Found tip in fresh payment data: $${freshPayment.tip}`);
+                  }
+                }
+              } catch (e) {
+                console.log('[TIP CHECK] Could not fetch fresh payment data:', e);
+                // Continue with existing payment data
+              }
+            }
+          }
           
           // Determine role for THIS SPECIFIC JOB (not just user's general roles)
           const isCustomerForThisJob = job.customerId === user.id;
@@ -24191,6 +24216,11 @@ meta.textContent =
           // Convert tip to number in case it's a Decimal type from Prisma
           const tipAmount = payment ? Number(payment.tip || 0) : 0;
           const hasTipped = isCustomerForThisJob && tipAmount > 0;
+          
+          // Debug logging
+          if (isCustomerForThisJob) {
+            console.log(`[TIP CHECK] Job ${job.id}: payment=${!!payment}, tipAmount=${tipAmount}, hasTipped=${hasTipped}`);
+          }
           
           // Check if user has already reviewed (reviews have reviewerId field)
           const hasReviewed = job.reviews && job.reviews.some(r => r.reviewerId === user.id);
