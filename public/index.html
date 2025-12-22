@@ -16046,6 +16046,36 @@ async function renderJobs(reset = false) {
         completionInstructions.textContent = "The hustler will enter this code when the job is complete. Do not share it until you are satisfied with the work.";
         completionCodeSection.appendChild(completionInstructions);
         
+        // Show refund estimate for hourly jobs
+        if (job.payType === 'hourly' && job.hourlyRate && job.estHours && parsedRequirements && parsedRequirements.startedAt) {
+          try {
+            const startedAt = new Date(parsedRequirements.startedAt);
+            const now = new Date();
+            const elapsedMs = now.getTime() - startedAt.getTime();
+            const actualHours = elapsedMs / (1000 * 60 * 60);
+            const hourlyRate = Number(job.hourlyRate || 0);
+            const maxHours = Number(job.estHours || 0);
+            
+            const originalAuthorized = hourlyRate * maxHours;
+            const actualCharge = hourlyRate * actualHours;
+            const refundAmount = originalAuthorized - actualCharge;
+            
+            if (refundAmount > 0) {
+              const refundInfo = document.createElement("div");
+              refundInfo.style.cssText = "padding: 0.75rem; background: #dcfce7; border-left: 4px solid #10b981; border-radius: 6px; margin-bottom: 0.75rem;";
+              refundInfo.innerHTML = `
+                <div style="font-weight: 600; color: #059669; margin-bottom: 0.25rem; font-size: 0.85rem;">💚 Refund Estimate</div>
+                <div style="font-size: 0.8rem; color: #047857; line-height: 1.4;">
+                  If the job is completed right now (${actualHours.toFixed(2)} hours worked), you'll be automatically refunded <strong>$${refundAmount.toFixed(2)}</strong> for the unused time.
+                </div>
+              `;
+              completionCodeSection.appendChild(refundInfo);
+            }
+          } catch (e) {
+            console.error('Error calculating refund estimate:', e);
+          }
+        }
+        
         // Regenerate button
         const regenerateBtn = document.createElement("button");
         regenerateBtn.className = "btn btn-ghost";
@@ -23612,16 +23642,44 @@ meta.textContent =
               ` : '';
               
               // Completion code display for customer (if job is IN_PROGRESS) - Customer just needs to see their code to give to hustler
-              const completionCodeSection = job.status === 'IN_PROGRESS' && job.startCodeVerified && job.completionCode && !job.completionCodeVerified ? `
+              const completionCodeSection = job.status === 'IN_PROGRESS' && job.startCodeVerified && job.completionCode && !job.completionCodeVerified ? (() => {
+                let refundInfo = '';
+                if (job.payType === 'hourly' && job.hourlyRate && job.estHours && requirements && requirements.startedAt) {
+                  try {
+                    const startedAt = new Date(requirements.startedAt);
+                    const now = new Date();
+                    const elapsedMs = now.getTime() - startedAt.getTime();
+                    const actualHours = elapsedMs / (1000 * 60 * 60);
+                    const hourlyRate = Number(job.hourlyRate || 0);
+                    const maxHours = Number(job.estHours || 0);
+                    
+                    const originalAuthorized = hourlyRate * maxHours;
+                    const actualCharge = hourlyRate * actualHours;
+                    const refundAmount = originalAuthorized - actualCharge;
+                    
+                    if (refundAmount > 0) {
+                      refundInfo = `
+                        <div style="padding: 0.5rem; background: #dcfce7; border-left: 3px solid #10b981; border-radius: 4px; margin-top: 0.5rem; font-size: 0.75rem; color: #047857; line-height: 1.3;">
+                          💚 If completed now (${actualHours.toFixed(2)} hrs), you'll be refunded <strong>$${refundAmount.toFixed(2)}</strong> for unused time.
+                        </div>
+                      `;
+                    }
+                  } catch (e) {
+                    console.error('Error calculating refund estimate:', e);
+                  }
+                }
+                return `
                 <div style="padding: 1rem; background: #dcfce7; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #16a34a;">
                   <div style="font-weight: 700; font-size: 0.95rem; color: #166534; margin-bottom: 0.5rem;">✅ Your Completion Code</div>
                   <div style="font-size: 1.75rem; font-weight: 700; letter-spacing: 0.3em; color: #166534; text-align: center; padding: 0.75rem; background: white; border-radius: 6px; font-family: 'Courier New', monospace; margin-bottom: 0.5rem;">${job.completionCode}</div>
                   <div style="font-size: 0.85rem; color: #166534; line-height: 1.4;">
                     <div style="font-weight: 600; margin-bottom: 0.25rem;">⚠️ Give this code to your hustler only after the job is fully done and you're satisfied.</div>
                     <div style="font-size: 0.8rem;">This will release payment to the hustler.</div>
+                    ${refundInfo}
                   </div>
                 </div>
-              ` : '';
+              `;
+              })() : '';
               
               card.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
