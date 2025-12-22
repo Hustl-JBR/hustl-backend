@@ -21775,7 +21775,8 @@ async function renderJobs(reset = false) {
         
         if (statusResponse.ok) {
           const status = await statusResponse.json();
-          const payoutsEnabled = status.accountDetails?.payoutsEnabled || false;
+          const payoutsEnabled = status.payoutsEnabled || status.accountDetails?.payoutsEnabled || false;
+          console.log('[STRIPE STATUS] Status check result:', { connected: status.connected, payoutsEnabled, accountId: status.accountId });
           if (status.connected && payoutsEnabled) {
             // Fully connected
             stripeContent.innerHTML = `

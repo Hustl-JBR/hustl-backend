@@ -353,9 +353,13 @@ router.get('/status', async (req, res) => {
       }
     }
     
+    // Get payoutsEnabled from account details
+    const payoutsEnabled = accountDetails?.payouts_enabled || false;
+    
     res.json({ 
       connected: isConnected,
       accountId: user.stripeAccountId,
+      payoutsEnabled: payoutsEnabled, // Include directly for easier frontend access
       accountDetails: accountDetails ? {
         id: accountDetails.id,
         type: accountDetails.type,
