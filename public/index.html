@@ -6210,11 +6210,12 @@
         });
         
         if (!response.ok) {
-          console.error('Failed to fetch user stats');
+          console.error('Failed to fetch user stats:', response.status, response.statusText);
           return;
         }
         
         const userData = await response.json();
+        console.log('[PROFILE STATS] Raw API response:', userData);
         
         // Update profile basic info
         const profileBasicInfo = document.getElementById('profileBasicInfo');

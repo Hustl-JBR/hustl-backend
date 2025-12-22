@@ -113,6 +113,10 @@ router.get('/me', authenticate, async (req, res) => {
               { 
                 status: 'COMPLETED_BY_HUSTLER',
                 completionCodeVerified: true
+              },
+              {
+                status: 'AWAITING_CUSTOMER_CONFIRM',
+                completionCodeVerified: true
               }
             ]
           }
@@ -133,6 +137,10 @@ router.get('/me', authenticate, async (req, res) => {
             { status: 'PAID' },
             { 
               status: 'COMPLETED_BY_HUSTLER',
+              completionCodeVerified: true
+            },
+            {
+              status: 'AWAITING_CUSTOMER_CONFIRM',
               completionCodeVerified: true
             }
           ]
@@ -161,21 +169,32 @@ router.get('/me', authenticate, async (req, res) => {
         let hustlerEarned = 0;
         const tipAmount = Number(job.payment?.tip || 0);
         
-        if (job.payment && job.payment.status === 'CAPTURED') {
-          const paymentAmount = Number(job.payment.amount) || 0;
+        // Calculate job amount
+        const jobAmount = job.payType === 'flat' 
+          ? Number(job.amount || 0)
+          : (Number(job.hourlyRate || 0) * Number(job.estHours || 0));
+        
+        if (job.payment) {
+          // If payment exists, use payment amount (more accurate)
+          const paymentAmount = Number(job.payment.amount || jobAmount);
           const platformFee = Number(job.payment.feeHustler) || (paymentAmount * 0.12); // 12% platform fee
           hustlerEarned = paymentAmount - platformFee;
-        } else if (job.payment) {
-          // If payment exists but not captured, still calculate based on job amount
-          const jobAmount = job.payType === 'flat' 
-            ? Number(job.amount || 0)
-            : (Number(job.hourlyRate || 0) * Number(job.estHours || 0));
+        } else {
+          // If no payment record yet, calculate based on job amount (for completed jobs awaiting payment)
           const platformFee = jobAmount * 0.12;
           hustlerEarned = jobAmount - platformFee;
         }
         
         // Add tip (100% goes to hustler, no platform fee on tips)
         totalEarned += hustlerEarned + tipAmount;
+        
+        console.log('[GET /users/me] Job earnings:', {
+          jobId: job.id,
+          jobAmount,
+          hustlerEarned,
+          tipAmount,
+          total: hustlerEarned + tipAmount
+        });
       });
       
       console.log('[GET /users/me] Total earned calculated:', totalEarned);
