@@ -514,5 +514,57 @@ router.get('/transfers', async (req, res) => {
   }
 });
 
+// POST /admin/grant-admin - Grant admin access to current user (one-time setup)
+// This allows the first admin to grant themselves access
+router.post('/grant-admin', authenticate, async (req, res) => {
+  try {
+    // Check if ANY user already has ADMIN role
+    const existingAdmin = await prisma.user.findFirst({
+      where: {
+        roles: {
+          has: 'ADMIN'
+        }
+      },
+      select: { id: true, email: true }
+    });
+
+    // If no admin exists, allow anyone to grant themselves admin
+    // Otherwise, require existing admin role
+    if (existingAdmin) {
+      const userRoles = (req.user.roles || []).map(r => r.toUpperCase());
+      if (!userRoles.includes('ADMIN')) {
+        return res.status(403).json({ 
+          error: 'Forbidden',
+          message: 'Only existing admins can grant admin access'
+        });
+      }
+    }
+
+    // Grant admin to current user
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        roles: {
+          set: [...new Set([...(req.user.roles || []), 'ADMIN'])]
+        }
+      },
+      select: {
+        id: true,
+        email: true,
+        roles: true
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Admin access granted successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Grant admin error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
 
