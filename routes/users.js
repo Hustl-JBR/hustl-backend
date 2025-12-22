@@ -171,13 +171,22 @@ router.get('/me', authenticate, async (req, res) => {
         let hustlerEarned = 0;
         const tipAmount = Number(job.payment?.tip || 0);
         
-        // Calculate job amount
-        const jobAmount = job.payType === 'flat' 
-          ? Number(job.amount || 0)
-          : (Number(job.hourlyRate || 0) * Number(job.estHours || 0));
+        // Calculate job amount - use payment.amount if available (for negotiated prices)
+        // Otherwise calculate from job details
+        let jobAmount = 0;
+        if (job.payment && job.payment.amount) {
+          // Use payment amount (includes negotiated prices)
+          jobAmount = Number(job.payment.amount);
+        } else if (job.payType === 'flat') {
+          jobAmount = Number(job.amount || 0);
+        } else {
+          // Hourly job - use actual hours worked if available, otherwise estimated
+          const actualHours = job.requirements?.actualHours || job.estHours || 0;
+          jobAmount = Number(job.hourlyRate || 0) * Number(actualHours);
+        }
         
         if (job.payment) {
-          // If payment exists, use payment amount (more accurate)
+          // If payment exists, use payment amount (more accurate - includes negotiated prices)
           const paymentAmount = Number(job.payment.amount || jobAmount);
           const platformFee = Number(job.payment.feeHustler) || (paymentAmount * 0.12); // 12% platform fee
           hustlerEarned = paymentAmount - platformFee;
