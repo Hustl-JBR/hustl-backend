@@ -24418,7 +24418,11 @@ meta.textContent =
           
           // If we're the customer, ALWAYS try fetching fresh payment data to check for tips
           // This helps when webhook just processed the tip but job data hasn't refreshed
+          let hasPendingTip = false;
           if (isCustomerForThisJob) {
+            // Check if there's a pending tip in sessionStorage (in case webhook hasn't processed yet)
+            hasPendingTip = sessionStorage.getItem(`tipPending_${job.id}`) === 'true';
+            
             // Always fetch fresh payment data to ensure we have the latest tip information
             try {
               const paymentResponse = await fetch(`${API_BASE}/payments/job/${job.id}`, {
@@ -24432,8 +24436,16 @@ meta.textContent =
                   tipAmount = freshTipAmount; // Always use fresh tip amount
                   if (freshTipAmount > 0) {
                     console.log(`[TIP CHECK] Found tip in fresh payment data: $${tipAmount.toFixed(2)}`);
+                    // Clear pending flag if tip is now in database
+                    if (hasPendingTip) {
+                      sessionStorage.removeItem(`tipPending_${job.id}`);
+                      hasPendingTip = false;
+                    }
                   } else {
                     console.log(`[TIP CHECK] No tip found in fresh payment data`);
+                    if (hasPendingTip) {
+                      console.log(`[TIP CHECK] But found pending tip in sessionStorage for job ${job.id}`);
+                    }
                   }
                 }
               }
@@ -24443,7 +24455,8 @@ meta.textContent =
             }
           }
           
-          const hasTipped = isCustomerForThisJob && tipAmount > 0;
+          // Consider it tipped if tipAmount > 0 OR if there's a pending tip in sessionStorage
+          const hasTipped = isCustomerForThisJob && (tipAmount > 0 || hasPendingTip);
           
           // Debug logging for tip detection
           if (isCustomerForThisJob) {
