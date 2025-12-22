@@ -21497,7 +21497,7 @@ async function renderJobs(reset = false) {
       <div class="quick-stat-card">
         <div class="quick-stat-icon">${isHustler ? '💰' : '💸'}</div>
         <div class="quick-stat-value">$${isHustler ? totalEarned.toFixed(0) : totalSpent.toFixed(0)}</div>
-        <div class="quick-stat-label">Earned</div>
+        <div class="quick-stat-label">${isHustler ? 'Earned' : 'Spent'}</div>
       </div>
       <div class="quick-stat-card">
         <div class="quick-stat-icon">⭐</div>
@@ -21518,7 +21518,7 @@ async function renderJobs(reset = false) {
           $${isHustler ? totalEarned.toFixed(2) : totalSpent.toFixed(2)}
         </div>
         <div style="color: var(--text-muted); margin-bottom: 1.5rem;">
-          Total Earned
+          ${isHustler ? 'Total Earned' : 'Total Spent'}
         </div>
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; text-align: left;">
           <div style="padding: 1rem; background: #f0fdf4; border-radius: 10px;">
@@ -21659,7 +21659,38 @@ async function renderJobs(reset = false) {
             }
             
             const userData = await userResponse.json();
-            const totalEarned = Number(userData.totalEarned) || 0;
+            const isHustler = user.role === "HUSTLER" || user.role === "hustler";
+            
+            let displayAmount = 0;
+            let displayLabel = '';
+            
+            if (isHustler) {
+              displayAmount = Number(userData.totalEarned) || 0;
+              displayLabel = 'Total Earned';
+            } else {
+              // For customers, calculate total spent from completed jobs
+              try {
+                const completedJobsResponse = await fetch(`${API_BASE}/jobs/completed`, {
+                  headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                });
+                if (completedJobsResponse.ok) {
+                  const completedJobs = await completedJobsResponse.json();
+                  // Sum up payments where user is customer
+                  displayAmount = completedJobs
+                    .filter(job => job.customerId === user.id && job.payment)
+                    .reduce((sum, job) => {
+                      const paymentAmount = Number(job.payment?.amount || 0);
+                      const serviceFee = Number(job.payment?.feeCustomer) || (paymentAmount * 0.065);
+                      const tip = Number(job.payment?.tip || 0);
+                      return sum + paymentAmount + serviceFee + tip;
+                    }, 0);
+                }
+              } catch (error) {
+                console.error('[EARNINGS TAB] Error calculating total spent:', error);
+              }
+              displayLabel = 'Total Spent';
+            }
+            
             const jobsCompleted = Number(userData.jobsCompleted) || 0;
             
             // Fetch active jobs count
@@ -21672,15 +21703,14 @@ async function renderJobs(reset = false) {
               activeJobsCount = Array.isArray(activeJobs) ? activeJobs.length : 0;
             }
             
-            const isHustler = user.role === "HUSTLER" || user.role === "hustler";
             earningsContent.innerHTML = `
               <div style="text-align: center; padding: 2rem;">
                 <div style="font-size: 3rem; margin-bottom: 1rem;">${isHustler ? '💰' : '📊'}</div>
                 <div style="font-size: 2rem; font-weight: 700; color: var(--primary); margin-bottom: 0.5rem;">
-                  $${totalEarned.toFixed(2)}
+                  $${displayAmount.toFixed(2)}
                 </div>
                 <div style="color: var(--text-muted); margin-bottom: 1.5rem;">
-                  ${isHustler ? 'Total Earned' : 'Total Spent'}
+                  ${displayLabel}
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; text-align: left;">
                   <div style="padding: 1rem; background: #f0fdf4; border-radius: 10px;">
