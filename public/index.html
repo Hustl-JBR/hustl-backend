@@ -29869,6 +29869,11 @@ meta.textContent =
           if (typeof loadCompletedJobs === 'function') {
             loadCompletedJobs();
           }
+          
+          // Refresh profile stats after review submission (updates rating)
+          if (typeof renderProfileStats === 'function') {
+            setTimeout(() => renderProfileStats(), 1000);
+          }
           });
         } catch (error) {
           console.error('❌ Error submitting review:', error);
