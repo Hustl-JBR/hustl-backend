@@ -6177,6 +6177,26 @@
             await renderProfileStats();
           }, 100);
         }
+        
+        // Also refresh profile stats periodically when on profile view (every 30 seconds)
+        if (view === 'profile') {
+          // Clear any existing interval
+          if (window.profileStatsInterval) {
+            clearInterval(window.profileStatsInterval);
+          }
+          // Set up periodic refresh
+          window.profileStatsInterval = setInterval(async () => {
+            if (activeView === 'profile' && typeof renderProfileStats === 'function') {
+              await renderProfileStats();
+            }
+          }, 30000); // Refresh every 30 seconds
+        } else {
+          // Clear interval when leaving profile view
+          if (window.profileStatsInterval) {
+            clearInterval(window.profileStatsInterval);
+            window.profileStatsInterval = null;
+          }
+        }
       }
       
       // Don't re-initialize hamburger menu - it uses event delegation and doesn't need re-initialization
@@ -29027,6 +29047,10 @@ meta.textContent =
               });
               if (typeof loadActiveJobs === 'function') loadActiveJobs();
               if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
+              // Refresh profile stats after job completion
+              if (typeof renderProfileStats === 'function') {
+                setTimeout(() => renderProfileStats(), 1000);
+              }
               return true;
             }
           }
@@ -29081,6 +29105,11 @@ meta.textContent =
         // Success! Show congratulations modal
         console.log('✅ Completion verified successfully!');
         showCompletionSuccessModal(jobId, data);
+        
+        // Refresh profile stats after job completion
+        if (typeof renderProfileStats === 'function') {
+          setTimeout(() => renderProfileStats(), 2000);
+        }
         
         return true;
       } catch (error) {
@@ -29375,6 +29404,10 @@ meta.textContent =
         // Refresh jobs to show completed status
         if (typeof loadActiveJobs === 'function') loadActiveJobs();
         if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
+        // Refresh profile stats after job completion
+        if (typeof renderProfileStats === 'function') {
+          setTimeout(() => renderProfileStats(), 1000);
+        }
         
         // Open review modal immediately
         if (typeof showReviewModal === 'function') {
@@ -29496,6 +29529,10 @@ meta.textContent =
         // Refresh jobs to show completed status
         if (typeof loadActiveJobs === 'function') loadActiveJobs();
         if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
+        // Refresh profile stats after job completion
+        if (typeof renderProfileStats === 'function') {
+          setTimeout(() => renderProfileStats(), 1000);
+        }
       });
       
       // Close on background click
