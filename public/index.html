@@ -23686,15 +23686,30 @@ meta.textContent =
                     if (currentAmount > 0) {
                       const platformFee = currentAmount * 0.12;
                       const finalPayment = currentAmount - platformFee;
+                      const isHourly = payType === 'hourly';
+                      const hourlyRate = parseFloat(job.hourlyRate || 0);
+                      const hourlyEarnings = hourlyRate > 0 ? (hourlyRate * 0.88).toFixed(2) : 0; // 88% after 12% platform fee
+                      
                       return `
                         <div style="padding: 0.625rem; background: #fef3c7; border-left: 3px solid #f59e0b; border-radius: 6px; margin-bottom: 0.625rem;">
                           <div style="font-weight: 600; color: #92400e; margin-bottom: 0.25rem; font-size: 0.75rem;">💰 Your Final Payment</div>
                           <div style="font-size: 0.7rem; color: #78350f; line-height: 1.4;">
+                            ${isHourly && hourlyRate > 0 ? `
+                            <div style="margin-bottom: 0.25rem;">Hourly Rate: <strong>$${hourlyRate.toFixed(2)}/hour</strong></div>
+                            <div style="margin-bottom: 0.25rem;">Platform Fee (12%): <strong>$${(hourlyRate * 0.12).toFixed(2)}/hour</strong></div>
+                            <div style="margin-top: 0.375rem; padding-top: 0.375rem; border-top: 1px solid #fbbf24; font-weight: 600;">
+                              You'll Earn: <strong style="color: #059669;">$${hourlyEarnings}/hour</strong>
+                            </div>
+                            <div style="margin-top: 0.375rem; font-size: 0.65rem; color: #92400e; font-style: italic;">
+                              This is your guaranteed hourly rate. You're actually guaranteed to make this much per hour because you're paid for actual hours worked.
+                            </div>
+                            ` : `
                             <div style="margin-bottom: 0.25rem;">Job Amount: <strong>$${currentAmount.toFixed(2)}</strong></div>
                             <div style="margin-bottom: 0.25rem;">Platform Fee (12%): <strong>$${platformFee.toFixed(2)}</strong></div>
                             <div style="margin-top: 0.375rem; padding-top: 0.375rem; border-top: 1px solid #fbbf24; font-weight: 600;">
                               You'll Earn: <strong style="color: #059669;">$${finalPayment.toFixed(2)}</strong>
                             </div>
+                            `}
                             <div style="margin-top: 0.375rem; font-size: 0.65rem; color: #92400e;">
                               Once verified, price is locked. Refunds via <strong>team.hustlapp@outlook.com</strong>.
                             </div>
