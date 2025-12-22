@@ -24184,40 +24184,44 @@ meta.textContent =
           // Use it directly - it may be null for some completed jobs
           let payment = job.payment || null;
           
-          // If we're the customer and tip is 0, try fetching fresh payment data
+          // Get other user info based on role in this job
+          const otherUser = isCustomerForThisJob ? (job.hustler || {}) : (job.customer || {});
+          
+          // Check if tip already added (only for customers of this job)
+          // Convert tip to number in case it's a Decimal type from Prisma
+          let tipAmount = payment ? Number(payment.tip || 0) : 0;
+          
+          // If we're the customer and tip is 0 or payment is null, try fetching fresh payment data
           // This helps when webhook just processed the tip but job data hasn't refreshed
-          if (isCustomerForThisJob && payment && payment.id) {
-            const currentTip = Number(payment.tip || 0);
-            if (currentTip === 0) {
-              // Tip might not be updated yet - try fetching fresh payment data
+          if (isCustomerForThisJob) {
+            if (!payment || !payment.id || tipAmount === 0) {
+              // Try fetching fresh payment data
               try {
                 const paymentResponse = await fetch(`${API_BASE}/payments/job/${job.id}`, {
                   headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (paymentResponse.ok) {
                   const freshPayment = await paymentResponse.json();
-                  if (freshPayment && Number(freshPayment.tip || 0) > 0) {
-                    payment = freshPayment; // Use fresh payment data with tip
-                    console.log(`[TIP CHECK] Found tip in fresh payment data: $${freshPayment.tip}`);
+                  if (freshPayment) {
+                    payment = freshPayment; // Use fresh payment data
+                    tipAmount = Number(freshPayment.tip || 0);
+                    if (tipAmount > 0) {
+                      console.log(`[TIP CHECK] Found tip in fresh payment data: $${tipAmount.toFixed(2)}`);
+                    }
                   }
                 }
               } catch (e) {
                 // Silently fail - use existing payment data
+                console.log('[TIP CHECK] Could not fetch fresh payment data:', e);
               }
             }
           }
           
-          // Get other user info based on role in this job
-          const otherUser = isCustomerForThisJob ? (job.hustler || {}) : (job.customer || {});
-          
-          // Check if tip already added (only for customers of this job)
-          // Convert tip to number in case it's a Decimal type from Prisma
-          const tipAmount = payment ? Number(payment.tip || 0) : 0;
           const hasTipped = isCustomerForThisJob && tipAmount > 0;
           
           // Debug logging for tip detection
           if (isCustomerForThisJob) {
-            console.log(`[TIP CHECK] Job ${job.id}: payment=${!!payment}, tipAmount=${tipAmount.toFixed(2)}, hasTipped=${hasTipped}, payment.tip=${payment?.tip}`);
+            console.log(`[TIP CHECK] Job ${job.id}: payment=${!!payment}, payment.tip=${payment?.tip}, tipAmount=${tipAmount.toFixed(2)}, hasTipped=${hasTipped}`);
           }
           
           // Check if user has already reviewed (reviews have reviewerId field)
