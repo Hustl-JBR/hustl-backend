@@ -23215,9 +23215,14 @@ meta.textContent =
                 </div>
                 ${(() => {
                   const payType = job.payType || 'flat';
-                  const jobAmount = payType === 'hourly' 
-                    ? (parseFloat(job.hourlyRate || 0) * parseFloat(job.estHours || 0))
-                    : parseFloat(job.amount || 0);
+                  // Use payment.amount if available (negotiated price), otherwise use job.amount (original price)
+                  let jobAmount = 0;
+                  if (payType === 'hourly') {
+                    jobAmount = parseFloat(job.hourlyRate || 0) * parseFloat(job.estHours || 0);
+                  } else {
+                    // For flat jobs, use payment.amount if it exists (negotiated price), otherwise job.amount
+                    jobAmount = job.payment && job.payment.amount ? parseFloat(job.payment.amount) : parseFloat(job.amount || 0);
+                  }
                   if (jobAmount > 0) {
                     const serviceFee = jobAmount * 0.065;
                     const finalPrice = jobAmount + serviceFee;
