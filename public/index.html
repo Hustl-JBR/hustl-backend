@@ -29176,18 +29176,15 @@ meta.textContent =
         updateSubmitButton();
       });
       
-      // Submit review - check if button is disabled before proceeding
+      // Submit review
       submitBtn.addEventListener('click', async (e) => {
-        // Prevent click if button is disabled
-        if (submitBtn.disabled) {
-          e.preventDefault();
-          e.stopPropagation();
-          return;
-        }
+        e.preventDefault();
+        e.stopPropagation();
         
-        console.log('📤 Submitting review with rating:', selectedRating);
-        console.log('📤 Review text length:', reviewText.value.trim().length);
+        console.log('📤 Submit button clicked!');
+        console.log('📤 Current state - rating:', selectedRating, 'text length:', reviewText.value.trim().length, 'disabled:', submitBtn.disabled);
         
+        // Check requirements
         if (selectedRating === 0) {
           showToast('Please select a rating');
           return;
@@ -29205,6 +29202,10 @@ meta.textContent =
         
         try {
           const token = localStorage.getItem('hustl_token');
+          if (!token) {
+            throw new Error('Please log in to submit a review');
+          }
+          
           const reviewData = {
             jobId,
             revieweeId,
@@ -29213,6 +29214,7 @@ meta.textContent =
           };
           
           console.log('📤 Review data being submitted:', reviewData);
+          console.log('📤 API endpoint:', `${API_BASE}/reviews`);
           
           const response = await fetch(`${API_BASE}/reviews`, {
             method: 'POST',
@@ -29223,9 +29225,12 @@ meta.textContent =
             body: JSON.stringify(reviewData)
           });
           
+          console.log('📤 Response status:', response.status, response.statusText);
+          
           if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to submit review');
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            console.error('❌ Review submission error:', errorData);
+            throw new Error(errorData.error || errorData.message || 'Failed to submit review');
           }
           
           const result = await response.json();
@@ -29274,11 +29279,27 @@ meta.textContent =
           });
         } catch (error) {
           console.error('❌ Error submitting review:', error);
+          console.error('❌ Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+          });
           showToast(error.message || 'Error submitting review. Please try again.');
           submitBtn.disabled = false;
           submitBtn.textContent = 'Submit Review';
+          // Re-enable button by updating state
+          updateSubmitButton();
         }
       });
+      
+      // Also add click handler to button directly (in case event listener doesn't work)
+      submitBtn.onclick = async function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('📤 Submit button onclick triggered');
+        // Trigger the click event on the button to use the addEventListener handler
+        submitBtn.dispatchEvent(new Event('click'));
+      };
       
       // Cancel button
       modal.querySelector('#cancelReviewBtn')?.addEventListener('click', () => {
