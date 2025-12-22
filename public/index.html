@@ -33897,6 +33897,7 @@ try {
       };
       
       // Refresh immediately, then again after delays (webhook might take a moment)
+      // More aggressive refresh to catch webhook processing
       setTimeout(() => {
         updateTipButtons();
         refreshCompletedJobs();
@@ -33909,6 +33910,14 @@ try {
         updateTipButtons();
         refreshCompletedJobs();
       }, 5000);
+      setTimeout(() => {
+        updateTipButtons();
+        refreshCompletedJobs();
+      }, 10000); // Extra refresh after 10 seconds
+      setTimeout(() => {
+        updateTipButtons();
+        refreshCompletedJobs();
+      }, 20000); // Final refresh after 20 seconds
     } else if (tipCancelled) {
       // Tip payment cancelled
       if (typeof showToast === 'function') {
