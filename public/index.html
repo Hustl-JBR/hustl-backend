@@ -24759,15 +24759,18 @@ meta.textContent =
           }
         }
         
-        // Fetch payment data if not provided
+        // Fetch payment data - always fetch fresh for customers to get latest tip status
         let payment = paymentData;
-        if (!payment) {
+        if (!payment || isCustomer) {
           try {
             const paymentResponse = await fetch(`${API_BASE}/payments/job/${jobId}`, {
               headers: { 'Authorization': `Bearer ${token}` }
             });
             if (paymentResponse.ok) {
-              payment = await paymentResponse.json();
+              const freshPayment = await paymentResponse.json();
+              if (freshPayment) {
+                payment = freshPayment; // Always use fresh payment data
+              }
             }
           } catch (e) {
             console.error("Error fetching payment:", e);
@@ -24778,23 +24781,43 @@ meta.textContent =
         const otherUser = isCustomer ? (job.hustler || {}) : (job.customer || {});
         
         // Check if tip already added (only for customers of this job)
+        // Always check payment.tip from database (not sessionStorage)
         // Convert tip to number in case it's a Decimal type from Prisma
         const tipAmount = payment ? Number(payment.tip || 0) : 0;
         const hasTipped = isCustomer && tipAmount > 0;
         
+        // Clear any pending tip flag from sessionStorage if tip is now in database
+        if (isCustomer && tipAmount > 0) {
+          try {
+            sessionStorage.removeItem(`tipPending_${jobId}`);
+          } catch (e) {
+            // Ignore errors clearing sessionStorage
+          }
+        }
+        
         console.log('🔵 Popup role check - isCustomer:', isCustomer, 'isHustler:', isHustler, 'hasTipped:', hasTipped);
         
         // Calculate amounts - ensure all are numbers
-        // Use payment.amount if available (negotiated price), otherwise use job.amount (original price)
+        // For hourly jobs: payment.amount is the actual amount charged (updated after completion)
+        // For flat jobs: use payment.amount if it exists (negotiated price), otherwise job.amount
         const payType = job.payType || 'flat';
         let jobAmount = 0;
         if (payType === 'hourly') {
-          jobAmount = parseFloat(job.hourlyRate || 0) * parseFloat(job.estHours || 0);
+          // For hourly jobs, payment.amount is the actual amount charged (hours worked × rate)
+          // If payment doesn't exist yet, fall back to estimated
+          jobAmount = payment && payment.amount ? parseFloat(payment.amount) : (parseFloat(job.hourlyRate || 0) * parseFloat(job.estHours || 0));
         } else {
           // For flat jobs, use payment.amount if it exists (negotiated price), otherwise job.amount
           jobAmount = payment && payment.amount ? parseFloat(payment.amount) : parseFloat(job.amount || 0);
         }
         jobAmount = Number(jobAmount);
+        
+        // Get actual hours worked for hourly jobs (stored in requirements.actualHours)
+        let actualHours = null;
+        if (payType === 'hourly' && job.requirements) {
+          const requirements = typeof job.requirements === 'string' ? JSON.parse(job.requirements) : job.requirements;
+          actualHours = requirements?.actualHours || null;
+        }
         
         // Create modal
         const modal = document.createElement('div');
@@ -24848,11 +24871,14 @@ meta.textContent =
           if (job.payType === 'hourly' && job.hourlyRate && job.estHours) {
             // Original authorized amount = hourlyRate × estHours
             originalAuthorizedAmount = Number(job.hourlyRate) * Number(job.estHours);
-            // Refund = original authorized - actual charged (payment.amount is updated to actual amount)
+            // Refund = original authorized - actual charged (payment.amount is the actual amount charged)
             refundAmount = Math.max(0, originalAuthorizedAmount - jobAmount);
           }
           
-          const serviceFee = Number(jobAmount * 0.065);
+          // Service fee is 6.5% of the actual amount charged
+          // Use stored feeCustomer from payment record if available (more accurate), otherwise calculate
+          const serviceFee = payment && payment.feeCustomer ? Number(payment.feeCustomer) : Number(jobAmount * 0.065);
+          // Get tip amount - check payment.tip from database, not sessionStorage
           const tipAmount = Number(payment?.tip || 0);
           const totalPaid = Number(jobAmount + serviceFee);
           
@@ -24882,17 +24908,25 @@ meta.textContent =
                 💳 Payment Details
               </div>
               <div style="font-size: 0.95rem; color: #1e3a8a; line-height: 2;">
-                ${job.payType === 'hourly' && refundAmount > 0 ? `
+                ${job.payType === 'hourly' && actualHours !== null ? `
+                <div style="margin-bottom: 1rem; padding: 1rem; background: #dcfce7; border-radius: 8px; border-left: 4px solid #10b981;">
+                  <div style="font-weight: 600; color: #047857; margin-bottom: 0.5rem; font-size: 1rem;">⏱️ Time Worked</div>
+                  <div style="font-size: 1.1rem; color: #065f46;">
+                    Hustler worked <strong>${actualHours.toFixed(2)} hours</strong> at <strong>$${Number(job.hourlyRate).toFixed(2)}/hr</strong>
+                  </div>
+                </div>
+                ` : ''}
+                ${job.payType === 'hourly' && actualHours !== null && refundAmount > 0 ? `
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; padding: 0.75rem; background: #dcfce7; border-radius: 6px; border-left: 3px solid #10b981;">
-                  <span>Original Authorized:</span>
+                  <span>Original Amount Authorized:</span>
                   <strong>$${originalAuthorizedAmount.toFixed(2)}</strong>
                 </div>
                 ` : ''}
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
-                  <span>Job Amount Charged:</span>
+                  <span>${job.payType === 'hourly' ? 'Amount Charged' : 'Job Amount Charged'}:</span>
                   <strong>$${jobAmount.toFixed(2)}</strong>
                 </div>
-                ${job.payType === 'hourly' && refundAmount > 0 ? `
+                ${job.payType === 'hourly' && actualHours !== null && refundAmount > 0 ? `
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; padding: 0.75rem; background: #fef3c7; border-radius: 6px; border-left: 3px solid #f59e0b;">
                   <span>💚 Refunded (Unused Time):</span>
                   <strong style="color: #059669;">-$${refundAmount.toFixed(2)}</strong>
@@ -24912,7 +24946,7 @@ meta.textContent =
                   <span>Total Paid:</span>
                   <strong style="color: #1e40af; font-size: 1.3rem;">$${Number(totalPaid + tipAmount).toFixed(2)}</strong>
                 </div>
-                ${job.payType === 'hourly' && refundAmount > 0 ? `
+                ${job.payType === 'hourly' && actualHours !== null && refundAmount > 0 ? `
                 <div style="margin-top: 1rem; padding: 0.75rem; background: #dcfce7; border-radius: 6px; border-left: 3px solid #10b981; font-size: 0.85rem; color: #047857; line-height: 1.4;">
                   💚 <strong>$${refundAmount.toFixed(2)}</strong> was automatically refunded to your original payment method for unused time.
                 </div>
@@ -24982,6 +25016,7 @@ meta.textContent =
           `;
         } else if (isHustler) {
           // HUSTLER VIEW: Earnings (How much you made), Review, Job info
+          // For hourly jobs: jobAmount is the actual amount charged (already updated in payment.amount)
           const platformFee = Number(jobAmount * 0.12);
           const earnings = Number(jobAmount - platformFee);
           const tipAmount = Number(payment?.tip || 0);
@@ -25013,8 +25048,16 @@ meta.textContent =
                 💰 How Much You Made
               </div>
               <div style="font-size: 1rem; color: #047857; line-height: 2;">
+                ${job.payType === 'hourly' && actualHours !== null ? `
+                <div style="margin-bottom: 1rem; padding: 1rem; background: #bbf7d0; border-radius: 8px; border-left: 4px solid #059669;">
+                  <div style="font-weight: 600; color: #065f46; margin-bottom: 0.5rem; font-size: 1rem;">⏱️ Time Worked</div>
+                  <div style="font-size: 1.1rem; color: #047857;">
+                    You worked <strong>${actualHours.toFixed(2)} hours</strong> at <strong>$${Number(job.hourlyRate).toFixed(2)}/hr</strong>
+                  </div>
+                </div>
+                ` : ''}
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
-                  <span>Job Amount:</span>
+                  <span>${job.payType === 'hourly' ? 'Amount Earned' : 'Job Amount'}:</span>
                   <strong>$${jobAmount.toFixed(2)}</strong>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
