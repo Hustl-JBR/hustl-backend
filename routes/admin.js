@@ -591,5 +591,79 @@ router.get('/transfers', async (req, res) => {
   }
 });
 
+// GET /admin/tips - List all tips
+router.get('/tips', [
+  query('page').optional().isInt({ min: 1 }),
+  query('limit').optional().isInt({ min: 1, max: 100 }),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const page = parseInt(req.query.page || '1', 10);
+    const limit = parseInt(req.query.limit || '50', 10);
+    const skip = (page - 1) * limit;
+
+    // Get all payments with tips > 0
+    const where = {
+      tip: {
+        gt: 0
+      }
+    };
+
+    const [payments, total] = await Promise.all([
+      prisma.payment.findMany({
+        where,
+        include: {
+          job: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+            },
+          },
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          hustler: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.payment.count({ where }),
+    ]);
+
+    res.json({
+      tips: payments,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page * limit < total,
+      },
+    });
+  } catch (error) {
+    console.error('[ADMIN TIPS] Error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message 
+    });
+  }
+});
+
 module.exports = router;
 

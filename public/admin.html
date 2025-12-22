@@ -509,6 +509,7 @@
         else if (tab.dataset.tab === 'refunds') loadRefunds();
         else if (tab.dataset.tab === 'payouts') loadPayouts();
         else if (tab.dataset.tab === 'payments') loadPayments();
+        else if (tab.dataset.tab === 'tips') loadTips();
       });
     });
     
@@ -749,7 +750,7 @@
             <tbody>
               ${data.payments.map(payment => `
                 <tr>
-                  <td>${new Date(payment.createdAt).toLocaleDateString()}</td>
+                  <td>${payment.created_at ? new Date(payment.created_at).toLocaleDateString() : 'N/A'}</td>
                   <td>${payment.job?.title || 'N/A'}</td>
                   <td>${payment.customer?.name || 'N/A'}</td>
                   <td>${payment.hustler?.name || 'N/A'}</td>
