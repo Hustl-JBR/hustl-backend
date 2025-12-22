@@ -476,6 +476,12 @@ app.use((req, res, next) => {
   ) {
     return next(); // Continue to next middleware/route handler
   }
+  
+  // Serve admin.html for /admin route
+  if (req.path === "/admin" || req.path === "/admin.html") {
+    return res.sendFile(path.join(publicPath, "admin.html"));
+  }
+  
   // Serve index.html for all other routes (SPA fallback)
   res.sendFile(path.join(publicPath, "index.html"));
 });

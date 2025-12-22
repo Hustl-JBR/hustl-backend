@@ -404,6 +404,7 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       }
 
       // Transfer to hustler's Stripe Connect account (minus 12% fee)
+      const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
       const jobWithHustler = await prisma.job.findUnique({
         where: { id: jobId },
         include: {
@@ -413,23 +414,33 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         }
       });
 
-      if (jobWithHustler.hustler.stripeAccountId) {
+      if (skipStripeCheck) {
+        console.log(`[JOB COMPLETION] SKIP_STRIPE_CHECK enabled - skipping transfer. Would transfer $${hustlerPayout.toFixed(2)} to hustler`);
+      } else if (jobWithHustler.hustler.stripeAccountId) {
         try {
+          console.log(`[JOB COMPLETION] Attempting to transfer $${hustlerPayout.toFixed(2)} to hustler account: ${jobWithHustler.hustler.stripeAccountId}`);
           const transferResult = await transferToHustler(
             jobWithHustler.hustler.stripeAccountId,
             hustlerPayout,
             job.id,
             `Payment for job: ${job.title}`
           );
-          console.log(`[JOB COMPLETION] Transfer successful: ${transferResult.id} for $${hustlerPayout.toFixed(2)}`);
+          console.log(`[JOB COMPLETION] ✅ Transfer successful: ${transferResult.id} for $${hustlerPayout.toFixed(2)}`);
         } catch (transferError) {
-          console.error(`[JOB COMPLETION] Transfer failed for job ${job.id}:`, transferError);
+          console.error(`[JOB COMPLETION] ❌ Transfer failed for job ${job.id}:`, transferError);
+          console.error(`[JOB COMPLETION] Transfer error details:`, {
+            errorType: transferError.type,
+            errorCode: transferError.code,
+            errorMessage: transferError.message,
+            hustlerAccountId: jobWithHustler.hustler.stripeAccountId,
+            transferAmount: hustlerPayout
+          });
           // Don't fail the entire job completion if transfer fails - we can retry later
           // But log it so we know there's an issue
           throw new Error(`Failed to transfer payment to hustler: ${transferError.message}`);
         }
       } else {
-        console.warn(`[JOB COMPLETION] Hustler ${jobWithHustler.hustler.id} has no Stripe account ID - cannot transfer payment`);
+        console.warn(`[JOB COMPLETION] ⚠️ Hustler ${jobWithHustler.hustler.id} has no Stripe account ID - cannot transfer payment`);
         throw new Error('Hustler has not connected a Stripe account');
       }
 
