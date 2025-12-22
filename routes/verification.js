@@ -191,8 +191,52 @@ router.post('/job/:jobId/verify-start', authenticate, async (req, res) => {
           ...(job.requirements || {}),
           startedAt: startedAt.toISOString() // Store when job actually started
         }
+      },
+      include: {
+        customer: { select: { id: true, email: true, name: true } },
+        hustler: { select: { id: true, email: true, name: true } },
+        payment: true
       }
     });
+
+    // Send email notifications (non-blocking)
+    try {
+      const { sendStartCodeActivatedEmail, sendPaymentInEscrowEmail } = require('../services/email');
+      
+      // Email to customer: Start code activated, payment in escrow
+      if (updatedJob.customer?.email) {
+        const receiptUrl = `${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || 'https://hustljobs.com'}/payments/receipts/${updatedJob.payment?.id || ''}`;
+        sendStartCodeActivatedEmail(
+          updatedJob.customer.email,
+          updatedJob.customer.name,
+          updatedJob.title,
+          updatedJob.id,
+          Number(updatedJob.payment?.amount || updatedJob.amount || 0),
+          Number(updatedJob.payment?.feeCustomer || 0),
+          Number(updatedJob.payment?.total || 0),
+          receiptUrl,
+          updatedJob.hustler?.name || 'Hustler'
+        ).catch(emailError => {
+          console.error('[START CODE] Error sending customer email:', emailError);
+        });
+      }
+      
+      // Email to hustler: Payment is in escrow
+      if (updatedJob.hustler?.email) {
+        sendPaymentInEscrowEmail(
+          updatedJob.hustler.email,
+          updatedJob.hustler.name,
+          updatedJob.title,
+          updatedJob.id,
+          Number(updatedJob.payment?.amount || updatedJob.amount || 0)
+        ).catch(emailError => {
+          console.error('[START CODE] Error sending hustler email:', emailError);
+        });
+      }
+    } catch (emailError) {
+      console.error('[START CODE] Error setting up email notifications:', emailError);
+      // Don't fail the request if emails fail
+    }
 
     res.json({
       success: true,
@@ -469,7 +513,7 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       }
 
       // Send email receipts to both customer and hustler (non-blocking)
-      const { sendPaymentReceiptEmail, sendHustlerPaymentReceiptEmail } = require('../services/email');
+      const { sendPaymentReceiptEmail, sendHustlerPaymentReceiptEmail, sendPaymentReleasedEmail } = require('../services/email');
       const jobWithUsers = await prisma.job.findUnique({
         where: { id: jobId },
         include: {
@@ -479,18 +523,23 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         }
       });
       
+      // Email to customer: Payment released from escrow
       if (jobWithUsers?.payment && jobWithUsers?.customer?.email) {
-        const receiptUrl = `${process.env.APP_BASE_URL || 'https://hustljobs.com'}/payments/receipts/${jobWithUsers.payment.id}`;
-        sendPaymentReceiptEmail(
+        const receiptUrl = `${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || 'https://hustljobs.com'}/payments/receipts/${jobWithUsers.payment.id}`;
+        sendPaymentReleasedEmail(
           jobWithUsers.customer.email,
           jobWithUsers.customer.name,
+          jobWithUsers.title,
+          jobId,
           jobWithUsers.payment,
-          receiptUrl
+          receiptUrl,
+          jobWithUsers.hustler?.name || 'Hustler'
         ).catch(emailError => {
-          console.error('[HOURLY JOB] Error sending customer receipt email:', emailError);
+          console.error('[JOB COMPLETION] Error sending payment released email:', emailError);
         });
       }
       
+      // Email to hustler: Payment receipt
       if (jobWithUsers?.payment && jobWithUsers?.hustler?.email) {
         sendHustlerPaymentReceiptEmail(
           jobWithUsers.hustler.email,
@@ -500,7 +549,7 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
           jobWithUsers.payment,
           job.payType === 'hourly' ? actualHours : null
         ).catch(emailError => {
-          console.error('[HOURLY JOB] Error sending hustler receipt email:', emailError);
+          console.error('[JOB COMPLETION] Error sending hustler receipt email:', emailError);
         });
       }
 

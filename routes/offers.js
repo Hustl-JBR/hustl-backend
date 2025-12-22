@@ -227,6 +227,24 @@ router.post('/:jobId', authenticate, requireRole('HUSTLER'), [
       return res.status(400).json({ error: 'Job is not available' });
     }
 
+    // Validate proposedAmount: can only be higher than original job amount (no price decreases)
+    if (proposedAmount !== null && proposedAmount !== undefined) {
+      const proposed = parseFloat(proposedAmount);
+      const originalAmount = parseFloat(job.amount || 0);
+      
+      if (isNaN(proposed) || proposed <= 0) {
+        return res.status(400).json({ error: 'Proposed amount must be a positive number' });
+      }
+      
+      if (proposed < originalAmount) {
+        return res.status(400).json({ 
+          error: 'Proposed price cannot be lower than the original job amount. You can only propose a higher price.',
+          originalAmount: originalAmount,
+          proposedAmount: proposed
+        });
+      }
+    }
+
     if (job.customerId === req.user.id) {
       return res.status(400).json({ error: 'Cannot offer on your own job' });
     }

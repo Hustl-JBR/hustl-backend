@@ -667,23 +667,98 @@ async function sendAutoCompleteEmail(email, name, jobTitle) {
   }
 }
 
-async function sendRefundEmail(email, name, jobTitle, amount) {
+async function sendRefundEmail(email, name, jobTitle, amount, reason, payment) {
   if (!isEmailConfigured()) return;
   try {
+    const refundAmount = payment ? Number(payment.total || payment.amount || amount) : Number(amount);
+    const supportEmail = process.env.SUPPORT_EMAIL || process.env.FROM_EMAIL || 'team.hustljobs@outlook.com';
+    
     await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
-      subject: `Refund processed for "${jobTitle}"`,
+      subject: `Refund Processed - "${jobTitle}"`,
       html: `
-        <h1>Refund Processed</h1>
-        <p>Hi ${name},</p>
-        <p>Your job <strong>${jobTitle}</strong> has been cancelled.</p>
-        <p>A refund of $${amount.toFixed(2)} has been processed and will appear in your account within 5-10 business days.</p>
-        <p><a href="${process.env.APP_BASE_URL || 'https://hustljobs.com'}/jobs">View Jobs</a></p>
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #ffffff; padding: 0;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">Refund Processed</h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hi <strong>${name}</strong>! 👋
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              Your job <strong>"${jobTitle}"</strong> has been cancelled and a refund has been processed.
+            </p>
+            
+            ${reason ? `
+            <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 1rem; margin: 1.5rem 0; border-radius: 4px;">
+              <p style="color: #991b1b; margin: 0; font-weight: 600; margin-bottom: 0.5rem;">Reason:</p>
+              <p style="color: #7f1d1d; margin: 0;">${reason}</p>
+            </div>
+            ` : ''}
+            
+            <div style="background: white; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; border: 1px solid #e2e8f0;">
+              <div style="text-align: center; margin-bottom: 1rem;">
+                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">💰</div>
+                <div style="font-size: 2rem; font-weight: 700; color: #10b981; margin-bottom: 0.5rem;">$${refundAmount.toFixed(2)}</div>
+                <div style="color: #64748b; font-size: 0.9rem;">Refund Amount</div>
+              </div>
+              
+              ${payment ? `
+              <table style="width: 100%; border-collapse: collapse; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
+                <tr>
+                  <td style="padding: 0.5rem 0; color: #64748b;">Job Amount:</td>
+                  <td style="padding: 0.5rem 0; text-align: right; font-weight: 600; color: #1e293b;">$${Number(payment.amount || 0).toFixed(2)}</td>
+                </tr>
+                ${Number(payment.tip || 0) > 0 ? `
+                <tr>
+                  <td style="padding: 0.5rem 0; color: #64748b;">Tip:</td>
+                  <td style="padding: 0.5rem 0; text-align: right; font-weight: 600; color: #1e293b;">$${Number(payment.tip || 0).toFixed(2)}</td>
+                </tr>
+                ` : ''}
+                <tr>
+                  <td style="padding: 0.5rem 0; color: #64748b;">Service Fee:</td>
+                  <td style="padding: 0.5rem 0; text-align: right; font-weight: 600; color: #1e293b;">$${Number(payment.feeCustomer || 0).toFixed(2)}</td>
+                </tr>
+                <tr style="border-top: 2px solid #e2e8f0;">
+                  <td style="padding: 0.75rem 0; font-weight: 700; color: #1e293b;">Total Refunded:</td>
+                  <td style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: #10b981; font-size: 1.1rem;">$${refundAmount.toFixed(2)}</td>
+                </tr>
+              </table>
+              ` : ''}
+            </div>
+            
+            <div style="background: #eff6ff; border-radius: 8px; padding: 1rem; margin: 1.5rem 0; border-left: 4px solid #2563eb;">
+              <p style="color: #1e40af; margin: 0; font-size: 0.95rem; line-height: 1.6;">
+                <strong>💡 Refund Timeline:</strong><br>
+                The refund has been processed and will appear in your account within 5-10 business days, depending on your bank or card issuer.
+              </p>
+            </div>
+            
+            <div style="background: #fef3c7; border-radius: 8px; padding: 1rem; margin: 1.5rem 0; border-left: 4px solid #f59e0b;">
+              <p style="color: #92400e; margin: 0; font-size: 0.95rem; line-height: 1.6;">
+                <strong>❓ Questions about this refund?</strong><br>
+                If you need assistance or have questions, please email us at <a href="mailto:${supportEmail}" style="color: #92400e; font-weight: 600;">${supportEmail}</a> and include details about what happened.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 2rem 0;">
+              <a href="${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || 'https://hustljobs.com'}/?view=manage-jobs" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+                View My Jobs →
+              </a>
+            </div>
+          </div>
+        </div>
       `,
     });
+    console.log('[Email] Refund email sent successfully');
   } catch (error) {
-    console.error('Send refund email error:', error);
+    console.error('[Email] Error sending refund email:', error);
+    throw error;
   }
 }
 
@@ -1439,6 +1514,210 @@ async function sendTipReceivedEmail(email, name, jobTitle, tipAmount, customerNa
   }
 }
 
+async function sendStartCodeActivatedEmail(email, name, jobTitle, jobId, jobAmount, serviceFee, total, receiptUrl, hustlerName) {
+  if (!isEmailConfigured()) return;
+  try {
+    console.log('[Email] Sending start code activated email to:', email);
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `✅ Job Started - "${jobTitle}"`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #ffffff; padding: 0;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">✅ Job Started!</h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hi <strong>${name}</strong>! 👋
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              Great news! <strong>${hustlerName}</strong> has started working on your job <strong>"${jobTitle}"</strong>. Your payment is now secured in escrow.
+            </p>
+            
+            <div style="background: white; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; border: 1px solid #e2e8f0;">
+              <div style="font-weight: 700; font-size: 1.1rem; color: #1e293b; margin-bottom: 1rem; text-align: center;">Payment Confirmed</div>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 0.75rem 0; color: #64748b;">Job Amount:</td>
+                  <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: #1e293b;">$${jobAmount.toFixed(2)}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 0.75rem 0; color: #64748b;">Service Fee (6.5%):</td>
+                  <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: #1e293b;">$${serviceFee.toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 0.75rem 0; font-size: 1.1rem; font-weight: 700; color: #1e293b;">Total Paid:</td>
+                  <td style="padding: 0.75rem 0; text-align: right; font-size: 1.1rem; font-weight: 700; color: #2563eb;">$${total.toFixed(2)}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <div style="background: #eff6ff; border-radius: 8px; padding: 1rem; margin: 1.5rem 0; border-left: 4px solid #2563eb;">
+              <p style="color: #1e40af; margin: 0; font-size: 0.95rem; line-height: 1.6;">
+                <strong>🔒 Payment in Escrow:</strong><br>
+                Your payment is securely held in escrow until the hustler completes the job and enters the completion code. This protects both you and the hustler.
+              </p>
+            </div>
+            
+            <div style="background: #fef3c7; border-radius: 8px; padding: 1rem; margin: 1.5rem 0; border-left: 4px solid #f59e0b;">
+              <p style="color: #92400e; margin: 0; font-size: 0.95rem; line-height: 1.6;">
+                <strong>💡 Need a Refund?</strong><br>
+                If something goes wrong, you can request a refund by emailing <a href="mailto:${process.env.SUPPORT_EMAIL || 'team.hustljobs@outlook.com'}" style="color: #92400e; font-weight: 600;">${process.env.SUPPORT_EMAIL || 'team.hustljobs@outlook.com'}</a> with details about what happened. Include your receipt for faster processing.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 2rem 0;">
+              <a href="${receiptUrl}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem; margin-right: 1rem;">
+                View Receipt →
+              </a>
+              <a href="${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || 'https://hustljobs.com'}/?view=manage-jobs" style="display: inline-block; padding: 1rem 2rem; background: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+                Manage Jobs →
+              </a>
+            </div>
+          </div>
+        </div>
+      `,
+    });
+    console.log('[Email] Start code activated email sent successfully');
+  } catch (error) {
+    console.error('[Email] Error sending start code activated email:', error);
+    throw error;
+  }
+}
+
+async function sendPaymentInEscrowEmail(email, name, jobTitle, jobId, amount) {
+  if (!isEmailConfigured()) return;
+  try {
+    console.log('[Email] Sending payment in escrow email to:', email);
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `💰 Payment in Escrow - "${jobTitle}"`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #ffffff; padding: 0;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">💰 Payment Secured</h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hi <strong>${name}</strong>! 👋
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              Great news! The customer has started the job <strong>"${jobTitle}"</strong> and your payment of <strong style="color: #10b981;">$${amount.toFixed(2)}</strong> is now secured in escrow.
+            </p>
+            
+            <div style="background: #eff6ff; border-radius: 8px; padding: 1rem; margin: 1.5rem 0; border-left: 4px solid #2563eb;">
+              <p style="color: #1e40af; margin: 0; font-size: 0.95rem; line-height: 1.6;">
+                <strong>🔒 What This Means:</strong><br>
+                The payment is safely held in escrow until you complete the job and enter the completion code. Once the customer verifies completion, the payment will be released to your Stripe account (minus our 12% platform fee).
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 2rem 0;">
+              <a href="${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || 'https://hustljobs.com'}/?view=manage-jobs" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+                View Job Details →
+              </a>
+            </div>
+          </div>
+        </div>
+      `,
+    });
+    console.log('[Email] Payment in escrow email sent successfully');
+  } catch (error) {
+    console.error('[Email] Error sending payment in escrow email:', error);
+    throw error;
+  }
+}
+
+async function sendPaymentReleasedEmail(email, name, jobTitle, jobId, payment, receiptUrl, hustlerName) {
+  if (!isEmailConfigured()) return;
+  try {
+    console.log('[Email] Sending payment released email to:', email);
+    const jobAmount = Number(payment.amount || 0);
+    const tipAmount = Number(payment.tip || 0);
+    const serviceFee = Number(payment.feeCustomer || 0);
+    const total = Number(payment.total || 0);
+    
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `✅ Payment Released - "${jobTitle}"`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #ffffff; padding: 0;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 2rem; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 1.75rem;">✅ Payment Released!</h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 2rem; background: #f8fafc; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 1.1rem; color: #1e293b; margin-bottom: 1.5rem;">
+              Hi <strong>${name}</strong>! 👋
+            </p>
+            
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 1.5rem;">
+              Great news! <strong>${hustlerName}</strong> has completed your job <strong>"${jobTitle}"</strong> and the payment has been released from escrow to the hustler.
+            </p>
+            
+            <div style="background: white; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; border: 1px solid #e2e8f0;">
+              <div style="font-weight: 700; font-size: 1.1rem; color: #1e293b; margin-bottom: 1rem; text-align: center;">Payment Summary</div>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 0.75rem 0; color: #64748b;">Job Amount:</td>
+                  <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: #1e293b;">$${jobAmount.toFixed(2)}</td>
+                </tr>
+                ${tipAmount > 0 ? `
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 0.75rem 0; color: #64748b;">💝 Tip:</td>
+                  <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: #10b981;">+$${tipAmount.toFixed(2)}</td>
+                </tr>
+                ` : ''}
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 0.75rem 0; color: #64748b;">Service Fee (6.5%):</td>
+                  <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: #1e293b;">$${serviceFee.toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 0.75rem 0; font-size: 1.1rem; font-weight: 700; color: #1e293b;">Total Paid:</td>
+                  <td style="padding: 0.75rem 0; text-align: right; font-size: 1.1rem; font-weight: 700; color: #2563eb;">$${total.toFixed(2)}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <div style="background: #dcfce7; border-radius: 8px; padding: 1rem; margin: 1.5rem 0; border-left: 4px solid #10b981;">
+              <p style="color: #166534; margin: 0; font-size: 0.95rem; line-height: 1.6;">
+                <strong>✅ Job Complete:</strong><br>
+                The payment has been successfully released to the hustler. Thank you for using Hustl!
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 2rem 0;">
+              <a href="${receiptUrl}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem; margin-right: 1rem;">
+                View Receipt →
+              </a>
+              <a href="${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || 'https://hustljobs.com'}/?view=manage-jobs" style="display: inline-block; padding: 1rem 2rem; background: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
+                Rate Your Hustler →
+              </a>
+            </div>
+          </div>
+        </div>
+      `,
+    });
+    console.log('[Email] Payment released email sent successfully');
+  } catch (error) {
+    console.error('[Email] Error sending payment released email:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   sendSignupEmail,
   sendEmailVerificationEmail,
@@ -1473,6 +1752,9 @@ module.exports = {
   sendPriceChangeAcceptedEmail,
   sendPriceChangeDeclinedEmail,
   sendHoursExtendedEmail,
+  sendStartCodeActivatedEmail,
+  sendPaymentInEscrowEmail,
+  sendPaymentReleasedEmail,
 };
 
 async function sendJobPostedEmail(email, name, jobTitle, jobId, jobDate, amount, payType, hourlyRate, estHours) {
