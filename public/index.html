@@ -16212,7 +16212,7 @@ async function renderJobs(reset = false) {
             payoutInfo.innerHTML = `
               <div style="font-weight: 600; color: #059669; margin-bottom: 0.25rem; font-size: 0.85rem;">💰 Payout Estimate</div>
               <div style="font-size: 0.8rem; color: #047857; line-height: 1.4;">
-                If the job is completed right now (${actualHours.toFixed(2)} hours worked), <strong>$${payoutAmount.toFixed(2)}</strong> will be released to your account.
+                If completed now (${actualHours.toFixed(2)} hrs): Job amount $${actualJobAmount.toFixed(2)} - Platform fee (12%) $${platformFee.toFixed(2)} = <strong>$${payoutAmount.toFixed(2)}</strong> will be released to your account.
               </div>
             `;
             completionCodeInputSection.appendChild(payoutInfo);
@@ -23882,7 +23882,7 @@ meta.textContent =
                       
                       payoutInfo = `
                         <div style="padding: 0.5rem; background: #dcfce7; border-left: 3px solid #10b981; border-radius: 4px; margin-bottom: 0.625rem; font-size: 0.75rem; color: #047857; line-height: 1.3;">
-                          💰 If completed now (${actualHours.toFixed(2)} hrs), <strong>$${payoutAmount.toFixed(2)}</strong> will be released to your account.
+                          💰 If completed now (${actualHours.toFixed(2)} hrs): Job amount $${actualJobAmount.toFixed(2)} - Platform fee (12%) $${platformFee.toFixed(2)} = <strong>$${payoutAmount.toFixed(2)}</strong> will be released to your account.
                         </div>
                       `;
                     } catch (e) {
@@ -24699,6 +24699,16 @@ meta.textContent =
         
         if (isCustomer) {
           // CUSTOMER VIEW: Full payment details, Tip, Review, Completed by, Job info
+          // For hourly jobs, calculate refund amount (original authorized - actual charged)
+          let originalAuthorizedAmount = jobAmount;
+          let refundAmount = 0;
+          if (job.payType === 'hourly' && job.hourlyRate && job.estHours) {
+            // Original authorized amount = hourlyRate × estHours
+            originalAuthorizedAmount = Number(job.hourlyRate) * Number(job.estHours);
+            // Refund = original authorized - actual charged (payment.amount is updated to actual amount)
+            refundAmount = Math.max(0, originalAuthorizedAmount - jobAmount);
+          }
+          
           const serviceFee = Number(jobAmount * 0.065);
           const tipAmount = Number(payment?.tip || 0);
           const totalPaid = Number(jobAmount + serviceFee);
@@ -24729,10 +24739,22 @@ meta.textContent =
                 💳 Payment Details
               </div>
               <div style="font-size: 0.95rem; color: #1e3a8a; line-height: 2;">
+                ${job.payType === 'hourly' && refundAmount > 0 ? `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; padding: 0.75rem; background: #dcfce7; border-radius: 6px; border-left: 3px solid #10b981;">
+                  <span>Original Authorized:</span>
+                  <strong>$${originalAuthorizedAmount.toFixed(2)}</strong>
+                </div>
+                ` : ''}
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
-                  <span>Job Amount:</span>
+                  <span>Job Amount Charged:</span>
                   <strong>$${jobAmount.toFixed(2)}</strong>
                 </div>
+                ${job.payType === 'hourly' && refundAmount > 0 ? `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; padding: 0.75rem; background: #fef3c7; border-radius: 6px; border-left: 3px solid #f59e0b;">
+                  <span>💚 Refunded (Unused Time):</span>
+                  <strong style="color: #059669;">-$${refundAmount.toFixed(2)}</strong>
+                </div>
+                ` : ''}
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
                   <span>Service Fee (6.5%):</span>
                   <strong>$${serviceFee.toFixed(2)}</strong>
@@ -24747,6 +24769,11 @@ meta.textContent =
                   <span>Total Paid:</span>
                   <strong style="color: #1e40af; font-size: 1.3rem;">$${Number(totalPaid + tipAmount).toFixed(2)}</strong>
                 </div>
+                ${job.payType === 'hourly' && refundAmount > 0 ? `
+                <div style="margin-top: 1rem; padding: 0.75rem; background: #dcfce7; border-radius: 6px; border-left: 3px solid #10b981; font-size: 0.85rem; color: #047857; line-height: 1.4;">
+                  💚 <strong>$${refundAmount.toFixed(2)}</strong> was automatically refunded to your original payment method for unused time.
+                </div>
+                ` : ''}
                 ${payment && payment.paymentMethod ? `
                   <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #93c5fd; font-size: 0.85rem; color: #475569;">
                     Payment Method: <strong>${payment.paymentMethod}</strong>
@@ -29269,8 +29296,26 @@ meta.textContent =
         document.body.removeChild(modal);
         document.body.style.overflow = '';
         
-        // Refresh jobs to show completed status
-        if (typeof loadActiveJobs === 'function') loadActiveJobs();
+        // Navigate to manage-jobs view and switch to completed tab
+        if (typeof window.setView === 'function') {
+          window.setView('manage-jobs');
+        } else if (typeof setView === 'function') {
+          setView('manage-jobs');
+        } else {
+          window.location.hash = '#manage-jobs';
+        }
+        
+        // Wait a bit for view to load, then switch to completed tab
+        setTimeout(() => {
+          const completedTab = document.querySelector('[data-manage-tab="completed"]');
+          if (completedTab) {
+            completedTab.click();
+          }
+          // Refresh completed jobs
+          if (typeof loadCompletedJobs === 'function') {
+            loadCompletedJobs(true);
+          }
+        }, 500);
         if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
         
         setView('manage-jobs');
