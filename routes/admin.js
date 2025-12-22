@@ -250,7 +250,7 @@ router.get('/stats', async (req, res) => {
         amount: true,
         tip: true,
         feeCustomer: true,
-        platformFee: true,
+        feeHustler: true,
         refundAmount: true,
         createdAt: true,
         capturedAt: true,
@@ -284,7 +284,7 @@ router.get('/stats', async (req, res) => {
 
     const totalPlatformFees = allPayments
       .filter(p => p.status === 'CAPTURED')
-      .reduce((sum, p) => sum + (Number(p.platformFee) || 0), 0);
+      .reduce((sum, p) => sum + (Number(p.feeHustler) || 0), 0);
 
     const pendingPayouts = allPayouts
       .filter(p => p.status === 'PENDING' || p.status === 'PROCESSING')
