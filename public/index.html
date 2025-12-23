@@ -25195,8 +25195,8 @@ meta.textContent =
       let payment = paymentData || job?.payment || null;
       
       // Check if already tipped - if so, show view tip modal instead
-      if (payment && payment.tip && payment.tip > 0) {
-        const tipAmount = Number(payment.tip);
+      if (payment && payment.tip && Number(payment.tip) > 0) {
+        const tipAmount = Number(payment.tip) || 0;
         const modal = document.createElement('div');
         modal.id = 'tipViewModal';
         modal.style.cssText = `
@@ -25632,13 +25632,13 @@ meta.textContent =
           
           showToast(`💚 Thanks for tipping $${confirmedTipAmount.toFixed(2)}! The tip has been sent to the hustler.`);
           
-          // Close modal after 3 seconds
+          // Close modal after 4 seconds (give user time to see success message)
           setTimeout(() => {
             if (document.body.contains(modal)) {
               document.body.removeChild(modal);
               document.body.style.overflow = '';
             }
-          }, 3000);
+          }, 4000);
           
           // Call success callback if provided - use confirmed amount from backend
           if (typeof handleTipSuccessCallback === 'function') {
@@ -25647,15 +25647,17 @@ meta.textContent =
             handleTipSuccess(confirmedTipAmount);
           }
           
-          // Refresh completed jobs if on that view
-          if (typeof loadCompletedJobs === 'function') {
-            setTimeout(() => loadCompletedJobs(true), 1000);
-          }
-          
-          // Also refresh the job card if we're viewing it
-          if (typeof loadCompletedJobs === 'function') {
-            loadCompletedJobs(true);
-          }
+          // Don't reload immediately - let user see the success message
+          // Refresh completed jobs after modal closes (if on that view)
+          setTimeout(() => {
+            if (typeof loadCompletedJobs === 'function') {
+              // Only refresh if we're on the completed jobs view
+              const completedTab = document.querySelector('[data-manage-tab="completed"]');
+              if (completedTab && completedTab.classList.contains('active')) {
+                loadCompletedJobs(true);
+              }
+            }
+          }, 4000); // Refresh after modal closes (3s) + 1s buffer
         } catch (error) {
           console.error('Error processing tip:', error);
           showToast(error.message || 'Failed to process tip. Please try again.');
