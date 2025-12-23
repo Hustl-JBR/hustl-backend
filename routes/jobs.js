@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { geocodeAddress } = require('../services/mapbox');
+const { calculateFees } = require('../services/pricing');
 
 const router = express.Router();
 
