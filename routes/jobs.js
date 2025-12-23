@@ -1901,8 +1901,8 @@ router.post('/:id/finalize-price-change', authenticate, requireRole('CUSTOMER'),
       newJobAmount = proposedPrice.amount !== null ? proposedPrice.amount : job.amount;
     }
 
-    const customerFee = newJobAmount * 0.065;
-    const newTotal = newJobAmount + customerFee;
+    // Calculate fees using centralized pricing service
+    const newFees = calculateFees(newJobAmount);
 
     // Update original payment intent to new total
     if (job.payment && job.payment.providerId) {
@@ -1910,12 +1910,12 @@ router.post('/:id/finalize-price-change', authenticate, requireRole('CUSTOMER'),
         const existingIntent = await stripe.paymentIntents.retrieve(job.payment.providerId);
         if (existingIntent.status === 'requires_capture' || existingIntent.status === 'requires_payment_method') {
           await stripe.paymentIntents.update(job.payment.providerId, {
-            amount: Math.round(newTotal * 100),
+            amount: Math.round(newFees.total * 100),
             metadata: {
               ...existingIntent.metadata,
               amount: newJobAmount.toString(),
               tip: '0',
-              customerFee: customerFee.toString(),
+              customerFee: newFees.customerFee.toString(),
               priceUpdatedAt: new Date().toISOString(),
               differencePaymentIntentId: paymentIntentId
             }
