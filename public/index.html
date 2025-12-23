@@ -25315,8 +25315,14 @@ meta.textContent =
       
       const description = document.createElement('p');
       description.style.cssText = 'font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.5;';
-      description.textContent = 'Show your appreciation for a job well done! 100% of your tip goes directly to the hustler.';
+      description.textContent = 'Show your appreciation for a job well done! 100% of your tip goes directly to the hustler\'s account.';
       modalContent.appendChild(description);
+      
+      // Add info box about where money goes
+      const infoBox = document.createElement('div');
+      infoBox.style.cssText = 'padding: 0.75rem; background: #f0fdf4; border: 1px solid #10b981; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; color: #047857; line-height: 1.4;';
+      infoBox.innerHTML = '💚 <strong>Direct Transfer:</strong> Your tip goes directly to the hustler\'s Stripe account. The platform never receives this money.';
+      modalContent.appendChild(infoBox);
       
       // Tip amount input section
       const tipInputSection = document.createElement('div');
@@ -25594,23 +25600,45 @@ meta.textContent =
             throw new Error('Invalid tip amount received from server');
           }
           
-          // Success! Update UI to show "Thanks for tipping"
+          // Success! Show confirmation
+          console.log('[TIP] ✅ Tip confirmed successfully:', {
+            tipAmount: confirmedTipAmount,
+            paymentIntentId: currentPaymentIntentId,
+            transferDestination: confirmResult.transferDestination
+          });
+          
+          // Update UI to show success
           submitBtn.disabled = true;
-          submitBtn.textContent = '💚 Thanks for tipping!';
+          submitBtn.textContent = '💚 Tip Sent!';
           submitBtn.style.background = '#10b981';
           submitBtn.style.cursor = 'default';
           tipInput.disabled = true;
+          
+          // Hide payment form and show success message
           paymentContainer.style.display = 'none';
           
-          showToast(`💚 Thanks for tipping $${confirmedTipAmount.toFixed(2)}!`);
+          // Show success message in modal
+          const successMsg = document.createElement('div');
+          successMsg.style.cssText = 'padding: 1rem; background: #dcfce7; border: 2px solid #10b981; border-radius: 8px; margin-top: 1rem; text-align: center;';
+          successMsg.innerHTML = `
+            <div style="font-size: 1.1rem; font-weight: 600; color: #047857; margin-bottom: 0.5rem;">
+              💚 Tip of $${confirmedTipAmount.toFixed(2)} sent successfully!
+            </div>
+            <div style="font-size: 0.85rem; color: #065f46;">
+              The tip has been transferred directly to the hustler's account.
+            </div>
+          `;
+          modalContent.appendChild(successMsg);
           
-          // Close modal after 2 seconds
+          showToast(`💚 Thanks for tipping $${confirmedTipAmount.toFixed(2)}! The tip has been sent to the hustler.`);
+          
+          // Close modal after 3 seconds
           setTimeout(() => {
             if (document.body.contains(modal)) {
               document.body.removeChild(modal);
               document.body.style.overflow = '';
             }
-          }, 2000);
+          }, 3000);
           
           // Call success callback if provided - use confirmed amount from backend
           if (typeof handleTipSuccessCallback === 'function') {
