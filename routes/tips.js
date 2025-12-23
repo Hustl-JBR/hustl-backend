@@ -609,14 +609,43 @@ router.post('/job/:jobId', requireRole('CUSTOMER'), async (req, res) => {
     }
 
     // Send notification email to hustler (non-blocking)
-    const { sendTipNotificationEmail } = require('../services/email');
     if (job.hustler?.email) {
-      sendTipNotificationEmail(
-        job.hustler.email,
-        job.hustler.name || 'Hustler',
-        job.title,
-        finalTipAmount
-      ).catch(err => console.error('[TIP] Error sending tip notification:', err));
+      try {
+        const { sendTipReceivedEmail } = require('../services/email');
+        await sendTipReceivedEmail(
+          job.hustler.email,
+          job.hustler.name || 'Hustler',
+          job.title || 'Completed Job',
+          finalTipAmount,
+          job.customer?.name || 'Customer'
+        ).catch(err => {
+          console.error('[TIP] Error sending tip notification email:', err);
+          // Don't fail the request if email fails
+        });
+      } catch (emailError) {
+        console.error('[TIP] Error loading email service:', emailError);
+        // Don't fail the request if email service fails
+      }
+    }
+    
+    // Create in-app notification for hustler
+    if (job.hustler?.id) {
+      try {
+        const { prisma } = require('../db');
+        await prisma.notification.create({
+          data: {
+            userId: job.hustler.id,
+            type: 'TIP_RECEIVED',
+            message: `You received a $${finalTipAmount.toFixed(2)} tip from ${job.customer?.name || 'a customer'} for "${job.title || 'your job'}"!`,
+            link: `/jobs/${jobId}`,
+            read: false,
+          },
+        });
+        console.log(`[TIP] ✅ Created in-app notification for hustler ${job.hustler.id}`);
+      } catch (notifError) {
+        console.error('[TIP] Error creating in-app notification:', notifError);
+        // Don't fail the request if notification fails
+      }
     }
 
     res.json({
