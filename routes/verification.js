@@ -460,7 +460,30 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       } else if (job.payment.providerId) {
         // Full capture for flat jobs
         await capturePaymentIntent(job.payment.providerId);
+        console.log(`[JOB COMPLETION] ✅ Payment captured successfully: ${job.payment.providerId}`);
       }
+
+      // Calculate customer charges and refunds BEFORE transfer (so we can update payment record even if transfer fails)
+      const originalAuthorizedAmount = Number(job.payment.amount);
+      const customerChargedAmount = actualJobAmount; // What customer is actually charged
+      const customerRefundAmount = job.payType === 'hourly' ? (originalAuthorizedAmount - actualJobAmount) : 0; // What customer gets back (only for hourly)
+      const customerServiceFee = customerChargedAmount * 0.065; // 6.5% service fee on actual amount
+      const customerTotalCharged = customerChargedAmount + customerServiceFee;
+
+      // CRITICAL: Update payment record to CAPTURED immediately after capture succeeds
+      // This ensures the database reflects reality even if transfer fails
+      await prisma.payment.update({
+        where: { id: job.payment.id },
+        data: {
+          status: 'CAPTURED',
+          amount: actualJobAmount, // Update to actual amount charged
+          feeHustler: platformFee, // 12% platform fee
+          feeCustomer: customerServiceFee, // 6.5% customer service fee
+          total: customerTotalCharged, // Update total to match actual charge + service fee
+          capturedAt: new Date(), // Record when payment was captured
+        }
+      });
+      console.log(`[JOB COMPLETION] ✅ Payment record updated to CAPTURED in database`);
 
       // Transfer to hustler's Stripe Connect account (minus 12% fee)
       // CRITICAL: This transfer MUST happen - hustler must receive their payment
@@ -538,13 +561,6 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         }
       }
 
-      // Calculate customer charges and refunds BEFORE updating payment record
-      const originalAuthorizedAmount = Number(job.payment.amount);
-      const customerChargedAmount = actualJobAmount; // What customer is actually charged
-      const customerRefundAmount = job.payType === 'hourly' ? (originalAuthorizedAmount - actualJobAmount) : 0; // What customer gets back (only for hourly)
-      const customerServiceFee = customerChargedAmount * 0.065; // 6.5% service fee on actual amount
-      const customerTotalCharged = customerChargedAmount + customerServiceFee;
-      
       // Log payment breakdown for ALL jobs
       console.log(`[JOB COMPLETION] Payment Breakdown for ${job.payType} job:`);
       console.log(`  Job Amount (actual charged): $${actualJobAmount.toFixed(2)}`);
@@ -559,19 +575,6 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         console.log(`  Actual Hours Worked: ${actualHours.toFixed(2)} hrs`);
         console.log(`  Customer Refund (unused): $${customerRefundAmount.toFixed(2)}`);
       }
-
-      // Update payment record with actual amount (for hourly jobs)
-      await prisma.payment.update({
-        where: { id: job.payment.id },
-        data: {
-          status: 'CAPTURED',
-          amount: actualJobAmount, // Update to actual amount charged
-          feeHustler: platformFee, // 12% platform fee
-          feeCustomer: customerServiceFee, // 6.5% customer service fee
-          total: customerTotalCharged, // Update total to match actual charge + service fee
-          capturedAt: new Date(), // Record when payment was captured
-        }
-      });
       
       // Update job requirements with actual hours worked (for hourly jobs)
       if (job.payType === 'hourly') {
@@ -697,19 +700,39 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         message: paymentError.message,
         stack: paymentError.stack,
         jobId: jobId,
-        actualJobAmount: actualJobAmount,
+        actualJobAmount: typeof actualJobAmount !== 'undefined' ? actualJobAmount : 'NOT CALCULATED',
         hustlerPayout: typeof hustlerPayout !== 'undefined' ? hustlerPayout : 'NOT CALCULATED'
       });
       
       // Check if this is a transfer error specifically
+      // If payment was captured but transfer failed, payment record should already be updated to CAPTURED
       if (paymentError.message && paymentError.message.includes('transfer')) {
         console.error('[JOB COMPLETION] ❌ TRANSFER FAILED - Hustler did not receive payment!');
-        console.error('[JOB COMPLETION] ❌ This is a CRITICAL issue - payment was captured but not transferred to hustler');
-        console.error('[JOB COMPLETION] ❌ Manual intervention required to transfer payment to hustler');
+        console.error('[JOB COMPLETION] ❌ Payment was captured and database updated, but transfer failed');
+        console.error('[JOB COMPLETION] ❌ Use admin endpoint to retry transfer: POST /admin/jobs/:jobId/capture-and-transfer');
+        
+        // Payment record should already be CAPTURED (updated before transfer attempt)
+        // Job should be marked as completed but transfer needs to be retried
+        await prisma.job.update({
+          where: { id: jobId },
+          data: { 
+            completionCodeVerified: true,
+            status: 'COMPLETED_BY_HUSTLER' // Keep as completed - transfer can be retried
+          }
+        });
+        
+        return res.status(500).json({ 
+          error: 'Payment captured but transfer failed. Transfer will be retried.',
+          message: paymentError.message,
+          transferFailed: true,
+          paymentCaptured: true, // Payment was captured before transfer failed
+          jobId: jobId,
+          retryEndpoint: `/admin/jobs/${jobId}/capture-and-transfer`
+        });
       }
       
-      // Still mark completion as verified even if payment fails (can be retried)
-      // But don't set to PAID if payment failed
+      // If capture itself failed, payment is still PREAUTHORIZED
+      // Mark completion as verified but don't set to PAID
       await prisma.job.update({
         where: { id: jobId },
         data: { 
@@ -719,9 +742,10 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       });
       
       return res.status(500).json({ 
-        error: 'Completion verified but payment release failed. Please contact support.',
+        error: 'Completion verified but payment processing failed. Please contact support.',
         message: paymentError.message,
-        transferFailed: paymentError.message && paymentError.message.includes('transfer'),
+        transferFailed: false,
+        paymentCaptured: false,
         jobId: jobId
       });
     }
