@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { calculateFees } = require('../services/pricing');
 
 const prisma = new PrismaClient();
 
