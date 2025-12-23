@@ -7,6 +7,7 @@
 const express = require('express');
 const prisma = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { Errors, ErrorCodes } = require('../services/errors');
 const Stripe = require('stripe');
 
 // Initialize Stripe
