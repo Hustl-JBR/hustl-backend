@@ -275,6 +275,14 @@ router.post('/create-intent/job/:jobId', requireRole('CUSTOMER'), async (req, re
       return res.status(400).json({ error: 'Tip amount must be greater than 0' });
     }
 
+    // Check if hustler has Stripe account connected
+    if (!job.hustler?.stripeAccountId) {
+      return res.status(400).json({ 
+        error: 'Hustler has not connected their Stripe account',
+        message: 'The hustler must connect their payment account before receiving tips'
+      });
+    }
+
     // Create payment intent for tip (without confirming - for Stripe Elements)
     const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
     let tipPaymentIntent = null;
@@ -312,9 +320,16 @@ router.post('/create-intent/job/:jobId', requireRole('CUSTOMER'), async (req, re
         console.log(`[TIP INTENT] Created tip payment intent: ${tipPaymentIntent.id} for $${finalTipAmount.toFixed(2)}`);
       } catch (stripeError) {
         console.error('[TIP INTENT] Error creating tip payment intent:', stripeError);
+        console.error('[TIP INTENT] Stripe error details:', {
+          type: stripeError.type,
+          code: stripeError.code,
+          message: stripeError.message,
+          hustlerStripeAccountId: job.hustler?.stripeAccountId
+        });
         return res.status(500).json({ 
           error: 'Failed to create tip payment intent',
-          message: stripeError.message
+          message: stripeError.message || 'Stripe API error',
+          details: process.env.NODE_ENV === 'development' ? stripeError.message : undefined
         });
       }
     } else {
