@@ -30,14 +30,14 @@ router.get('/job/:jobId/codes', authenticate, async (req, res) => {
     });
 
     if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
+      return Errors.notFound('Job', jobId).send(res);
     }
 
     const isCustomer = job.customerId === userId;
     const isHustler = job.hustlerId === userId;
 
     if (!isCustomer && !isHustler) {
-      return res.status(403).json({ error: 'Not authorized to view this job' });
+      return Errors.forbidden('Not authorized to view this job').send(res);
     }
 
     // Role-based code visibility
