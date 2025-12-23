@@ -518,43 +518,9 @@ router.post('/job/:jobId', requireRole('CUSTOMER'), async (req, res) => {
       tipPaymentIntent = { id: paymentIntentId, status: 'succeeded' };
     }
 
-    // Note: For tips created via payment intent with transfer_data, the transfer happens automatically
-    // Only create manual transfer if payment intent doesn't have transfer_data
-    // Check if payment intent has transfer_data (which means it already transfers automatically)
-    let needsManualTransfer = true;
-    if (!skipStripeCheck && stripe && tipPaymentIntent) {
-      try {
-        const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
-        // If payment intent has transfer_data, transfer already happened automatically
-        if (pi.transfer_data && pi.transfer_data.destination) {
-          needsManualTransfer = false;
-          console.log(`[TIP] Payment intent ${paymentIntentId} has transfer_data - transfer happens automatically`);
-        }
-      } catch (err) {
-        console.error('[TIP] Error checking payment intent transfer_data:', err);
-        // Continue with manual transfer as fallback
-      }
-    }
-    
-    // Only create manual transfer if needed (payment intent doesn't have transfer_data)
-    if (needsManualTransfer && job.hustler?.stripeAccountId && !skipStripeCheck && stripe) {
-      try {
-        await stripe.transfers.create({
-          amount: Math.round(finalTipAmount * 100),
-          currency: 'usd',
-          destination: job.hustler.stripeAccountId,
-          metadata: {
-            jobId: job.id,
-            type: 'tip',
-            description: `Tip for job: ${job.title}`
-          },
-        });
-        console.log(`[TIP] Manually transferred $${finalTipAmount.toFixed(2)} tip to hustler ${job.hustler.stripeAccountId}`);
-      } catch (transferError) {
-        console.error('[TIP] Error transferring tip to hustler:', transferError);
-        // Don't fail the request - tip was charged, we can retry transfer
-      }
-    }
+    // With transfer_data in the payment intent, the transfer happens automatically when payment succeeds
+    // No manual transfer needed - Stripe handles it automatically
+    console.log(`[TIP] Payment intent ${paymentIntentId} has transfer_data - transfer happens automatically via Stripe`);
 
     // Update payment record with tip (or create if doesn't exist)
     const jobAmount = Number(job.payment?.amount || job.amount || 0);
@@ -570,11 +536,15 @@ router.post('/job/:jobId', requireRole('CUSTOMER'), async (req, res) => {
     
     try {
       if (job.payment?.id) {
+        // Calculate new total
+        const currentTotal = Number(job.payment.total) || jobAmount;
+        const newTotal = currentTotal + finalTipAmount;
+        
         await prisma.payment.update({
           where: { id: job.payment.id },
           data: {
-            tip: finalTipAmount,
-            total: (Number(job.payment.total) || jobAmount) + finalTipAmount,
+            tip: finalTipAmount.toString(), // Prisma Decimal fields need string
+            total: newTotal.toString(), // Prisma Decimal fields need string
             tipPaymentIntentId: paymentIntentId,
             tipAddedAt: new Date()
           }
@@ -597,16 +567,18 @@ router.post('/job/:jobId', requireRole('CUSTOMER'), async (req, res) => {
           });
         }
         
+        const newTotal = jobAmount + finalTipAmount;
+        
         await prisma.payment.create({
           data: {
             jobId: job.id,
             customerId: job.customerId,
             hustlerId: job.hustlerId,
-            amount: jobAmount,
-            tip: finalTipAmount,
-            feeCustomer: 0,
-            feeHustler: 0,
-            total: jobAmount + finalTipAmount,
+            amount: jobAmount.toString(), // Prisma Decimal fields need string
+            tip: finalTipAmount.toString(), // Prisma Decimal fields need string
+            feeCustomer: '0', // Prisma Decimal fields need string
+            feeHustler: '0', // Prisma Decimal fields need string
+            total: newTotal.toString(), // Prisma Decimal fields need string
             status: 'CAPTURED',
             tipPaymentIntentId: paymentIntentId,
             tipAddedAt: new Date()
