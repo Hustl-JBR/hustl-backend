@@ -703,7 +703,7 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     });
     // Transaction committed successfully
     
-    const { payment: existingPayment, job, startCode, completionCode, startCodeExpiresAt } = result;
+    const { payment: finalPayment, job, startCode, completionCode, startCodeExpiresAt } = result;
     console.log(`[OFFER ACCEPT] ✅ Payment, offer, and job updated in transaction`);
 
     // Create thread for messaging (use upsert to avoid duplicate errors)
