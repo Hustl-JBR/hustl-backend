@@ -463,6 +463,7 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       }
 
       // Transfer to hustler's Stripe Connect account (minus 12% fee)
+      // CRITICAL: This transfer MUST happen - hustler must receive their payment
       const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
       const jobWithHustler = await prisma.job.findUnique({
         where: { id: jobId },
@@ -473,34 +474,68 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         }
       });
 
+      // Verify calculation is correct
+      console.log(`[JOB COMPLETION] Transfer Calculation:`);
+      console.log(`  Job Amount: $${actualJobAmount.toFixed(2)}`);
+      console.log(`  Platform Fee (12%): $${platformFee.toFixed(2)} → STAYS IN PLATFORM`);
+      console.log(`  Hustler Payout (88%): $${hustlerPayout.toFixed(2)} → MUST BE TRANSFERRED TO HUSTLER`);
+
       if (skipStripeCheck) {
-        console.log(`[JOB COMPLETION] SKIP_STRIPE_CHECK enabled - skipping transfer. Would transfer $${hustlerPayout.toFixed(2)} to hustler`);
-      } else if (jobWithHustler.hustler.stripeAccountId) {
+        console.warn(`[JOB COMPLETION] ⚠️ SKIP_STRIPE_CHECK enabled - skipping transfer. Would transfer $${hustlerPayout.toFixed(2)} to hustler`);
+        console.warn(`[JOB COMPLETION] ⚠️ IN TEST MODE - Transfer not executed. In production, this MUST transfer $${hustlerPayout.toFixed(2)} to hustler account.`);
+      } else if (!jobWithHustler.hustler.stripeAccountId) {
+        console.error(`[JOB COMPLETION] ❌ CRITICAL: Hustler ${jobWithHustler.hustler.id} has no Stripe account ID - cannot transfer payment`);
+        console.error(`[JOB COMPLETION] ❌ Hustler must connect Stripe account before receiving payment`);
+        throw new Error('Hustler has not connected a Stripe account. Payment cannot be transferred.');
+      } else {
+        // Transfer MUST succeed - this is critical
         try {
-          console.log(`[JOB COMPLETION] Attempting to transfer $${hustlerPayout.toFixed(2)} to hustler account: ${jobWithHustler.hustler.stripeAccountId}`);
+          console.log(`[JOB COMPLETION] 🚀 Initiating transfer: $${hustlerPayout.toFixed(2)} to hustler account: ${jobWithHustler.hustler.stripeAccountId}`);
+          console.log(`[JOB COMPLETION] Transfer details:`, {
+            hustlerAccountId: jobWithHustler.hustler.stripeAccountId,
+            transferAmount: hustlerPayout,
+            jobId: job.id,
+            jobAmount: actualJobAmount,
+            platformFee: platformFee
+          });
+          
           const transferResult = await transferToHustler(
             jobWithHustler.hustler.stripeAccountId,
             hustlerPayout,
             job.id,
             `Payment for job: ${job.title}`
           );
-          console.log(`[JOB COMPLETION] ✅ Transfer successful: ${transferResult.id} for $${hustlerPayout.toFixed(2)}`);
+          
+          console.log(`[JOB COMPLETION] ✅ Transfer successful!`);
+          console.log(`[JOB COMPLETION] Transfer ID: ${transferResult.id}`);
+          console.log(`[JOB COMPLETION] Transfer Status: ${transferResult.status}`);
+          console.log(`[JOB COMPLETION] Amount Transferred: $${(transferResult.amount / 100).toFixed(2)}`);
+          console.log(`[JOB COMPLETION] Destination: ${transferResult.destination}`);
+          
+          // Verify transfer amount matches expected payout
+          const transferredAmount = transferResult.amount / 100;
+          if (Math.abs(transferredAmount - hustlerPayout) > 0.01) {
+            console.error(`[JOB COMPLETION] ⚠️ WARNING: Transfer amount mismatch!`);
+            console.error(`[JOB COMPLETION] Expected: $${hustlerPayout.toFixed(2)}, Actual: $${transferredAmount.toFixed(2)}`);
+          }
         } catch (transferError) {
-          console.error(`[JOB COMPLETION] ❌ Transfer failed for job ${job.id}:`, transferError);
+          console.error(`[JOB COMPLETION] ❌ CRITICAL ERROR: Transfer failed for job ${job.id}`);
           console.error(`[JOB COMPLETION] Transfer error details:`, {
             errorType: transferError.type,
             errorCode: transferError.code,
             errorMessage: transferError.message,
+            errorStack: transferError.stack,
             hustlerAccountId: jobWithHustler.hustler.stripeAccountId,
-            transferAmount: hustlerPayout
+            transferAmount: hustlerPayout,
+            jobAmount: actualJobAmount,
+            platformFee: platformFee
           });
-          // Don't fail the entire job completion if transfer fails - we can retry later
-          // But log it so we know there's an issue
-          throw new Error(`Failed to transfer payment to hustler: ${transferError.message}`);
+          
+          // This is a critical error - the hustler MUST receive their payment
+          // We throw an error to prevent job completion if transfer fails
+          // The transfer can be retried manually or via admin tool
+          throw new Error(`CRITICAL: Failed to transfer payment to hustler. Transfer amount: $${hustlerPayout.toFixed(2)}. Error: ${transferError.message}. Please retry transfer manually.`);
         }
-      } else {
-        console.warn(`[JOB COMPLETION] ⚠️ Hustler ${jobWithHustler.hustler.id} has no Stripe account ID - cannot transfer payment`);
-        throw new Error('Hustler has not connected a Stripe account');
       }
 
       // Calculate customer charges and refunds BEFORE updating payment record
@@ -657,7 +692,22 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         hustlerId: job.hustlerId
       });
     } catch (paymentError) {
-      console.error('Error releasing payment:', paymentError);
+      console.error('[JOB COMPLETION] ❌ CRITICAL ERROR in payment processing:', paymentError);
+      console.error('[JOB COMPLETION] Error details:', {
+        message: paymentError.message,
+        stack: paymentError.stack,
+        jobId: jobId,
+        actualJobAmount: actualJobAmount,
+        hustlerPayout: typeof hustlerPayout !== 'undefined' ? hustlerPayout : 'NOT CALCULATED'
+      });
+      
+      // Check if this is a transfer error specifically
+      if (paymentError.message && paymentError.message.includes('transfer')) {
+        console.error('[JOB COMPLETION] ❌ TRANSFER FAILED - Hustler did not receive payment!');
+        console.error('[JOB COMPLETION] ❌ This is a CRITICAL issue - payment was captured but not transferred to hustler');
+        console.error('[JOB COMPLETION] ❌ Manual intervention required to transfer payment to hustler');
+      }
+      
       // Still mark completion as verified even if payment fails (can be retried)
       // But don't set to PAID if payment failed
       await prisma.job.update({
@@ -667,9 +717,12 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
           status: 'COMPLETED_BY_HUSTLER' // Keep as completed but not paid if payment failed
         }
       });
+      
       return res.status(500).json({ 
         error: 'Completion verified but payment release failed. Please contact support.',
-        job: updatedJob
+        message: paymentError.message,
+        transferFailed: paymentError.message && paymentError.message.includes('transfer'),
+        jobId: jobId
       });
     }
 
