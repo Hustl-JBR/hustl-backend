@@ -711,7 +711,7 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     // Check if price was negotiated (old payment was voided)
     const priceWasNegotiated = existingPayment && offer.proposedAmount && offer.proposedAmount > 0 && offer.job.payType === 'flat';
     const originalAmount = priceWasNegotiated ? parseFloat(offer.job.amount || 0) : null;
-    const originalTotal = originalAmount ? originalAmount + (originalAmount * 0.065) : null;
+    const originalFees = originalAmount ? calculateFees(originalAmount) : null;
     
     res.json({
       job,
@@ -722,10 +722,10 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       priceNegotiated: priceWasNegotiated,
       originalAmount: originalAmount,
       newAmount: priceWasNegotiated ? jobAmount : null,
-      refundInfo: priceWasNegotiated && originalTotal ? {
+      refundInfo: priceWasNegotiated && originalFees ? {
         refunded: true,
-        amount: originalTotal,
-        message: `Original payment of $${originalTotal.toFixed(2)} has been voided. New payment of $${total.toFixed(2)} has been authorized. You can now hire someone else or unassign if needed.`
+        amount: originalFees.total,
+        message: `Original payment of $${originalFees.total.toFixed(2)} has been voided. New payment of $${fees.total.toFixed(2)} has been authorized. You can now hire someone else or unassign if needed.`
       } : null
     });
   } catch (error) {
