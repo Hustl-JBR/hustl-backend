@@ -844,11 +844,16 @@ router.post('/:id/decline', authenticate, requireRole('CUSTOMER'), async (req, r
     }
 
     if (offer.job.customerId !== req.user.id) {
-      return res.status(403).json({ error: 'Forbidden' });
+      return Errors.forbidden().send(res);
     }
 
     if (offer.status !== 'PENDING') {
-      return res.status(400).json({ error: 'Offer is not pending' });
+      return res.status(400).json({
+        error: {
+          code: ErrorCodes.OFFER_ALREADY_ACCEPTED,
+          message: 'Offer is not pending'
+        }
+      });
     }
 
     const updated = await prisma.offer.update({
@@ -858,6 +863,10 @@ router.post('/:id/decline', authenticate, requireRole('CUSTOMER'), async (req, r
 
     res.json(updated);
   } catch (error) {
+    console.error('Decline offer error:', error);
+    return Errors.internal().send(res);
+  }
+});
     console.error('Decline offer error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
