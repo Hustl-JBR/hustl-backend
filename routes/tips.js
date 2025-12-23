@@ -473,8 +473,15 @@ router.post('/job/:jobId', requireRole('CUSTOMER'), async (req, res) => {
         tipPaymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
         finalTipAmount = tipPaymentIntent.amount / 100; // Convert from cents
         
+        console.log(`[TIP] Retrieved payment intent ${paymentIntentId}:`, {
+          status: tipPaymentIntent.status,
+          amount: finalTipAmount,
+          metadata: tipPaymentIntent.metadata
+        });
+        
         // Verify payment intent belongs to this job
         if (tipPaymentIntent.metadata.jobId !== jobId) {
+          console.error(`[TIP] Payment intent jobId mismatch: ${tipPaymentIntent.metadata.jobId} !== ${jobId}`);
           return res.status(400).json({ error: 'Payment intent does not match job' });
         }
         
@@ -482,6 +489,7 @@ router.post('/job/:jobId', requireRole('CUSTOMER'), async (req, res) => {
         // Accept 'succeeded', 'processing', or 'requires_capture' as valid states
         const validStatuses = ['succeeded', 'processing', 'requires_capture'];
         if (!validStatuses.includes(tipPaymentIntent.status)) {
+          console.error(`[TIP] Invalid payment intent status: ${tipPaymentIntent.status}`);
           return res.status(400).json({ 
             error: 'Payment not completed',
             status: tipPaymentIntent.status,
@@ -489,12 +497,19 @@ router.post('/job/:jobId', requireRole('CUSTOMER'), async (req, res) => {
           });
         }
         
-        console.log(`[TIP] Payment intent confirmed: ${paymentIntentId} for $${finalTipAmount.toFixed(2)}`);
+        console.log(`[TIP] ✅ Payment intent confirmed: ${paymentIntentId} for $${finalTipAmount.toFixed(2)} (status: ${tipPaymentIntent.status})`);
       } catch (stripeError) {
-        console.error('[TIP] Error retrieving payment intent:', stripeError);
+        console.error('[TIP] ❌ Error retrieving payment intent:', stripeError);
+        console.error('[TIP] Stripe error details:', {
+          type: stripeError.type,
+          code: stripeError.code,
+          message: stripeError.message,
+          paymentIntentId: paymentIntentId
+        });
         return res.status(500).json({ 
           error: 'Failed to verify tip payment',
-          message: stripeError.message
+          message: stripeError.message || 'Stripe API error',
+          code: stripeError.code
         });
       }
     } else {

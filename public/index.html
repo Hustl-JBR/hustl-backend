@@ -25539,7 +25539,8 @@ meta.textContent =
         submitBtn.textContent = 'Processing...';
         
         try {
-          // Confirm payment with Stripe (embedded, no redirect)
+          // With confirmation_method: 'automatic', use confirmPayment
+          // The Payment Element handles payment method collection automatically
           const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
             elements,
             confirmParams: {
@@ -25549,16 +25550,27 @@ meta.textContent =
           });
           
           if (confirmError) {
-            throw new Error(confirmError.message || 'Payment failed');
+            // Handle specific error codes
+            if (confirmError.code === 'payment_intent_unexpected_state') {
+              // Payment intent might already be confirmed - check status
+              console.log('[TIP] Payment intent may already be confirmed, checking status...');
+              // Continue to backend - it will check the status
+            } else {
+              throw new Error(confirmError.message || 'Payment failed');
+            }
           }
           
-          // Check payment intent status - accept succeeded, processing, or requires_capture
-          if (paymentIntent && !['succeeded', 'processing', 'requires_capture'].includes(paymentIntent.status)) {
-            console.warn('[TIP] Payment intent status:', paymentIntent.status);
-            // Still proceed - backend will handle status validation
+          // Check payment intent status
+          if (paymentIntent) {
+            console.log('[TIP] Payment intent status after confirm:', paymentIntent.status);
+            // Accept succeeded, processing, or requires_capture
+            if (!['succeeded', 'processing', 'requires_capture'].includes(paymentIntent.status)) {
+              console.warn('[TIP] Unexpected payment intent status:', paymentIntent.status);
+              // Still proceed - backend will validate
+            }
           }
           
-          // Payment confirmed - now confirm on backend
+          // Payment confirmed (or in progress) - now confirm on backend
           const confirmResponse = await fetch(`${API_BASE}/tips/job/${jobId}`, {
             method: 'POST',
             headers: {
