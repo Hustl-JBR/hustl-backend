@@ -452,13 +452,7 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       // Calculate fees using centralized pricing service
       const fees = calculateFees(jobAmount);
       
-      return res.status(400).json({ 
-        error: 'Payment required to accept this offer. Please complete payment to proceed.',
-        requiresPayment: true,
-        amount: fees.total,
-        jobId: offer.job.id,
-        offerId: offer.id,
-      });
+      return Errors.paymentRequired(fees.total, offer.job.id, offer.id).send(res);
     }
 
     // Check if payment already exists (from previous attempt)
