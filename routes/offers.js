@@ -395,19 +395,30 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     });
 
     if (!offer) {
-      return res.status(404).json({ error: 'Offer not found' });
+      return Errors.notFound('Offer').send(res);
     }
 
     if (offer.job.customerId !== req.user.id) {
-      return res.status(403).json({ error: 'Forbidden' });
+      return Errors.forbidden().send(res);
     }
 
     if (offer.status !== 'PENDING') {
-      return res.status(400).json({ error: 'Offer is not pending' });
+      return res.status(400).json({
+        error: {
+          code: ErrorCodes.OFFER_ALREADY_ACCEPTED,
+          message: 'Offer is not pending'
+        }
+      });
     }
 
     if (offer.job.status !== 'OPEN' && offer.job.status !== 'REQUESTED') {
-      return res.status(400).json({ error: 'Job is not available' });
+      return res.status(400).json({
+        error: {
+          code: ErrorCodes.INVALID_JOB_STATUS,
+          message: 'Job is not available',
+          details: { status: offer.job.status }
+        }
+      });
     }
 
     // CHECK ACTIVE JOBS LIMIT - Hustlers can only have 2 active jobs at once
