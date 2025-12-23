@@ -620,8 +620,8 @@ router.post('/', authenticate, requireRole('CUSTOMER'), [
       paymentAmounts: {
         amount: jobAmount,
         tip: 0, // Tips happen after completion, not in authorization
-        fee: customerFee,
-        total: total,
+        fee: fees.customerFee,
+        total: fees.total,
       },
       message: 'Job posted successfully! Hustlers nearby will begin applying soon.',
     });
