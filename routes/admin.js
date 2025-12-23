@@ -392,11 +392,21 @@ router.get('/stats', async (req, res) => {
            p.completedAt && new Date(p.completedAt) >= sevenDaysAgo
     ).length;
 
+    // Get pending transfers (payouts that haven't been completed)
+    const pendingTransfers = allPayouts
+      .filter(p => p.status === 'PENDING' || p.status === 'PROCESSING')
+      .map(p => ({
+        amount: Number(p.netAmount),
+        status: p.status,
+        createdAt: p.createdAt
+      }));
+
     res.json({
       revenue: {
         total: totalRevenue,
         platformFees: totalPlatformFees, // Total fees collected (12% + 6.5%)
         estimatedStripeFees: estimatedStripeFees, // Estimated Stripe processing fees
+        netEarnings: netPlatformEarnings, // Net after Stripe fees
         netPlatformEarnings: netPlatformEarnings, // Net after Stripe fees
         refunds: totalRefunds,
         net: totalRevenue - totalRefunds,
@@ -405,6 +415,7 @@ router.get('/stats', async (req, res) => {
         total: totalPayouts,
         pending: pendingPayouts,
         recent: recentPayouts,
+        pendingTransfers: pendingTransfers, // Array of pending transfer details
       },
       refunds: {
         total: totalRefunds,

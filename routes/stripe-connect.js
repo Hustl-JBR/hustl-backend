@@ -266,9 +266,17 @@ router.get('/onboarding-link', handleOnboardingLink);
 router.post('/onboarding-link', handleOnboardingLink);
 
 // GET /stripe-connect/status - Check the status of the connected Stripe account
+// Note: authenticate is already applied via router.use(authenticate) above
 router.get('/status', async (req, res) => {
   try {
     const user = req.user;
+    
+    if (!user) {
+      return res.status(401).json({ 
+        error: 'Unauthorized',
+        message: 'Please log in to check Stripe status'
+      });
+    }
 
     // Check if user has HUSTLER role
     const userRoles = (user.roles || []).map(r => r.toUpperCase());

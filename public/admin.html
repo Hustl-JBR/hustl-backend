@@ -674,8 +674,19 @@
               <div class="stat-value">$${Number(data.revenue?.total || 0).toFixed(2)}</div>
             </div>
             <div class="stat-card">
-              <div class="stat-label">Platform Fees</div>
+              <div class="stat-label">Platform Fees (Gross)</div>
               <div class="stat-value">$${Number(data.revenue?.platformFees || 0).toFixed(2)}</div>
+              <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">12% + 6.5% fees</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Stripe Processing Fees</div>
+              <div class="stat-value">$${Number(data.revenue?.estimatedStripeFees || 0).toFixed(2)}</div>
+              <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">~2.9% + $0.30 per transaction</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-color: #16a34a;">
+              <div class="stat-label">Net Earnings (After Stripe)</div>
+              <div class="stat-value" style="color: #166534;">$${Number(data.revenue?.netEarnings || 0).toFixed(2)}</div>
+              <div style="font-size: 0.75rem; color: #166534; margin-top: 0.25rem; opacity: 0.8;">What you actually keep</div>
             </div>
             <div class="stat-card refunds">
               <div class="stat-label">Total Refunds</div>
@@ -697,12 +708,34 @@
                 <div style="font-size: 0.85rem; color: #6b7280;">Payouts</div>
                 <div style="font-size: 1.5rem; font-weight: 700;">${data.payouts?.recent || 0}</div>
               </div>
-              <div style="background: #f9fafb; padding: 1rem; border-radius: 8px;">
-                <div style="font-size: 0.85rem; color: #6b7280;">Pending Payouts</div>
-                <div style="font-size: 1.5rem; font-weight: 700;">$${Number(data.payouts?.pending || 0).toFixed(2)}</div>
+              <div style="background: #fef3c7; padding: 1rem; border-radius: 8px; border: 2px solid #f59e0b;">
+                <div style="font-size: 0.85rem; color: #92400e; font-weight: 600;">Pending Transfers</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #92400e;">$${Number(data.payouts?.pending || 0).toFixed(2)}</div>
+                <div style="font-size: 0.75rem; color: #92400e; margin-top: 0.25rem;">Awaiting transfer</div>
               </div>
             </div>
           </div>
+          ${data.payouts?.pendingTransfers && data.payouts.pendingTransfers.length > 0 ? `
+          <div style="margin-top: 2rem;">
+            <h3 style="margin-bottom: 1rem;">Pending Transfers to Hustlers</h3>
+            <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 1.5rem;">
+              <div style="font-size: 0.9rem; color: #92400e; margin-bottom: 1rem; font-weight: 600;">
+                ⏳ ${data.payouts.pendingTransfers.length} transfer${data.payouts.pendingTransfers.length === 1 ? '' : 's'} pending ($${Number(data.payouts.pending || 0).toFixed(2)} total)
+              </div>
+              <div style="font-size: 0.85rem; color: #92400e; line-height: 1.6;">
+                These transfers are waiting for funds to become available in your Stripe account. They will be processed automatically once funds are released (typically 2-7 days for new accounts).
+              </div>
+              <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(245, 158, 11, 0.3);">
+                <div style="font-size: 0.85rem; color: #92400e; font-weight: 600; margin-bottom: 0.5rem;">To view in Stripe:</div>
+                <div style="font-size: 0.8rem; color: #92400e; line-height: 1.5;">
+                  1. Go to <a href="https://dashboard.stripe.com/connect/transfers" target="_blank" style="color: #2563eb; text-decoration: underline;">Stripe Dashboard → Connect → Transfers</a><br>
+                  2. Filter by status: "Pending" or "In Transit"<br>
+                  3. You'll see all transfers waiting to be processed
+                </div>
+              </div>
+            </div>
+          </div>
+          ` : ''}
         `;
       } catch (error) {
         document.getElementById('statsContent').innerHTML = `<div class="error">Error: ${error.message}</div>`;
