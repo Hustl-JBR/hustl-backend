@@ -867,10 +867,6 @@ router.post('/:id/decline', authenticate, requireRole('CUSTOMER'), async (req, r
     return Errors.internal().send(res);
   }
 });
-    console.error('Decline offer error:', error);
-    return Errors.internal().send(res);
-  }
-});
 
 // POST /offers/:id/negotiate - Negotiate price with hustler (Customer only)
 router.post('/:id/negotiate', authenticate, requireRole('CUSTOMER'), [
