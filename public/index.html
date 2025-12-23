@@ -25279,11 +25279,11 @@ meta.textContent =
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(0, 0, 0, 0.75);
+        background: rgba(0, 0, 0, 0.6);
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 10000;
+        z-index: 10001;
         padding: 1rem;
         overflow-y: auto;
       `;
@@ -25292,55 +25292,136 @@ meta.textContent =
       modalContent.style.cssText = `
         background: white;
         border-radius: 16px;
-        padding: 2rem;
-        max-width: 500px;
+        max-width: 480px;
         width: 100%;
-        box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        max-height: 90vh;
+        padding: 1.5rem;
         position: relative;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        overflow-y: auto;
+        margin: auto;
       `;
       
-      modalContent.innerHTML = `
-        <button id="closeTipModal" style="position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; border-radius: 50%; border: none; background: #f3f4f6; color: var(--text-main); font-size: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">×</button>
-        
-        <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin: 0 0 1rem 0;">💝 Tip Your Hustler</h2>
-        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;">Show your appreciation for a job well done! The tip will go directly to the hustler.</p>
-        
-        <style>
-          #tipAmountInput {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            box-sizing: border-box;
-          }
-        </style>
-        <div style="margin-bottom: 1.5rem;">
-          <label for="tipAmountInput" style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">Tip Amount</label>
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <span style="color: var(--text-muted); font-weight: 600; font-size: 1rem;">$</span>
-            <input type="number" id="tipAmountInput" min="0.01" max="${maxTip}" step="0.01" placeholder="0.00" />
-          </div>
-          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Maximum tip: $${maxTip.toFixed(2)}</div>
-        </div>
-        
-        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
-          <button class="quickTipBtn" data-amount="${Math.min(jobAmount * 0.15, 50).toFixed(2)}" style="flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; background: white; color: var(--text-main); font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f9fafb'; this.style.borderColor='var(--primary)'" onmouseout="this.style.background='white'; this.style.borderColor='var(--border)'">15% ($${Math.min(jobAmount * 0.15, 50).toFixed(2)})</button>
-          <button class="quickTipBtn" data-amount="${Math.min(jobAmount * 0.20, 50).toFixed(2)}" style="flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; background: white; color: var(--text-main); font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f9fafb'; this.style.borderColor='var(--primary)'" onmouseout="this.style.background='white'; this.style.borderColor='var(--border)'">20% ($${Math.min(jobAmount * 0.20, 50).toFixed(2)})</button>
-          <button class="quickTipBtn" data-amount="${Math.min(jobAmount * 0.25, 50).toFixed(2)}" style="flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; background: white; color: var(--text-main); font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f9fafb'; this.style.borderColor='var(--primary)'" onmouseout="this.style.background='white'; this.style.borderColor='var(--border)'">25% ($${Math.min(jobAmount * 0.25, 50).toFixed(2)})</button>
-        </div>
-        
-        <div id="paymentElementContainer" style="margin-bottom: 1.5rem; display: none;">
-          <div id="payment-element" style="padding: 1rem; border: 2px solid var(--border); border-radius: 8px; background: #f9fafb;"></div>
-        </div>
-        
-        <button id="submitTipBtn" style="width: 100%; padding: 0.875rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">💝 Tip</button>
+      const closeBtn = document.createElement('button');
+      closeBtn.innerHTML = '×';
+      closeBtn.style.cssText = 'position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; border-radius: 50%; background: #f3f4f6; border: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6b7280; z-index: 10;';
+      closeBtn.id = 'closeTipModal';
+      modalContent.appendChild(closeBtn);
+      
+      const title = document.createElement('h2');
+      title.style.cssText = 'margin: 0 0 1rem 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main);';
+      title.textContent = '💝 Tip Your Hustler';
+      modalContent.appendChild(title);
+      
+      const description = document.createElement('p');
+      description.style.cssText = 'font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.5;';
+      description.textContent = 'Show your appreciation for a job well done! 100% of your tip goes directly to the hustler.';
+      modalContent.appendChild(description);
+      
+      // Tip amount input section
+      const tipInputSection = document.createElement('div');
+      tipInputSection.style.cssText = 'margin-bottom: 1rem;';
+      
+      const tipLabel = document.createElement('label');
+      tipLabel.setAttribute('for', 'tipAmountInput');
+      tipLabel.style.cssText = 'display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;';
+      tipLabel.textContent = 'Tip Amount';
+      tipInputSection.appendChild(tipLabel);
+      
+      const tipInputContainer = document.createElement('div');
+      tipInputContainer.style.cssText = 'display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;';
+      
+      const dollarSign = document.createElement('span');
+      dollarSign.style.cssText = 'color: var(--text-muted); font-weight: 600; font-size: 1rem; position: relative; z-index: 1;';
+      dollarSign.textContent = '$';
+      tipInputContainer.appendChild(dollarSign);
+      
+      const tipInput = document.createElement('input');
+      tipInput.type = 'number';
+      tipInput.id = 'tipAmountInput';
+      tipInput.min = '0.01';
+      tipInput.max = maxTip.toString();
+      tipInput.step = '0.01';
+      tipInput.placeholder = '0.00';
+      tipInput.style.cssText = 'flex: 1; padding: 0.75rem 1rem 0.75rem 3.75rem; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; font-weight: 600; box-sizing: border-box; position: relative;';
+      tipInputContainer.appendChild(tipInput);
+      
+      tipInputSection.appendChild(tipInputContainer);
+      
+      const maxTipNote = document.createElement('div');
+      maxTipNote.style.cssText = 'font-size: 0.75rem; color: var(--text-muted);';
+      maxTipNote.textContent = `Maximum tip: $${maxTip.toFixed(2)}`;
+      tipInputSection.appendChild(maxTipNote);
+      
+      modalContent.appendChild(tipInputSection);
+      
+      // Quick tip buttons
+      const quickTipSection = document.createElement('div');
+      quickTipSection.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 1.5rem;';
+      
+      [15, 20, 25].forEach(percent => {
+        const quickTipBtn = document.createElement('button');
+        quickTipBtn.className = 'quickTipBtn';
+        const quickTipAmount = Math.min(jobAmount * (percent / 100), 50);
+        quickTipBtn.dataset.amount = quickTipAmount.toFixed(2);
+        quickTipBtn.textContent = `${percent}% ($${quickTipAmount.toFixed(2)})`;
+        quickTipBtn.style.cssText = 'flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; background: white; color: var(--text-main); font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 0.85rem;';
+        quickTipBtn.addEventListener('mouseover', () => {
+          quickTipBtn.style.background = '#f9fafb';
+          quickTipBtn.style.borderColor = 'var(--primary)';
+        });
+        quickTipBtn.addEventListener('mouseout', () => {
+          quickTipBtn.style.background = 'white';
+          quickTipBtn.style.borderColor = 'var(--border)';
+        });
+        quickTipSection.appendChild(quickTipBtn);
+      });
+      
+      modalContent.appendChild(quickTipSection);
+      
+      // Direct to hustler notice
+      const directNotice = document.createElement('div');
+      directNotice.style.cssText = 'padding: 0.75rem; background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; color: #166534; line-height: 1.5;';
+      directNotice.innerHTML = `
+        <div style="font-weight: 600; margin-bottom: 0.25rem;">💚 100% Direct to Hustler</div>
+        <div>Your tip goes directly to the hustler. Hustl does not take any fees from tips.</div>
       `;
+      modalContent.appendChild(directNotice);
+      
+      // Payment element container (hidden initially)
+      const paymentElementContainer = document.createElement('div');
+      paymentElementContainer.id = 'paymentElementContainer';
+      paymentElementContainer.style.cssText = 'margin-bottom: 1rem; display: none;';
+      
+      const paymentElementDiv = document.createElement('div');
+      paymentElementDiv.id = 'payment-element';
+      paymentElementDiv.style.cssText = 'padding: 1rem; border: 2px solid var(--border); border-radius: 8px; background: #f9fafb;';
+      paymentElementContainer.appendChild(paymentElementDiv);
+      
+      modalContent.appendChild(paymentElementContainer);
+      
+      // Submit button
+      const submitBtn = document.createElement('button');
+      submitBtn.id = 'submitTipBtn';
+      submitBtn.className = 'btn btn-primary';
+      submitBtn.textContent = '💝 Tip';
+      submitBtn.style.cssText = 'width: 100%; padding: 0.875rem; margin-top: 0.5rem; font-size: 0.95rem; font-weight: 600;';
+      modalContent.appendChild(submitBtn);
       
       modal.appendChild(modalContent);
       document.body.appendChild(modal);
       document.body.style.overflow = 'hidden';
+      
+      // Add mobile-specific styling for tip input
+      const style = document.createElement('style');
+      style.textContent = `
+        @media (max-width: 768px) {
+          #tipAmountInput {
+            padding-left: 4rem !important;
+          }
+        }
+      `;
+      document.head.appendChild(style);
       
       // Quick tip buttons - update amount input
       modal.querySelectorAll('.quickTipBtn').forEach(btn => {

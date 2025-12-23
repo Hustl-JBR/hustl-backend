@@ -336,20 +336,15 @@ router.post('/create-intent/job/:jobId', requireRole('CUSTOMER'), async (req, re
           });
         }
 
-        // Get customer's payment method from original payment (optional - we'll use Elements to collect new payment)
-        const originalPaymentIntent = job.payment?.providerId 
-          ? await stripe.paymentIntents.retrieve(job.payment.providerId).catch(() => null)
-          : null;
-
         console.log(`[TIP INTENT] Creating payment intent for $${finalTipAmount.toFixed(2)} tip to hustler ${job.hustler.stripeAccountId}`);
 
         // Create payment intent with direct charge to hustler's connected account
         // Using transfer_data means 100% goes to hustler (no platform fee)
         // Note: Cannot use application_fee_amount with transfer_data
-        tipPaymentIntent = await stripe.paymentIntents.create({
+        // Don't include customer field - Stripe Elements will handle customer creation if needed
+        const paymentIntentData = {
           amount: Math.round(finalTipAmount * 100), // Convert to cents
           currency: 'usd',
-          customer: originalPaymentIntent?.customer, // Optional - can create new customer
           payment_method_types: ['card'],
           metadata: {
             jobId: job.id,
@@ -367,7 +362,9 @@ router.post('/create-intent/job/:jobId', requireRole('CUSTOMER'), async (req, re
           // Don't confirm - let Stripe Elements handle confirmation
           confirmation_method: 'manual',
           capture_method: 'automatic',
-        });
+        };
+
+        tipPaymentIntent = await stripe.paymentIntents.create(paymentIntentData);
 
         console.log(`[TIP INTENT] ✅ Created tip payment intent: ${tipPaymentIntent.id} for $${finalTipAmount.toFixed(2)}`);
       } catch (stripeError) {
