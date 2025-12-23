@@ -512,23 +512,67 @@ router.post('/jobs/:jobId/retry-transfer', requireRole('ADMIN'), async (req, res
         const availableBalanceDollars = availableBalance / 100;
         const pendingBalance = balance.pending[0]?.amount || 0;
         const pendingBalanceDollars = pendingBalance / 100;
+        const totalBalance = availableBalanceDollars + pendingBalanceDollars;
         
         console.log(`[ADMIN RETRY TRANSFER] Platform Balance:`);
         console.log(`  Available: $${availableBalanceDollars.toFixed(2)}`);
         console.log(`  Pending: $${pendingBalanceDollars.toFixed(2)}`);
+        console.log(`  Total: $${totalBalance.toFixed(2)}`);
         console.log(`  Transfer Amount Needed: $${hustlerPayout.toFixed(2)}`);
 
         if (availableBalanceDollars < hustlerPayout) {
+          // Check if the payment charge exists and when it will be available
+          let chargeInfo = null;
+          try {
+            const charges = await stripe.charges.list({
+              payment_intent: job.payment.providerId,
+              limit: 1
+            });
+            
+            if (charges.data.length > 0) {
+              const charge = charges.data[0];
+              chargeInfo = {
+                chargeId: charge.id,
+                amount: charge.amount / 100,
+                status: charge.status,
+                captured: charge.captured,
+                availableOn: charge.available_on ? new Date(charge.available_on * 1000).toISOString() : null
+              };
+              console.log(`[ADMIN RETRY TRANSFER] Charge Info:`, chargeInfo);
+            }
+          } catch (chargeError) {
+            console.error('[ADMIN RETRY TRANSFER] Error fetching charge:', chargeError);
+          }
+
+          const hasEnoughPending = pendingBalanceDollars >= hustlerPayout;
+          const hasEnoughTotal = totalBalance >= hustlerPayout;
+          
+          let suggestion = '';
+          if (hasEnoughPending) {
+            suggestion = `Funds are pending ($${pendingBalanceDollars.toFixed(2)}). Stripe typically releases funds within 2-7 days. The transfer will happen automatically once funds become available, or you can retry later.`;
+          } else if (hasEnoughTotal) {
+            suggestion = `Some funds are available ($${availableBalanceDollars.toFixed(2)}) but not enough. Pending funds ($${pendingBalanceDollars.toFixed(2)}) will become available within 2-7 days.`;
+          } else {
+            suggestion = `Total balance ($${totalBalance.toFixed(2)}) is less than needed ($${hustlerPayout.toFixed(2)}). Please verify the payment was captured correctly.`;
+          }
+
+          if (chargeInfo?.availableOn) {
+            suggestion += ` Funds will be available on: ${new Date(chargeInfo.availableOn).toLocaleDateString()}`;
+          }
+
           return res.status(400).json({ 
-            error: 'Insufficient balance for transfer',
-            message: `Platform account has insufficient available balance. Available: $${availableBalanceDollars.toFixed(2)}, Needed: $${hustlerPayout.toFixed(2)}. Funds may be pending.`,
+            error: 'Insufficient available balance for transfer',
+            message: `Platform account has insufficient available balance. Available: $${availableBalanceDollars.toFixed(2)}, Needed: $${hustlerPayout.toFixed(2)}. ${suggestion}`,
             balance: {
               available: availableBalanceDollars,
               pending: pendingBalanceDollars,
+              total: totalBalance,
               needed: hustlerPayout
             },
+            chargeInfo: chargeInfo,
             paymentIntentId: job.payment.providerId,
-            suggestion: 'Wait a few minutes for funds to become available, or check if payment was actually captured.'
+            suggestion: suggestion,
+            canRetryLater: hasEnoughPending || hasEnoughTotal
           });
         }
       } catch (balanceError) {
