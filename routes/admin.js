@@ -789,18 +789,16 @@ router.post('/jobs/:jobId/capture-and-transfer', requireRole('ADMIN'), async (re
       });
     }
 
-    // Calculate amounts
+    // Calculate amounts using centralized pricing service
     const actualJobAmount = Number(job.payment.amount || job.amount || 0);
-    const platformFee = actualJobAmount * 0.12; // 12% platform fee
-    const hustlerPayout = actualJobAmount - platformFee; // 88% to hustler
-    const customerServiceFee = actualJobAmount * 0.065; // 6.5% customer service fee
-    const customerTotalCharged = actualJobAmount + customerServiceFee;
+    const fees = calculateFees(actualJobAmount);
+    const hustlerPayout = fees.hustlerPayout;
 
     console.log(`[ADMIN MANUAL CAPTURE] Processing payment for job ${jobId}:`);
     console.log(`  Job Amount: $${actualJobAmount.toFixed(2)}`);
-    console.log(`  Platform Fee (12%): $${platformFee.toFixed(2)}`);
+    console.log(`  Platform Fee (12%): $${fees.platformFee.toFixed(2)}`);
     console.log(`  Hustler Payout (88%): $${hustlerPayout.toFixed(2)}`);
-    console.log(`  Customer Service Fee (6.5%): $${customerServiceFee.toFixed(2)}`);
+    console.log(`  Customer Service Fee (6.5%): $${fees.customerFee.toFixed(2)}`);
 
     // Capture payment (or check if already captured)
     const { capturePaymentIntent, transferToHustler } = require('../services/stripe');
