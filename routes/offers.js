@@ -486,15 +486,49 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
         });
       }
       
-      // If there's an existing payment with a different PaymentIntent, void the old one
+      // If there's an existing payment with a different PaymentIntent, void the old one completely
       // This happens when hustler proposed a different price and customer accepts
+      // We void the old transaction and create a completely new one (cleaner than charging difference)
       if (existingPayment && existingPayment.providerId && existingPayment.providerId !== paymentIntentId) {
         try {
           const oldPaymentIntent = await stripe.paymentIntents.retrieve(existingPayment.providerId);
-          if (oldPaymentIntent.status === 'requires_capture') {
-            // Void the old payment intent (release authorization)
+          if (oldPaymentIntent.status === 'requires_capture' || oldPaymentIntent.status === 'requires_payment_method') {
+            // Void/cancel the old payment intent completely (releases authorization)
             await stripe.paymentIntents.cancel(existingPayment.providerId);
-            console.log(`[OFFER ACCEPT] Voided old PaymentIntent ${existingPayment.providerId} (price changed from $${existingPayment.amount} to new amount)`);
+            console.log(`[OFFER ACCEPT] ✅ Voided old PaymentIntent ${existingPayment.providerId} (original amount: $${existingPayment.total.toFixed(2)})`);
+            console.log(`[OFFER ACCEPT] Customer will be refunded the original authorization amount`);
+            
+            // Update payment record to reflect void
+            await prisma.payment.update({
+              where: { id: existingPayment.id },
+              data: {
+                status: 'VOIDED',
+                refundReason: 'Price negotiation - original payment voided, new payment created'
+              }
+            });
+            
+            // Send refund notification email to customer
+            try {
+              const { sendRefundEmail } = require('../services/email');
+              const customer = await prisma.user.findUnique({
+                where: { id: existingPayment.customerId },
+                select: { email: true, name: true }
+              });
+              
+              if (customer && customer.email) {
+                await sendRefundEmail(
+                  customer.email,
+                  customer.name,
+                  offer.job.title,
+                  Number(existingPayment.total),
+                  'Price negotiation - original payment voided. Please complete new payment to accept the negotiated price.',
+                  existingPayment
+                );
+                console.log(`[OFFER ACCEPT] Sent refund notification email to customer`);
+              }
+            } catch (emailError) {
+              console.error('[OFFER ACCEPT] Error sending refund email:', emailError);
+            }
           }
         } catch (voidError) {
           console.error(`[OFFER ACCEPT] Error voiding old PaymentIntent ${existingPayment.providerId}:`, voidError);
@@ -682,12 +716,24 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       // Don't fail the request if email fails
     }
 
+    // Check if price was negotiated (old payment was voided)
+    const priceWasNegotiated = existingPayment && offer.proposedAmount && offer.proposedAmount > 0 && offer.job.payType === 'flat';
+    const originalAmount = priceWasNegotiated ? parseFloat(offer.job.amount || 0) : null;
+    
     res.json({
       job,
       offer,
-      payment,
+      payment: existingPayment, // Use the payment we just created/updated
       startCode, // Customer needs to give this to hustler
       startCodeExpiresAt, // 78 hours from now
+      priceNegotiated: priceWasNegotiated,
+      originalAmount: originalAmount,
+      newAmount: priceWasNegotiated ? jobAmount : null,
+      refundInfo: priceWasNegotiated ? {
+        refunded: true,
+        amount: originalAmount + (originalAmount * 0.065), // Original amount + service fee
+        message: `Original payment of $${(originalAmount + (originalAmount * 0.065)).toFixed(2)} has been voided. New payment of $${total.toFixed(2)} has been authorized.`
+      } : null
     });
   } catch (error) {
     console.error('Accept offer error:', error);

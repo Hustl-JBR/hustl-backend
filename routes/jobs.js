@@ -2930,7 +2930,7 @@ router.post('/:id/leave', authenticate, requireRole('HUSTLER'), async (req, res)
     }
 
     // Process refund (automatic if before start code)
-    await processRefundIfNeeded(job, 'Hustler left job', req.user.id, req.user.name, req.ip);
+    const refundInfo = await processRefundIfNeeded(job, 'Hustler left job', req.user.id, req.user.name, req.ip);
 
     // Find accepted offer
     const acceptedOffer = job.offers && job.offers.length > 0 ? job.offers[0] : null;
@@ -2954,7 +2954,7 @@ router.post('/:id/leave', authenticate, requireRole('HUSTLER'), async (req, res)
       }
     });
 
-    // Send notification email to customer (non-blocking)
+    // Send notification email to customer with refund info (non-blocking)
     if (job.customer) {
       try {
         const emailService = require('../services/email');
@@ -2967,8 +2967,20 @@ router.post('/:id/leave', authenticate, requireRole('HUSTLER'), async (req, res)
             job.id
           );
         }
+        
+        // Also send refund email if refund was processed
+        if (refundInfo.refunded && emailService.sendRefundEmail) {
+          await emailService.sendRefundEmail(
+            job.customer.email,
+            job.customer.name,
+            job.title,
+            refundInfo.amount,
+            'Hustler left job - full refund processed',
+            job.payment
+          );
+        }
       } catch (emailError) {
-        console.error('Error sending cancellation email (non-fatal):', emailError);
+        console.error('Error sending cancellation/refund email (non-fatal):', emailError);
       }
     }
     
