@@ -24500,6 +24500,17 @@ meta.textContent =
             }
           });
           
+          // Hustler view tip button - shows tip they received
+          card.querySelector('.viewTipReceivedBtn')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            // Open the completed job details popup to see tip details
+            if (typeof openCompletedJobDetails === 'function') {
+              openCompletedJobDetails(job.id, job, payment, isCustomerForThisJob, isHustlerForThisJob);
+            } else {
+              showToast('Unable to open job details. Please try again.');
+            }
+          });
+          
           card.querySelector('.reviewBtn')?.addEventListener('click', async (e) => {
             e.stopPropagation();
             const jobId = e.target.dataset.jobId;
