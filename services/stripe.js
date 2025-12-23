@@ -159,9 +159,23 @@ async function createAccountLink(accountId, returnUrl, refreshUrl) {
 }
 
 // Stripe Connect: Transfer funds to hustler's connected account
-async function transferToHustler(connectedAccountId, amount, jobId, description) {
+/**
+ * Transfer funds to hustler's Stripe Connect account with idempotency protection
+ * @param {string} connectedAccountId - Hustler's Stripe Connect account ID
+ * @param {number} amount - Amount to transfer in dollars
+ * @param {string} jobId - Job ID (used for idempotency and metadata)
+ * @param {string} description - Transfer description
+ * @param {string} idempotencyKey - Optional idempotency key (generated if not provided)
+ * @returns {Promise<object>} Transfer object
+ */
+async function transferToHustler(connectedAccountId, amount, jobId, description, idempotencyKey = null) {
   try {
     console.log(`[TRANSFER] Creating transfer: $${amount.toFixed(2)} to account ${connectedAccountId} for job ${jobId}`);
+    
+    // Generate idempotency key if not provided
+    // Pattern: transfer-{jobId}-{timestamp}
+    // CRITICAL: This prevents double-payments if transfer is retried
+    const key = idempotencyKey || `transfer-${jobId}-${Date.now()}`;
     
     const transfer = await stripe.transfers.create({
       amount: Math.round(amount * 100), // Convert to cents
@@ -171,6 +185,8 @@ async function transferToHustler(connectedAccountId, amount, jobId, description)
         jobId: jobId,
         description: description,
       },
+    }, {
+      idempotencyKey: key
     });
     
     console.log(`[TRANSFER] Transfer created successfully: ${transfer.id}, status: ${transfer.status}, amount: $${(transfer.amount / 100).toFixed(2)}`);
