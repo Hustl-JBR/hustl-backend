@@ -24460,8 +24460,41 @@ meta.textContent =
               
               // Add event listener for view tip button
               const viewTipBtn = thanksDiv.querySelector('.viewTipBtn');
-              viewTipBtn?.addEventListener('click', (e) => {
+              viewTipBtn?.addEventListener('click', async (e) => {
                 e.stopPropagation();
+                
+                // Always fetch fresh payment data from backend to get accurate tip amount
+                let actualTipAmount = 0;
+                try {
+                  const token = localStorage.getItem('hustl_token');
+                  const paymentResponse = await fetch(`${API_BASE}/payments/job/${job.id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                  
+                  if (paymentResponse.ok) {
+                    const paymentData = await paymentResponse.json();
+                    actualTipAmount = Number(paymentData.tip || 0);
+                    console.log('[VIEW TIP] Fetched fresh payment data:', { tip: paymentData.tip, actualTipAmount });
+                  } else {
+                    // Fallback to data attribute or payment object
+                    const tipBtnElement = e.target.closest('.viewTipBtn');
+                    const tipAmountFromData = parseFloat(tipBtnElement?.dataset.tipAmount || 0);
+                    actualTipAmount = tipAmountFromData > 0 ? tipAmountFromData : (Number(payment?.tip || 0));
+                    console.log('[VIEW TIP] Using fallback tip amount:', { tipAmountFromData, paymentTip: payment?.tip, actualTipAmount });
+                  }
+                } catch (error) {
+                  console.error('[VIEW TIP] Error fetching payment:', error);
+                  // Fallback to data attribute or payment object
+                  const tipBtnElement = e.target.closest('.viewTipBtn');
+                  const tipAmountFromData = parseFloat(tipBtnElement?.dataset.tipAmount || 0);
+                  actualTipAmount = tipAmountFromData > 0 ? tipAmountFromData : (Number(payment?.tip || 0));
+                }
+                
+                if (actualTipAmount <= 0) {
+                  showToast('Unable to retrieve tip amount. Please refresh the page.');
+                  return;
+                }
+                
                 // Show tip view modal
                 const modal = document.createElement('div');
                 modal.id = 'tipViewModal';
@@ -24491,16 +24524,7 @@ meta.textContent =
                   text-align: center;
                 `;
                 
-                // Get tip amount from data attribute
-                const tipBtnElement = e.target.closest('.viewTipBtn');
-                const tipAmountFromData = parseFloat(tipBtnElement?.dataset.tipAmount || 0);
-                const actualTipAmount = tipAmountFromData > 0 ? tipAmountFromData : (tipAmount || 0);
-                
-                console.log('[VIEW TIP] Showing modal with tip amount:', {
-                  tipAmountFromData,
-                  tipAmount,
-                  actualTipAmount
-                });
+                console.log('[VIEW TIP] Showing modal with tip amount:', actualTipAmount);
                 
                 modalContent.innerHTML = `
                   <button id="closeTipViewModal" style="position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; border-radius: 50%; border: none; background: #f3f4f6; color: var(--text-main); font-size: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">×</button>
@@ -34279,12 +34303,8 @@ try {
         if (completedTab) {
           completedTab.click(); // Switch to completed tab
         }
-        // Single refresh after a short delay to let webhook process
-        setTimeout(() => {
-          if (typeof loadCompletedJobs === 'function') {
-            loadCompletedJobs(true);
-          }
-        }, 2000); // Wait 2 seconds for webhook to process
+        // Don't reload - tip is processed, that's all that matters
+        // User can manually refresh if they want to see updated UI
       }, 500);
     } else if (tipCancelled) {
       // Tip payment cancelled
