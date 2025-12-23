@@ -21469,20 +21469,10 @@ async function renderJobs(reset = false) {
     console.error("profileBasicInfo element not found in DOM");
   }
   
-  // Render Quick Stats (already got quickStats above, but check again)
+  // Render Quick Stats - removed per user request
   if (quickStats) {
-    quickStats.innerHTML = `
-      <div class="quick-stat-card">
-        <div class="quick-stat-icon">✅</div>
-        <div class="quick-stat-value">${completedJobs.length}</div>
-        <div class="quick-stat-label">Jobs Done</div>
-      </div>
-      <div class="quick-stat-card">
-        <div class="quick-stat-icon">⭐</div>
-        <div class="quick-stat-value">${user.ratingAvg ? user.ratingAvg.toFixed(1) : (user.ratingCount > 0 ? '0.0' : '0.0')}</div>
-        <div class="quick-stat-label">Rating</div>
-      </div>
-    `;
+    quickStats.innerHTML = '';
+    quickStats.style.display = 'none';
   }
   
   // Initialize Profile Tabs (call after a short delay to ensure DOM is ready)
