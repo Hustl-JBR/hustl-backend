@@ -1096,18 +1096,14 @@ async function sendHustlerCancelledEmail(email, name, jobTitle, hustlerName, job
             <p style="color: #991b1b; margin: 0.5rem 0 0 0;">Hustler: ${hustlerName}</p>
           </div>
           
-          <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
-            <p style="font-size: 1.05rem; color: #1e40af; margin: 0 0 0.5rem 0; font-weight: 600;">
-              💰 Refund Started
-            </p>
-            <p style="color: #1e3a8a; margin: 0; line-height: 1.6;">
-              Your payment has been refunded. The refund may take 5-10 business days to appear in your account, depending on your bank.
-            </p>
-          </div>
+          ${refundSection}
           
-          <p style="color: #374151; line-height: 1.6; margin: 1.5rem 0;">
-            The job is now open for other applicants. You can review new applications or repost the job.
-          </p>
+          <div style="margin-top: 1.5rem; padding: 1rem; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #3b82f6;">
+            <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.5rem;">What's Next?</div>
+            <div style="font-size: 0.9rem; color: #1e3a8a; line-height: 1.6;">
+              You can now hire someone else for this job or unassign if you no longer need it. The job is back to "Open" status and available for new applications.
+            </div>
+          </div>
           
           <div style="margin: 2rem 0; text-align: center;">
             <a href="${jobUrl}" style="display: inline-block; padding: 1rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem;">
