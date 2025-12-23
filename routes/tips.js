@@ -8,6 +8,34 @@ const prisma = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
 const Stripe = require('stripe');
 
+// Initialize Stripe with validation (at top of file, before routes)
+let stripe;
+let stripeKeyStatus = 'unknown';
+
+if (process.env.STRIPE_SECRET_KEY) {
+  const key = process.env.STRIPE_SECRET_KEY.trim().replace(/^["']|["']$/g, '');
+  
+  if (!key.startsWith('sk_test_') && !key.startsWith('sk_live_')) {
+    console.error('[TIPS] WARNING: STRIPE_SECRET_KEY does not start with sk_test_ or sk_live_.');
+    stripeKeyStatus = 'invalid_format';
+  } else {
+    stripeKeyStatus = key.startsWith('sk_test_') ? 'test' : 'live';
+  }
+  
+  try {
+    stripe = new Stripe(key);
+    console.log('[TIPS] Stripe client initialized successfully');
+  } catch (error) {
+    console.error('[TIPS] Error initializing Stripe:', error.message);
+    stripeKeyStatus = 'initialization_failed';
+    stripe = new Stripe(key); // Still create instance - will fail on API calls
+  }
+} else {
+  console.error('[TIPS] ERROR: STRIPE_SECRET_KEY is not set in environment variables');
+  stripeKeyStatus = 'missing';
+  stripe = new Stripe('sk_test_missing_key_please_set_in_environment');
+}
+
 const router = express.Router();
 router.use(authenticate);
 
@@ -275,30 +303,45 @@ router.post('/create-intent/job/:jobId', requireRole('CUSTOMER'), async (req, re
       return res.status(400).json({ error: 'Tip amount must be greater than 0' });
     }
 
-    // Check if hustler has Stripe account connected
-    if (!job.hustler?.stripeAccountId) {
-      return res.status(400).json({ 
-        error: 'Hustler has not connected their Stripe account',
-        message: 'The hustler must connect their payment account before receiving tips'
-      });
-    }
-
     // Create payment intent for tip (without confirming - for Stripe Elements)
     const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
     let tipPaymentIntent = null;
 
-    // Ensure Stripe is initialized
-    if (!stripe && process.env.STRIPE_SECRET_KEY) {
-      const key = process.env.STRIPE_SECRET_KEY.trim().replace(/^["']|["']$/g, '');
-      stripe = new Stripe(key);
+    // Validate Stripe is available
+    if (!skipStripeCheck) {
+      if (!stripe || stripeKeyStatus === 'missing' || stripeKeyStatus === 'initialization_failed') {
+        console.error('[TIP INTENT] Stripe not properly initialized. Status:', stripeKeyStatus);
+        return res.status(500).json({ 
+          error: 'Payment system not configured',
+          message: 'Stripe is not properly initialized. Please check server logs.',
+          stripeKeyStatus: stripeKeyStatus
+        });
+      }
+      
+      if (!job.hustler?.stripeAccountId) {
+        return res.status(400).json({ 
+          error: 'Hustler has not connected their Stripe account',
+          message: 'The hustler must connect their payment account before receiving tips'
+        });
+      }
     }
 
     if (!skipStripeCheck && stripe) {
       try {
+        // Validate hustler has Stripe account
+        if (!job.hustler?.stripeAccountId) {
+          return res.status(400).json({ 
+            error: 'Hustler has not connected their Stripe account',
+            message: 'The hustler must connect their payment account before receiving tips'
+          });
+        }
+
         // Get customer's payment method from original payment (optional - we'll use Elements to collect new payment)
         const originalPaymentIntent = job.payment?.providerId 
           ? await stripe.paymentIntents.retrieve(job.payment.providerId).catch(() => null)
           : null;
+
+        console.log(`[TIP INTENT] Creating payment intent for $${finalTipAmount.toFixed(2)} tip to hustler ${job.hustler.stripeAccountId}`);
 
         // Create payment intent with direct charge to hustler's connected account
         // Using transfer_data means 100% goes to hustler (no platform fee)
@@ -326,19 +369,37 @@ router.post('/create-intent/job/:jobId', requireRole('CUSTOMER'), async (req, re
           capture_method: 'automatic',
         });
 
-        console.log(`[TIP INTENT] Created tip payment intent: ${tipPaymentIntent.id} for $${finalTipAmount.toFixed(2)}`);
+        console.log(`[TIP INTENT] ✅ Created tip payment intent: ${tipPaymentIntent.id} for $${finalTipAmount.toFixed(2)}`);
       } catch (stripeError) {
-        console.error('[TIP INTENT] Error creating tip payment intent:', stripeError);
+        console.error('[TIP INTENT] ❌ Error creating tip payment intent:', stripeError);
         console.error('[TIP INTENT] Stripe error details:', {
           type: stripeError.type,
           code: stripeError.code,
           message: stripeError.message,
-          hustlerStripeAccountId: job.hustler?.stripeAccountId
+          hustlerStripeAccountId: job.hustler?.stripeAccountId,
+          stripeKeyStatus: stripeKeyStatus
         });
+        
+        // Provide more helpful error messages
+        let errorMessage = 'Failed to create tip payment intent';
+        if (stripeError.type === 'StripeAuthenticationError') {
+          errorMessage = 'Stripe authentication failed. Please check server configuration.';
+        } else if (stripeError.code === 'account_invalid') {
+          errorMessage = 'Hustler\'s Stripe account is not valid. They may need to complete onboarding.';
+        } else if (stripeError.message) {
+          errorMessage = stripeError.message;
+        }
+        
         return res.status(500).json({ 
-          error: 'Failed to create tip payment intent',
+          error: errorMessage,
           message: stripeError.message || 'Stripe API error',
-          details: process.env.NODE_ENV === 'development' ? stripeError.message : undefined
+          code: stripeError.code,
+          type: stripeError.type,
+          details: process.env.NODE_ENV === 'development' ? {
+            fullError: stripeError.message,
+            stripeKeyStatus: stripeKeyStatus,
+            hustlerAccountId: job.hustler?.stripeAccountId
+          } : undefined
         });
       }
     } else {
@@ -367,14 +428,7 @@ router.post('/create-intent/job/:jobId', requireRole('CUSTOMER'), async (req, re
   }
 });
 
-// Initialize Stripe
-let stripe;
-if (process.env.STRIPE_SECRET_KEY) {
-  const key = process.env.STRIPE_SECRET_KEY.trim().replace(/^["']|["']$/g, '');
-  stripe = new Stripe(key);
-} else {
-  stripe = new Stripe('sk_test_missing_key');
-}
+// Stripe is initialized at the top of the file
 
 // POST /tips/job/:jobId - Confirm tip payment and transfer to hustler
 router.post('/job/:jobId', requireRole('CUSTOMER'), async (req, res) => {
