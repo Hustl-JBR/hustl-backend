@@ -95,7 +95,12 @@ router.post('/job/:jobId/verify-start', authenticate, async (req, res) => {
     const userId = req.user.id;
 
     if (!code || code.length !== 6) {
-      return res.status(400).json({ error: 'Start code must be 6 digits' });
+      return res.status(400).json({
+        error: {
+          code: ErrorCodes.INVALID_INPUT,
+          message: 'Start code must be 6 digits'
+        }
+      });
     }
 
     const job = await prisma.job.findUnique({
@@ -104,18 +109,24 @@ router.post('/job/:jobId/verify-start', authenticate, async (req, res) => {
     });
 
     if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
+      return Errors.notFound('Job', jobId).send(res);
     }
 
     // Only the assigned hustler can verify start code
     if (job.hustlerId !== userId) {
-      return res.status(403).json({ error: 'Only the assigned hustler can verify start code' });
+      return Errors.forbidden('Only the assigned hustler can verify start code').send(res);
     }
 
     // Job must be SCHEDULED (hustler accepted, waiting for Start Code) to verify start code
     // Also allow ASSIGNED for backwards compatibility during migration
     if (job.status !== 'SCHEDULED' && job.status !== 'ASSIGNED') {
-      return res.status(400).json({ error: 'Job must be in SCHEDULED status to verify start code' });
+      return res.status(400).json({
+        error: {
+          code: ErrorCodes.INVALID_JOB_STATUS,
+          message: 'Job must be in SCHEDULED status to verify start code',
+          details: { currentStatus: job.status }
+        }
+      });
     }
 
     // Check if code has expired (78 hours)
@@ -137,20 +148,22 @@ router.post('/job/:jobId/verify-start', authenticate, async (req, res) => {
       } catch (refundError) {
         console.error('Error processing expiration refund:', refundError);
       }
-      return res.status(400).json({ 
-        error: 'Start code has expired (78 hours). Job has been cancelled and customer refunded.',
-        expired: true 
-      });
+      return Errors.codeExpired('start').send(res);
     }
 
     if (job.startCodeVerified) {
-      return res.status(400).json({ error: 'Start code already verified' });
+      return res.status(400).json({
+        error: {
+          code: ErrorCodes.CODE_ALREADY_USED,
+          message: 'Start code already verified'
+        }
+      });
     }
 
     // Check the code (use startCode, fallback to arrivalCode for migration)
     const expectedCode = job.startCode || job.arrivalCode;
     if (code.trim() !== expectedCode) {
-      return res.status(400).json({ error: 'Incorrect code. Ask the customer for the correct 6-digit start code.' });
+      return Errors.invalidCode('start').send(res);
     }
 
     // BUSINESS RULE: Hustler lock - can only have ONE job in progress at a time
