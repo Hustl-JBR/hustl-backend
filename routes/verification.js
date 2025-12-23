@@ -385,13 +385,13 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       console.log(`[FLAT JOB] Using payment amount: $${actualJobAmount.toFixed(2)} (payment.amount: ${job.payment?.amount}, job.amount: ${job.amount})`);
     }
 
-    // Calculate 12% platform fee on actual amount
-    const platformFee = actualJobAmount * 0.12;
-    const hustlerPayout = actualJobAmount - platformFee;
+    // Calculate fees using centralized pricing service
+    const fees = calculateFees(actualJobAmount);
+    const hustlerPayout = fees.hustlerPayout;
     
     console.log(`[JOB COMPLETION] Payment breakdown for job ${job.id}:`);
     console.log(`[JOB COMPLETION]   Job Amount: $${actualJobAmount.toFixed(2)}`);
-    console.log(`[JOB COMPLETION]   Platform Fee (12%): $${platformFee.toFixed(2)}`);
+    console.log(`[JOB COMPLETION]   Platform Fee (12%): $${fees.platformFee.toFixed(2)}`);
     console.log(`[JOB COMPLETION]   Hustler Payout: $${hustlerPayout.toFixed(2)}`);
     
     // For hourly jobs with multiple workers, split evenly
