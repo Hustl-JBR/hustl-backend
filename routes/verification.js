@@ -857,7 +857,7 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
 
   } catch (error) {
     console.error('Error verifying completion:', error);
-    res.status(500).json({ error: 'Failed to verify completion' });
+    return Errors.internal('Failed to verify completion').send(res);
   }
 });
 
