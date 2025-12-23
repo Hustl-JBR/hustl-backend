@@ -99,6 +99,47 @@ router.get('/me', authenticate, async (req, res) => {
       user.photoUrl = null;
     }
     
+    // Calculate ratingAvg and ratingCount from reviews table (single source of truth)
+    // This ensures accuracy even if cached fields are out of sync
+    try {
+      const allReviews = await prisma.review.findMany({
+        where: {
+          revieweeId: req.user.id,
+          isHidden: false,
+        },
+        select: { stars: true },
+      });
+      
+      // Calculate average rating from actual reviews
+      const calculatedRatingAvg = allReviews.length > 0
+        ? Math.round((allReviews.reduce((sum, r) => sum + r.stars, 0) / allReviews.length) * 10) / 10
+        : 0;
+      const calculatedRatingCount = allReviews.length;
+      
+      // Update cached fields if they're different (async, non-blocking)
+      if (user.ratingAvg !== calculatedRatingAvg || user.ratingCount !== calculatedRatingCount) {
+        console.log(`[GET /users/me] Rating mismatch detected. Cached: ${user.ratingAvg} (${user.ratingCount}), Calculated: ${calculatedRatingAvg} (${calculatedRatingCount}). Updating...`);
+        prisma.user.update({
+          where: { id: req.user.id },
+          data: {
+            ratingAvg: calculatedRatingAvg,
+            ratingCount: calculatedRatingCount,
+          },
+        }).catch(err => {
+          console.error('[GET /users/me] Error updating cached ratings:', err);
+        });
+      }
+      
+      // Use calculated values instead of cached
+      user.ratingAvg = calculatedRatingAvg;
+      user.ratingCount = calculatedRatingCount;
+      
+      console.log(`[GET /users/me] Using calculated ratings: ${calculatedRatingAvg} from ${calculatedRatingCount} reviews`);
+    } catch (ratingError) {
+      console.error('[GET /users/me] Error calculating ratings from reviews:', ratingError);
+      // Fall back to cached values if calculation fails
+    }
+    
     // Calculate completed jobs count (only jobs where user was the hustler)
     // Count jobs that are completed - PAID status means completed, others need completionCodeVerified
     const completedJobsCount = await prisma.job.count({
@@ -231,21 +272,61 @@ router.get('/me', authenticate, async (req, res) => {
       totalEarned = 0;
     }
     
-    // Rating is already included in user object from the select statement
-    const ratingAvg = user.ratingAvg || 0;
+    // Calculate ratingAvg and ratingCount from reviews table (single source of truth)
+    // This ensures accuracy even if cached fields are out of sync
+    let calculatedRatingAvg = 0;
+    let calculatedRatingCount = 0;
+    try {
+      const allReviews = await prisma.review.findMany({
+        where: {
+          revieweeId: req.user.id,
+          isHidden: false,
+        },
+        select: { stars: true },
+      });
+      
+      // Calculate average rating from actual reviews
+      calculatedRatingAvg = allReviews.length > 0
+        ? Math.round((allReviews.reduce((sum, r) => sum + r.stars, 0) / allReviews.length) * 10) / 10
+        : 0;
+      calculatedRatingCount = allReviews.length;
+      
+      // Update cached fields if they're different (async, non-blocking)
+      if (user.ratingAvg !== calculatedRatingAvg || user.ratingCount !== calculatedRatingCount) {
+        console.log(`[GET /users/me] Rating mismatch detected. Cached: ${user.ratingAvg} (${user.ratingCount}), Calculated: ${calculatedRatingAvg} (${calculatedRatingCount}). Updating...`);
+        prisma.user.update({
+          where: { id: req.user.id },
+          data: {
+            ratingAvg: calculatedRatingAvg,
+            ratingCount: calculatedRatingCount,
+          },
+        }).catch(err => {
+          console.error('[GET /users/me] Error updating cached ratings:', err);
+        });
+      }
+      
+      console.log(`[GET /users/me] Using calculated ratings: ${calculatedRatingAvg} from ${calculatedRatingCount} reviews`);
+    } catch (ratingError) {
+      console.error('[GET /users/me] Error calculating ratings from reviews:', ratingError);
+      // Fall back to cached values if calculation fails
+      calculatedRatingAvg = user.ratingAvg || 0;
+      calculatedRatingCount = user.ratingCount || 0;
+    }
     
     console.log('[GET /users/me] Returning user with stats:', {
       photoUrl: user.photoUrl,
       jobsCompleted: completedJobsCount,
       totalEarned,
-      ratingAvg
+      ratingAvg: calculatedRatingAvg,
+      ratingCount: calculatedRatingCount
     });
 
     res.json({
       ...user,
       jobsCompleted: completedJobsCount,
       totalEarned: totalEarned,
-      ratingAvg: ratingAvg  // Ensure ratingAvg is included (already in user object)
+      ratingAvg: calculatedRatingAvg,  // Use calculated value from reviews table
+      ratingCount: calculatedRatingCount  // Use calculated count from reviews table
     });
   } catch (error) {
     console.error('Get user error:', error);
@@ -378,10 +459,53 @@ router.get('/:id', optionalAuth, async (req, res) => {
       }
     });
 
+    // Calculate ratingAvg and ratingCount from reviews table (single source of truth)
+    // This ensures accuracy even if cached fields are out of sync
+    let calculatedRatingAvg = 0;
+    let calculatedRatingCount = 0;
+    try {
+      const allReviews = await prisma.review.findMany({
+        where: {
+          revieweeId: requestedUserId,
+          isHidden: false,
+        },
+        select: { stars: true },
+      });
+      
+      // Calculate average rating from actual reviews
+      calculatedRatingAvg = allReviews.length > 0
+        ? Math.round((allReviews.reduce((sum, r) => sum + r.stars, 0) / allReviews.length) * 10) / 10
+        : 0;
+      calculatedRatingCount = allReviews.length;
+      
+      // Update cached fields if they're different (async, non-blocking)
+      if (user.ratingAvg !== calculatedRatingAvg || user.ratingCount !== calculatedRatingCount) {
+        console.log(`[GET /users/:id] Rating mismatch detected. Cached: ${user.ratingAvg} (${user.ratingCount}), Calculated: ${calculatedRatingAvg} (${calculatedRatingCount}). Updating...`);
+        prisma.user.update({
+          where: { id: requestedUserId },
+          data: {
+            ratingAvg: calculatedRatingAvg,
+            ratingCount: calculatedRatingCount,
+          },
+        }).catch(err => {
+          console.error('[GET /users/:id] Error updating cached ratings:', err);
+        });
+      }
+      
+      console.log(`[GET /users/:id] Using calculated ratings: ${calculatedRatingAvg} from ${calculatedRatingCount} reviews`);
+    } catch (ratingError) {
+      console.error('[GET /users/:id] Error calculating ratings from reviews:', ratingError);
+      // Fall back to cached values if calculation fails
+      calculatedRatingAvg = user.ratingAvg || 0;
+      calculatedRatingCount = user.ratingCount || 0;
+    }
+    
     console.log(`[GET /users/:id] Returning profile for: ${user.name} (ID: ${user.id}) with ${completedJobsCount} completed jobs`);
     res.json({
       ...user,
-      completedJobsCount
+      completedJobsCount,
+      ratingAvg: calculatedRatingAvg,  // Use calculated value from reviews table
+      ratingCount: calculatedRatingCount  // Use calculated count from reviews table
     });
   } catch (error) {
     console.error('Get user error:', error);
