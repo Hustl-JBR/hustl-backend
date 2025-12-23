@@ -1531,9 +1531,11 @@ router.post('/:id/accept-price-change', authenticate, requireRole('CUSTOMER'), a
       : Number(job.amount || 0);
 
     const priceDifference = newJobAmount - oldJobAmount;
-    const customerFee = newJobAmount * 0.065;
-    const oldCustomerFee = oldJobAmount * 0.065;
-    const feeDifference = customerFee - oldCustomerFee;
+    
+    // Calculate fees using centralized pricing service
+    const newFees = calculateFees(newJobAmount);
+    const oldFees = calculateFees(oldJobAmount);
+    const feeDifference = newFees.customerFee - oldFees.customerFee;
     const totalDifference = priceDifference + feeDifference;
 
     // If price increased, customer needs to authorize additional payment
