@@ -96,7 +96,7 @@ router.get('/user/me', authenticate, async (req, res) => {
     res.json(offers);
   } catch (error) {
     console.error('Get user offers error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return Errors.internal().send(res);
   }
 });
 
