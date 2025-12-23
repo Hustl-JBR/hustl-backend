@@ -1026,6 +1026,58 @@ router.post('/me/photo', authenticate, upload.single('photo'), async (req, res) 
   }
 });
 
+// GET /users/me/payouts - Get current user's payouts (hustler only)
+router.get('/me/payouts', authenticate, async (req, res) => {
+  try {
+    // Get all payouts for the current user (as hustler)
+    const payouts = await prisma.payout.findMany({
+      where: {
+        hustlerId: req.user.id
+      },
+      include: {
+        job: {
+          select: {
+            id: true,
+            title: true,
+            createdAt: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Format payouts for frontend
+    const formattedPayouts = payouts.map(payout => ({
+      id: payout.id,
+      jobId: payout.jobId,
+      jobTitle: payout.job?.title || 'Unknown Job',
+      amount: Number(payout.netAmount), // Amount after platform fee
+      platformFee: Number(payout.platformFee),
+      grossAmount: Number(payout.amount), // Original job amount
+      status: payout.status, // PENDING, PROCESSING, COMPLETED, FAILED
+      createdAt: payout.createdAt,
+      completedAt: payout.completedAt,
+      transferId: payout.payoutProviderId
+    }));
+
+    res.json({
+      payouts: formattedPayouts,
+      total: formattedPayouts.length,
+      pending: formattedPayouts.filter(p => p.status === 'PENDING').length,
+      completed: formattedPayouts.filter(p => p.status === 'COMPLETED').length,
+      failed: formattedPayouts.filter(p => p.status === 'FAILED').length
+    });
+  } catch (error) {
+    console.error('[GET /users/me/payouts] Error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message 
+    });
+  }
+});
+
 // GET /users/me/photo - Get profile photo URL
 router.get('/me/photo', authenticate, async (req, res) => {
   try {
