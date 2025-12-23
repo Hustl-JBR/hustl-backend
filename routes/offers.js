@@ -713,10 +713,6 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     // Check if price was negotiated (old payment was voided)
     const priceWasNegotiated = existingPayment && offer.proposedAmount && offer.proposedAmount > 0 && offer.job.payType === 'flat';
     const originalAmount = priceWasNegotiated ? parseFloat(offer.job.amount || 0) : null;
-    
-    // Check if price was negotiated (old payment was voided)
-    const priceWasNegotiated = existingPayment && offer.proposedAmount && offer.proposedAmount > 0 && offer.job.payType === 'flat';
-    const originalAmount = priceWasNegotiated ? parseFloat(offer.job.amount || 0) : null;
     const originalTotal = originalAmount ? originalAmount + (originalAmount * 0.065) : null;
     
     res.json({
