@@ -299,6 +299,11 @@ router.post('/create-intent/job/:jobId', requireRole('CUSTOMER'), async (req, re
             tipAmount: finalTipAmount.toString(),
             description: `Tip for job: ${job.title}`
           },
+          // Transfer 100% to hustler (no platform fee on tips)
+          application_fee_amount: 0, // No platform fee
+          transfer_data: {
+            destination: job.hustler.stripeAccountId,
+          },
           // Don't confirm - let Stripe Elements handle confirmation
           confirmation_method: 'manual',
           capture_method: 'automatic',
