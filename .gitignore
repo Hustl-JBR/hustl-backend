@@ -51,3 +51,7 @@ Hustl/
 
 =======
 >>>>>>> parent of c729581 (Update .gitignore)
+-e 
+# Environment files
+*.env
+*.env.*
