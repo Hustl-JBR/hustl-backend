@@ -24491,13 +24491,24 @@ meta.textContent =
                   text-align: center;
                 `;
                 
+                // Get tip amount from data attribute
+                const tipBtnElement = e.target.closest('.viewTipBtn');
+                const tipAmountFromData = parseFloat(tipBtnElement?.dataset.tipAmount || 0);
+                const actualTipAmount = tipAmountFromData > 0 ? tipAmountFromData : (tipAmount || 0);
+                
+                console.log('[VIEW TIP] Showing modal with tip amount:', {
+                  tipAmountFromData,
+                  tipAmount,
+                  actualTipAmount
+                });
+                
                 modalContent.innerHTML = `
                   <button id="closeTipViewModal" style="position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; border-radius: 50%; border: none; background: #f3f4f6; color: var(--text-main); font-size: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">×</button>
                   
                   <div style="font-size: 3rem; margin-bottom: 1rem;">💚</div>
                   <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin: 0 0 1rem 0;">Thanks for Tipping!</h2>
                   <p style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.5rem; font-weight: 600;">
-                    You tipped <span style="color: #10b981; font-size: 1.25rem;">$${tipAmount.toFixed(2)}</span>
+                    You tipped <span style="color: #10b981; font-size: 1.25rem;">$${actualTipAmount.toFixed(2)}</span>
                   </p>
                   <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;">
                     The tip has been sent directly to the hustler. Thank you for your generosity!
