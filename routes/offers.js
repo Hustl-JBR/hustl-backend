@@ -200,7 +200,7 @@ router.post('/:jobId', authenticate, requireRole('HUSTLER'), [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return Errors.validation(errors.array()).send(res);
     }
 
     const { jobId } = req.params;
@@ -214,7 +214,7 @@ router.post('/:jobId', authenticate, requireRole('HUSTLER'), [
     // });
 
     // if (!user.idVerified) {
-    //   return res.status(403).json({ error: 'ID verification required to request jobs' });
+    //   return Errors.forbidden('ID verification required to request jobs').send(res);
     // }
 
     const job = await prisma.job.findUnique({
@@ -222,11 +222,17 @@ router.post('/:jobId', authenticate, requireRole('HUSTLER'), [
     });
 
     if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
+      return Errors.notFound('Job', jobId).send(res);
     }
 
     if (job.status !== 'OPEN') {
-      return res.status(400).json({ error: 'Job is not available' });
+      return res.status(400).json({ 
+        error: { 
+          code: ErrorCodes.INVALID_JOB_STATUS, 
+          message: 'Job is not available',
+          details: { status: job.status }
+        }
+      });
     }
 
     // Validate proposedAmount: can only be higher than original job amount (no price decreases)
@@ -235,20 +241,35 @@ router.post('/:jobId', authenticate, requireRole('HUSTLER'), [
       const originalAmount = parseFloat(job.amount || 0);
       
       if (isNaN(proposed) || proposed <= 0) {
-        return res.status(400).json({ error: 'Proposed amount must be a positive number' });
+        return res.status(400).json({
+          error: {
+            code: ErrorCodes.INVALID_INPUT,
+            message: 'Proposed amount must be a positive number'
+          }
+        });
       }
       
       if (proposed < originalAmount) {
         return res.status(400).json({ 
-          error: 'Proposed price cannot be lower than the original job amount. You can only propose a higher price.',
-          originalAmount: originalAmount,
-          proposedAmount: proposed
+          error: {
+            code: ErrorCodes.INVALID_INPUT,
+            message: 'Proposed price cannot be lower than the original job amount. You can only propose a higher price.',
+            details: {
+              originalAmount: originalAmount,
+              proposedAmount: proposed
+            }
+          }
         });
       }
     }
 
     if (job.customerId === req.user.id) {
-      return res.status(400).json({ error: 'Cannot offer on your own job' });
+      return res.status(400).json({
+        error: {
+          code: ErrorCodes.INVALID_INPUT,
+          message: 'Cannot offer on your own job'
+        }
+      });
     }
 
     // Check if this is a private rehire job
