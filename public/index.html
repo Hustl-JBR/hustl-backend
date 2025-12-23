@@ -21499,6 +21499,25 @@ async function renderJobs(reset = false) {
         const ratingsContent = document.getElementById("profileRatingsContent");
         if (ratingsContent) {
           try {
+            // Fetch fresh user data from /users/me to get accurate ratingAvg and ratingCount
+            // This ensures we use the same calculation as the backend (from reviews table)
+            let freshUserData = user; // Fallback to current user
+            try {
+              const token = localStorage.getItem('hustl_token');
+              const userResponse = await fetch(`${API_BASE}/users/me`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+              });
+              if (userResponse.ok) {
+                freshUserData = await userResponse.json();
+                console.log('[RATINGS TAB] Fetched fresh user data:', {
+                  ratingAvg: freshUserData.ratingAvg,
+                  ratingCount: freshUserData.ratingCount
+                });
+              }
+            } catch (error) {
+              console.error('[RATINGS TAB] Error fetching fresh user data:', error);
+            }
+            
             // Use centralized review loading function - single source of truth
             const result = await window.loadUserReviews(user.id, 6, 0);
             const reviews = result.reviews;
@@ -21507,15 +21526,18 @@ async function renderJobs(reset = false) {
             const ratingCount = document.getElementById("profileRatingCount");
             const reviewsList = document.getElementById("profileReviewsList");
             
-            // Always use backend data (ratingAvg, ratingCount) - single source of truth
+            // Always use fresh backend data (ratingAvg, ratingCount) - single source of truth
             if (ratingValue) {
-              ratingValue.textContent = user.ratingAvg ? user.ratingAvg.toFixed(1) : (user.ratingCount > 0 ? '0.0' : '0.0');
+              const ratingAvg = freshUserData.ratingAvg || 0;
+              ratingValue.textContent = ratingAvg > 0 ? ratingAvg.toFixed(1) : '0.0';
+              console.log('[RATINGS TAB] Updated rating value:', ratingAvg);
             }
             if (ratingCount) {
-              const count = user.ratingCount || 0;
+              const count = freshUserData.ratingCount || 0;
               ratingCount.textContent = count === 0 
                 ? 'No reviews yet' 
                 : `Based on ${count} ${count === 1 ? 'review' : 'reviews'}`;
+              console.log('[RATINGS TAB] Updated rating count:', count);
             }
             
             // Render reviews with limit of 3 initially, then "View more"
