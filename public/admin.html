@@ -565,6 +565,28 @@
       setTimeout(() => el.style.display = 'none', 5000);
     }
     
+    // Capture and Transfer for PREAUTHORIZED payments
+    async function captureAndTransfer(jobId, jobTitle) {
+      if (!confirm(`Capture payment and transfer to hustler for job: "${jobTitle}"?\n\nThis will:\n1. Capture the payment from customer\n2. Transfer 88% to hustler (12% platform fee stays)\n3. Update payment status to CAPTURED`)) {
+        return;
+      }
+      
+      try {
+        showSuccess('Processing capture and transfer...');
+        
+        const result = await apiRequest(`/admin/jobs/${jobId}/capture-and-transfer`, {
+          method: 'POST'
+        });
+        
+        showSuccess(`✅ Success! Payment captured and transferred.\n\nTransfer ID: ${result.transfer?.id || 'N/A'}\nAmount Transferred: $${result.payment?.hustlerPayout?.toFixed(2) || 'N/A'}`);
+        
+        // Reload payments to show updated status
+        setTimeout(() => loadPayments(), 2000);
+      } catch (error) {
+        showError(`Failed: ${error.message}`);
+      }
+    }
+    
     // Load Stats
     async function loadStats() {
       try {
@@ -784,7 +806,8 @@
                   <td><strong style="color: #2563eb;">$${platformEarns.toFixed(2)}</strong></td>
                   <td><span class="badge ${payment.status.toLowerCase()}">${payment.status}</span></td>
                   <td>
-                    ${payment.status === 'CAPTURED' ? `<button class="btn btn-danger" onclick="openRefundModal('${payment.id}', ${total})">Refund</button>` : '-'}
+                    ${payment.status === 'CAPTURED' ? `<button class="btn btn-danger" onclick="openRefundModal('${payment.id}', ${total})">Refund</button>` : ''}
+                    ${payment.status === 'PREAUTHORIZED' && payment.job?.id ? `<button class="btn btn-primary" onclick="captureAndTransfer('${payment.job.id}', '${payment.job.title || 'Job'}')" style="margin-top: 0.25rem;">💰 Capture & Transfer</button>` : ''}
                   </td>
                 </tr>
               `;
