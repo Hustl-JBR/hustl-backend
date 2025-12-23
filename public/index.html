@@ -25540,7 +25540,7 @@ meta.textContent =
         
         try {
           // Confirm payment with Stripe (embedded, no redirect)
-          const { error: confirmError } = await stripe.confirmPayment({
+          const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
             elements,
             confirmParams: {
               return_url: `${window.location.origin}${window.location.pathname}?tip_success=true&jobId=${jobId}`
@@ -25550,6 +25550,12 @@ meta.textContent =
           
           if (confirmError) {
             throw new Error(confirmError.message || 'Payment failed');
+          }
+          
+          // Check payment intent status - accept succeeded, processing, or requires_capture
+          if (paymentIntent && !['succeeded', 'processing', 'requires_capture'].includes(paymentIntent.status)) {
+            console.warn('[TIP] Payment intent status:', paymentIntent.status);
+            // Still proceed - backend will handle status validation
           }
           
           // Payment confirmed - now confirm on backend
