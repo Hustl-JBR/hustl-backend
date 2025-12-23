@@ -25196,7 +25196,18 @@ meta.textContent =
       
       // Check if already tipped - if so, show view tip modal instead
       if (payment && payment.tip && Number(payment.tip) > 0) {
-        const tipAmount = Number(payment.tip) || 0;
+        // Get tip amount from payment - ensure it's a valid number
+        const existingTipAmount = Number(payment.tip) || 0;
+        
+        console.log('[TIP VIEW] Showing existing tip modal:', {
+          paymentTip: payment.tip,
+          existingTipAmount,
+          paymentData: payment
+        });
+        
+        if (existingTipAmount <= 0) {
+          console.warn('[TIP VIEW] Tip amount is 0 or invalid, but payment.tip exists:', payment.tip);
+        }
         const modal = document.createElement('div');
         modal.id = 'tipViewModal';
         modal.style.cssText = `
@@ -25231,7 +25242,7 @@ meta.textContent =
           <div style="font-size: 3rem; margin-bottom: 1rem;">💚</div>
           <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin: 0 0 1rem 0;">Thanks for Tipping!</h2>
           <p style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.5rem; font-weight: 600;">
-            You tipped <span style="color: #10b981; font-size: 1.25rem;">$${tipAmount.toFixed(2)}</span>
+            You tipped <span style="color: #10b981; font-size: 1.25rem;">$${existingTipAmount.toFixed(2)}</span>
           </p>
           <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;">
             The tip has been sent directly to the hustler. Thank you for your generosity!
