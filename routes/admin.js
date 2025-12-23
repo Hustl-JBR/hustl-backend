@@ -484,10 +484,60 @@ router.post('/jobs/:jobId/retry-transfer', requireRole('ADMIN'), async (req, res
     console.log(`  Platform Fee (12%): $${platformFee.toFixed(2)}`);
     console.log(`  Hustler Payout (88%): $${hustlerPayout.toFixed(2)}`);
 
-    // Transfer to hustler
+    // Check platform balance and payment status before transferring
     const { transferToHustler } = require('../services/stripe');
+    const Stripe = require('stripe');
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
 
+    // Verify payment was actually captured in Stripe and check balance
+    if (!skipStripeCheck) {
+      try {
+        // Check payment intent status
+        const paymentIntent = await stripe.paymentIntents.retrieve(job.payment.providerId);
+        console.log(`[ADMIN RETRY TRANSFER] Payment Intent Status: ${paymentIntent.status}`);
+        console.log(`[ADMIN RETRY TRANSFER] Payment Intent Amount: $${(paymentIntent.amount / 100).toFixed(2)}`);
+        
+        if (paymentIntent.status !== 'succeeded') {
+          return res.status(400).json({ 
+            error: 'Payment not captured in Stripe',
+            message: `Payment intent status is ${paymentIntent.status}, not 'succeeded'. Payment must be captured before transfer.`,
+            paymentIntentStatus: paymentIntent.status
+          });
+        }
+
+        // Check platform balance
+        const balance = await stripe.balance.retrieve();
+        const availableBalance = balance.available[0]?.amount || 0; // Amount in cents
+        const availableBalanceDollars = availableBalance / 100;
+        const pendingBalance = balance.pending[0]?.amount || 0;
+        const pendingBalanceDollars = pendingBalance / 100;
+        
+        console.log(`[ADMIN RETRY TRANSFER] Platform Balance:`);
+        console.log(`  Available: $${availableBalanceDollars.toFixed(2)}`);
+        console.log(`  Pending: $${pendingBalanceDollars.toFixed(2)}`);
+        console.log(`  Transfer Amount Needed: $${hustlerPayout.toFixed(2)}`);
+
+        if (availableBalanceDollars < hustlerPayout) {
+          return res.status(400).json({ 
+            error: 'Insufficient balance for transfer',
+            message: `Platform account has insufficient available balance. Available: $${availableBalanceDollars.toFixed(2)}, Needed: $${hustlerPayout.toFixed(2)}. Funds may be pending.`,
+            balance: {
+              available: availableBalanceDollars,
+              pending: pendingBalanceDollars,
+              needed: hustlerPayout
+            },
+            paymentIntentId: job.payment.providerId,
+            suggestion: 'Wait a few minutes for funds to become available, or check if payment was actually captured.'
+          });
+        }
+      } catch (balanceError) {
+        console.error('[ADMIN RETRY TRANSFER] Error checking balance:', balanceError);
+        // Continue anyway - let Stripe handle the error
+      }
+    }
+
+    // Transfer to hustler
     let transferResult = null;
     if (skipStripeCheck) {
       console.warn('[ADMIN RETRY TRANSFER] ⚠️ SKIP_STRIPE_CHECK enabled - skipping transfer');
