@@ -294,14 +294,32 @@ async function handleTipCheckoutCompleted(session) {
 
 async function handlePaymentIntentSucceeded(paymentIntent) {
   const jobId = paymentIntent.metadata?.jobId;
-  if (!jobId) return;
+  
+  console.log(`[WEBHOOK] payment_intent.succeeded: ${paymentIntent.id}`, {
+    jobId,
+    amount: paymentIntent.amount / 100,
+    status: paymentIntent.status,
+    captured: paymentIntent.captured
+  });
+  
+  if (!jobId) {
+    console.log('[WEBHOOK] No jobId in payment intent metadata, skipping');
+    return;
+  }
 
   const payment = await prisma.payment.findFirst({
     where: { providerId: paymentIntent.id },
     include: { job: true },
   });
 
-  if (payment && payment.status === 'PREAUTHORIZED') {
+  if (!payment) {
+    console.log(`[WEBHOOK] No payment found for providerId: ${paymentIntent.id}`);
+    return;
+  }
+
+  // Idempotency: Only update if status is PREAUTHORIZED
+  // If already CAPTURED or REFUNDED, webhook is duplicate (safe to ignore)
+  if (payment.status === 'PREAUTHORIZED') {
     await prisma.payment.update({
       where: { id: payment.id },
       data: { 
@@ -309,6 +327,9 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
         capturedAt: new Date(), // Record when payment was captured
       },
     });
+    console.log(`[WEBHOOK] ✅ Payment ${payment.id} status synced: PREAUTHORIZED → CAPTURED`);
+  } else {
+    console.log(`[WEBHOOK] Payment ${payment.id} already in status: ${payment.status}, skipping update (idempotent)`);
   }
 }
 
