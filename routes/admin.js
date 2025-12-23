@@ -429,6 +429,211 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// POST /admin/jobs/:jobId/capture-and-transfer - Manually capture payment and transfer to hustler (admin only)
+// Used for jobs where completion code verification didn't happen but job is completed
+router.post('/jobs/:jobId/capture-and-transfer', requireRole('ADMIN'), async (req, res) => {
+  try {
+    const { jobId } = req.params;
+
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: {
+        payment: true,
+        customer: { select: { id: true, email: true, name: true } },
+        hustler: { 
+          select: { 
+            id: true, 
+            email: true, 
+            name: true, 
+            stripeAccountId: true 
+          } 
+        },
+      },
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (!job.payment) {
+      return res.status(400).json({ error: 'Payment not found for this job' });
+    }
+
+    if (job.payment.status !== 'PREAUTHORIZED') {
+      return res.status(400).json({ 
+        error: 'Payment is not pre-authorized',
+        currentStatus: job.payment.status,
+        message: 'This endpoint only works for PREAUTHORIZED payments. Payment is already ' + job.payment.status
+      });
+    }
+
+    if (!job.hustler?.stripeAccountId) {
+      return res.status(400).json({ 
+        error: 'Hustler has not connected Stripe account',
+        hustlerId: job.hustlerId
+      });
+    }
+
+    // Calculate amounts
+    const actualJobAmount = Number(job.payment.amount || job.amount || 0);
+    const platformFee = actualJobAmount * 0.12; // 12% platform fee
+    const hustlerPayout = actualJobAmount - platformFee; // 88% to hustler
+    const customerServiceFee = actualJobAmount * 0.065; // 6.5% customer service fee
+    const customerTotalCharged = actualJobAmount + customerServiceFee;
+
+    console.log(`[ADMIN MANUAL CAPTURE] Processing payment for job ${jobId}:`);
+    console.log(`  Job Amount: $${actualJobAmount.toFixed(2)}`);
+    console.log(`  Platform Fee (12%): $${platformFee.toFixed(2)}`);
+    console.log(`  Hustler Payout (88%): $${hustlerPayout.toFixed(2)}`);
+    console.log(`  Customer Service Fee (6.5%): $${customerServiceFee.toFixed(2)}`);
+
+    // Capture payment
+    const { capturePaymentIntent, transferToHustler } = require('../services/stripe');
+    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+
+    let captureResult;
+    if (skipStripeCheck) {
+      console.warn('[ADMIN MANUAL CAPTURE] ⚠️ SKIP_STRIPE_CHECK enabled - skipping capture');
+      captureResult = { id: job.payment.providerId, status: 'succeeded' };
+    } else {
+      try {
+        console.log(`[ADMIN MANUAL CAPTURE] Capturing payment intent: ${job.payment.providerId}`);
+        captureResult = await capturePaymentIntent(job.payment.providerId);
+        console.log(`[ADMIN MANUAL CAPTURE] ✅ Payment captured: ${captureResult.id}`);
+      } catch (captureError) {
+        console.error('[ADMIN MANUAL CAPTURE] ❌ Capture failed:', captureError);
+        return res.status(500).json({ 
+          error: 'Failed to capture payment',
+          message: captureError.message,
+          details: {
+            paymentIntentId: job.payment.providerId,
+            errorType: captureError.type,
+            errorCode: captureError.code
+          }
+        });
+      }
+    }
+
+    // Transfer to hustler
+    let transferResult = null;
+    if (skipStripeCheck) {
+      console.warn('[ADMIN MANUAL CAPTURE] ⚠️ SKIP_STRIPE_CHECK enabled - skipping transfer');
+    } else {
+      try {
+        console.log(`[ADMIN MANUAL CAPTURE] Transferring $${hustlerPayout.toFixed(2)} to hustler: ${job.hustler.stripeAccountId}`);
+        transferResult = await transferToHustler(
+          job.hustler.stripeAccountId,
+          hustlerPayout,
+          job.id,
+          `Payment for job: ${job.title} (Manual capture by admin)`
+        );
+        console.log(`[ADMIN MANUAL CAPTURE] ✅ Transfer successful: ${transferResult.id}`);
+      } catch (transferError) {
+        console.error('[ADMIN MANUAL CAPTURE] ❌ Transfer failed:', transferError);
+        // Payment was captured but transfer failed - update payment status anyway
+        // Admin can retry transfer manually
+        await prisma.payment.update({
+          where: { id: job.payment.id },
+          data: {
+            status: 'CAPTURED',
+            amount: actualJobAmount,
+            feeHustler: platformFee,
+            feeCustomer: customerServiceFee,
+            total: customerTotalCharged,
+            capturedAt: new Date(),
+          }
+        });
+
+        return res.status(500).json({ 
+          error: 'Payment captured but transfer failed',
+          message: transferError.message,
+          paymentCaptured: true,
+          transferFailed: true,
+          details: {
+            transferAmount: hustlerPayout,
+            hustlerAccountId: job.hustler.stripeAccountId,
+            errorType: transferError.type,
+            errorCode: transferError.code
+          }
+        });
+      }
+    }
+
+    // Update payment record
+    const updatedPayment = await prisma.payment.update({
+      where: { id: job.payment.id },
+      data: {
+        status: 'CAPTURED',
+        amount: actualJobAmount,
+        feeHustler: platformFee,
+        feeCustomer: customerServiceFee,
+        total: customerTotalCharged,
+        capturedAt: new Date(),
+      }
+    });
+
+    // Update job status to PAID
+    await prisma.job.update({
+      where: { id: jobId },
+      data: { 
+        status: 'PAID',
+        completionCodeVerified: true // Mark as verified since we're manually processing
+      }
+    });
+
+    // Log audit
+    await prisma.auditLog.create({
+      data: {
+        actorId: req.user.id,
+        actionType: 'MANUAL_CAPTURE_AND_TRANSFER',
+        resourceType: 'JOB',
+        resourceId: jobId,
+        details: {
+          jobId: jobId,
+          paymentId: job.payment.id,
+          capturedAmount: actualJobAmount,
+          platformFee: platformFee,
+          hustlerPayout: hustlerPayout,
+          transferId: transferResult?.id,
+          reason: 'Manual capture and transfer by admin - completion code verification was skipped'
+        },
+      },
+    }).catch(err => console.error('Error creating audit log:', err));
+
+    res.json({
+      success: true,
+      message: 'Payment captured and transferred successfully',
+      payment: {
+        id: updatedPayment.id,
+        status: updatedPayment.status,
+        amount: actualJobAmount,
+        platformFee: platformFee,
+        hustlerPayout: hustlerPayout,
+        customerServiceFee: customerServiceFee,
+      },
+      transfer: transferResult ? {
+        id: transferResult.id,
+        status: transferResult.status,
+        amount: hustlerPayout,
+        destination: transferResult.destination
+      } : null,
+      job: {
+        id: jobId,
+        status: 'PAID',
+        title: job.title
+      }
+    });
+
+  } catch (error) {
+    console.error('[ADMIN MANUAL CAPTURE] Error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
 // POST /admin/refunds/:paymentId - Manually process a refund (admin only)
 router.post('/refunds/:paymentId', [
   body('amount').optional().isFloat({ min: 0.01 }),
