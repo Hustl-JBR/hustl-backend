@@ -283,7 +283,12 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
     const userId = req.user.id;
 
     if (!code) {
-      return res.status(400).json({ error: 'Code is required' });
+      return res.status(400).json({
+        error: {
+          code: ErrorCodes.MISSING_FIELD,
+          message: 'Code is required'
+        }
+      });
     }
 
     const job = await prisma.job.findUnique({
@@ -292,21 +297,32 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
     });
 
     if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
+      return Errors.notFound('Job', jobId).send(res);
     }
 
     // Only the assigned hustler can verify completion
     if (job.hustlerId !== userId) {
-      return res.status(403).json({ error: 'Only the assigned hustler can verify completion code' });
+      return Errors.forbidden('Only the assigned hustler can verify completion code').send(res);
     }
 
     if (!code || code.length !== 6) {
-      return res.status(400).json({ error: 'Completion code must be 6 digits' });
+      return res.status(400).json({
+        error: {
+          code: ErrorCodes.INVALID_INPUT,
+          message: 'Completion code must be 6 digits'
+        }
+      });
     }
 
     // Job must be IN_PROGRESS (start code verified) to complete
     if (job.status !== 'IN_PROGRESS' && !job.startCodeVerified && !job.arrivalCodeVerified) {
-      return res.status(400).json({ error: 'Job must be started (start code verified) before completion can be verified' });
+      return res.status(400).json({
+        error: {
+          code: ErrorCodes.INVALID_JOB_STATUS,
+          message: 'Job must be started (start code verified) before completion can be verified',
+          details: { currentStatus: job.status }
+        }
+      });
     }
 
     if (job.completionCodeVerified) {
