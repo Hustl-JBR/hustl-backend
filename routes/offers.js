@@ -448,14 +448,13 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       } else {
         jobAmount = parseFloat(offer.job.amount || 0);
       }
-      const tipAmount = 0; // Tips happen after completion, not in authorization
-      const customerFee = jobAmount * 0.065; // 6.5% customer fee (no min/max cap)
-      const total = jobAmount + customerFee;
+      // Calculate fees using centralized pricing service
+      const fees = calculateFees(jobAmount);
       
       return res.status(400).json({ 
         error: 'Payment required to accept this offer. Please complete payment to proceed.',
         requiresPayment: true,
-        amount: total,
+        amount: fees.total,
         jobId: offer.job.id,
         offerId: offer.id,
       });
