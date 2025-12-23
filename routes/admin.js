@@ -429,6 +429,181 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// POST /admin/jobs/:jobId/retry-transfer - Retry transfer for already-captured payments (admin only)
+// Used when payment is CAPTURED but transfer failed or wasn't created
+router.post('/jobs/:jobId/retry-transfer', requireRole('ADMIN'), async (req, res) => {
+  try {
+    const { jobId } = req.params;
+
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: {
+        payment: true,
+        customer: { select: { id: true, email: true, name: true } },
+        hustler: { 
+          select: { 
+            id: true, 
+            email: true, 
+            name: true, 
+            stripeAccountId: true 
+          } 
+        },
+      },
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (!job.payment) {
+      return res.status(400).json({ error: 'Payment not found for this job' });
+    }
+
+    if (job.payment.status !== 'CAPTURED') {
+      return res.status(400).json({ 
+        error: 'Payment must be CAPTURED to retry transfer',
+        currentStatus: job.payment.status,
+        message: 'Payment status is ' + job.payment.status + '. Only CAPTURED payments can have transfers retried.'
+      });
+    }
+
+    if (!job.hustler?.stripeAccountId) {
+      return res.status(400).json({ 
+        error: 'Hustler has not connected Stripe account',
+        hustlerId: job.hustlerId
+      });
+    }
+
+    // Calculate amounts from payment record
+    const actualJobAmount = Number(job.payment.amount || job.amount || 0);
+    const platformFee = Number(job.payment.feeHustler || actualJobAmount * 0.12);
+    const hustlerPayout = actualJobAmount - platformFee;
+
+    console.log(`[ADMIN RETRY TRANSFER] Retrying transfer for job ${jobId}:`);
+    console.log(`  Job Amount: $${actualJobAmount.toFixed(2)}`);
+    console.log(`  Platform Fee (12%): $${platformFee.toFixed(2)}`);
+    console.log(`  Hustler Payout (88%): $${hustlerPayout.toFixed(2)}`);
+
+    // Transfer to hustler
+    const { transferToHustler } = require('../services/stripe');
+    const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
+
+    let transferResult = null;
+    if (skipStripeCheck) {
+      console.warn('[ADMIN RETRY TRANSFER] ⚠️ SKIP_STRIPE_CHECK enabled - skipping transfer');
+    } else {
+      try {
+        console.log(`[ADMIN RETRY TRANSFER] Transferring $${hustlerPayout.toFixed(2)} to hustler: ${job.hustler.stripeAccountId}`);
+        transferResult = await transferToHustler(
+          job.hustler.stripeAccountId,
+          hustlerPayout,
+          job.id,
+          `Payment for job: ${job.title} (Retry transfer by admin)`
+        );
+        console.log(`[ADMIN RETRY TRANSFER] ✅ Transfer successful: ${transferResult.id}`);
+      } catch (transferError) {
+        console.error('[ADMIN RETRY TRANSFER] ❌ Transfer failed:', transferError);
+        console.error('[ADMIN RETRY TRANSFER] Transfer error details:', {
+          errorType: transferError.type,
+          errorCode: transferError.code,
+          errorMessage: transferError.message,
+          errorParam: transferError.param,
+          errorDeclineCode: transferError.decline_code,
+          stack: transferError.stack,
+          transferAmount: hustlerPayout,
+          hustlerAccountId: job.hustler.stripeAccountId,
+          jobId: jobId
+        });
+
+        let errorMessage = transferError.message || 'Unknown transfer error';
+        let helpfulMessage = errorMessage;
+        
+        if (transferError.code === 'account_invalid') {
+          helpfulMessage = 'Hustler\'s Stripe account is invalid or not fully set up. They may need to complete onboarding.';
+        } else if (transferError.code === 'insufficient_funds') {
+          helpfulMessage = 'Insufficient funds in platform account to make transfer. Check Stripe balance.';
+        } else if (transferError.message?.includes('account')) {
+          helpfulMessage = 'Issue with hustler\'s Stripe account. Please verify their account is active and properly connected.';
+        }
+
+        return res.status(500).json({ 
+          error: 'Transfer failed',
+          message: helpfulMessage,
+          transferFailed: true,
+          details: {
+            transferAmount: hustlerPayout,
+            hustlerAccountId: job.hustler.stripeAccountId,
+            errorType: transferError.type,
+            errorCode: transferError.code,
+            errorMessage: errorMessage,
+            errorParam: transferError.param,
+            errorDeclineCode: transferError.decline_code
+          }
+        });
+      }
+    }
+
+    // Update job status to PAID if not already
+    if (job.status !== 'PAID') {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: { 
+          status: 'PAID',
+          completionCodeVerified: true
+        }
+      });
+    }
+
+    // Log audit
+    await prisma.auditLog.create({
+      data: {
+        actorId: req.user.id,
+        actionType: 'RETRY_TRANSFER',
+        resourceType: 'JOB',
+        resourceId: jobId,
+        details: {
+          jobId: jobId,
+          paymentId: job.payment.id,
+          transferId: transferResult?.id,
+          transferAmount: hustlerPayout,
+          reason: 'Retry transfer by admin - original transfer failed or was not created'
+        },
+      },
+    }).catch(err => console.error('Error creating audit log:', err));
+
+    res.json({
+      success: true,
+      message: 'Transfer completed successfully',
+      payment: {
+        id: job.payment.id,
+        status: job.payment.status,
+        amount: actualJobAmount,
+        platformFee: platformFee,
+        hustlerPayout: hustlerPayout,
+      },
+      transfer: transferResult ? {
+        id: transferResult.id,
+        status: transferResult.status,
+        amount: hustlerPayout,
+        destination: transferResult.destination
+      } : null,
+      job: {
+        id: jobId,
+        status: 'PAID',
+        title: job.title
+      }
+    });
+
+  } catch (error) {
+    console.error('[ADMIN RETRY TRANSFER] Error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
 // POST /admin/jobs/:jobId/capture-and-transfer - Manually capture payment and transfer to hustler (admin only)
 // Used for jobs where completion code verification didn't happen but job is completed
 router.post('/jobs/:jobId/capture-and-transfer', requireRole('ADMIN'), async (req, res) => {

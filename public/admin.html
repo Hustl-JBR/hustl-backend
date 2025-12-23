@@ -565,6 +565,53 @@
       setTimeout(() => el.style.display = 'none', 5000);
     }
     
+    // Retry Transfer for CAPTURED payments (when transfer failed)
+    async function retryTransfer(jobId, jobTitle) {
+      if (!confirm(`Retry transfer to hustler for job: "${jobTitle}"?\n\nThis will:\n1. Transfer 88% to hustler (12% platform fee stays)\n2. Update job status to PAID`)) {
+        return;
+      }
+      
+      try {
+        showSuccess('Retrying transfer...');
+        
+        const result = await apiRequest(`/admin/jobs/${jobId}/retry-transfer`, {
+          method: 'POST'
+        });
+        
+        showSuccess(`✅ Success! Transfer completed.\n\nTransfer ID: ${result.transfer?.id || 'N/A'}\nAmount Transferred: $${result.payment?.hustlerPayout?.toFixed(2) || 'N/A'}`);
+        
+        // Reload payments to show updated status
+        setTimeout(() => loadPayments(), 2000);
+      } catch (error) {
+        // Try to get detailed error from response
+        let errorMessage = error.message || 'Unknown error';
+        let errorDetails = '';
+        
+        try {
+          const errorResponse = await fetch(`${API_BASE}/admin/jobs/${jobId}/retry-transfer`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          const errorData = await errorResponse.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+          if (errorData.details) {
+            errorDetails = `\n\nError Code: ${errorData.details.errorCode || 'N/A'}\nError Type: ${errorData.details.errorType || 'N/A'}\nHustler Account: ${errorData.details.hustlerAccountId || 'N/A'}`;
+          }
+        } catch (fetchError) {
+          // Use the original error message
+        }
+        
+        showError(`Failed: ${errorMessage}${errorDetails}`);
+        console.error('Retry transfer error:', error);
+      }
+    }
+    
     // Capture and Transfer for PREAUTHORIZED payments
     async function captureAndTransfer(jobId, jobTitle) {
       if (!confirm(`Capture payment and transfer to hustler for job: "${jobTitle}"?\n\nThis will:\n1. Capture the payment from customer\n2. Transfer 88% to hustler (12% platform fee stays)\n3. Update payment status to CAPTURED`)) {
@@ -831,7 +878,10 @@
                   <td><strong style="color: #2563eb;">$${platformEarns.toFixed(2)}</strong></td>
                   <td><span class="badge ${payment.status.toLowerCase()}">${payment.status}</span></td>
                   <td>
-                    ${payment.status === 'CAPTURED' ? `<button class="btn btn-danger" onclick="openRefundModal('${payment.id}', ${total})">Refund</button>` : ''}
+                    ${payment.status === 'CAPTURED' ? `
+                      <button class="btn btn-danger" onclick="openRefundModal('${payment.id}', ${total})">Refund</button>
+                      ${payment.job?.id && payment.feeHustler > 0 ? `<button class="btn btn-primary" onclick="retryTransfer('${payment.job.id}', '${payment.job.title || 'Job'}')" style="margin-top: 0.25rem; margin-left: 0.25rem;">🔄 Retry Transfer</button>` : ''}
+                    ` : ''}
                     ${payment.status === 'PREAUTHORIZED' && payment.job?.id ? `<button class="btn btn-primary" onclick="captureAndTransfer('${payment.job.id}', '${payment.job.title || 'Job'}')" style="margin-top: 0.25rem;">💰 Capture & Transfer</button>` : ''}
                   </td>
                 </tr>
