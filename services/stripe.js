@@ -2,41 +2,94 @@ const Stripe = require('stripe');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-async function createPaymentIntent({ amount, customerId, jobId, metadata }) {
+/**
+ * Create a payment intent with idempotency protection
+ * @param {object} params - Payment parameters
+ * @param {number} params.amount - Amount in dollars
+ * @param {string} params.customerId - Customer ID
+ * @param {string} params.jobId - Job ID (used for idempotency key)
+ * @param {object} params.metadata - Additional metadata
+ * @param {string} params.idempotencyKey - Optional idempotency key (generated if not provided)
+ * @returns {Promise<object>} Payment intent
+ */
+async function createPaymentIntent({ amount, customerId, jobId, metadata, idempotencyKey }) {
+  // Generate idempotency key if not provided
+  // Pattern: create-{jobId}-{timestamp}
+  const key = idempotencyKey || `create-${jobId}-${Date.now()}`;
+  
   const paymentIntent = await stripe.paymentIntents.create({
     amount,
     currency: 'usd',
     capture_method: 'manual', // Pre-authorize, capture later
     metadata,
     description: `Job payment for ${jobId}`,
+  }, {
+    idempotencyKey: key
   });
 
   return paymentIntent;
 }
 
-async function capturePaymentIntent(paymentIntentId, amountToCapture = null) {
+/**
+ * Capture a payment intent with idempotency protection
+ * @param {string} paymentIntentId - Payment intent ID
+ * @param {number|null} amountToCapture - Amount to capture in dollars (null for full capture)
+ * @param {string} idempotencyKey - Optional idempotency key (recommended for safety)
+ * @returns {Promise<object>} Captured payment intent
+ */
+async function capturePaymentIntent(paymentIntentId, amountToCapture = null, idempotencyKey = null) {
+  // Generate idempotency key if not provided
+  // Pattern: capture-{paymentIntentId}-{timestamp}
+  const key = idempotencyKey || `capture-${paymentIntentId}-${Date.now()}`;
+  
+  const options = {
+    idempotencyKey: key
+  };
+  
   // If amountToCapture is provided, do partial capture
   // Otherwise, capture the full authorized amount
   if (amountToCapture !== null) {
-    const paymentIntent = await stripe.paymentIntents.capture(paymentIntentId, {
-      amount_to_capture: Math.round(amountToCapture * 100) // Convert to cents
-    });
-    return paymentIntent;
-  } else {
-    const paymentIntent = await stripe.paymentIntents.capture(paymentIntentId);
-    return paymentIntent;
+    options.amount_to_capture = Math.round(amountToCapture * 100); // Convert to cents
   }
-}
-
-async function voidPaymentIntent(paymentIntentId) {
-  const paymentIntent = await stripe.paymentIntents.cancel(paymentIntentId);
+  
+  const paymentIntent = await stripe.paymentIntents.capture(paymentIntentId, options);
   return paymentIntent;
 }
 
-async function createRefund(paymentIntentId, amount) {
+/**
+ * Void/cancel a payment intent with idempotency protection
+ * @param {string} paymentIntentId - Payment intent ID
+ * @param {string} idempotencyKey - Optional idempotency key
+ * @returns {Promise<object>} Cancelled payment intent
+ */
+async function voidPaymentIntent(paymentIntentId, idempotencyKey = null) {
+  // Generate idempotency key if not provided
+  // Pattern: void-{paymentIntentId}-{timestamp}
+  const key = idempotencyKey || `void-${paymentIntentId}-${Date.now()}`;
+  
+  const paymentIntent = await stripe.paymentIntents.cancel(paymentIntentId, {
+    idempotencyKey: key
+  });
+  return paymentIntent;
+}
+
+/**
+ * Create a refund with idempotency protection
+ * @param {string} paymentIntentId - Payment intent ID
+ * @param {number} amount - Amount to refund in dollars (optional, full refund if not specified)
+ * @param {string} idempotencyKey - Optional idempotency key
+ * @returns {Promise<object>} Refund object
+ */
+async function createRefund(paymentIntentId, amount, idempotencyKey = null) {
+  // Generate idempotency key if not provided
+  // Pattern: refund-{paymentIntentId}-{timestamp}
+  const key = idempotencyKey || `refund-${paymentIntentId}-${Date.now()}`;
+  
   const refund = await stripe.refunds.create({
     payment_intent: paymentIntentId,
     amount: amount ? Math.round(amount * 100) : undefined, // Partial refund if amount specified
+  }, {
+    idempotencyKey: key
   });
   return refund;
 }
