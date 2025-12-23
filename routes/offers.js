@@ -668,21 +668,15 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       data: updateData,
     });
 
-    // Update payment with hustler ID (payment was created when job was posted)
-    await prisma.payment.update({
-      where: { id: existingPayment.id },
-      data: {
-        hustlerId: offer.hustlerId,
-      },
-    });
-
-    // Payment already exists, just update hustler ID
-    const payment = await prisma.payment.update({
-      where: { id: existingPayment.id },
-      data: {
-        hustlerId: offer.hustlerId,
-      },
-    });
+    // Update payment with hustler ID if needed (only if not already set)
+    if (!existingPayment.hustlerId || existingPayment.hustlerId !== offer.hustlerId) {
+      await prisma.payment.update({
+        where: { id: existingPayment.id },
+        data: {
+          hustlerId: offer.hustlerId,
+        },
+      });
+    }
 
     // Create thread for messaging (use upsert to avoid duplicate errors)
     try {
@@ -720,6 +714,11 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     const priceWasNegotiated = existingPayment && offer.proposedAmount && offer.proposedAmount > 0 && offer.job.payType === 'flat';
     const originalAmount = priceWasNegotiated ? parseFloat(offer.job.amount || 0) : null;
     
+    // Check if price was negotiated (old payment was voided)
+    const priceWasNegotiated = existingPayment && offer.proposedAmount && offer.proposedAmount > 0 && offer.job.payType === 'flat';
+    const originalAmount = priceWasNegotiated ? parseFloat(offer.job.amount || 0) : null;
+    const originalTotal = originalAmount ? originalAmount + (originalAmount * 0.065) : null;
+    
     res.json({
       job,
       offer,
@@ -729,10 +728,10 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       priceNegotiated: priceWasNegotiated,
       originalAmount: originalAmount,
       newAmount: priceWasNegotiated ? jobAmount : null,
-      refundInfo: priceWasNegotiated ? {
+      refundInfo: priceWasNegotiated && originalTotal ? {
         refunded: true,
-        amount: originalAmount + (originalAmount * 0.065), // Original amount + service fee
-        message: `Original payment of $${(originalAmount + (originalAmount * 0.065)).toFixed(2)} has been voided. New payment of $${total.toFixed(2)} has been authorized.`
+        amount: originalTotal,
+        message: `Original payment of $${originalTotal.toFixed(2)} has been voided. New payment of $${total.toFixed(2)} has been authorized. You can now hire someone else or unassign if needed.`
       } : null
     });
   } catch (error) {

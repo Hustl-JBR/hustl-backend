@@ -2964,7 +2964,8 @@ router.post('/:id/leave', authenticate, requireRole('HUSTLER'), async (req, res)
             job.customer.name,
             job.title,
             req.user.name || 'Hustler',
-            job.id
+            job.id,
+            refundInfo.refunded ? refundInfo.amount : null
           );
         }
         

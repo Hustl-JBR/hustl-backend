@@ -1063,15 +1063,24 @@ async function sendJobUnacceptedEmail(email, name, jobTitle, jobId, customerName
   }
 }
 
-async function sendHustlerCancelledEmail(email, name, jobTitle, hustlerName, jobId) {
+async function sendHustlerCancelledEmail(email, name, jobTitle, hustlerName, jobId, refundAmount = null) {
   if (!isEmailConfigured()) return;
   try {
     const jobUrl = `${process.env.APP_BASE_URL || 'https://hustljobs.com'}/jobs/${jobId}`;
+    const refundSection = refundAmount ? `
+      <div style="background: #dcfce7; border: 2px solid #16a34a; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
+        <div style="font-size: 1.1rem; font-weight: 700; color: #166534; margin-bottom: 0.5rem;">💰 Full Refund Processed</div>
+        <div style="font-size: 1.5rem; font-weight: 800; color: #166534; margin-bottom: 0.5rem;">$${Number(refundAmount).toFixed(2)}</div>
+        <div style="font-size: 0.9rem; color: #166534; line-height: 1.6;">
+          Your payment has been fully refunded. The refund will appear in your account within 5-10 business days.
+        </div>
+      </div>
+    ` : '';
     
     await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
-      subject: `Hustler Left: "${jobTitle}"`,
+      subject: `Hustler Left: "${jobTitle}"${refundAmount ? ' - Full Refund Processed' : ''}`,
       html: `
         <div style="max-width: 600px; margin: 0 auto; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
           <h1 style="color: #dc2626; font-size: 1.75rem; margin-bottom: 1rem;">Hustler Left Job</h1>
