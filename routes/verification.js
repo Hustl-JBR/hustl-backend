@@ -375,6 +375,12 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       // Flat job: use the payment amount (which should be the negotiated price if price was negotiated)
       // This is the amount that was actually authorized/paid, not the original job.amount
       actualJobAmount = Number(job.payment?.amount || job.amount || 0);
+      const originalJobAmount = Number(job.amount || 0);
+      const paymentAmount = Number(job.payment?.amount || 0);
+      
+      if (paymentAmount !== originalJobAmount) {
+        console.log(`[FLAT JOB] Price was negotiated: Original job amount $${originalJobAmount.toFixed(2)} → Negotiated amount $${paymentAmount.toFixed(2)}`);
+      }
       console.log(`[FLAT JOB] Using payment amount: $${actualJobAmount.toFixed(2)} (payment.amount: ${job.payment?.amount}, job.amount: ${job.amount})`);
     }
 

@@ -485,6 +485,22 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
           paymentStatus: paymentIntent.status,
         });
       }
+      
+      // If there's an existing payment with a different PaymentIntent, void the old one
+      // This happens when hustler proposed a different price and customer accepts
+      if (existingPayment && existingPayment.providerId && existingPayment.providerId !== paymentIntentId) {
+        try {
+          const oldPaymentIntent = await stripe.paymentIntents.retrieve(existingPayment.providerId);
+          if (oldPaymentIntent.status === 'requires_capture') {
+            // Void the old payment intent (release authorization)
+            await stripe.paymentIntents.cancel(existingPayment.providerId);
+            console.log(`[OFFER ACCEPT] Voided old PaymentIntent ${existingPayment.providerId} (price changed from $${existingPayment.amount} to new amount)`);
+          }
+        } catch (voidError) {
+          console.error(`[OFFER ACCEPT] Error voiding old PaymentIntent ${existingPayment.providerId}:`, voidError);
+          // Continue even if void fails - the new payment intent will be used
+        }
+      }
     }
 
     // Calculate payment amounts
@@ -595,8 +611,14 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     
     // If hustler proposed a price (and it's a flat job), update job.amount to match
     if (offer.proposedAmount && offer.proposedAmount > 0 && offer.job.payType === 'flat') {
-      updateData.amount = parseFloat(offer.proposedAmount);
+      const originalAmount = parseFloat(offer.job.amount || 0);
+      const newAmount = parseFloat(offer.proposedAmount);
+      const priceDifference = newAmount - originalAmount;
+      
+      updateData.amount = newAmount;
+      console.log(`[OFFER ACCEPT] Price negotiation: Original $${originalAmount} → Proposed $${newAmount} (difference: $${priceDifference > 0 ? '+' : ''}${priceDifference.toFixed(2)})`);
       console.log(`[OFFER ACCEPT] Updating job.amount to negotiated price: $${updateData.amount}`);
+      console.log(`[OFFER ACCEPT] Payment record updated: amount=$${jobAmount.toFixed(2)}, total=$${total.toFixed(2)} (includes $${customerFee.toFixed(2)} service fee)`);
     }
     
     // If keepOpenUntilAccepted was set, job auto-closes now
