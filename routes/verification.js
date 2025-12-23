@@ -262,7 +262,7 @@ router.post('/job/:jobId/verify-start', authenticate, async (req, res) => {
 
   } catch (error) {
     console.error('Error verifying start code:', error);
-    res.status(500).json({ error: 'Failed to verify start code' });
+    return Errors.internal('Failed to verify start code').send(res);
   }
 });
 
