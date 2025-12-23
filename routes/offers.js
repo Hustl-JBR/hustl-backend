@@ -279,7 +279,7 @@ router.post('/:jobId', authenticate, requireRole('HUSTLER'), [
     
     // If it's a private rehire job, only the specified hustler can create an offer
     if (isPrivate && rehireHustlerId && rehireHustlerId !== req.user.id) {
-      return res.status(403).json({ error: 'This job is a private rehire request for a specific worker' });
+      return Errors.forbidden('This job is a private rehire request for a specific worker').send(res);
     }
 
     // Check if offer already exists
@@ -292,7 +292,12 @@ router.post('/:jobId', authenticate, requireRole('HUSTLER'), [
     });
 
     if (existing) {
-      return res.status(400).json({ error: 'Offer already exists' });
+      return res.status(400).json({
+        error: {
+          code: ErrorCodes.ALREADY_EXISTS,
+          message: 'Offer already exists'
+        }
+      });
     }
 
     const offer = await prisma.offer.create({
