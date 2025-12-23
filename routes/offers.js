@@ -739,14 +739,14 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     }
 
     // Check if price was negotiated (old payment was voided)
-    const priceWasNegotiated = existingPayment && offer.proposedAmount && offer.proposedAmount > 0 && offer.job.payType === 'flat';
+    const priceWasNegotiated = finalPayment && offer.proposedAmount && offer.proposedAmount > 0 && offer.job.payType === 'flat';
     const originalAmount = priceWasNegotiated ? parseFloat(offer.job.amount || 0) : null;
     const originalFees = originalAmount ? calculateFees(originalAmount) : null;
     
     res.json({
       job,
       offer,
-      payment: existingPayment, // Use the payment we just created/updated
+      payment: finalPayment, // Use the payment we just created/updated
       startCode, // Customer needs to give this to hustler
       startCodeExpiresAt, // 78 hours from now
       priceNegotiated: priceWasNegotiated,
