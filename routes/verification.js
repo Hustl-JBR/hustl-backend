@@ -694,20 +694,6 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         console.log(`  Actual Hours Worked: ${actualHours.toFixed(2)} hrs`);
         console.log(`  Customer Refund (unused): $${customerRefundAmount.toFixed(2)}`);
       }
-      
-      // Update job requirements with actual hours worked (for hourly jobs)
-      if (job.payType === 'hourly') {
-        await prisma.job.update({
-          where: { id: jobId },
-          data: {
-            requirements: {
-              ...(job.requirements || {}),
-              actualHours: actualHours,
-              completedAt: completionTime.toISOString()
-            }
-          }
-        });
-      }
 
       // Send email receipts to both customer and hustler (non-blocking)
       const { sendPaymentReceiptEmail, sendHustlerPaymentReceiptEmail, sendPaymentReleasedEmail } = require('../services/email');
