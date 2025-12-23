@@ -24427,12 +24427,12 @@ meta.textContent =
             }
           }
           
-          // Only consider it tipped if tipAmount > 0 in database (ignore sessionStorage if database has value)
-          // sessionStorage is only for temporary state during processing, but if database shows tip, that's the truth
-          const hasTipped = isCustomerForThisJob && tipAmount > 0;
+          // Consider it tipped if tipAmount > 0 OR if there's a pending tip (shows "Processing..." state)
+          // This allows us to show immediate feedback while webhook processes
+          const hasTipped = isCustomerForThisJob && (tipAmount > 0 || hasPendingTip);
           
-          // Clear any stale pending tip flags if tip is in database
-          if (hasTipped && hasPendingTip) {
+          // Clear any stale pending tip flags if tip is confirmed in database
+          if (tipAmount > 0 && hasPendingTip) {
             try {
               sessionStorage.removeItem(`tipPending_${job.id}`);
             } catch (e) {
@@ -24483,6 +24483,8 @@ meta.textContent =
                     <span>💚 Thanks for tipping!</span>
                     ${tipAmount > 0 ? `
                       <button class="btn btn-ghost viewTipBtn" data-job-id="${job.id}" data-tip-amount="${tipAmount.toFixed(2)}" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; font-weight: 600; color: #059669; background: transparent; border: 1px solid #10b981; border-radius: 6px; cursor: pointer; margin-left: 0.5rem;">View Tip ($${tipAmount.toFixed(2)})</button>
+                    ` : hasPendingTip ? `
+                      <span style="font-size: 0.8rem; color: #047857; font-style: italic;">Processing...</span>
                     ` : ''}
                   </div>
                 ` : `
@@ -33912,8 +33914,13 @@ try {
       // Clean URL
       const cleanUrl = window.location.pathname;
       window.history.replaceState({}, document.title, cleanUrl);
-    } else if (tipSuccess) {
-      // Tip payment completed
+    } else if (tipSuccess && jobId) {
+      // Tip payment completed - set sessionStorage flag and ensure completed jobs are loaded
+      console.log('[TIP SUCCESS] Tip payment completed for job:', jobId);
+      
+      // Set sessionStorage flag so the tip button shows "Processing..." state
+      sessionStorage.setItem(`tipPending_${jobId}`, 'true');
+      
       if (typeof showToast === 'function') {
         showToast('💚 Thanks for tipping! Your tip has been sent to the hustler.');
       }
@@ -33922,92 +33929,33 @@ try {
       const cleanUrl = window.location.pathname + (window.location.hash || '');
       window.history.replaceState({}, document.title, cleanUrl);
       
-      // Update tip buttons immediately if we can find them
-      const updateTipButtons = async () => {
-        // Find all tip buttons and update them if tip was just completed
-        document.querySelectorAll('.tipBtn').forEach(async (btn) => {
-          const jobId = btn.dataset.jobId;
-          if (jobId && sessionStorage.getItem(`tipPending_${jobId}`)) {
-            // Fetch tip amount from payment data
-            let tipAmount = 0;
-            try {
-              const token = localStorage.getItem('hustl_token');
-              const paymentResponse = await fetch(`${API_BASE}/payments/job/${jobId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-              });
-              if (paymentResponse.ok) {
-                const payment = await paymentResponse.json();
-                tipAmount = Number(payment?.tip || 0);
-              }
-            } catch (e) {
-              console.error('Error fetching tip amount:', e);
-            }
-            
-            // Replace tip button with "Thanks for tipping" message and view tip button
-            const tipContainer = btn.parentElement;
-            btn.remove();
-            
-            const thanksDiv = document.createElement('div');
-            thanksDiv.style.cssText = 'flex: 1; min-width: 120px; padding: 0.75rem 1rem; font-size: 0.9rem; font-weight: 600; border: 2px solid #10b981; color: #10b981; background: #dcfce7; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 0.5rem;';
-            thanksDiv.innerHTML = `
-              <span>💚 Thanks for tipping!</span>
-              <button class="btn btn-ghost viewTipBtn" data-job-id="${jobId}" data-tip-amount="${tipAmount.toFixed(2)}" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; font-weight: 600; color: #059669; background: transparent; border: 1px solid #10b981; border-radius: 6px; cursor: pointer; margin-left: 0.5rem;">View Tip ($${tipAmount.toFixed(2)})</button>
-            `;
-            
-            // Add event listener for view tip button
-            const viewTipBtn = thanksDiv.querySelector('.viewTipBtn');
-            viewTipBtn?.addEventListener('click', (e) => {
-              e.stopPropagation();
-              showToast(`💚 You tipped $${tipAmount.toFixed(2)} for this job!`, 'success', 4000);
-            });
-            
-            tipContainer.appendChild(thanksDiv);
-            sessionStorage.removeItem(`tipPending_${jobId}`);
-          }
-        });
-      };
+      // Navigate to manage-jobs view and switch to completed tab
+      if (typeof setView === 'function') {
+        setView('manage-jobs');
+      }
       
-      // Update buttons immediately
-      updateTipButtons();
-      
-      // Refresh completed jobs if on manage-jobs view
-      // Wait a bit for webhook to process, then refresh multiple times to ensure tip shows
-      const refreshCompletedJobs = () => {
-        const currentView = window.activeView || activeView;
-        if (currentView === 'manage-jobs' || window.location.hash === '#manage-jobs') {
-          // Switch to completed tab and refresh
-          const completedTab = document.querySelector('[data-manage-tab="completed"]');
-          if (completedTab && !completedTab.classList.contains('active')) {
-            completedTab.click(); // Switch to completed tab
-          }
+      // Wait for view to load, then switch to completed tab and refresh
+      setTimeout(() => {
+        const completedTab = document.querySelector('[data-manage-tab="completed"]');
+        if (completedTab) {
+          completedTab.click(); // Switch to completed tab
+        }
+        
+        // Refresh completed jobs list multiple times to catch webhook processing
+        const refreshCompletedJobs = () => {
           if (typeof loadCompletedJobs === 'function') {
             loadCompletedJobs(true); // Reload with reset
           }
-        }
-      };
-      
-      // Refresh immediately, then again after delays (webhook might take a moment)
-      // More aggressive refresh to catch webhook processing
-      setTimeout(() => {
-        updateTipButtons();
+        };
+        
+        // Refresh immediately and multiple times to catch webhook
         refreshCompletedJobs();
+        setTimeout(refreshCompletedJobs, 1000);
+        setTimeout(refreshCompletedJobs, 3000);
+        setTimeout(refreshCompletedJobs, 5000);
+        setTimeout(refreshCompletedJobs, 10000);
+        setTimeout(refreshCompletedJobs, 20000);
       }, 500);
-      setTimeout(() => {
-        updateTipButtons();
-        refreshCompletedJobs();
-      }, 2000);
-      setTimeout(() => {
-        updateTipButtons();
-        refreshCompletedJobs();
-      }, 5000);
-      setTimeout(() => {
-        updateTipButtons();
-        refreshCompletedJobs();
-      }, 10000); // Extra refresh after 10 seconds
-      setTimeout(() => {
-        updateTipButtons();
-        refreshCompletedJobs();
-      }, 20000); // Final refresh after 20 seconds
     } else if (tipCancelled) {
       // Tip payment cancelled
       if (typeof showToast === 'function') {
