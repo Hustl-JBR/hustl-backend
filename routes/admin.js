@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult, query } = require('express-validator');
 const { authenticate, requireRole } = require('../middleware/auth');
 const prisma = require('../db');
+const { calculateFees } = require('../services/pricing');
 
 const router = express.Router();
 
