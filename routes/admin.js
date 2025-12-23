@@ -574,6 +574,18 @@ router.post('/jobs/:jobId/capture-and-transfer', requireRole('ADMIN'), async (re
         console.log(`[ADMIN MANUAL CAPTURE] ✅ Transfer successful: ${transferResult.id}`);
       } catch (transferError) {
         console.error('[ADMIN MANUAL CAPTURE] ❌ Transfer failed:', transferError);
+        console.error('[ADMIN MANUAL CAPTURE] Transfer error details:', {
+          errorType: transferError.type,
+          errorCode: transferError.code,
+          errorMessage: transferError.message,
+          errorParam: transferError.param,
+          errorDeclineCode: transferError.decline_code,
+          stack: transferError.stack,
+          transferAmount: hustlerPayout,
+          hustlerAccountId: job.hustler.stripeAccountId,
+          jobId: jobId
+        });
+        
         // Payment was captured but transfer failed - update payment status anyway
         // Admin can retry transfer manually
         await prisma.payment.update({
@@ -584,20 +596,35 @@ router.post('/jobs/:jobId/capture-and-transfer', requireRole('ADMIN'), async (re
             feeHustler: platformFee,
             feeCustomer: customerServiceFee,
             total: customerTotalCharged,
-            capturedAt: new Date(),
+            capturedAt: alreadyCaptured ? job.payment.capturedAt || new Date() : new Date(),
           }
         });
 
+        // Provide detailed error message to help diagnose
+        let errorMessage = transferError.message || 'Unknown transfer error';
+        let helpfulMessage = errorMessage;
+        
+        if (transferError.code === 'account_invalid') {
+          helpfulMessage = 'Hustler\'s Stripe account is invalid or not fully set up. They may need to complete onboarding.';
+        } else if (transferError.code === 'insufficient_funds') {
+          helpfulMessage = 'Insufficient funds in platform account to make transfer. This should not happen if payment was captured.';
+        } else if (transferError.message?.includes('account')) {
+          helpfulMessage = 'Issue with hustler\'s Stripe account. Please verify their account is active and properly connected.';
+        }
+
         return res.status(500).json({ 
           error: 'Payment captured but transfer failed',
-          message: transferError.message,
+          message: helpfulMessage,
           paymentCaptured: true,
           transferFailed: true,
           details: {
             transferAmount: hustlerPayout,
             hustlerAccountId: job.hustler.stripeAccountId,
             errorType: transferError.type,
-            errorCode: transferError.code
+            errorCode: transferError.code,
+            errorMessage: errorMessage,
+            errorParam: transferError.param,
+            errorDeclineCode: transferError.decline_code
           }
         });
       }

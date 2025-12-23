@@ -583,7 +583,32 @@
         // Reload payments to show updated status
         setTimeout(() => loadPayments(), 2000);
       } catch (error) {
-        showError(`Failed: ${error.message}`);
+        // Try to get detailed error from response
+        let errorMessage = error.message || 'Unknown error';
+        let errorDetails = '';
+        
+        try {
+          const errorResponse = await fetch(`${API_BASE}/admin/jobs/${jobId}/capture-and-transfer`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          const errorData = await errorResponse.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+          if (errorData.details) {
+            errorDetails = `\n\nError Code: ${errorData.details.errorCode || 'N/A'}\nError Type: ${errorData.details.errorType || 'N/A'}\nHustler Account: ${errorData.details.hustlerAccountId || 'N/A'}`;
+          }
+        } catch (fetchError) {
+          // Use the original error message
+        }
+        
+        showError(`Failed: ${errorMessage}${errorDetails}`);
+        console.error('Capture and transfer error:', error);
       }
     }
     
