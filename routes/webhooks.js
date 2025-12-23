@@ -345,15 +345,30 @@ async function handlePaymentIntentFailed(paymentIntent) {
 }
 
 async function handlePaymentIntentCanceled(paymentIntent) {
+  console.log(`[WEBHOOK] payment_intent.canceled: ${paymentIntent.id}`, {
+    amount: paymentIntent.amount / 100,
+    canceledAt: paymentIntent.canceled_at
+  });
+  
   const payment = await prisma.payment.findFirst({
     where: { providerId: paymentIntent.id },
   });
 
-  if (payment && payment.status === 'PREAUTHORIZED') {
+  if (!payment) {
+    console.log(`[WEBHOOK] No payment found for providerId: ${paymentIntent.id}`);
+    return;
+  }
+
+  // Idempotency: Only update if status is PREAUTHORIZED
+  // If already VOIDED or REFUNDED, webhook is duplicate (safe to ignore)
+  if (payment.status === 'PREAUTHORIZED') {
     await prisma.payment.update({
       where: { id: payment.id },
       data: { status: 'VOIDED' },
     });
+    console.log(`[WEBHOOK] ✅ Payment ${payment.id} status synced: PREAUTHORIZED → VOIDED`);
+  } else {
+    console.log(`[WEBHOOK] Payment ${payment.id} already in status: ${payment.status}, skipping update (idempotent)`);
   }
 }
 
