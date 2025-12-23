@@ -80,7 +80,7 @@ router.get('/job/:jobId/codes', authenticate, async (req, res) => {
 
   } catch (error) {
     console.error('Error getting verification codes:', error);
-    res.status(500).json({ error: 'Failed to get verification codes' });
+    return Errors.internal('Failed to get verification codes').send(res);
   }
 });
 
