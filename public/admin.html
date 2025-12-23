@@ -720,17 +720,37 @@
             <h3 style="margin-bottom: 1rem;">Pending Transfers to Hustlers</h3>
             <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 1.5rem;">
               <div style="font-size: 0.9rem; color: #92400e; margin-bottom: 1rem; font-weight: 600;">
-                ⏳ ${data.payouts.pendingTransfers.length} transfer${data.payouts.pendingTransfers.length === 1 ? '' : 's'} pending ($${Number(data.payouts.pending || 0).toFixed(2)} total)
+                ⏳ ${data.payouts.pendingTransfers.length} transfer${data.payouts.pendingTransfers.length === 1 ? '' : 's'} waiting to be created ($${Number(data.payouts.pending || 0).toFixed(2)} total)
               </div>
-              <div style="font-size: 0.85rem; color: #92400e; line-height: 1.6;">
-                These transfers are waiting for funds to become available in your Stripe account. They will be processed automatically once funds are released (typically 2-7 days for new accounts).
+              <div style="font-size: 0.85rem; color: #92400e; line-height: 1.6; margin-bottom: 1rem;">
+                <strong>Important:</strong> These are payout records in the database, but the actual Stripe transfers haven't been created yet because funds are pending in your Stripe account. <strong>You won't see them in Stripe</strong> until you retry the transfers once funds become available.
               </div>
+              ${data.payouts.pendingTransfers.length > 0 ? `
+              <div style="background: rgba(255,255,255,0.7); padding: 1rem; border-radius: 8px; margin-top: 1rem; border: 1px solid rgba(245, 158, 11, 0.3);">
+                <div style="font-size: 0.85rem; color: #92400e; font-weight: 600; margin-bottom: 0.75rem;">Pending Transfers List:</div>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 200px; overflow-y: auto;">
+                  ${data.payouts.pendingTransfers.map(transfer => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(255,255,255,0.5); border-radius: 6px;">
+                      <div style="flex: 1;">
+                        <div style="font-size: 0.8rem; font-weight: 600; color: #92400e;">${transfer.jobTitle || 'Unknown Job'}</div>
+                        <div style="font-size: 0.75rem; color: #92400e; opacity: 0.8;">${transfer.hustlerName || 'Unknown Hustler'}</div>
+                      </div>
+                      <div style="text-align: right;">
+                        <div style="font-size: 0.9rem; font-weight: 700; color: #92400e;">$${transfer.amount.toFixed(2)}</div>
+                        <div style="font-size: 0.7rem; color: #92400e; opacity: 0.7;">${transfer.status}</div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              ` : ''}
               <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(245, 158, 11, 0.3);">
-                <div style="font-size: 0.85rem; color: #92400e; font-weight: 600; margin-bottom: 0.5rem;">To view in Stripe:</div>
+                <div style="font-size: 0.85rem; color: #92400e; font-weight: 600; margin-bottom: 0.5rem;">How to Retry Transfers:</div>
                 <div style="font-size: 0.8rem; color: #92400e; line-height: 1.5;">
-                  1. Go to <a href="https://dashboard.stripe.com/connect/transfers" target="_blank" style="color: #2563eb; text-decoration: underline;">Stripe Dashboard → Connect → Transfers</a><br>
-                  2. Filter by status: "Pending" or "In Transit"<br>
-                  3. You'll see all transfers waiting to be processed
+                  1. Go to the <strong>Payments</strong> tab<br>
+                  2. Find payments with status <strong>CAPTURED</strong><br>
+                  3. Click the <strong>"🔄 Retry Transfer"</strong> button<br>
+                  4. The transfer will be created in Stripe once funds are available
                 </div>
               </div>
             </div>
