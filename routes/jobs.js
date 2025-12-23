@@ -1965,8 +1965,8 @@ router.post('/:id/finalize-price-change', authenticate, requireRole('CUSTOMER'),
         data: {
           amount: newJobAmount,
           tip: 0,
-          feeCustomer: customerFee,
-          total: newTotal
+          feeCustomer: newFees.customerFee,
+          total: newFees.total
         }
       });
     }
