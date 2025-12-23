@@ -25651,24 +25651,11 @@ meta.textContent =
             }
           }, 4000);
           
-          // Call success callback if provided - use confirmed amount from backend
-          if (typeof handleTipSuccessCallback === 'function') {
-            handleTipSuccessCallback(confirmedTipAmount);
-          } else if (typeof handleTipSuccess === 'function') {
-            handleTipSuccess(confirmedTipAmount);
-          }
+          // Don't call handleTipSuccess - it might trigger reloads
+          // The UI will update naturally when user navigates or refreshes
           
-          // Don't reload immediately - let user see the success message
-          // Refresh completed jobs after modal closes (if on that view)
-          setTimeout(() => {
-            if (typeof loadCompletedJobs === 'function') {
-              // Only refresh if we're on the completed jobs view
-              const completedTab = document.querySelector('[data-manage-tab="completed"]');
-              if (completedTab && completedTab.classList.contains('active')) {
-                loadCompletedJobs(true);
-              }
-            }
-          }, 4000); // Refresh after modal closes (3s) + 1s buffer
+          // Don't reload at all - let user manually refresh if needed
+          // The tip button will update when they navigate away and come back
         } catch (error) {
           console.error('Error processing tip:', error);
           showToast(error.message || 'Failed to process tip. Please try again.');
