@@ -747,6 +747,7 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         perWorkerPayout: teamSize > 1 && job.payType === 'hourly' ? Number(perWorkerPayout.toFixed(2)) : null,
         platformFee: Number(platformFee.toFixed(2)),
         tipAmount: Number(tipAmount.toFixed(2)), // Include tip amount if available
+        teamSize: teamSize, // Include team size for team payment responsibility message
         jobId: jobId,
         customerId: job.customerId,
         hustlerId: job.hustlerId

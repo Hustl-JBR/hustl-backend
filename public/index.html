@@ -16342,7 +16342,8 @@ async function renderJobs(reset = false) {
                 hustlerPayout: data.hustlerPayout || 0,
                 actualHours: data.actualHours || null,
                 platformFee: data.platformFee || 0,
-                tipAmount: data.tipAmount || 0 // Include tip amount
+                tipAmount: data.tipAmount || 0, // Include tip amount
+                teamSize: data.teamSize || 1 // Include team size
               });
             } else {
               showToast("✅ Completion code verified! Job is now complete.");
@@ -29787,6 +29788,14 @@ meta.textContent =
                     Due to payment processing, you will receive your payment in <strong>2-7 business days</strong>. This is normal for all payment platforms (like Uber, DoorDash, etc.) and ensures secure transactions.
                   </div>
                 </div>
+                ${completionData.teamSize && completionData.teamSize > 1 ? `
+                <div style="background: rgba(59, 130, 246, 0.1); padding: 1rem; border-radius: 8px; margin-top: 1rem; border: 1px solid rgba(59, 130, 246, 0.3);">
+                  <div style="font-size: 0.9rem; font-weight: 600; color: #1e40af; margin-bottom: 0.5rem;">👥 Team Payment Responsibility</div>
+                  <div style="font-size: 0.85rem; color: #1e40af; line-height: 1.5;">
+                    If you brought friends or team members to help with this job, <strong>you are responsible for paying them</strong> from the amount you receive. Make sure to distribute the earnings fairly among your team.
+                  </div>
+                </div>
+                ` : ''}
               ` : '<div style="font-size: 1.5rem; font-weight: 700;">Payment has been processed.</div>'}
               ${completionData.actualHours ? `<div style="margin-top: 1rem; font-size: 1rem; font-weight: 600; padding-top: 1rem; border-top: 2px solid rgba(22, 163, 74, 0.3);">⏱️ Final time worked: ${completionData.actualHours.toFixed(2)} hours</div>` : ''}
             </div>
