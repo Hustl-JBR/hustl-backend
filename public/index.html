@@ -16325,7 +16325,8 @@ async function renderJobs(reset = false) {
                 actualJobAmount: data.actualJobAmount || 0,
                 hustlerPayout: data.hustlerPayout || 0,
                 actualHours: data.actualHours || null,
-                platformFee: data.platformFee || 0
+                platformFee: data.platformFee || 0,
+                tipAmount: data.tipAmount || 0 // Include tip amount
               });
             } else {
               showToast("✅ Completion code verified! Job is now complete.");
@@ -29617,14 +29618,51 @@ meta.textContent =
             <p style="font-size: 1.25rem; color: #4a4a4a; margin: 0; font-weight: 600;">Job Completed Successfully! 🎊</p>
           </div>
           
+          ${isHustler ? `
+          <!-- Hustler Payment Info -->
+          <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-radius: 16px; padding: 2rem; margin-bottom: 2rem; border: 3px solid #16a34a; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);">
+            <div style="font-weight: 700; color: #166534; margin-bottom: 1rem; font-size: 1.25rem; text-align: center;">💰 Payment Processing</div>
+            <div style="color: #166534; text-align: center; font-size: 1.1rem;">
+              ${completionData.hustlerPayout ? `
+                <div style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">$${parseFloat(completionData.hustlerPayout).toFixed(2)}</div>
+                <div style="font-size: 0.95rem; opacity: 0.9; margin-bottom: 1rem;">will be released to your account</div>
+                <div style="background: rgba(255, 255, 255, 0.6); padding: 1rem; border-radius: 8px; margin-top: 1rem; border: 1px solid rgba(22, 163, 74, 0.3);">
+                  <div style="font-size: 0.9rem; font-weight: 600; color: #166534; margin-bottom: 0.5rem;">⏳ Processing Time</div>
+                  <div style="font-size: 0.85rem; color: #166534; line-height: 1.5;">
+                    Due to payment processing, you will receive your payment in <strong>2-7 business days</strong>. This is normal for all payment platforms (like Uber, DoorDash, etc.) and ensures secure transactions.
+                  </div>
+                </div>
+              ` : '<div style="font-size: 1.5rem; font-weight: 700;">Payment has been processed.</div>'}
+              ${completionData.actualHours ? `<div style="margin-top: 1rem; font-size: 1rem; font-weight: 600; padding-top: 1rem; border-top: 2px solid rgba(22, 163, 74, 0.3);">⏱️ Final time worked: ${completionData.actualHours.toFixed(2)} hours</div>` : ''}
+            </div>
+          </div>
+          
+          <!-- Tip Info (if any) -->
+          ${completionData.tipAmount && parseFloat(completionData.tipAmount) > 0 ? `
+          <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; padding: 2rem; margin-bottom: 2rem; border: 3px solid #f59e0b; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
+            <div style="font-weight: 700; color: #92400e; margin-bottom: 1rem; font-size: 1.25rem; text-align: center;">💝 Tip Received!</div>
+            <div style="color: #92400e; text-align: center; font-size: 1.1rem;">
+              <div style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">$${parseFloat(completionData.tipAmount).toFixed(2)}</div>
+              <div style="font-size: 0.95rem; opacity: 0.9; margin-bottom: 1rem;">has been sent directly to your account</div>
+              <div style="background: rgba(255, 255, 255, 0.6); padding: 1rem; border-radius: 8px; margin-top: 1rem; border: 1px solid rgba(245, 158, 11, 0.3);">
+                <div style="font-size: 0.9rem; font-weight: 600; color: #92400e; margin-bottom: 0.5rem;">⚡ Instant Transfer</div>
+                <div style="font-size: 0.85rem; color: #92400e; line-height: 1.5;">
+                  Tips are transferred <strong>instantly</strong> and should be visible in your Stripe account now. 100% of tips go directly to you!
+                </div>
+              </div>
+            </div>
+          </div>
+          ` : ''}
+          ` : `
+          <!-- Customer Payment Info -->
           <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-radius: 16px; padding: 2rem; margin-bottom: 2rem; border: 3px solid #16a34a; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);">
             <div style="font-weight: 700; color: #166534; margin-bottom: 1rem; font-size: 1.25rem; text-align: center;">💰 Payment Released</div>
             <div style="color: #166534; text-align: center; font-size: 1.1rem;">
-              ${completionData.actualJobAmount ? `<div style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">$${parseFloat(completionData.actualJobAmount).toFixed(2)}</div><div style="font-size: 0.95rem; opacity: 0.9;">has been released to ${isHustler ? 'you' : 'the hustler'}</div>` : '<div style="font-size: 1.5rem; font-weight: 700;">Payment has been processed.</div>'}
+              ${completionData.actualJobAmount ? `<div style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">$${parseFloat(completionData.actualJobAmount).toFixed(2)}</div><div style="font-size: 0.95rem; opacity: 0.9;">has been released to the hustler</div>` : '<div style="font-size: 1.5rem; font-weight: 700;">Payment has been processed.</div>'}
               ${completionData.actualHours ? `<div style="margin-top: 1rem; font-size: 1rem; font-weight: 600; padding-top: 1rem; border-top: 2px solid rgba(22, 163, 74, 0.3);">⏱️ Final time worked: ${completionData.actualHours.toFixed(2)} hours</div>` : ''}
-              ${completionData.hustlerPayout ? `<div style="margin-top: 0.5rem; font-size: 0.9rem; opacity: 0.8;">After platform fee (12%): $${parseFloat(completionData.hustlerPayout).toFixed(2)}</div>` : ''}
             </div>
           </div>
+          `}
           
           <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; padding: 2rem; margin-bottom: 2rem; border: 3px solid #f59e0b; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
             <div style="font-weight: 700; color: #92400e; margin-bottom: 1rem; font-size: 1.5rem; text-align: center;">🎉 Job Completed</div>

@@ -732,6 +732,9 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       // Log the response data for debugging
       console.log(`[JOB COMPLETION] Response data - actualJobAmount: $${actualJobAmount.toFixed(2)}, actualHours: ${actualHours || 'N/A'}, hustlerPayout: $${hustlerPayout.toFixed(2)}`);
       
+      // Get tip amount from payment record if available
+      const tipAmount = job.payment?.tip ? Number(job.payment.tip) : 0;
+      
       res.json({
         success: true,
         message: 'Job completed successfully! Please leave a review.',
@@ -743,6 +746,7 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         hustlerPayout: Number(hustlerPayout.toFixed(2)), // Ensure it's a number with 2 decimals
         perWorkerPayout: teamSize > 1 && job.payType === 'hourly' ? Number(perWorkerPayout.toFixed(2)) : null,
         platformFee: Number(platformFee.toFixed(2)),
+        tipAmount: Number(tipAmount.toFixed(2)), // Include tip amount if available
         jobId: jobId,
         customerId: job.customerId,
         hustlerId: job.hustlerId
