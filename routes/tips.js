@@ -478,11 +478,14 @@ router.post('/job/:jobId', requireRole('CUSTOMER'), async (req, res) => {
           return res.status(400).json({ error: 'Payment intent does not match job' });
         }
         
-        // Verify payment succeeded
-        if (tipPaymentIntent.status !== 'succeeded') {
+        // Verify payment succeeded or is processing (with automatic confirmation, it may be processing)
+        // Accept 'succeeded', 'processing', or 'requires_capture' as valid states
+        const validStatuses = ['succeeded', 'processing', 'requires_capture'];
+        if (!validStatuses.includes(tipPaymentIntent.status)) {
           return res.status(400).json({ 
             error: 'Payment not completed',
-            status: tipPaymentIntent.status
+            status: tipPaymentIntent.status,
+            message: `Payment is in ${tipPaymentIntent.status} state. Expected: succeeded, processing, or requires_capture.`
           });
         }
         
@@ -541,33 +544,54 @@ router.post('/job/:jobId', requireRole('CUSTOMER'), async (req, res) => {
     // Update payment record with tip (or create if doesn't exist)
     const jobAmount = Number(job.payment?.amount || job.amount || 0);
     
-    if (job.payment?.id) {
-      await prisma.payment.update({
-        where: { id: job.payment.id },
-        data: {
-          tip: finalTipAmount,
-          total: (Number(job.payment.total) || jobAmount) + finalTipAmount,
-          tipPaymentIntentId: paymentIntentId,
-          tipAddedAt: new Date()
-        }
+    try {
+      if (job.payment?.id) {
+        await prisma.payment.update({
+          where: { id: job.payment.id },
+          data: {
+            tip: finalTipAmount,
+            total: (Number(job.payment.total) || jobAmount) + finalTipAmount,
+            tipPaymentIntentId: paymentIntentId,
+            tipAddedAt: new Date()
+          }
+        });
+        console.log(`[TIP] ✅ Updated payment record ${job.payment.id} with tip $${finalTipAmount.toFixed(2)}`);
+      } else {
+        // Payment doesn't exist - create it (shouldn't happen but handle gracefully)
+        console.warn(`[TIP] Payment record not found for job ${jobId}, creating new payment record`);
+        await prisma.payment.create({
+          data: {
+            jobId: job.id,
+            customerId: job.customerId,
+            hustlerId: job.hustlerId,
+            amount: jobAmount,
+            tip: finalTipAmount,
+            feeCustomer: 0,
+            feeHustler: 0,
+            total: jobAmount + finalTipAmount,
+            status: 'CAPTURED',
+            tipPaymentIntentId: paymentIntentId,
+            tipAddedAt: new Date()
+          }
+        });
+        console.log(`[TIP] ✅ Created payment record for job ${jobId} with tip $${finalTipAmount.toFixed(2)}`);
+      }
+    } catch (dbError) {
+      console.error('[TIP] ❌ Database error updating payment record:', dbError);
+      console.error('[TIP] Error details:', {
+        message: dbError.message,
+        code: dbError.code,
+        jobId: jobId,
+        paymentId: job.payment?.id,
+        tipAmount: finalTipAmount
       });
-    } else {
-      // Payment doesn't exist - create it (shouldn't happen but handle gracefully)
-      console.warn(`[TIP] Payment record not found for job ${jobId}, creating new payment record`);
-      await prisma.payment.create({
-        data: {
-          jobId: job.id,
-          customerId: job.customerId,
-          hustlerId: job.hustlerId,
-          amount: jobAmount,
-          tip: finalTipAmount,
-          feeCustomer: 0,
-          feeHustler: 0,
-          total: jobAmount + finalTipAmount,
-          status: 'CAPTURED',
-          tipPaymentIntentId: paymentIntentId,
-          tipAddedAt: new Date()
-        }
+      // Still return success if payment was processed - we can retry DB update
+      // But log the error for debugging
+      return res.status(500).json({
+        error: 'Failed to save tip to database',
+        message: dbError.message || 'Database error',
+        tipAmount: finalTipAmount,
+        paymentIntentId: paymentIntentId
       });
     }
 
