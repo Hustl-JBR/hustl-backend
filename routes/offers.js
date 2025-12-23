@@ -1179,10 +1179,8 @@ router.post('/:id/accept-negotiation', authenticate, requireRole('HUSTLER'), asy
 
     // Create or update payment record (use negotiated amount)
     const jobAmount = parseFloat(offer.proposedAmount);
-    // TIPS ARE NOT INCLUDED IN AUTHORIZATION - They happen after completion
-    // Customer fee is 6.5% (no min/max cap)
-    const customerFee = jobAmount * 0.065;
-    const total = jobAmount + customerFee;
+    // Calculate fees using centralized pricing service
+    const fees = calculateFees(jobAmount);
 
     let existingPayment = await prisma.payment.findUnique({
       where: { jobId: offer.job.id },
@@ -1195,8 +1193,8 @@ router.post('/:id/accept-negotiation', authenticate, requireRole('HUSTLER'), asy
           hustlerId: offer.hustlerId,
           amount: jobAmount,
           tip: 0, // Tips happen after completion, not in authorization
-          feeCustomer: customerFee,
-          total,
+          feeCustomer: fees.customerFee,
+          total: fees.total,
         },
       });
     } else {
@@ -1207,9 +1205,9 @@ router.post('/:id/accept-negotiation', authenticate, requireRole('HUSTLER'), asy
           hustlerId: offer.hustlerId,
           amount: jobAmount,
           tip: 0, // Tips happen after completion, not in authorization
-          feeCustomer: customerFee,
+          feeCustomer: fees.customerFee,
           feeHustler: 0,
-          total,
+          total: fees.total,
           status: 'PREAUTHORIZED',
         },
       });
