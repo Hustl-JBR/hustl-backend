@@ -523,28 +523,46 @@ async function handleTransferPaid(transfer) {
 
 // Handle transfer failed (payout failed)
 async function handleTransferFailed(transfer) {
+  console.log(`[WEBHOOK] transfer.failed: ${transfer.id}`, {
+    amount: transfer.amount / 100,
+    destination: transfer.destination,
+    failureCode: transfer.failure_code,
+    failureMessage: transfer.failure_message
+  });
+  
   const payout = await prisma.payout.findFirst({
     where: { payoutProviderId: transfer.id },
     include: { hustler: true },
   });
 
-  if (payout && payout.status !== 'FAILED') {
+  if (!payout) {
+    console.log(`[WEBHOOK] No payout found for transfer: ${transfer.id}`);
+    return;
+  }
+
+  // Idempotency: Only update if status is not already FAILED
+  if (payout.status !== 'FAILED') {
     await prisma.payout.update({
       where: { id: payout.id },
       data: {
         status: 'FAILED',
+        failureReason: transfer.failure_message || transfer.failure_code || 'Unknown',
       },
     });
+    console.log(`[WEBHOOK] ✅ Payout ${payout.id} marked as FAILED`);
 
-    // Send admin notification
-    const { sendAdminPayoutNotification } = require('../services/email');
+    // Send admin alert for failed transfer
+    const { sendAdminAlert } = require('../services/email');
     try {
-      await sendAdminPayoutNotification(payout, payout.hustler);
+      await sendAdminAlert(
+        'Transfer Failed',
+        `Transfer ${transfer.id} failed for payout ${payout.id}. Amount: $${(transfer.amount / 100).toFixed(2)}. Reason: ${transfer.failure_message || 'Unknown'}`
+      );
     } catch (error) {
-      console.error('Error sending admin payout notification:', error);
+      console.error('[WEBHOOK] Error sending admin alert:', error);
     }
-
-    console.log(`Payout failed via webhook: ${payout.id}`);
+  } else {
+    console.log(`[WEBHOOK] Payout ${payout.id} already marked as FAILED (idempotent)`);
   }
 }
 
