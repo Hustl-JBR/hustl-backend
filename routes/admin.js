@@ -487,30 +487,74 @@ router.post('/jobs/:jobId/capture-and-transfer', requireRole('ADMIN'), async (re
     console.log(`  Hustler Payout (88%): $${hustlerPayout.toFixed(2)}`);
     console.log(`  Customer Service Fee (6.5%): $${customerServiceFee.toFixed(2)}`);
 
-    // Capture payment
+    // Capture payment (or check if already captured)
     const { capturePaymentIntent, transferToHustler } = require('../services/stripe');
+    const Stripe = require('stripe');
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
 
     let captureResult;
+    let alreadyCaptured = false;
+    
     if (skipStripeCheck) {
       console.warn('[ADMIN MANUAL CAPTURE] ⚠️ SKIP_STRIPE_CHECK enabled - skipping capture');
       captureResult = { id: job.payment.providerId, status: 'succeeded' };
     } else {
       try {
-        console.log(`[ADMIN MANUAL CAPTURE] Capturing payment intent: ${job.payment.providerId}`);
-        captureResult = await capturePaymentIntent(job.payment.providerId);
-        console.log(`[ADMIN MANUAL CAPTURE] ✅ Payment captured: ${captureResult.id}`);
-      } catch (captureError) {
-        console.error('[ADMIN MANUAL CAPTURE] ❌ Capture failed:', captureError);
-        return res.status(500).json({ 
-          error: 'Failed to capture payment',
-          message: captureError.message,
-          details: {
-            paymentIntentId: job.payment.providerId,
-            errorType: captureError.type,
-            errorCode: captureError.code
+        // First, check the current status of the payment intent in Stripe
+        console.log(`[ADMIN MANUAL CAPTURE] Checking payment intent status: ${job.payment.providerId}`);
+        const paymentIntent = await stripe.paymentIntents.retrieve(job.payment.providerId);
+        
+        console.log(`[ADMIN MANUAL CAPTURE] Payment intent status: ${paymentIntent.status}`);
+        
+        if (paymentIntent.status === 'succeeded') {
+          // Payment is already captured in Stripe
+          console.log(`[ADMIN MANUAL CAPTURE] ✅ Payment already captured in Stripe`);
+          alreadyCaptured = true;
+          captureResult = paymentIntent;
+        } else if (paymentIntent.status === 'requires_capture') {
+          // Payment is pre-authorized, needs to be captured
+          console.log(`[ADMIN MANUAL CAPTURE] Capturing payment intent: ${job.payment.providerId}`);
+          captureResult = await capturePaymentIntent(job.payment.providerId);
+          console.log(`[ADMIN MANUAL CAPTURE] ✅ Payment captured: ${captureResult.id}`);
+        } else {
+          // Payment is in an unexpected state
+          console.error(`[ADMIN MANUAL CAPTURE] ❌ Payment intent in unexpected state: ${paymentIntent.status}`);
+          return res.status(400).json({ 
+            error: 'Payment is not in a capturable state',
+            currentStatus: paymentIntent.status,
+            message: `Payment intent status is ${paymentIntent.status}. Expected 'requires_capture' or 'succeeded'.`
+          });
+        }
+      } catch (stripeError) {
+        console.error('[ADMIN MANUAL CAPTURE] ❌ Stripe API error:', stripeError);
+        
+        // If it's a "already captured" error, that's okay - proceed with transfer
+        if (stripeError.code === 'payment_intent_unexpected_state' || 
+            stripeError.message?.includes('already been captured') ||
+            stripeError.message?.includes('already succeeded')) {
+          console.log('[ADMIN MANUAL CAPTURE] ⚠️ Payment already captured (error indicates this) - proceeding with transfer');
+          alreadyCaptured = true;
+          // Try to retrieve it to get the status
+          try {
+            captureResult = await stripe.paymentIntents.retrieve(job.payment.providerId);
+          } catch (retrieveError) {
+            return res.status(500).json({ 
+              error: 'Failed to verify payment status',
+              message: retrieveError.message
+            });
           }
-        });
+        } else {
+          return res.status(500).json({ 
+            error: 'Failed to process payment',
+            message: stripeError.message,
+            details: {
+              paymentIntentId: job.payment.providerId,
+              errorType: stripeError.type,
+              errorCode: stripeError.code
+            }
+          });
+        }
       }
     }
 
@@ -559,18 +603,23 @@ router.post('/jobs/:jobId/capture-and-transfer', requireRole('ADMIN'), async (re
       }
     }
 
-    // Update payment record
-    const updatedPayment = await prisma.payment.update({
-      where: { id: job.payment.id },
-      data: {
-        status: 'CAPTURED',
-        amount: actualJobAmount,
-        feeHustler: platformFee,
-        feeCustomer: customerServiceFee,
-        total: customerTotalCharged,
-        capturedAt: new Date(),
+      // Update payment record (only if not already updated)
+      // If payment was already captured, we still need to update the database
+      const updatedPayment = await prisma.payment.update({
+        where: { id: job.payment.id },
+        data: {
+          status: 'CAPTURED',
+          amount: actualJobAmount,
+          feeHustler: platformFee,
+          feeCustomer: customerServiceFee,
+          total: customerTotalCharged,
+          capturedAt: alreadyCaptured ? job.payment.capturedAt || new Date() : new Date(), // Keep existing capturedAt if already captured
+        }
+      });
+      
+      if (alreadyCaptured) {
+        console.log('[ADMIN MANUAL CAPTURE] ℹ️ Payment was already captured in Stripe - database updated to match');
       }
-    });
 
     // Update job status to PAID
     await prisma.job.update({
