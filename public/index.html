@@ -20821,11 +20821,6 @@ async function renderJobs(reset = false) {
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
                 <div>
                   <h2 style="margin: 0; font-size: 1.75rem; font-weight: 700; color: var(--text-main);">${user.name || 'User'}</h2>
-                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
-                    <span style="font-size: 1.1rem;">⭐</span>
-                    <span style="font-weight: 600; color: var(--text-main);">${ratingAvg.toFixed(1)}</span>
-                    <span style="color: var(--text-muted); font-size: 0.9rem;">(${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})</span>
-                  </div>
                 </div>
                 <button class="btn btn-primary" id="basicInfoEditBtn" style="padding: 0.5rem 1rem; font-size: 0.9rem; white-space: nowrap;">Edit</button>
               </div>
@@ -21474,11 +21469,6 @@ async function renderJobs(reset = false) {
             })}
             <div style="flex: 1; min-width: 0;">
               <h2 style="margin: 0; font-size: 1.75rem; font-weight: 700; color: var(--text-main);">${user.name || 'User'}</h2>
-              <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
-                <span style="font-size: 1.1rem;">⭐</span>
-                <span style="font-weight: 600; color: var(--text-main);">${ratingAvg.toFixed(1)}</span>
-                <span style="color: var(--text-muted); font-size: 0.9rem;">(${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'})</span>
-              </div>
               ${user.bio ? `<div style="color: var(--text-main); line-height: 1.6; margin-top: 0.75rem; font-size: 0.95rem;">${user.bio}</div>` : '<div style="color: var(--text-muted); font-style: italic; margin-top: 0.75rem; font-size: 0.9rem;">No description yet.</div>'}
             </div>
           </div>
