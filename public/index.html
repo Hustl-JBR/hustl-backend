@@ -6233,6 +6233,27 @@
         if (profileQuickStats) {
           profileQuickStats.style.display = 'none';
         }
+        
+        // Update rating display in profile card
+        const profileRatingValue = document.getElementById('profileRatingValue');
+        const profileRatingCount = document.getElementById('profileRatingCount');
+        
+        if (profileRatingValue) {
+          const ratingAvg = userData.ratingAvg || 0;
+          profileRatingValue.textContent = ratingAvg > 0 ? ratingAvg.toFixed(1) : '0.0';
+          console.log('[PROFILE STATS] Updated rating value:', ratingAvg);
+        }
+        
+        if (profileRatingCount) {
+          const ratingCount = userData.ratingCount || 0;
+          profileRatingCount.textContent = `Based on ${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'}`;
+          console.log('[PROFILE STATS] Updated rating count:', ratingCount);
+        }
+        
+        console.log('[PROFILE STATS] Rating data:', {
+          ratingAvg: userData.ratingAvg,
+          ratingCount: userData.ratingCount
+        });
       } catch (error) {
         console.error('Error rendering profile stats:', error);
       }
