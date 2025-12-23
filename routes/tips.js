@@ -294,10 +294,14 @@ router.post('/create-intent/job/:jobId', requireRole('CUSTOMER'), async (req, re
           ? await stripe.paymentIntents.retrieve(job.payment.providerId).catch(() => null)
           : null;
 
+        // Create payment intent with direct charge to hustler's connected account
+        // Using transfer_data means 100% goes to hustler (no platform fee)
+        // Note: Cannot use application_fee_amount with transfer_data
         tipPaymentIntent = await stripe.paymentIntents.create({
           amount: Math.round(finalTipAmount * 100), // Convert to cents
           currency: 'usd',
           customer: originalPaymentIntent?.customer, // Optional - can create new customer
+          payment_method_types: ['card'],
           metadata: {
             jobId: job.id,
             customerId: req.user.id,
@@ -307,8 +311,7 @@ router.post('/create-intent/job/:jobId', requireRole('CUSTOMER'), async (req, re
             tipAmount: finalTipAmount.toString(),
             description: `Tip for job: ${job.title}`
           },
-          // Transfer 100% to hustler (no platform fee on tips)
-          application_fee_amount: 0, // No platform fee
+          // Transfer 100% directly to hustler's connected account (no platform fee on tips)
           transfer_data: {
             destination: job.hustler.stripeAccountId,
           },
