@@ -72,7 +72,7 @@ router.get('/me', authenticate, async (req, res) => {
         .reduce((sum, r) => sum + Number(r.rewardAmount), 0),
     };
 
-    const referralUrl = `${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'http://localhost:8080'}/?ref=${user.referralCode}`;
+    const referralUrl = `${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || req.protocol + '://' + req.get('host')}/?ref=${user.referralCode}`;
 
     res.json({
       referralCode: user.referralCode,

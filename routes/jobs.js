@@ -2397,16 +2397,20 @@ router.post('/:id/confirm-complete', authenticate, requireRole('CUSTOMER'), asyn
         await capturePaymentIntent(job.payment.providerId);
       }
 
-      // Calculate hustler fee (12% platform fee)
-      const hustlerFee = Number(job.payment.amount) * 0.12;
-      const hustlerAmount = Number(job.payment.amount) - hustlerFee;
+      // Calculate fees
+      const jobAmount = Number(job.payment.amount);
+      const hustlerFee = jobAmount * 0.12; // 12% platform fee
+      const customerFee = jobAmount * 0.065; // 6.5% customer service fee
+      const hustlerAmount = jobAmount - hustlerFee;
 
-      // Update payment
+      // Update payment with all fees and captured timestamp
       await prisma.payment.update({
         where: { id: job.payment.id },
         data: {
           status: 'CAPTURED',
           feeHustler: hustlerFee,
+          feeCustomer: customerFee, // Ensure customer fee is set
+          capturedAt: new Date(), // Record when payment was captured
         },
       });
 
@@ -2431,7 +2435,7 @@ router.post('/:id/confirm-complete', authenticate, requireRole('CUSTOMER'), asyn
 
       // Send email receipts to both customer and hustler
       const { sendPaymentReceiptEmail, sendHustlerPaymentReceiptEmail } = require('../services/email');
-      const receiptUrl = `${process.env.APP_BASE_URL || 'https://hustljobs.com'}/payments/receipts/${job.payment.id}`;
+      const receiptUrl = `${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || req.protocol + '://' + req.get('host')}/payments/receipts/${job.payment.id}`;
       
       // Send customer receipt
       if (job.customer?.email) {

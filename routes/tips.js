@@ -107,7 +107,7 @@ router.post('/create-checkout/job/:jobId', requireRole('CUSTOMER'), async (req, 
     
     if (skipStripeCheck || !stripe) {
       return res.json({
-        checkoutUrl: `${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || 'http://localhost:3000'}/?tip_success=true&jobId=${jobId}&test=true`,
+        checkoutUrl: `${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || req.get('origin') || 'http://localhost:3000'}/?tip_success=true&jobId=${jobId}&test=true`,
         isTestMode: true,
         tipAmount: finalTipAmount
       });
@@ -442,8 +442,26 @@ router.post('/job/:jobId', requireRole('CUSTOMER'), async (req, res) => {
       tipPaymentIntent = { id: paymentIntentId, status: 'succeeded' };
     }
 
-    // Transfer tip to hustler (100% goes to hustler, no platform fee on tips)
-    if (job.hustler?.stripeAccountId && !skipStripeCheck && stripe) {
+    // Note: For tips created via payment intent with transfer_data, the transfer happens automatically
+    // Only create manual transfer if payment intent doesn't have transfer_data
+    // Check if payment intent has transfer_data (which means it already transfers automatically)
+    let needsManualTransfer = true;
+    if (!skipStripeCheck && stripe && tipPaymentIntent) {
+      try {
+        const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+        // If payment intent has transfer_data, transfer already happened automatically
+        if (pi.transfer_data && pi.transfer_data.destination) {
+          needsManualTransfer = false;
+          console.log(`[TIP] Payment intent ${paymentIntentId} has transfer_data - transfer happens automatically`);
+        }
+      } catch (err) {
+        console.error('[TIP] Error checking payment intent transfer_data:', err);
+        // Continue with manual transfer as fallback
+      }
+    }
+    
+    // Only create manual transfer if needed (payment intent doesn't have transfer_data)
+    if (needsManualTransfer && job.hustler?.stripeAccountId && !skipStripeCheck && stripe) {
       try {
         await stripe.transfers.create({
           amount: Math.round(finalTipAmount * 100),
@@ -455,24 +473,45 @@ router.post('/job/:jobId', requireRole('CUSTOMER'), async (req, res) => {
             description: `Tip for job: ${job.title}`
           },
         });
-        console.log(`[TIP] Transferred $${finalTipAmount.toFixed(2)} tip to hustler ${job.hustler.stripeAccountId}`);
+        console.log(`[TIP] Manually transferred $${finalTipAmount.toFixed(2)} tip to hustler ${job.hustler.stripeAccountId}`);
       } catch (transferError) {
         console.error('[TIP] Error transferring tip to hustler:', transferError);
         // Don't fail the request - tip was charged, we can retry transfer
       }
     }
 
-    // Update payment record with tip
+    // Update payment record with tip (or create if doesn't exist)
     const jobAmount = Number(job.payment?.amount || job.amount || 0);
-    await prisma.payment.update({
-      where: { id: job.payment.id },
-      data: {
-        tip: finalTipAmount,
-        total: (Number(job.payment.total) || jobAmount) + finalTipAmount,
-        tipPaymentIntentId: paymentIntentId,
-        tipAddedAt: new Date()
-      }
-    });
+    
+    if (job.payment?.id) {
+      await prisma.payment.update({
+        where: { id: job.payment.id },
+        data: {
+          tip: finalTipAmount,
+          total: (Number(job.payment.total) || jobAmount) + finalTipAmount,
+          tipPaymentIntentId: paymentIntentId,
+          tipAddedAt: new Date()
+        }
+      });
+    } else {
+      // Payment doesn't exist - create it (shouldn't happen but handle gracefully)
+      console.warn(`[TIP] Payment record not found for job ${jobId}, creating new payment record`);
+      await prisma.payment.create({
+        data: {
+          jobId: job.id,
+          customerId: job.customerId,
+          hustlerId: job.hustlerId,
+          amount: jobAmount,
+          tip: finalTipAmount,
+          feeCustomer: 0,
+          feeHustler: 0,
+          total: jobAmount + finalTipAmount,
+          status: 'CAPTURED',
+          tipPaymentIntentId: paymentIntentId,
+          tipAddedAt: new Date()
+        }
+      });
+    }
 
     // Send notification email to hustler (non-blocking)
     const { sendTipNotificationEmail } = require('../services/email');

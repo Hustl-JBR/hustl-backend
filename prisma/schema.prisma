@@ -85,6 +85,7 @@ model User {
   threadsAsB            Thread[]              @relation("UserB")
   paymentsAsCustomer    Payment[]             @relation("CustomerPayments")
   paymentsAsHustler     Payment[]             @relation("HustlerPayments")
+  payouts               Payout[]              @relation("HustlerPayouts")
   referrals            Referral[]            @relation("Referrer")
   referredBy            User?                 @relation("ReferredBy", fields: [referredByUserId], references: [id])
   referredUsers         User[]                @relation("ReferredBy")
@@ -148,6 +149,7 @@ model Job {
   offers                Offer[]
   thread                Thread?
   payment                Payment?
+  payout                 Payout?
   reviews                Review[]
   locationUpdates        LocationUpdate[]
   parentJob             Job?                  @relation("RecurringJobs", fields: [parentJobId], references: [id])
@@ -259,10 +261,16 @@ model Payment {
   tip                   Decimal               @default(0) @db.Decimal(10, 2)
   feeCustomer           Decimal               @map("fee_customer") @db.Decimal(10, 2)
   feeHustler            Decimal               @map("fee_hustler") @db.Decimal(10, 2)
+  platformFee           Decimal?              @map("platform_fee") @db.Decimal(10, 2) // Platform fee (12% of amount)
   total                 Decimal               @db.Decimal(10, 2)
   status                PaymentStatus         @default(PREAUTHORIZED)
   providerId            String?               @map("provider_id") // Stripe payment intent ID
+  tipPaymentIntentId    String?               @map("tip_payment_intent_id") // Stripe payment intent ID for tip
   receiptUrl            String?               @map("receipt_url")
+  refundAmount          Decimal?              @map("refund_amount") @db.Decimal(10, 2)
+  refundReason          String?               @map("refund_reason") @db.Text
+  tipAddedAt            DateTime?             @map("tip_added_at")
+  capturedAt            DateTime?              @map("captured_at")
   created_at            DateTime              @default(now()) @map("created_at")
 
   // Relations
@@ -274,6 +282,7 @@ model Payment {
   @@index([hustlerId])
   @@index([status])
   @@index([providerId])
+  @@index([capturedAt])
   @@map("payments")
 }
 
@@ -318,5 +327,73 @@ model LocationUpdate {
   @@index([hustlerId])
   @@index([timestamp])
   @@map("location_updates")
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Payout {
+  id                    String                @id @default(cuid())
+  hustlerId             String                @map("hustler_id")
+  jobId                 String                @unique @map("job_id")
+  amount                Decimal               @db.Decimal(10, 2) // Gross amount before fees
+  platformFee           Decimal               @map("platform_fee") @db.Decimal(10, 2) // 12% platform fee
+  netAmount             Decimal               @map("net_amount") @db.Decimal(10, 2) // Amount after platform fee
+  status                PayoutStatus          @default(PENDING)
+  payoutProviderId      String?               @map("payout_provider_id") // Stripe transfer ID
+  payoutMethod          String                @default("STRIPE_TRANSFER") @map("payout_method")
+  createdAt             DateTime              @default(now()) @map("created_at")
+  completedAt           DateTime?             @map("completed_at")
+
+  // Relations
+  hustler               User                  @relation("HustlerPayouts", fields: [hustlerId], references: [id])
+  job                   Job                   @relation("JobPayouts", fields: [jobId], references: [id])
+
+  @@index([hustlerId])
+  @@index([jobId])
+  @@index([status])
+  @@index([completedAt])
+  @@map("payouts")
+}
+
+enum AuditActionType {
+  REFUND
+  PAYOUT
+  PAYMENT_CAPTURE
+  PAYMENT_VOID
+  JOB_CANCEL
+  JOB_COMPLETE
+  USER_BAN
+  USER_UNBAN
+  ADMIN_ACTION
+}
+
+enum AuditResourceType {
+  PAYMENT
+  PAYOUT
+  JOB
+  USER
+  OFFER
+}
+
+model AuditLog {
+  id                    String                @id @default(cuid())
+  actorId               String                @map("actor_id") // User ID who performed the action
+  actionType            AuditActionType       @map("action_type")
+  resourceType          AuditResourceType     @map("resource_type")
+  resourceId            String                @map("resource_id")
+  details               Json                  // Additional details about the action
+  createdAt             DateTime              @default(now()) @map("created_at")
+
+  @@index([actorId])
+  @@index([actionType])
+  @@index([resourceType])
+  @@index([resourceId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 

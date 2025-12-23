@@ -135,7 +135,7 @@ const { email, password, name, username, city, zip, role, referralCode } = req.b
     // Track referral if code provided (non-blocking)
     if (referralCode) {
       try {
-        const referralResponse = await fetch(`${process.env.APP_BASE_URL || 'http://localhost:8080'}/referrals/track`, {
+        const referralResponse = await fetch(`${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'http://localhost:8080'}/referrals/track`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ referralCode, userId: user.id }),
@@ -350,7 +350,7 @@ router.post('/forgot-password', [
         { expiresIn: '1h' }
       );
 
-      const resetUrl = `${process.env.APP_BASE_URL || 'https://hustljobs.com'}/reset-password?token=${resetToken}`;
+      const resetUrl = `${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || req.protocol + '://' + req.get('host')}/reset-password?token=${resetToken}`;
       
       // Send email asynchronously (non-blocking) for faster response
       sendPasswordResetEmail(user.email, user.name, resetUrl).catch(emailError => {

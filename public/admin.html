@@ -752,25 +752,43 @@
                 <th>Job</th>
                 <th>Customer</th>
                 <th>Hustler</th>
-                <th>Amount</th>
+                <th>Job Amount</th>
+                <th>Tip</th>
+                <th>Customer Fee (6.5%)</th>
+                <th>Hustler Fee (12%)</th>
+                <th>Total</th>
+                <th>Platform Earns</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              ${data.payments.map(payment => `
+              ${data.payments.map(payment => {
+                const jobAmount = Number(payment.amount || 0);
+                const tip = Number(payment.tip || 0);
+                const customerFee = Number(payment.feeCustomer || 0);
+                const hustlerFee = Number(payment.feeHustler || 0);
+                const total = Number(payment.total || 0);
+                const platformEarns = customerFee + hustlerFee;
+                return `
                 <tr>
                   <td>${payment.created_at ? new Date(payment.created_at).toLocaleDateString() : 'N/A'}</td>
                   <td>${payment.job?.title || 'N/A'}</td>
-                  <td>${payment.customer?.name || 'N/A'}</td>
-                  <td>${payment.hustler?.name || 'N/A'}</td>
-                  <td>$${Number(payment.total || 0).toFixed(2)}</td>
+                  <td>${payment.customer?.name || 'N/A'}<br><small style="color: #6b7280;">${payment.customer?.email || ''}</small></td>
+                  <td>${payment.hustler?.name || 'N/A'}<br><small style="color: #6b7280;">${payment.hustler?.email || ''}</small></td>
+                  <td>$${jobAmount.toFixed(2)}</td>
+                  <td>${tip > 0 ? `<strong style="color: #10b981;">$${tip.toFixed(2)}</strong>` : '-'}</td>
+                  <td>$${customerFee.toFixed(2)}</td>
+                  <td>$${hustlerFee.toFixed(2)}</td>
+                  <td><strong>$${total.toFixed(2)}</strong></td>
+                  <td><strong style="color: #2563eb;">$${platformEarns.toFixed(2)}</strong></td>
                   <td><span class="badge ${payment.status.toLowerCase()}">${payment.status}</span></td>
                   <td>
-                    ${payment.status === 'CAPTURED' ? `<button class="btn btn-danger" onclick="openRefundModal('${payment.id}', ${Number(payment.total || 0)})">Refund</button>` : '-'}
+                    ${payment.status === 'CAPTURED' ? `<button class="btn btn-danger" onclick="openRefundModal('${payment.id}', ${total})">Refund</button>` : '-'}
                   </td>
                 </tr>
-              `).join('')}
+              `;
+              }).join('')}
             </tbody>
           </table>
         `;

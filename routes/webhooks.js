@@ -4,7 +4,17 @@ const prisma = require('../db');
 
 const router = express.Router();
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// Initialize Stripe with validation
+let stripe;
+if (process.env.STRIPE_SECRET_KEY) {
+  const key = process.env.STRIPE_SECRET_KEY.trim().replace(/^["']|["']$/g, '');
+  stripe = new Stripe(key);
+  console.log('[WEBHOOKS] Stripe initialized successfully');
+} else {
+  console.error('[WEBHOOKS] ERROR: STRIPE_SECRET_KEY is not set');
+  // Create dummy instance - will fail on API calls but won't crash
+  stripe = new Stripe('sk_test_missing_key_please_set_in_environment');
+}
 
 // POST /webhooks/stripe - Stripe webhook handler
 router.post('/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -208,6 +218,8 @@ async function handleTipCheckoutCompleted(session) {
     });
 
     // Update payment record with tip (or create if doesn't exist)
+    // Note: Tips via checkout session with transfer_data already transfer to hustler automatically
+    // No need to create a separate transfer
     let updatedPayment;
     if (job.payment) {
       updatedPayment = await prisma.payment.update({
@@ -217,8 +229,9 @@ async function handleTipCheckoutCompleted(session) {
           total: {
             increment: tipAmount // Add tip to total
           },
-          // Payment intent from checkout session
-          providerId: session.payment_intent || job.payment.providerId,
+          tipPaymentIntentId: session.payment_intent, // Store tip payment intent ID
+          tipAddedAt: new Date(), // Record when tip was added
+          // Don't overwrite original providerId - keep job payment intent separate from tip payment intent
         },
       });
     } else {
@@ -232,7 +245,9 @@ async function handleTipCheckoutCompleted(session) {
           tip: tipAmount,
           total: Number(job.amount || 0) + tipAmount,
           status: 'CAPTURED',
-          providerId: session.payment_intent,
+          providerId: session.payment_intent, // For tip-only payments, use tip payment intent
+          tipPaymentIntentId: session.payment_intent,
+          tipAddedAt: new Date(),
         },
       });
     }
@@ -289,7 +304,10 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
   if (payment && payment.status === 'PREAUTHORIZED') {
     await prisma.payment.update({
       where: { id: payment.id },
-      data: { status: 'CAPTURED' },
+      data: { 
+        status: 'CAPTURED',
+        capturedAt: new Date(), // Record when payment was captured
+      },
     });
   }
 }

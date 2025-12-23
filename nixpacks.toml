@@ -10,3 +10,4 @@ cmds = ["npm install && npx prisma generate"]
 [start]
 cmd = "node scripts/fix-failed-migration.js && npx prisma migrate deploy && npm start"
 
+

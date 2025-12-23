@@ -205,7 +205,7 @@ router.post('/job/:jobId/verify-start', authenticate, async (req, res) => {
       
       // Email to customer: Start code activated, payment in escrow
       if (updatedJob.customer?.email) {
-        const receiptUrl = `${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || 'https://hustljobs.com'}/payments/receipts/${updatedJob.payment?.id || ''}`;
+        const receiptUrl = `${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || req.protocol + '://' + req.get('host')}/payments/receipts/${updatedJob.payment?.id || ''}`;
         sendStartCodeActivatedEmail(
           updatedJob.customer.email,
           updatedJob.customer.name,
@@ -531,9 +531,10 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         data: {
           status: 'CAPTURED',
           amount: actualJobAmount, // Update to actual amount charged
-          feeHustler: platformFee,
-          feeCustomer: customerServiceFee, // Update service fee to match actual amount
+          feeHustler: platformFee, // 12% platform fee
+          feeCustomer: customerServiceFee, // 6.5% customer service fee
           total: customerTotalCharged, // Update total to match actual charge + service fee
+          capturedAt: new Date(), // Record when payment was captured
         }
       });
       
@@ -564,7 +565,7 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       
       // Email to customer: Payment released from escrow
       if (jobWithUsers?.payment && jobWithUsers?.customer?.email) {
-        const receiptUrl = `${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || 'https://hustljobs.com'}/payments/receipts/${jobWithUsers.payment.id}`;
+        const receiptUrl = `${process.env.FRONTEND_BASE_URL || process.env.APP_BASE_URL || req.protocol + '://' + req.get('host')}/payments/receipts/${jobWithUsers.payment.id}`;
         // Get original authorized amount for hourly jobs
         const originalAuthorized = job.payType === 'hourly' ? Number(job.payment.amount) : null;
         sendPaymentReleasedEmail(

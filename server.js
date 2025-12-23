@@ -7,6 +7,56 @@ const http = require("http");
 const { WebSocketServer } = require("ws");
 require("dotenv").config();
 
+// Environment variable validation
+function validateEnvironment() {
+  const required = [
+    'DATABASE_URL',
+    'JWT_SECRET',
+    'STRIPE_SECRET_KEY',
+    'STRIPE_PUBLISHABLE_KEY',
+  ];
+  
+  const optional = [
+    'STRIPE_WEBHOOK_SECRET',
+    'RESEND_API_KEY',
+    'MAPBOX_TOKEN',
+    'FRONTEND_BASE_URL',
+    'APP_BASE_URL',
+  ];
+  
+  const missing = required.filter(key => !process.env[key]);
+  
+  if (missing.length > 0) {
+    console.error('❌ CRITICAL: Missing required environment variables:');
+    missing.forEach(key => console.error(`   - ${key}`));
+    console.error('\n⚠️  Server will start but may fail on first request.');
+    console.error('   Set these in Railway → Variables tab\n');
+  } else {
+    console.log('✅ All required environment variables are set');
+  }
+  
+  // Check for test mode in production
+  const isTestMode = process.env.SKIP_STRIPE_CHECK === 'true';
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isTestKey = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_');
+  
+  if (isProduction && (isTestMode || isTestKey)) {
+    console.warn('⚠️  WARNING: Production mode detected but using test Stripe keys or SKIP_STRIPE_CHECK=true');
+    console.warn('   Real payments will NOT work. Switch to LIVE keys before going live!\n');
+  }
+  
+  // Log optional variables status
+  const missingOptional = optional.filter(key => !process.env[key]);
+  if (missingOptional.length > 0) {
+    console.log('ℹ️  Optional environment variables not set:');
+    missingOptional.forEach(key => console.log(`   - ${key} (some features may not work)`));
+    console.log('');
+  }
+}
+
+// Validate environment on startup
+validateEnvironment();
+
 const Stripe = require("stripe");
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY || "");
 

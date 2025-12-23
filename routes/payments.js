@@ -174,6 +174,7 @@ router.post('/jobs/:jobId/confirm', requireRole('CUSTOMER'), async (req, res) =>
       data: {
         status: 'CAPTURED',
         feeHustler: hustlerFee,
+        capturedAt: new Date(),
       },
     });
 
@@ -184,7 +185,7 @@ router.post('/jobs/:jobId/confirm', requireRole('CUSTOMER'), async (req, res) =>
     });
 
     // Generate receipt URL (store in R2 or generate PDF)
-    const receiptUrl = `${process.env.APP_BASE_URL}/payments/receipts/${payment.id}`;
+    const receiptUrl = `${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || req.protocol + '://' + req.get('host')}/payments/receipts/${payment.id}`;
 
     await prisma.payment.update({
       where: { id: payment.id },
@@ -202,7 +203,7 @@ router.post('/jobs/:jobId/confirm', requireRole('CUSTOMER'), async (req, res) =>
     // Check referral completion (non-blocking)
     if (job.hustlerId) {
       try {
-        await fetch(`${process.env.APP_BASE_URL || 'http://localhost:8080'}/referrals/check-completion`, {
+        await fetch(`${process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || req.protocol + '://' + req.get('host')}/referrals/check-completion`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -533,32 +534,32 @@ router.post('/checkout/offer/:offerId', authenticate, requireRole('CUSTOMER'), a
     }
 
     // REQUIRE STRIPE ACCOUNT - Hustler must have Stripe connected
-    // DISABLED FOR TESTING - Skip Stripe account requirement
+    // Skip in test mode (when SKIP_STRIPE_CHECK=true)
     const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
     
-    // DISABLED FOR TESTING - Always skip Stripe check for now
-    // if (!offer.hustler.stripeAccountId && !skipStripeCheck) {
-    //   // Send email to hustler about needing Stripe
-    //   try {
-    //     const { sendStripeRequiredEmail } = require('../services/email');
-    //     await sendStripeRequiredEmail(
-    //       offer.hustler.email,
-    //       offer.hustler.name,
-    //       offer.job.title
-    //     );
-    //   } catch (emailError) {
-    //     console.error('Error sending Stripe required email:', emailError);
-    //   }
-    //   
-    //   return res.status(400).json({ 
-    //     error: 'Hustler must connect Stripe account',
-    //     requiresStripe: true,
-    //     message: 'This hustler needs to connect their Stripe account before you can pay them. They have been notified via email.'
-    //   });
-    // }
+    if (!offer.hustler.stripeAccountId && !skipStripeCheck) {
+      // Send email to hustler about needing Stripe
+      try {
+        const { sendStripeRequiredEmail } = require('../services/email');
+        await sendStripeRequiredEmail(
+          offer.hustler.email,
+          offer.hustler.name,
+          offer.job.title
+        );
+      } catch (emailError) {
+        console.error('Error sending Stripe required email:', emailError);
+      }
+      
+      return res.status(400).json({ 
+        error: 'Hustler must connect Stripe account',
+        requiresStripe: true,
+        message: 'This hustler needs to connect their Stripe account before you can pay them. They have been notified via email.'
+      });
+    }
     
-    // In test mode, log that we're skipping the check
-    console.log('[TEST MODE] Skipping Stripe account check for hustler:', offer.hustler.id);
+    if (skipStripeCheck) {
+      console.log('[TEST MODE] Skipping Stripe account check for hustler:', offer.hustler.id);
+    }
 
     // Calculate payment amounts (6.5% customer fee, no tips in authorization)
     const jobAmount = Number(offer.job.amount);
@@ -757,10 +758,12 @@ router.post('/confirm-payment', authenticate, requireRole('CUSTOMER'), async (re
         });
       }
       
-      if (paymentIntent.status !== 'succeeded') {
+      // Accept both 'succeeded' (already captured) and 'requires_capture' (pre-authorized, ready to capture)
+      if (paymentIntent.status !== 'succeeded' && paymentIntent.status !== 'requires_capture') {
         return res.status(400).json({ 
           error: 'Payment not completed',
-          status: paymentIntent.status 
+          status: paymentIntent.status,
+          message: 'Payment must be succeeded or requires_capture to confirm'
         });
       }
       
