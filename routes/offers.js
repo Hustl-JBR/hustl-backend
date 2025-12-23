@@ -110,7 +110,7 @@ router.get('/:jobId', authenticate, async (req, res) => {
     });
 
     if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
+      return Errors.notFound('Job', jobId).send(res);
     }
 
     // Allow customer to see all offers for their job
@@ -130,7 +130,7 @@ router.get('/:jobId', authenticate, async (req, res) => {
         });
 
         if (!userOffer) {
-          return res.status(403).json({ error: 'Forbidden' });
+          return Errors.forbidden().send(res);
         }
       }
     }
