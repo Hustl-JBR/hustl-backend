@@ -392,14 +392,48 @@ router.get('/stats', async (req, res) => {
            p.completedAt && new Date(p.completedAt) >= sevenDaysAgo
     ).length;
 
-    // Get pending transfers (payouts that haven't been completed)
-    const pendingTransfers = allPayouts
-      .filter(p => p.status === 'PENDING' || p.status === 'PROCESSING')
-      .map(p => ({
+    // Get pending transfers (payouts that haven't been completed) with job details
+    let pendingTransfers = [];
+    try {
+      const pendingPayoutsWithDetails = await prisma.payout.findMany({
+        where: {
+          status: { in: ['PENDING', 'PROCESSING'] }
+        },
+        include: {
+          job: {
+            select: {
+              id: true,
+              title: true,
+              createdAt: true
+            }
+          },
+          hustler: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+      
+      pendingTransfers = pendingPayoutsWithDetails.map(p => ({
+        id: p.id,
+        jobId: p.jobId,
+        jobTitle: p.job?.title || 'Unknown Job',
+        hustlerName: p.hustler?.name || 'Unknown Hustler',
+        hustlerEmail: p.hustler?.email || '',
         amount: Number(p.netAmount),
         status: p.status,
         createdAt: p.createdAt
       }));
+    } catch (err) {
+      console.error('[ADMIN STATS] Error fetching pending transfers:', err);
+      pendingTransfers = [];
+    }
 
     res.json({
       revenue: {
