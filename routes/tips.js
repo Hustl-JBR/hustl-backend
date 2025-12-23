@@ -342,6 +342,7 @@ router.post('/create-intent/job/:jobId', requireRole('CUSTOMER'), async (req, re
         // Using transfer_data means 100% goes to hustler (no platform fee)
         // Note: Cannot use application_fee_amount with transfer_data
         // Don't include customer field - Stripe Elements will handle customer creation if needed
+        // Payment Elements require confirmation_method: 'automatic' (not 'manual')
         const paymentIntentData = {
           amount: Math.round(finalTipAmount * 100), // Convert to cents
           currency: 'usd',
@@ -359,8 +360,8 @@ router.post('/create-intent/job/:jobId', requireRole('CUSTOMER'), async (req, re
           transfer_data: {
             destination: job.hustler.stripeAccountId,
           },
-          // Don't confirm - let Stripe Elements handle confirmation
-          confirmation_method: 'manual',
+          // Payment Elements require automatic confirmation method
+          confirmation_method: 'automatic',
           capture_method: 'automatic',
         };
 
