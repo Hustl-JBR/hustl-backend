@@ -782,19 +782,22 @@ router.post('/:id/cancel', authenticate, requireRole('HUSTLER'), async (req, res
     });
 
     if (!offer) {
-      return res.status(404).json({ error: 'Application not found' });
+      return Errors.notFound('Application').send(res);
     }
 
     // Verify hustler owns this offer
     if (offer.hustlerId !== req.user.id) {
-      return res.status(403).json({ error: 'Forbidden - You can only cancel your own applications' });
+      return Errors.forbidden('You can only cancel your own applications').send(res);
     }
 
     // Only allow cancellation if offer is PENDING
     if (offer.status !== 'PENDING') {
       return res.status(400).json({ 
-        error: 'Can only cancel pending applications',
-        currentStatus: offer.status 
+        error: {
+          code: ErrorCodes.INVALID_INPUT,
+          message: 'Can only cancel pending applications',
+          details: { currentStatus: offer.status }
+        }
       });
     }
 
@@ -824,7 +827,7 @@ router.post('/:id/cancel', authenticate, requireRole('HUSTLER'), async (req, res
     });
   } catch (error) {
     console.error('Cancel application error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return Errors.internal().send(res);
   }
 });
 
@@ -837,7 +840,7 @@ router.post('/:id/decline', authenticate, requireRole('CUSTOMER'), async (req, r
     });
 
     if (!offer) {
-      return res.status(404).json({ error: 'Offer not found' });
+      return Errors.notFound('Offer').send(res);
     }
 
     if (offer.job.customerId !== req.user.id) {
