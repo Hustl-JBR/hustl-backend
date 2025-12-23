@@ -388,6 +388,11 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
     const platformFee = actualJobAmount * 0.12;
     const hustlerPayout = actualJobAmount - platformFee;
     
+    console.log(`[JOB COMPLETION] Payment breakdown for job ${job.id}:`);
+    console.log(`[JOB COMPLETION]   Job Amount: $${actualJobAmount.toFixed(2)}`);
+    console.log(`[JOB COMPLETION]   Platform Fee (12%): $${platformFee.toFixed(2)}`);
+    console.log(`[JOB COMPLETION]   Hustler Payout: $${hustlerPayout.toFixed(2)}`);
+    
     // For hourly jobs with multiple workers, split evenly
     const teamSize = job.teamSize || job.requirements?.teamSize || job.requirements?.team_size || 1;
     let perWorkerPayout = 0;
