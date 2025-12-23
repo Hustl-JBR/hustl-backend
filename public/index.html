@@ -25305,11 +25305,27 @@ meta.textContent =
         <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin: 0 0 1rem 0;">💝 Tip Your Hustler</h2>
         <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;">Show your appreciation for a job well done! The tip will go directly to the hustler.</p>
         
+        <style>
+          #tipAmountInput {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 3.75rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            box-sizing: border-box;
+          }
+          @media (max-width: 768px) {
+            #tipAmountInput {
+              padding-left: 4rem;
+            }
+          }
+        </style>
         <div style="margin-bottom: 1.5rem;">
-          <label style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">Tip Amount</label>
+          <label for="tipAmountInput" style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">Tip Amount</label>
           <div style="position: relative;">
             <span style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-weight: 600; pointer-events: none; z-index: 1;">$</span>
-            <input type="number" id="tipAmountInput" min="0.01" max="${maxTip}" step="0.01" placeholder="0.00" style="width: 100%; padding: 0.75rem 1rem 0.75rem 3.5rem; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; font-weight: 600; box-sizing: border-box;" />
+            <input type="number" id="tipAmountInput" min="0.01" max="${maxTip}" step="0.01" placeholder="0.00" />
           </div>
           <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Maximum tip: $${maxTip.toFixed(2)}</div>
         </div>
@@ -25405,10 +25421,17 @@ meta.textContent =
               body: JSON.stringify({ tipAmount })
             });
             
-            const intentResult = await intentResponse.json();
+            let intentResult;
+            try {
+              intentResult = await intentResponse.json();
+            } catch (jsonError) {
+              console.error('[TIP] Failed to parse response:', jsonError);
+              throw new Error('Invalid response from server');
+            }
             
             if (!intentResponse.ok) {
-              throw new Error(intentResult.error || 'Failed to create payment intent');
+              console.error('[TIP] Payment intent creation failed:', intentResult);
+              throw new Error(intentResult.error || intentResult.message || 'Failed to create payment intent');
             }
             
             currentPaymentIntentId = intentResult.paymentIntentId;

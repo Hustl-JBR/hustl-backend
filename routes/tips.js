@@ -287,6 +287,12 @@ router.post('/create-intent/job/:jobId', requireRole('CUSTOMER'), async (req, re
     const skipStripeCheck = process.env.SKIP_STRIPE_CHECK === 'true';
     let tipPaymentIntent = null;
 
+    // Ensure Stripe is initialized
+    if (!stripe && process.env.STRIPE_SECRET_KEY) {
+      const key = process.env.STRIPE_SECRET_KEY.trim().replace(/^["']|["']$/g, '');
+      stripe = new Stripe(key);
+    }
+
     if (!skipStripeCheck && stripe) {
       try {
         // Get customer's payment method from original payment (optional - we'll use Elements to collect new payment)
