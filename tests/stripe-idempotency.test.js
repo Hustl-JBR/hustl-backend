@@ -2,13 +2,11 @@
  * Idempotency Tests for Stripe Service
  * 
  * These tests demonstrate how idempotency keys prevent duplicate operations.
- * Run with: node tests/stripe-idempotency.test.js
+ * This is a documentation file showing examples and benefits.
  * 
  * Note: These are documentation/demonstration tests, not automated tests.
  * In production, Stripe will deduplicate requests with the same idempotency key within 24 hours.
  */
-
-const { createPaymentIntent, capturePaymentIntent, transferToHustler, voidPaymentIntent, createRefund } = require('../services/stripe');
 
 console.log('🧪 Stripe Idempotency Tests - Documentation\n');
 
