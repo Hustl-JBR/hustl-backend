@@ -559,6 +559,15 @@ router.post('/job/:jobId', requireRole('CUSTOMER'), async (req, res) => {
     // Update payment record with tip (or create if doesn't exist)
     const jobAmount = Number(job.payment?.amount || job.amount || 0);
     
+    // Validate required fields before database operation
+    if (!job.hustlerId) {
+      console.error('[TIP] ❌ Job missing hustlerId:', jobId);
+      return res.status(500).json({
+        error: 'Job is missing hustler information',
+        message: 'Cannot process tip without hustler ID'
+      });
+    }
+    
     try {
       if (job.payment?.id) {
         await prisma.payment.update({
@@ -574,6 +583,20 @@ router.post('/job/:jobId', requireRole('CUSTOMER'), async (req, res) => {
       } else {
         // Payment doesn't exist - create it (shouldn't happen but handle gracefully)
         console.warn(`[TIP] Payment record not found for job ${jobId}, creating new payment record`);
+        
+        // Ensure all required fields are present
+        if (!job.customerId || !job.hustlerId) {
+          console.error('[TIP] ❌ Missing required fields:', {
+            jobId: job.id,
+            customerId: job.customerId,
+            hustlerId: job.hustlerId
+          });
+          return res.status(500).json({
+            error: 'Missing required job information',
+            message: 'Cannot create payment record without customer or hustler ID'
+          });
+        }
+        
         await prisma.payment.create({
           data: {
             jobId: job.id,
@@ -596,15 +619,18 @@ router.post('/job/:jobId', requireRole('CUSTOMER'), async (req, res) => {
       console.error('[TIP] Error details:', {
         message: dbError.message,
         code: dbError.code,
+        meta: dbError.meta,
         jobId: jobId,
         paymentId: job.payment?.id,
-        tipAmount: finalTipAmount
+        tipAmount: finalTipAmount,
+        jobAmount: jobAmount,
+        customerId: job.customerId,
+        hustlerId: job.hustlerId
       });
-      // Still return success if payment was processed - we can retry DB update
-      // But log the error for debugging
       return res.status(500).json({
         error: 'Failed to save tip to database',
         message: dbError.message || 'Database error',
+        code: dbError.code,
         tipAmount: finalTipAmount,
         paymentIntentId: paymentIntentId
       });

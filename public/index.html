@@ -25583,7 +25583,15 @@ meta.textContent =
           const confirmResult = await confirmResponse.json();
           
           if (!confirmResponse.ok) {
-            throw new Error(confirmResult.error || 'Failed to process tip');
+            // Backend failed - don't show success message
+            throw new Error(confirmResult.error || confirmResult.message || 'Failed to process tip');
+          }
+          
+          // Backend confirmed success - get the actual tip amount from response
+          const confirmedTipAmount = confirmResult.tipAmount || tipAmount;
+          
+          if (!confirmedTipAmount || confirmedTipAmount <= 0) {
+            throw new Error('Invalid tip amount received from server');
           }
           
           // Success! Update UI to show "Thanks for tipping"
@@ -25594,7 +25602,7 @@ meta.textContent =
           tipInput.disabled = true;
           paymentContainer.style.display = 'none';
           
-          showToast(`💚 Thanks for tipping $${tipAmount.toFixed(2)}!`);
+          showToast(`💚 Thanks for tipping $${confirmedTipAmount.toFixed(2)}!`);
           
           // Close modal after 2 seconds
           setTimeout(() => {
@@ -25604,11 +25612,11 @@ meta.textContent =
             }
           }, 2000);
           
-          // Call success callback if provided
+          // Call success callback if provided - use confirmed amount from backend
           if (typeof handleTipSuccessCallback === 'function') {
-            handleTipSuccessCallback(tipAmount);
+            handleTipSuccessCallback(confirmedTipAmount);
           } else if (typeof handleTipSuccess === 'function') {
-            handleTipSuccess(tipAmount);
+            handleTipSuccess(confirmedTipAmount);
           }
           
           // Refresh completed jobs if on that view
