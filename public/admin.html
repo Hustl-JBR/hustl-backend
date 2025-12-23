@@ -800,11 +800,11 @@
             <tbody>
               ${data.refunds.map(refund => `
                 <tr>
-                  <td>${new Date(refund.updatedAt || refund.createdAt).toLocaleDateString()}</td>
-                  <td>${refund.job?.title || 'N/A'}</td>
+                  <td>${new Date(refund.updatedAt || refund.created_at || refund.createdAt).toLocaleDateString()}</td>
+                  <td>${refund.job?.title || 'Job Deleted'}</td>
                   <td>${refund.customer?.name || 'N/A'}<br><small style="color: #6b7280;">${refund.customer?.email || ''}</small></td>
                   <td>$${Number(refund.refundAmount || refund.total || 0).toFixed(2)}</td>
-                  <td>${refund.refundReason || 'N/A'}</td>
+                  <td>${refund.refundReason || (refund.status === 'VOIDED' ? 'Payment authorization voided' : 'N/A')}</td>
                   <td><span class="badge ${refund.status.toLowerCase()}">${refund.status}</span></td>
                 </tr>
               `).join('')}

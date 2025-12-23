@@ -2570,24 +2570,38 @@ router.delete('/:id', authenticate, requireRole('CUSTOMER'), async (req, res) =>
     // Process refund (automatic if before start code)
     const refundInfo = await processRefundIfNeeded(job, 'Job deleted by customer', req.user.id, req.user.name, req.ip);
 
-    // Delete payment first (if exists) - Payment has ON DELETE RESTRICT constraint
-    // Note: Refund should have already been processed above, but we still need to delete the payment record
-    if (job.payment) {
-      try {
-        await prisma.payment.delete({
-          where: { id: job.payment.id },
-        });
-      } catch (paymentError) {
-        console.error('Error deleting payment:', paymentError);
-        // If payment deletion fails, try to continue with job deletion
-        // The error might be that payment doesn't exist or is already deleted
+    // IMPORTANT: If payment was refunded/voided, we need to keep the payment record for admin tracking
+    // However, Payment has a required jobId foreign key, so we can't delete the job if payment exists
+    // Solution: Only delete payment if it wasn't refunded/voided
+    // If refunded/voided, we'll keep both job and payment (job will be marked as CANCELLED instead)
+    if (job.payment && (job.payment.status === 'REFUNDED' || job.payment.status === 'VOIDED')) {
+      // Payment was refunded/voided - keep both job and payment for audit trail
+      // Mark job as CANCELLED instead of deleting it
+      await prisma.job.update({
+        where: { id: req.params.id },
+        data: {
+          status: 'CANCELLED',
+          // Keep all other data for audit trail
+        },
+      });
+      console.log(`[DELETE JOB] Job ${req.params.id} marked as CANCELLED (payment ${job.payment.id} was ${job.payment.status} - keeping for refund tracking)`);
+    } else {
+      // Payment not refunded/voided - safe to delete payment and job
+      if (job.payment) {
+        try {
+          await prisma.payment.delete({
+            where: { id: job.payment.id },
+          });
+        } catch (paymentError) {
+          console.error('Error deleting payment:', paymentError);
+        }
       }
-    }
 
-    // Delete the job (cascade will handle offers, threads, etc.)
-    await prisma.job.delete({
-      where: { id: req.params.id },
-    });
+      // Delete the job (cascade will handle offers, threads, etc.)
+      await prisma.job.delete({
+        where: { id: req.params.id },
+      });
+    }
 
     // Send notification emails (non-blocking)
     try {
