@@ -566,10 +566,8 @@ router.post('/', authenticate, requireRole('CUSTOMER'), [
     
     // Calculate payment amounts (will be required when accepting an offer)
     const jobAmount = parseFloat(amount);
-    // TIPS ARE NOT INCLUDED IN AUTHORIZATION - They happen after completion
-    // Customer fee is 6.5% (no min/max cap)
-    const customerFee = jobAmount * 0.065;
-    const total = jobAmount + customerFee;
+    // Calculate fees using centralized pricing service
+    const fees = calculateFees(jobAmount);
 
     // NO PAYMENT REQUIRED UPFRONT - Jobs can be posted for free
     // Payment will be required when accepting an offer (industry standard)
