@@ -563,10 +563,8 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       maxAmount = jobAmount; // For flat jobs, max = actual
     }
     
-    // TIPS ARE NOT INCLUDED IN AUTHORIZATION - They happen after completion
-    // Customer fee is 6.5% (no min/max cap)
-    const customerFee = jobAmount * 0.065;
-    const total = jobAmount + customerFee;
+    // Calculate fees using centralized pricing service
+    const fees = calculateFees(jobAmount);
 
     // Create or update payment record with PREAUTHORIZED status (held in escrow)
     if (existingPayment) {
@@ -577,9 +575,9 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
           hustlerId: offer.hustlerId,
           amount: jobAmount,
           tip: 0, // Tips happen after completion, not in authorization
-          feeCustomer: customerFee,
+          feeCustomer: fees.customerFee,
           feeHustler: 0, // Will be calculated on release (12% of jobAmount)
-          total,
+          total: fees.total,
           status: 'PREAUTHORIZED',
           providerId: paymentIntent.id,
         },
@@ -593,9 +591,9 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
           hustlerId: offer.hustlerId,
           amount: jobAmount,
           tip: 0, // Tips happen after completion, not in authorization
-          feeCustomer: customerFee,
+          feeCustomer: fees.customerFee,
           feeHustler: 0, // Will be calculated on release (12% of jobAmount)
-          total,
+          total: fees.total,
           status: 'PREAUTHORIZED',
           providerId: paymentIntent.id,
         },
