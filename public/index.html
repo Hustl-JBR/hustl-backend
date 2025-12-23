@@ -24386,63 +24386,15 @@ meta.textContent =
           
           // Check if tip already added (only for customers of this job)
           // Convert tip to number in case it's a Decimal type from Prisma
+          // Payment data is already included in job from /jobs/completed endpoint - use it directly
           let tipAmount = payment ? Number(payment.tip || 0) : 0;
           
-          // If we're the customer, ALWAYS try fetching fresh payment data to check for tips
-          // This helps when webhook just processed the tip but job data hasn't refreshed
-          let hasPendingTip = false;
-          if (isCustomerForThisJob) {
-            // Check if there's a pending tip in sessionStorage (in case webhook hasn't processed yet)
-            hasPendingTip = sessionStorage.getItem(`tipPending_${job.id}`) === 'true';
-            
-            // Always fetch fresh payment data to ensure we have the latest tip information
-            try {
-              const paymentResponse = await fetch(`${API_BASE}/payments/job/${job.id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-              });
-              if (paymentResponse.ok) {
-                const freshPayment = await paymentResponse.json();
-                if (freshPayment) {
-                  payment = freshPayment; // Use fresh payment data
-                  const freshTipAmount = Number(freshPayment.tip || 0);
-                  tipAmount = freshTipAmount; // Always use fresh tip amount
-                  if (freshTipAmount > 0) {
-                    console.log(`[TIP CHECK] Found tip in fresh payment data: $${tipAmount.toFixed(2)}`);
-                    // Clear pending flag if tip is now in database
-                    if (hasPendingTip) {
-                      sessionStorage.removeItem(`tipPending_${job.id}`);
-                      hasPendingTip = false;
-                    }
-                  } else {
-                    console.log(`[TIP CHECK] No tip found in fresh payment data`);
-                    if (hasPendingTip) {
-                      console.log(`[TIP CHECK] But found pending tip in sessionStorage for job ${job.id}`);
-                    }
-                  }
-                }
-              }
-            } catch (e) {
-              // Silently fail - use existing payment data
-              console.log('[TIP CHECK] Could not fetch fresh payment data:', e);
-            }
-          }
-          
-          // Consider it tipped if tipAmount > 0 OR if there's a pending tip (shows "Processing..." state)
-          // This allows us to show immediate feedback while webhook processes
-          const hasTipped = isCustomerForThisJob && (tipAmount > 0 || hasPendingTip);
-          
-          // Clear any stale pending tip flags if tip is confirmed in database
-          if (tipAmount > 0 && hasPendingTip) {
-            try {
-              sessionStorage.removeItem(`tipPending_${job.id}`);
-            } catch (e) {
-              // Ignore errors
-            }
-          }
+          // Only consider it tipped if tipAmount > 0 in database (no "Processing..." state, no polling)
+          const hasTipped = isCustomerForThisJob && tipAmount > 0;
           
           // Debug logging for tip detection
           if (isCustomerForThisJob) {
-            console.log(`[TIP CHECK] Job ${job.id}: payment=${!!payment}, payment.tip=${payment?.tip}, tipAmount=${tipAmount.toFixed(2)}, hasTipped=${hasTipped}, hasPendingTip=${hasPendingTip}`);
+            console.log(`[TIP CHECK] Job ${job.id}: payment=${!!payment}, payment.tip=${payment?.tip}, tipAmount=${tipAmount.toFixed(2)}, hasTipped=${hasTipped}`);
           }
           
           // Check if user has already reviewed (reviews have reviewerId field)
@@ -24481,11 +24433,7 @@ meta.textContent =
                 ${hasTipped ? `
                   <div style="flex: 1; min-width: 120px; padding: 0.75rem 1rem; font-size: 0.9rem; font-weight: 600; border: 2px solid #10b981; color: #10b981; background: #dcfce7; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap;">
                     <span>💚 Thanks for tipping!</span>
-                    ${tipAmount > 0 ? `
-                      <button class="btn btn-ghost viewTipBtn" data-job-id="${job.id}" data-tip-amount="${tipAmount.toFixed(2)}" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; font-weight: 600; color: #059669; background: transparent; border: 1px solid #10b981; border-radius: 6px; cursor: pointer; margin-left: 0.5rem;">View Tip ($${tipAmount.toFixed(2)})</button>
-                    ` : hasPendingTip ? `
-                      <span style="font-size: 0.8rem; color: #047857; font-style: italic;">Processing...</span>
-                    ` : ''}
+                    <button class="btn btn-ghost viewTipBtn" data-job-id="${job.id}" data-tip-amount="${tipAmount.toFixed(2)}" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; font-weight: 600; color: #059669; background: transparent; border: 1px solid #10b981; border-radius: 6px; cursor: pointer; margin-left: 0.5rem;">View Tip ($${tipAmount.toFixed(2)})</button>
                   </div>
                 ` : `
                   <button class="btn btn-primary tipBtn" data-job-id="${job.id}" style="flex: 1; min-width: 120px; padding: 0.75rem 1rem; font-size: 0.9rem; font-weight: 600; border: 2px solid var(--primary); border-radius: 8px;">💝 Tip</button>
@@ -24499,57 +24447,7 @@ meta.textContent =
             </div>
           `;
           
-          // If tip is in "Processing..." state, start aggressive polling for updates
-          if (hasTipped && hasPendingTip && tipAmount === 0) {
-            // Poll more aggressively - every 1 second for first 10 seconds, then every 3 seconds
-            let pollAttempts = 0;
-            const maxAttempts = 60; // Increased to 60 attempts (2 minutes total)
-            let pollInterval;
-            
-            const pollForTip = async () => {
-              pollAttempts++;
-              if (pollAttempts > maxAttempts) {
-                clearInterval(pollInterval);
-                console.log(`[TIP POLL] Stopped polling for job ${job.id} after ${maxAttempts} attempts`);
-                return;
-              }
-              
-              try {
-                const paymentResponse = await fetch(`${API_BASE}/payments/job/${job.id}`, {
-                  headers: { 'Authorization': `Bearer ${token}` },
-                  cache: 'no-cache' // Force fresh data
-                });
-                if (paymentResponse.ok) {
-                  const freshPayment = await paymentResponse.json();
-                  const freshTipAmount = Number(freshPayment?.tip || 0);
-                  if (freshTipAmount > 0) {
-                    // Tip has been processed! Clear flag and refresh immediately
-                    console.log(`[TIP POLL] Tip found! Amount: $${freshTipAmount.toFixed(2)}`);
-                    clearInterval(pollInterval);
-                    sessionStorage.removeItem(`tipPending_${job.id}`);
-                    // Force immediate refresh of this specific job card
-                    if (typeof loadCompletedJobs === 'function') {
-                      loadCompletedJobs(true);
-                    }
-                    return; // Stop polling
-                  }
-                }
-              } catch (e) {
-                console.log('[TIP POLL] Error polling for tip:', e);
-              }
-            };
-            
-            // Start with aggressive polling (every 1 second for first 10 seconds)
-            pollInterval = setInterval(pollForTip, 1000);
-            
-            // After 10 seconds, switch to less frequent polling (every 3 seconds)
-            setTimeout(() => {
-              if (pollInterval) {
-                clearInterval(pollInterval);
-                pollInterval = setInterval(pollForTip, 3000);
-              }
-            }, 10000);
-          }
+          // No polling - webhook will process tip and it will show on next page load/refresh
           
           // Event listeners
           card.querySelector('.tipBtn')?.addEventListener('click', async (e) => {
@@ -33915,11 +33813,8 @@ try {
       const cleanUrl = window.location.pathname;
       window.history.replaceState({}, document.title, cleanUrl);
     } else if (tipSuccess && jobId) {
-      // Tip payment completed - set sessionStorage flag and ensure completed jobs are loaded
+      // Tip payment completed - webhook will process it
       console.log('[TIP SUCCESS] Tip payment completed for job:', jobId);
-      
-      // Set sessionStorage flag so the tip button shows "Processing..." state
-      sessionStorage.setItem(`tipPending_${jobId}`, 'true');
       
       if (typeof showToast === 'function') {
         showToast('💚 Thanks for tipping! Your tip has been sent to the hustler.');
@@ -33929,32 +33824,23 @@ try {
       const cleanUrl = window.location.pathname + (window.location.hash || '');
       window.history.replaceState({}, document.title, cleanUrl);
       
-      // Navigate to manage-jobs view and switch to completed tab
+      // Navigate to manage-jobs view and switch to completed tab (single refresh, no polling)
       if (typeof setView === 'function') {
         setView('manage-jobs');
       }
       
-      // Wait for view to load, then switch to completed tab and refresh
+      // Wait for view to load, then switch to completed tab (one gentle refresh)
       setTimeout(() => {
         const completedTab = document.querySelector('[data-manage-tab="completed"]');
         if (completedTab) {
           completedTab.click(); // Switch to completed tab
         }
-        
-        // Refresh completed jobs list multiple times to catch webhook processing
-        const refreshCompletedJobs = () => {
+        // Single refresh after a short delay to let webhook process
+        setTimeout(() => {
           if (typeof loadCompletedJobs === 'function') {
-            loadCompletedJobs(true); // Reload with reset
+            loadCompletedJobs(true);
           }
-        };
-        
-        // Refresh immediately and multiple times to catch webhook
-        refreshCompletedJobs();
-        setTimeout(refreshCompletedJobs, 1000);
-        setTimeout(refreshCompletedJobs, 3000);
-        setTimeout(refreshCompletedJobs, 5000);
-        setTimeout(refreshCompletedJobs, 10000);
-        setTimeout(refreshCompletedJobs, 20000);
+        }, 2000); // Wait 2 seconds for webhook to process
       }, 500);
     } else if (tipCancelled) {
       // Tip payment cancelled
