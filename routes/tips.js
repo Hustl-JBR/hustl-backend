@@ -135,6 +135,59 @@ router.post('/create-intent/job/:jobId', requireRole('CUSTOMER'), async (req, re
           stripeKeyStatus: stripeKeyStatus
         });
       }
+
+      // CRITICAL: Verify the Stripe Connect account actually exists and is active
+      // This prevents "No such destination" errors
+      try {
+        console.log(`[TIP INTENT] Verifying Stripe Connect account: ${job.hustler.stripeAccountId}`);
+        const account = await stripe.accounts.retrieve(job.hustler.stripeAccountId);
+        
+        console.log(`[TIP INTENT] Account verification result:`, {
+          id: account.id,
+          type: account.type,
+          charges_enabled: account.charges_enabled,
+          payouts_enabled: account.payouts_enabled,
+          details_submitted: account.details_submitted
+        });
+
+        // Check if account can receive payments
+        if (!account.charges_enabled) {
+          console.error('[TIP INTENT] ❌ Account cannot receive charges:', account.id);
+          return res.status(400).json({ 
+            error: 'Hustler payment account not fully activated',
+            message: 'The hustler needs to complete their account setup before receiving tips. Please ask them to finish connecting their Stripe account.',
+            accountStatus: {
+              charges_enabled: account.charges_enabled,
+              details_submitted: account.details_submitted
+            }
+          });
+        }
+
+      } catch (accountError) {
+        console.error('[TIP INTENT] ❌ Error verifying Stripe Connect account:', accountError);
+        console.error('[TIP INTENT] Account ID:', job.hustler.stripeAccountId);
+        console.error('[TIP INTENT] Error details:', {
+          type: accountError.type,
+          code: accountError.code,
+          message: accountError.message
+        });
+
+        // Handle specific Stripe errors
+        if (accountError.type === 'StripeInvalidRequestError' && accountError.code === 'resource_missing') {
+          return res.status(400).json({ 
+            error: 'Hustler payment account not found',
+            message: 'The hustler\'s payment account is not connected or has been removed. They need to reconnect their Stripe account.',
+            details: 'Account ID: ' + job.hustler.stripeAccountId
+          });
+        }
+
+        // Generic account verification error
+        return res.status(400).json({ 
+          error: 'Unable to verify hustler payment account',
+          message: 'There was an issue verifying the hustler\'s payment account. Please contact support.',
+          stripeError: accountError.message
+        });
+      }
     }
 
     // Create PaymentIntent with DIRECT CHARGE to hustler's connected account
