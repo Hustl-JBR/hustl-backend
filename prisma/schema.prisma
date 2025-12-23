@@ -149,7 +149,7 @@ model Job {
   offers                Offer[]
   thread                Thread?
   payment                Payment?
-  payout                 Payout?
+  payout                 Payout?                 @relation("JobPayouts")
   reviews                Review[]
   locationUpdates        LocationUpdate[]
   parentJob             Job?                  @relation("RecurringJobs", fields: [parentJobId], references: [id])
