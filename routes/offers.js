@@ -598,115 +598,113 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     // Calculate fees using centralized pricing service
     const fees = calculateFees(jobAmount);
 
-    // Create or update payment record with PREAUTHORIZED status (held in escrow)
-    if (existingPayment) {
-      // Update existing payment
-      existingPayment = await prisma.payment.update({
-        where: { id: existingPayment.id },
-        data: {
-          hustlerId: offer.hustlerId,
-          amount: jobAmount,
-          tip: 0, // Tips happen after completion, not in authorization
-          feeCustomer: fees.customerFee,
-          feeHustler: 0, // Will be calculated on release (12% of jobAmount)
-          total: fees.total,
-          status: 'PREAUTHORIZED',
-          providerId: paymentIntent.id,
-        },
+    // TRANSACTION: Update payment, offer, and job atomically
+    // This ensures all database changes happen together or not at all
+    const result = await prisma.$transaction(async (tx) => {
+      // Create or update payment record with PREAUTHORIZED status (held in escrow)
+      let payment;
+      if (existingPayment) {
+        // Update existing payment
+        payment = await tx.payment.update({
+          where: { id: existingPayment.id },
+          data: {
+            hustlerId: offer.hustlerId,
+            amount: jobAmount,
+            tip: 0, // Tips happen after completion, not in authorization
+            feeCustomer: fees.customerFee,
+            feeHustler: 0, // Will be calculated on release (12% of jobAmount)
+            total: fees.total,
+            status: 'PREAUTHORIZED',
+            providerId: paymentIntent.id,
+          },
+        });
+      } else {
+        // Create new payment
+        payment = await tx.payment.create({
+          data: {
+            jobId: offer.job.id,
+            customerId: req.user.id,
+            hustlerId: offer.hustlerId,
+            amount: jobAmount,
+            tip: 0, // Tips happen after completion, not in authorization
+            feeCustomer: fees.customerFee,
+            feeHustler: 0, // Will be calculated on release (12% of jobAmount)
+            total: fees.total,
+            status: 'PREAUTHORIZED',
+            providerId: paymentIntent.id,
+          },
+        });
+      }
+
+      // Update offer status
+      await tx.offer.update({
+        where: { id: req.params.id },
+        data: { status: 'ACCEPTED' },
       });
-    } else {
-      // Create new payment
-      existingPayment = await prisma.payment.create({
-        data: {
+
+      // Decline other offers
+      await tx.offer.updateMany({
+        where: {
           jobId: offer.job.id,
-          customerId: req.user.id,
-          hustlerId: offer.hustlerId,
-          amount: jobAmount,
-          tip: 0, // Tips happen after completion, not in authorization
-          feeCustomer: fees.customerFee,
-          feeHustler: 0, // Will be calculated on release (12% of jobAmount)
-          total: fees.total,
-          status: 'PREAUTHORIZED',
-          providerId: paymentIntent.id,
+          id: { not: req.params.id },
+          status: 'PENDING',
         },
+        data: { status: 'DECLINED' },
       });
-    }
 
-    // Update offer status
-    await prisma.offer.update({
-      where: { id: req.params.id },
-      data: { status: 'ACCEPTED' },
-    });
-
-    // Decline other offers
-    await prisma.offer.updateMany({
-      where: {
-        jobId: offer.job.id,
-        id: { not: req.params.id },
-        status: 'PENDING',
-      },
-      data: { status: 'DECLINED' },
-    });
-
-    // Generate 6-digit verification codes
-    const generateCode = () => String(Math.floor(100000 + Math.random() * 900000));
-    const startCode = generateCode(); // Customer gives this to hustler to start job
-    const completionCode = generateCode(); // Hustler gives this to customer to complete
-    
-    // Set expiration: 78 hours from now
-    const startCodeExpiresAt = new Date();
-    startCodeExpiresAt.setHours(startCodeExpiresAt.getHours() + 78);
-
-    // Check if job has keepOpenUntilAccepted setting - if so, close it now that we accepted
-    const jobRequirements = offer.job.requirements || {};
-    const shouldAutoClose = jobRequirements.keepOpenUntilAccepted === true;
-    
-    // Update job with hustler and verification codes
-    // Set status to SCHEDULED (not ASSIGNED) - job is scheduled but not started yet
-    // Job only becomes active (IN_PROGRESS) when Start Code is entered
-    // If hustler proposed a price, update job.amount to match the negotiated price
-    const updateData = {
-      status: 'SCHEDULED', // Scheduled, not active yet - waiting for Start Code
-      hustlerId: offer.hustlerId,
-      startCode,
-      startCodeExpiresAt,
-      completionCode,
-    };
-    
-    // If hustler proposed a price (and it's a flat job), update job.amount to match
-    if (offer.proposedAmount && offer.proposedAmount > 0 && offer.job.payType === 'flat') {
-      const originalAmount = parseFloat(offer.job.amount || 0);
-      const newAmount = parseFloat(offer.proposedAmount);
-      const priceDifference = newAmount - originalAmount;
+      // Generate 6-digit verification codes
+      const generateCode = () => String(Math.floor(100000 + Math.random() * 900000));
+      const startCode = generateCode(); // Customer gives this to hustler to start job
+      const completionCode = generateCode(); // Hustler gives this to customer to complete
       
-      updateData.amount = newAmount;
-      console.log(`[OFFER ACCEPT] Price negotiation: Original $${originalAmount} → Proposed $${newAmount} (difference: $${priceDifference > 0 ? '+' : ''}${priceDifference.toFixed(2)})`);
-      console.log(`[OFFER ACCEPT] Updating job.amount to negotiated price: $${updateData.amount}`);
-      console.log(`[OFFER ACCEPT] Payment record updated: amount=$${jobAmount.toFixed(2)}, total=$${total.toFixed(2)} (includes $${customerFee.toFixed(2)} service fee)`);
-    }
-    
-    // If keepOpenUntilAccepted was set, job auto-closes now
-    if (shouldAutoClose) {
-      updateData.requirements = {
-        ...jobRequirements,
-        keepOpenUntilAccepted: false, // Clear the flag
-      };
-    }
-    
-    const job = await prisma.job.update({
-      where: { id: offer.job.id },
-      data: updateData,
-    });
+      // Set expiration: 78 hours from now
+      const startCodeExpiresAt = new Date();
+      startCodeExpiresAt.setHours(startCodeExpiresAt.getHours() + 78);
 
-    // Update payment with hustler ID if needed (only if not already set)
-    if (!existingPayment.hustlerId || existingPayment.hustlerId !== offer.hustlerId) {
-      await prisma.payment.update({
-        where: { id: existingPayment.id },
-        data: {
-          hustlerId: offer.hustlerId,
-        },
+      // Check if job has keepOpenUntilAccepted setting - if so, close it now that we accepted
+      const jobRequirements = offer.job.requirements || {};
+      const shouldAutoClose = jobRequirements.keepOpenUntilAccepted === true;
+      
+      // Update job with hustler and verification codes
+      const updateData = {
+        status: 'SCHEDULED', // Scheduled, not active yet - waiting for Start Code
+        hustlerId: offer.hustlerId,
+        startCode,
+        startCodeExpiresAt,
+        completionCode,
+      };
+      
+      // If hustler proposed a price (and it's a flat job), update job.amount to match
+      if (offer.proposedAmount && offer.proposedAmount > 0 && offer.job.payType === 'flat') {
+        const originalAmount = parseFloat(offer.job.amount || 0);
+        const newAmount = parseFloat(offer.proposedAmount);
+        const priceDifference = newAmount - originalAmount;
+        
+        updateData.amount = newAmount;
+        console.log(`[OFFER ACCEPT] Price negotiation: Original $${originalAmount} → Proposed $${newAmount} (difference: $${priceDifference > 0 ? '+' : ''}${priceDifference.toFixed(2)})`);
+        console.log(`[OFFER ACCEPT] Updating job.amount to negotiated price: $${updateData.amount}`);
+        console.log(`[OFFER ACCEPT] Payment record updated: amount=$${jobAmount.toFixed(2)}, total=$${fees.total.toFixed(2)} (includes $${fees.customerFee.toFixed(2)} service fee)`);
+      }
+      
+      // If keepOpenUntilAccepted was set, job auto-closes now
+      if (shouldAutoClose) {
+        updateData.requirements = {
+          ...jobRequirements,
+          keepOpenUntilAccepted: false, // Clear the flag
+        };
+      }
+      
+      const updatedJob = await tx.job.update({
+        where: { id: offer.job.id },
+        data: updateData,
       });
-    }
+
+      return { payment, job: updatedJob, startCode, completionCode, startCodeExpiresAt };
+    });
+    // Transaction committed successfully
+    
+    const { payment: existingPayment, job, startCode, completionCode, startCodeExpiresAt } = result;
+    console.log(`[OFFER ACCEPT] ✅ Payment, offer, and job updated in transaction`);
 
     // Create thread for messaging (use upsert to avoid duplicate errors)
     try {
