@@ -541,6 +541,7 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
               requirements: {
                 ...(job.requirements || {}),
                 actualHours: actualHours,
+                completedAt: completionTime.toISOString()
               }
             }
           });
