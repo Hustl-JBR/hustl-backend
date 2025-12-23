@@ -6234,25 +6234,33 @@
           profileQuickStats.style.display = 'none';
         }
         
-        // Update rating display in profile card
+        // Update rating display in profile card (in Ratings tab)
+        // These elements exist even if the tab is hidden
         const profileRatingValue = document.getElementById('profileRatingValue');
         const profileRatingCount = document.getElementById('profileRatingCount');
         
         if (profileRatingValue) {
           const ratingAvg = userData.ratingAvg || 0;
           profileRatingValue.textContent = ratingAvg > 0 ? ratingAvg.toFixed(1) : '0.0';
-          console.log('[PROFILE STATS] Updated rating value:', ratingAvg);
+          console.log('[PROFILE STATS] ✅ Updated rating value in profile card:', ratingAvg, 'from API');
+        } else {
+          console.warn('[PROFILE STATS] ⚠️ profileRatingValue element not found (tab might not be rendered yet)');
         }
         
         if (profileRatingCount) {
           const ratingCount = userData.ratingCount || 0;
-          profileRatingCount.textContent = `Based on ${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'}`;
-          console.log('[PROFILE STATS] Updated rating count:', ratingCount);
+          profileRatingCount.textContent = ratingCount === 0 
+            ? 'No reviews yet' 
+            : `Based on ${ratingCount} ${ratingCount === 1 ? 'review' : 'reviews'}`;
+          console.log('[PROFILE STATS] ✅ Updated rating count in profile card:', ratingCount, 'from API');
+        } else {
+          console.warn('[PROFILE STATS] ⚠️ profileRatingCount element not found (tab might not be rendered yet)');
         }
         
-        console.log('[PROFILE STATS] Rating data:', {
+        console.log('[PROFILE STATS] Full rating data from /users/me API:', {
           ratingAvg: userData.ratingAvg,
-          ratingCount: userData.ratingCount
+          ratingCount: userData.ratingCount,
+          calculatedFromReviews: 'Yes (backend calculates from reviews table)'
         });
       } catch (error) {
         console.error('Error rendering profile stats:', error);
