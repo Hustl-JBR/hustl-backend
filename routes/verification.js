@@ -542,7 +542,7 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
             console.error(`[JOB COMPLETION] Expected: $${hustlerPayout.toFixed(2)}, Actual: $${transferredAmount.toFixed(2)}`);
           }
         } catch (transferError) {
-          console.error(`[JOB COMPLETION] ❌ CRITICAL ERROR: Transfer failed for job ${job.id}`);
+          console.error(`[JOB COMPLETION] ❌ Transfer failed for job ${job.id}`);
           console.error(`[JOB COMPLETION] Transfer error details:`, {
             errorType: transferError.type,
             errorCode: transferError.code,
@@ -554,10 +554,63 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
             platformFee: platformFee
           });
           
-          // This is a critical error - the hustler MUST receive their payment
-          // We throw an error to prevent job completion if transfer fails
-          // The transfer can be retried manually or via admin tool
-          throw new Error(`CRITICAL: Failed to transfer payment to hustler. Transfer amount: $${hustlerPayout.toFixed(2)}. Error: ${transferError.message}. Please retry transfer manually.`);
+          // Check if it's a balance issue (funds pending) vs other error
+          const isBalanceIssue = transferError.code === 'balance_insufficient' || 
+                                 transferError.message?.includes('insufficient') ||
+                                 transferError.message?.includes('balance');
+          
+          if (isBalanceIssue) {
+            // Funds are pending - this is expected for new Stripe accounts
+            // Create a pending payout record that will be retried automatically
+            console.warn(`[JOB COMPLETION] ⚠️ Transfer failed due to pending funds (normal for new accounts)`);
+            console.warn(`[JOB COMPLETION] Payment captured but transfer will happen when funds become available (typically 2-7 days)`);
+            
+            try {
+              await prisma.payout.create({
+                data: {
+                  hustlerId: job.hustlerId,
+                  jobId: job.id,
+                  amount: actualJobAmount,
+                  platformFee: platformFee,
+                  netAmount: hustlerPayout,
+                  status: 'PENDING', // Will be retried when funds available
+                  payoutMethod: 'STRIPE_TRANSFER',
+                  payoutProviderId: null, // No transfer created yet
+                }
+              });
+              console.log(`[JOB COMPLETION] ✅ Created pending payout record for automatic retry`);
+            } catch (payoutError) {
+              console.error('[JOB COMPLETION] Error creating payout record:', payoutError);
+            }
+            
+            // Don't throw error - payment is captured, transfer will happen later
+            // Job completion continues successfully
+          } else {
+            // Other error - this is more serious
+            console.error(`[JOB COMPLETION] ❌ Transfer failed with non-balance error`);
+            
+            // Create failed payout record
+            try {
+              await prisma.payout.create({
+                data: {
+                  hustlerId: job.hustlerId,
+                  jobId: job.id,
+                  amount: actualJobAmount,
+                  platformFee: platformFee,
+                  netAmount: hustlerPayout,
+                  status: 'FAILED',
+                  payoutMethod: 'STRIPE_TRANSFER',
+                  payoutProviderId: null,
+                }
+              });
+            } catch (payoutError) {
+              console.error('[JOB COMPLETION] Error creating failed payout record:', payoutError);
+            }
+            
+            // Still don't throw - payment is captured, admin can retry transfer
+            // But log it as a warning that needs attention
+            console.error(`[JOB COMPLETION] ⚠️ WARNING: Transfer failed. Payment captured but hustler needs manual transfer via admin dashboard.`);
+          }
         }
       }
 
