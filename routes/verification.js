@@ -326,12 +326,17 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
     }
 
     if (job.completionCodeVerified) {
-      return res.status(400).json({ error: 'Completion already verified' });
+      return res.status(400).json({
+        error: {
+          code: ErrorCodes.CODE_ALREADY_USED,
+          message: 'Completion already verified'
+        }
+      });
     }
 
     // Check the code
     if (code.trim() !== job.completionCode) {
-      return res.status(400).json({ error: 'Incorrect code. Ask the hustler for the correct 6-digit completion code.' });
+      return Errors.invalidCode('completion').send(res);
     }
 
     // For hourly jobs: Calculate actual hours worked and actual charge
