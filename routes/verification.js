@@ -517,20 +517,38 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       const customerServiceFee = customerChargedAmount * 0.065; // 6.5% service fee on actual amount
       const customerTotalCharged = customerChargedAmount + customerServiceFee;
 
-      // CRITICAL: Update payment record to CAPTURED immediately after capture succeeds
-      // This ensures the database reflects reality even if transfer fails
-      await prisma.payment.update({
-        where: { id: job.payment.id },
-        data: {
-          status: 'CAPTURED',
-          amount: actualJobAmount, // Update to actual amount charged
-          feeHustler: platformFee, // 12% platform fee
-          feeCustomer: customerServiceFee, // 6.5% customer service fee
-          total: customerTotalCharged, // Update total to match actual charge + service fee
-          capturedAt: new Date(), // Record when payment was captured
+      // CRITICAL: Update payment record + job hours in TRANSACTION
+      // This ensures database consistency even if later steps fail
+      await prisma.$transaction(async (tx) => {
+        // Update payment record to CAPTURED
+        await tx.payment.update({
+          where: { id: job.payment.id },
+          data: {
+            status: 'CAPTURED',
+            amount: actualJobAmount, // Update to actual amount charged
+            feeHustler: fees.platformFee, // 12% platform fee
+            feeCustomer: customerServiceFee, // 6.5% customer service fee
+            total: customerTotalCharged, // Update total to match actual charge + service fee
+            capturedAt: new Date(), // Record when payment was captured
+          }
+        });
+        
+        // For hourly jobs: update actual hours worked
+        if (job.payType === 'hourly') {
+          await tx.job.update({
+            where: { id: jobId },
+            data: {
+              requirements: {
+                ...(job.requirements || {}),
+                actualHours: actualHours,
+              }
+            }
+          });
         }
+        
+        console.log(`[JOB COMPLETION] ✅ Payment and job records updated in transaction`);
       });
-      console.log(`[JOB COMPLETION] ✅ Payment record updated to CAPTURED in database`);
+      // Transaction committed - database is now consistent
 
       // Transfer to hustler's Stripe Connect account (minus 12% fee)
       // CRITICAL: This transfer MUST happen - hustler must receive their payment
