@@ -4,6 +4,7 @@ const prisma = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { createPaymentIntent } = require('../services/stripe');
 const { calculateFees } = require('../services/pricing');
+const { Errors, ErrorCodes } = require('../services/errors');
 
 const router = express.Router();
 
