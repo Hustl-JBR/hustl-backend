@@ -189,7 +189,7 @@ router.get('/:jobId', authenticate, async (req, res) => {
     res.json(offers);
   } catch (error) {
     console.error('List offers error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return Errors.internal().send(res);
   }
 });
 
@@ -367,7 +367,7 @@ router.post('/:jobId', authenticate, requireRole('HUSTLER'), [
     res.status(201).json(offer);
   } catch (error) {
     console.error('Create offer error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return Errors.internal().send(res);
   }
 });
 
@@ -762,7 +762,7 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     });
   } catch (error) {
     console.error('Accept offer error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return Errors.internal().send(res);
   }
 });
 
@@ -868,7 +868,7 @@ router.post('/:id/decline', authenticate, requireRole('CUSTOMER'), async (req, r
   }
 });
     console.error('Decline offer error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return Errors.internal().send(res);
   }
 });
 
@@ -970,7 +970,7 @@ router.post('/:id/negotiate', authenticate, requireRole('CUSTOMER'), [
     });
   } catch (error) {
     console.error('Negotiate price error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return Errors.internal().send(res);
   }
 });
 
@@ -1071,7 +1071,7 @@ router.post('/:id/hustler-counter', authenticate, requireRole('HUSTLER'), [
     });
   } catch (error) {
     console.error('Hustler counter-offer error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return Errors.internal().send(res);
   }
 });
 
@@ -1302,7 +1302,7 @@ router.post('/:id/accept-negotiation', authenticate, requireRole('HUSTLER'), asy
     });
   } catch (error) {
     console.error('Hustler accept negotiation error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return Errors.internal().send(res);
   }
 });
 
@@ -1405,7 +1405,7 @@ router.post('/:id/hustler-cancel', authenticate, requireRole('HUSTLER'), async (
     });
   } catch (error) {
     console.error('Hustler cancel error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return Errors.internal().send(res);
   }
 });
 
@@ -1488,7 +1488,7 @@ router.post('/:id/unaccept', authenticate, requireRole('CUSTOMER'), async (req, 
     });
   } catch (error) {
     console.error('Unaccept offer error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return Errors.internal().send(res);
   }
 });
 
