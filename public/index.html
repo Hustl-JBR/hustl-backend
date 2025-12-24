@@ -357,6 +357,131 @@
         transform: scale(1.05);
       }
     }
+    
+    /* Fixed App Bottom Navigation - Starbucks Style */
+    .app-bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 70px;
+      background: #fff;
+      border-top: 1px solid #e5e7eb;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+      z-index: 9998;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    
+    @media (max-width: 768px) {
+      .app-bottom-nav {
+        display: flex;
+        justify-content: space-around;
+        align-items: flex-start;
+        padding-top: 8px;
+      }
+    }
+    
+    .nav-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      flex: 1;
+      background: none;
+      border: none;
+      padding: 4px 0;
+      cursor: pointer;
+      color: #9ca3af;
+      transition: all 0.2s ease;
+      position: relative;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    .nav-tab .nav-icon {
+      width: 24px;
+      height: 24px;
+      stroke-width: 2;
+      transition: all 0.2s ease;
+    }
+    
+    .nav-tab span {
+      font-size: 10px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    
+    .nav-tab:active {
+      transform: scale(0.92);
+    }
+    
+    .nav-tab.active {
+      color: #2563eb;
+    }
+    
+    .nav-tab.active .nav-icon {
+      stroke-width: 2.5;
+    }
+    
+    .nav-tab.active span {
+      font-weight: 600;
+    }
+    
+    /* Center Post Button - Floating Style */
+    .nav-tab-post {
+      position: relative;
+      color: #fff;
+    }
+    
+    .nav-post-btn {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: -20px;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+      transition: all 0.2s ease;
+    }
+    
+    .nav-post-btn svg {
+      width: 24px;
+      height: 24px;
+      stroke: white;
+    }
+    
+    .nav-tab-post:active .nav-post-btn {
+      transform: scale(0.92);
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+    }
+    
+    .nav-tab-post span {
+      color: #6b7280;
+      margin-top: 4px;
+    }
+    
+    .nav-tab-post.active span {
+      color: #2563eb;
+    }
+    
+    /* Badge for unread messages */
+    .nav-badge {
+      position: absolute;
+      top: 0;
+      right: 50%;
+      transform: translateX(12px);
+      background: #ef4444;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 10px;
+      min-width: 16px;
+      text-align: center;
+    }
 
     /* Clean, subtle background */
     body::before {
