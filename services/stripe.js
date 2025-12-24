@@ -9,6 +9,14 @@ if (!stripe) {
   console.warn('⚠️  [services/stripe.js] Stripe not initialized - STRIPE_SECRET_KEY not provided.');
 }
 
+// Helper to check if Stripe is initialized
+function requireStripe() {
+  if (!stripe) {
+    throw new Error('Stripe is not initialized. Set STRIPE_SECRET_KEY environment variable.');
+  }
+  return stripe;
+}
+
 /**
  * Create a payment intent with idempotency protection
  * @param {object} params - Payment parameters
@@ -20,11 +28,13 @@ if (!stripe) {
  * @returns {Promise<object>} Payment intent
  */
 async function createPaymentIntent({ amount, customerId, jobId, metadata, idempotencyKey }) {
+  const stripeClient = requireStripe();
+  
   // Generate idempotency key if not provided
   // Pattern: create-{jobId}-{timestamp}
   const key = idempotencyKey || `create-${jobId}-${Date.now()}`;
   
-  const paymentIntent = await stripe.paymentIntents.create({
+  const paymentIntent = await stripeClient.paymentIntents.create({
     amount,
     currency: 'usd',
     capture_method: 'manual', // Pre-authorize, capture later
