@@ -33973,16 +33973,7 @@ meta.textContent =
         });
       }
       
-      // Refresh button
-      const refreshBtn = document.getElementById("refreshJobsBtn");
-      if (refreshBtn) {
-        refreshBtn.addEventListener("click", () => {
-          if (typeof renderJobs === 'function') {
-            renderJobs(true);
-          }
-          // Removed toast notification - silent refresh
-        });
-      }
+      // Refresh button removed
       
       // Background polling system
       function startBackgroundPolling() {
