@@ -1443,43 +1443,6 @@ router.post('/:id/finalize-price-change', authenticate, requireRole('CUSTOMER'),
     deprecatedAt: '2025-12-23'
   });
 });
-        where: { id: job.payment.id },
-        data: {
-          amount: newJobAmount,
-          tip: 0,
-          feeCustomer: newFees.customerFee,
-          total: newFees.total
-        }
-      });
-    }
-
-    // Send notification email
-    const { sendPriceChangeAcceptedEmail } = require('../services/email');
-    try {
-      await sendPriceChangeAcceptedEmail(
-        job.customer.email,
-        job.customer.name,
-        job.title,
-        job.id,
-        newJobAmount
-      );
-    } catch (emailError) {
-      console.error('Error sending price change accepted email:', emailError);
-    }
-
-    res.json({ 
-      success: true,
-      job: updatedJob,
-      newAmount: newJobAmount
-    });
-  } catch (error) {
-    console.error('[PRICE CHANGE] Finalize price change error:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: error.message
-    });
-  }
-});
 
 // POST /jobs/:id/close - Close a job (Customer only)
 router.post('/:id/close', authenticate, requireRole('CUSTOMER'), async (req, res) => {
