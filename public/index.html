@@ -5826,15 +5826,16 @@
         right: 0;
         background: ${bgColor};
         color: white;
-        padding: 1rem;
+        padding: 0.75rem 1rem;
         z-index: 10000;
         text-align: center;
-        animation: slideDown 0.3s ease-out;
+        animation: slideDown 0.2s ease-out;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        cursor: pointer;
       `;
       notification.innerHTML = `
-        <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 0.25rem;">${title}</div>
-        <div style="font-size: 0.9rem; opacity: 0.95;">${message}</div>
+        <div style="font-weight: 600; font-size: 0.95rem;">${title}</div>
+        <div style="font-size: 0.85rem; opacity: 0.95;">${message}</div>
       `;
       
       // Add animation keyframes if not already added
@@ -5856,16 +5857,18 @@
       
       document.body.appendChild(notification);
       
-      // Auto-dismiss after 5 seconds
+      // Auto-dismiss after 3 seconds (faster)
       setTimeout(() => {
-        notification.style.animation = 'slideUp 0.3s ease-in forwards';
-        setTimeout(() => notification.remove(), 300);
-      }, 5000);
+        if (notification.parentNode) {
+          notification.style.animation = 'slideUp 0.2s ease-in forwards';
+          setTimeout(() => notification.remove(), 200);
+        }
+      }, 3000);
       
-      // Click to dismiss
+      // Click to dismiss immediately
       notification.addEventListener('click', () => {
-        notification.style.animation = 'slideUp 0.3s ease-in forwards';
-        setTimeout(() => notification.remove(), 300);
+        notification.style.animation = 'slideUp 0.2s ease-in forwards';
+        setTimeout(() => notification.remove(), 200);
       });
     }
     
