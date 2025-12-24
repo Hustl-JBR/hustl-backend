@@ -1557,8 +1557,13 @@
 
     .btn-primary {
       background: linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%);
-      color: #fff;
+      color: #ffffff !important;
       box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4), 0 0 20px rgba(14, 165, 233, 0.2);
+    }
+    
+    /* Ensure all blue buttons have white text */
+    .btn-primary *, button[style*="background: #2563eb"] *, button[style*="background:#2563eb"] *, button[style*="background: #3b82f6"] * {
+      color: #ffffff !important;
     }
     
     .btn-primary:hover {
