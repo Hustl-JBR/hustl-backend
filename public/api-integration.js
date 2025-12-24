@@ -207,7 +207,18 @@
         return null;
       }
 
-      // Always validate token with backend - don't trust cached user data
+      // IMPROVED: First check cached user data to prevent logout on network issues
+      const cachedUserStr = localStorage.getItem('hustl_user');
+      let cachedUser = null;
+      if (cachedUserStr) {
+        try {
+          cachedUser = JSON.parse(cachedUserStr);
+        } catch (e) {
+          console.warn('Failed to parse cached user data');
+        }
+      }
+
+      // Try to validate token with backend
       try {
         const user = await apiRequest('/users/me');
         // Update cached user only after successful validation
@@ -215,15 +226,48 @@
         this.currentUser = user;
         return user;
       } catch (error) {
-        // Token is invalid or expired - clear everything
-        console.warn('Token validation failed, clearing auth data:', error);
-        localStorage.removeItem('hustl_token');
-        localStorage.removeItem('hustl_user');
-        sessionStorage.removeItem('hustl_token');
-        sessionStorage.removeItem('hustl_user');
-        this.currentUser = null;
-        return null;
+        // FIXED: Only logout on explicit auth errors (401/403)
+        // Network errors, server errors, etc. should NOT log the user out
+        const isAuthError = error.status === 401 || error.status === 403;
+        
+        if (isAuthError) {
+          // Token is invalid or expired - clear everything
+          console.warn('Token invalid/expired (401/403), clearing auth data');
+          localStorage.removeItem('hustl_token');
+          localStorage.removeItem('hustl_user');
+          sessionStorage.removeItem('hustl_token');
+          sessionStorage.removeItem('hustl_user');
+          this.currentUser = null;
+          return null;
+        } else {
+          // Network error, server error, timeout, etc.
+          // Keep the user logged in using cached data
+          console.warn('Backend request failed (not auth error), using cached user:', error.message);
+          if (cachedUser) {
+            this.currentUser = cachedUser;
+            return cachedUser;
+          }
+          // No cached user and can't reach server - don't logout, just return null
+          // This allows the app to retry later
+          return null;
+        }
       }
+    },
+    
+    // Synchronous version for quick checks (uses cached data only)
+    getCurrentUserSync() {
+      if (this.currentUser) {
+        return this.currentUser;
+      }
+      const cachedUserStr = localStorage.getItem('hustl_user');
+      if (cachedUserStr) {
+        try {
+          return JSON.parse(cachedUserStr);
+        } catch (e) {
+          return null;
+        }
+      }
+      return null;
     },
   };
 
