@@ -1,0 +1,35 @@
+{
+  "appId": "com.hustljobs.app",
+  "appName": "Hustl",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "https"
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "preferredContentMode": "mobile",
+    "backgroundColor": "#ffffff",
+    "scrollEnabled": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "backgroundColor": "#2563eb",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": true
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#2563eb"
+    },
+    "Keyboard": {
+      "resize": "body",
+      "resizeOnFullScreen": true
+    }
+  }
+}
