@@ -35454,6 +35454,47 @@ try {
   }, 1000);
   </script>
   
+  <!-- Fixed Bottom Navigation Bar -->
+  <nav class="app-bottom-nav" id="appBottomNav">
+    <button class="nav-tab active" data-view="home">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+        <polyline points="9,22 9,12 15,12 15,22"/>
+      </svg>
+      <span>Home</span>
+    </button>
+    <button class="nav-tab" data-view="jobs">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/>
+        <path d="M21 21l-4.35-4.35"/>
+      </svg>
+      <span>Browse</span>
+    </button>
+    <button class="nav-tab nav-tab-post" data-view="post">
+      <div class="nav-post-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </div>
+      <span>Post</span>
+    </button>
+    <button class="nav-tab" data-view="messages">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"/>
+      </svg>
+      <span>Messages</span>
+      <span class="nav-badge" id="navMessagesBadge" style="display: none;">0</span>
+    </button>
+    <button class="nav-tab" data-view="profile">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      <span>Profile</span>
+    </button>
+  </nav>
+  
   <!-- Performance-optimized script loading -->
   <script src="https://js.stripe.com/v3/"></script>
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
