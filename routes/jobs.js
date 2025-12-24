@@ -1376,107 +1376,25 @@ router.patch('/:id', authenticate, requireRole('CUSTOMER'), [
   }
 });
 
-// POST /jobs/:id/propose-price-change - Hustler proposes price change (before start code)
-router.post('/:id/propose-price-change', authenticate, requireRole('HUSTLER'), [
-  body('amount').optional().isFloat({ min: 0 }),
-  body('hourlyRate').optional().isFloat({ min: 0 }),
-  body('estHours').optional().isInt({ min: 1 }),
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ 
-        error: 'Validation failed',
-        details: errors.array() 
-      });
-    }
-
-    const job = await prisma.job.findUnique({
-      where: { id: req.params.id },
-      include: { 
-        payment: true,
-        customer: { select: { id: true, name: true, email: true } }
-      }
-    });
-
-    if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
-    }
-
-    if (job.hustlerId !== req.user.id) {
-      return res.status(403).json({ error: 'Forbidden - You can only propose price changes for jobs assigned to you' });
-    }
-
-    // Price changes only allowed before start code
-    if (job.startCodeVerified) {
-      return res.status(400).json({ 
-        error: 'Price is locked. Cannot change price after job has started.' 
-      });
-    }
-
-    // Only allow for SCHEDULED or ASSIGNED jobs (hustler already assigned)
-    if (job.status !== 'SCHEDULED' && job.status !== 'ASSIGNED') {
-      return res.status(400).json({ 
-        error: 'Can only propose price changes for scheduled jobs with an assigned hustler' 
-      });
-    }
-
-    if (!job.hustlerId) {
-      return res.status(400).json({ 
-        error: 'No hustler assigned to this job' 
-      });
-    }
-
-    const { amount, hourlyRate, estHours } = req.body;
-    const proposedPrice = {
-      amount: amount !== undefined ? parseFloat(amount) : null,
-      hourlyRate: hourlyRate !== undefined ? parseFloat(hourlyRate) : null,
-      estHours: estHours !== undefined ? parseInt(estHours) : null,
-      proposedAt: new Date().toISOString(),
-      status: 'PENDING', // PENDING = waiting for hustler acceptance
-    };
-
-    // Store in job requirements
-    const existingRequirements = job.requirements || {};
-    const updatedJob = await prisma.job.update({
-      where: { id: req.params.id },
-      data: {
-        requirements: {
-          ...existingRequirements,
-          proposedPriceChange: proposedPrice
-        }
-      },
-      include: {
-        customer: { select: { id: true, name: true, email: true } }
-      }
-    });
-
-    // Send notification email to customer (non-blocking)
-    const { sendPriceChangeProposalEmail } = require('../services/email');
-    try {
-      await sendPriceChangeProposalEmail(
-        job.customer.email,
-        job.customer.name,
-        job.title,
-        job.id,
-        proposedPrice
-      );
-    } catch (emailError) {
-      console.error('Error sending price change proposal email:', emailError);
-    }
-
-    res.json({ 
-      success: true,
-      job: updatedJob,
-      proposedPrice 
-    });
-  } catch (error) {
-    console.error('Propose price change error:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: error.message 
-    });
-  }
+// POST /jobs/:id/propose-price-change - DEPRECATED (Phase 2)
+// Price changes after acceptance are no longer allowed for flat-rate jobs.
+// Hustlers should negotiate during the offer phase instead.
+router.post('/:id/propose-price-change', authenticate, requireRole('HUSTLER'), async (req, res) => {
+  // Log deprecation attempt for monitoring
+  console.warn(`[DEPRECATED] POST /jobs/${req.params.id}/propose-price-change attempted by user ${req.user.id}`);
+  console.warn(`[DEPRECATED] Request body:`, JSON.stringify(req.body));
+  
+  return res.status(410).json({
+    error: 'This endpoint has been deprecated',
+    code: 'ENDPOINT_DEPRECATED',
+    message: 'Post-acceptance price changes are no longer supported. Price is locked when the customer accepts an offer. Please negotiate your price during the offer phase before the job is accepted.',
+    deprecatedAt: '2025-12-23',
+    alternatives: [
+      'Negotiate price when creating your initial offer',
+      'Cancel the job and re-apply with a different price (if customer agrees)',
+      'Contact support for exceptional circumstances'
+    ]
+  });
 });
 
 // POST /jobs/:id/accept-price-change - Customer accepts price change
