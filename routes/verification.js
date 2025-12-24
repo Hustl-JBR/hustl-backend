@@ -951,28 +951,28 @@ router.post('/job/:jobId/regenerate-completion-code', authenticate, async (req, 
 });
 
 // ============================================
-// POST /verification/job/:jobId/extend-hours
-// Customer extends max hours for hourly job (before reaching limit)
+// POST /verification/job/:jobId/extend-hours - DEPRECATED (Phase 2B)
+// Hour extensions are no longer supported. Jobs now use a 1.5x buffer
+// that is authorized upfront when the offer is accepted.
 // ============================================
 router.post('/job/:jobId/extend-hours', authenticate, async (req, res) => {
-  try {
-    const { jobId } = req.params;
-    const { hours } = req.body; // Number of hours to add (default 1)
-    const userId = req.user.id;
-
-    if (!hours || hours <= 0 || !Number.isInteger(Number(hours))) {
-      return res.status(400).json({ error: 'Hours must be a positive integer' });
-    }
-
-    const hoursToAdd = parseInt(hours);
-
-    const job = await prisma.job.findUnique({
-      where: { id: jobId },
-      include: { payment: true }
-    });
-
-    if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
+  // Log deprecation attempt for monitoring
+  console.warn(`[DEPRECATED] POST /verification/job/${req.params.jobId}/extend-hours attempted by user ${req.user.id}`);
+  console.warn(`[DEPRECATED] Request body:`, JSON.stringify(req.body));
+  
+  return res.status(410).json({
+    error: 'This endpoint has been deprecated',
+    code: 'ENDPOINT_DEPRECATED',
+    message: 'Hour extensions are no longer supported. When you accept an offer for an hourly job, a 1.5x buffer is automatically authorized. If the job takes longer than the buffered amount, please contact support.',
+    deprecatedAt: '2025-12-23',
+    alternatives: [
+      'Hourly jobs now include a 1.5x buffer on the estimated hours',
+      'If more time is needed beyond the buffer, contact support',
+      'Consider canceling and rebooking with more estimated hours',
+      'Customer will only be charged for actual hours worked (up to the buffer)'
+    ]
+  });
+}););
     }
 
     // Only the customer can extend hours
