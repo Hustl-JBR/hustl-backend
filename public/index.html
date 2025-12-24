@@ -34808,41 +34808,20 @@ try {
       
       if (mobileMenuItems) {
         mobileMenuItems.innerHTML = `
-          <button class="mobile-menu-item active" data-view="home">
-            <span class="menu-emoji">🏠</span>
-            Home
-          </button>
-          <button class="mobile-menu-item" data-view="jobs">
-            <span class="menu-emoji">🔍</span>
-            Browse Jobs
-          </button>
-          <button class="mobile-menu-item" data-view="post">
-            <span class="menu-emoji">➕</span>
-            Post a Job
-          </button>
-          <button class="mobile-menu-item" data-view="manage-jobs">
-            <span class="menu-emoji">📋</span>
-            Manage Jobs
-          </button>
-          <button class="mobile-menu-item" data-view="messages">
-            <span class="menu-emoji">💬</span>
-            Messages
-          </button>
-          <button class="mobile-menu-item" data-view="profile">
-            <span class="menu-emoji">👤</span>
-            Profile
-          </button>
-          <button class="mobile-menu-item" data-view="about">
-            <span class="menu-emoji">ℹ️</span>
-            About Us
-          </button>
+          <button class="mobile-menu-item active" data-view="home">Home</button>
+          <button class="mobile-menu-item" data-view="jobs">Browse Jobs</button>
+          <button class="mobile-menu-item" data-view="post">Post a Job</button>
+          <button class="mobile-menu-item" data-view="manage-jobs">Manage Jobs</button>
+          <button class="mobile-menu-item" data-view="messages">Messages</button>
+          <button class="mobile-menu-item" data-view="profile">Profile</button>
+          <button class="mobile-menu-item" data-view="about">About</button>
         `;
       }
       
       if (mobileMenuAuth) {
         mobileMenuAuth.innerHTML = `
-            <div class="mobile-menu-user-info">👋 Signed in as <strong>${firstName}</strong></div>
-            <button class="btn-signup-header" id="mobileSignOutBtn" data-action="signout">🚪 Sign Out</button>
+            <div style="padding: 12px 16px; font-size: 13px; color: #6b7280; border-top: 1px solid #f0f0f0;">Signed in as ${firstName}</div>
+            <button class="btn-signup-header" id="mobileSignOutBtn" data-action="signout">Sign Out</button>
         `;
       }
     } else {
