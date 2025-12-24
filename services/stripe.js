@@ -145,8 +145,10 @@ async function createConnectedAccount(email, country = 'US') {
 
 // Stripe Connect: Verify account exists
 async function verifyStripeAccount(accountId) {
+  const stripeClient = requireStripe();
+  
   try {
-    const account = await stripe.accounts.retrieve(accountId);
+    const account = await stripeClient.accounts.retrieve(accountId);
     return account;
   } catch (error) {
     console.error('[STRIPE] Error verifying account:', accountId, error.message);
@@ -156,16 +158,18 @@ async function verifyStripeAccount(accountId) {
 
 // Stripe Connect: Create account link for onboarding
 async function createAccountLink(accountId, returnUrl, refreshUrl) {
+  const stripeClient = requireStripe();
+  
   try {
     console.log('[STRIPE] Creating account link for account:', accountId);
     console.log('[STRIPE] Return URL:', returnUrl);
     console.log('[STRIPE] Refresh URL:', refreshUrl);
     
     // First verify the account exists
-    const account = await stripe.accounts.retrieve(accountId);
+    const account = await stripeClient.accounts.retrieve(accountId);
     console.log('[STRIPE] Account retrieved:', account.id, 'Type:', account.type);
     
-    const accountLink = await stripe.accountLinks.create({
+    const accountLink = await stripeClient.accountLinks.create({
       account: accountId,
       refresh_url: refreshUrl,
       return_url: returnUrl,
@@ -194,6 +198,8 @@ async function createAccountLink(accountId, returnUrl, refreshUrl) {
  * @returns {Promise<object>} Transfer object
  */
 async function transferToHustler(connectedAccountId, amount, jobId, description, idempotencyKey = null) {
+  const stripeClient = requireStripe();
+  
   try {
     console.log(`[TRANSFER] Creating transfer: $${amount.toFixed(2)} to account ${connectedAccountId} for job ${jobId}`);
     
@@ -202,7 +208,7 @@ async function transferToHustler(connectedAccountId, amount, jobId, description,
     // CRITICAL: This prevents double-payments if transfer is retried
     const key = idempotencyKey || `transfer-${jobId}-${Date.now()}`;
     
-    const transfer = await stripe.transfers.create({
+    const transfer = await stripeClient.transfers.create({
       amount: Math.round(amount * 100), // Convert to cents
       currency: 'usd',
       destination: connectedAccountId,
