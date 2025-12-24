@@ -449,7 +449,7 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
     let perWorkerPayout = 0;
     if (teamSize > 1 && job.payType === 'hourly') {
       perWorkerPayout = hustlerPayout / teamSize;
-      console.log(`[HOURLY JOB] ${teamSize} workers → $${perWorkerPayout.toFixed(2)} each (total: $${hustlerPayout.toFixed(2)})`);
+      console.log(`[HOURLY JOB - PHASE 2B] ${teamSize} workers → $${perWorkerPayout.toFixed(2)} each (total: $${hustlerPayout.toFixed(2)})`);
     }
 
     // Release payment to hustler (capture payment intent and transfer to hustler)
@@ -457,68 +457,30 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
     const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
     
     try {
-      // For hourly jobs: Capture ONLY the actual amount worked (actualHours × hourlyRate)
-      // Stripe will automatically release the remaining authorized amount - no refund needed
+      // PHASE 2B: Simplified payment capture - single PaymentIntent per job
+      // For hourly jobs: Partial capture of actual amount worked
+      // For flat jobs: Full capture
+      // Stripe automatically releases unused authorization (no manual refund needed)
+      
       if (job.payType === 'hourly' && job.payment.providerId) {
-        const requirements = job.requirements || {};
-        const extensionPaymentIntents = requirements.extensionPaymentIntents || [];
-        const hourlyRate = Number(job.hourlyRate); // Get hourly rate for logging
-        
-        // Calculate how much to capture from original payment intent
+        const hourlyRate = Number(job.hourlyRate);
         const originalAuthorized = Number(job.payment.amount);
-        let remainingToCapture = actualJobAmount;
-        let totalCaptured = 0;
         
-        // First, capture from original payment intent (up to its authorized amount)
-        if (remainingToCapture > 0 && originalAuthorized > 0) {
-          const capturedFromOriginal = Math.min(remainingToCapture, originalAuthorized);
-          await capturePaymentIntent(job.payment.providerId, capturedFromOriginal);
-          remainingToCapture -= capturedFromOriginal;
-          totalCaptured += capturedFromOriginal;
-          console.log(`[HOURLY JOB] Captured $${capturedFromOriginal.toFixed(2)} from original payment intent (authorized: $${originalAuthorized.toFixed(2)})`);
-          
-          // Note: Stripe automatically releases the unused portion back to customer
-          const unusedFromOriginal = originalAuthorized - capturedFromOriginal;
-          if (unusedFromOriginal > 0.01) {
-            console.log(`[HOURLY JOB] Stripe will automatically release $${unusedFromOriginal.toFixed(2)} unused amount from original payment intent`);
-          }
+        console.log(`[HOURLY JOB - PHASE 2B] Payment capture:`);
+        console.log(`[HOURLY JOB - PHASE 2B]   Original authorized: $${originalAuthorized.toFixed(2)}`);
+        console.log(`[HOURLY JOB - PHASE 2B]   Actual amount to capture: $${actualJobAmount.toFixed(2)}`);
+        
+        // Partial capture from single PaymentIntent
+        await capturePaymentIntent(job.payment.providerId, actualJobAmount);
+        
+        // Calculate unused amount that Stripe will auto-release
+        const unusedAmount = originalAuthorized - actualJobAmount;
+        console.log(`[HOURLY JOB - PHASE 2B]   Amount captured: $${actualJobAmount.toFixed(2)}`);
+        if (unusedAmount > 0.01) {
+          console.log(`[HOURLY JOB - PHASE 2B]   Stripe auto-releasing: $${unusedAmount.toFixed(2)} (unused buffer)`);
         }
+        console.log(`[HOURLY JOB - PHASE 2B] ✅ Partial capture successful`);
         
-        // Then capture from extension payment intents if needed
-        for (const ext of extensionPaymentIntents) {
-          if (remainingToCapture <= 0) break;
-          
-          const extAmount = Number(ext.amount || 0);
-          const extPaymentIntentId = ext.paymentIntentId;
-          
-          if (extPaymentIntentId && extAmount > 0) {
-            // Calculate proportional capture from this extension
-            const captureFromExt = Math.min(remainingToCapture, extAmount);
-            await capturePaymentIntent(extPaymentIntentId, captureFromExt);
-            remainingToCapture -= captureFromExt;
-            totalCaptured += captureFromExt;
-            console.log(`[HOURLY JOB] Captured $${captureFromExt.toFixed(2)} from extension payment intent ${extPaymentIntentId} (authorized: $${extAmount.toFixed(2)})`);
-            
-            // Note: Stripe automatically releases the unused portion
-            const unusedFromExt = extAmount - captureFromExt;
-            if (unusedFromExt > 0.01) {
-              console.log(`[HOURLY JOB] Stripe will automatically release $${unusedFromExt.toFixed(2)} unused amount from extension payment intent`);
-            }
-          }
-        }
-        
-        // Verify we captured exactly the actual amount (within rounding tolerance)
-        const captureDifference = Math.abs(totalCaptured - actualJobAmount);
-        if (captureDifference > 0.01) {
-          console.warn(`[HOURLY JOB] Warning: Captured amount ($${totalCaptured.toFixed(2)}) differs from calculated amount ($${actualJobAmount.toFixed(2)}) by $${captureDifference.toFixed(2)}`);
-        }
-        
-        console.log(`[HOURLY JOB] Total captured: $${totalCaptured.toFixed(2)} (actual work: ${actualHours} hrs × $${hourlyRate}/hr = $${actualJobAmount.toFixed(2)})`);
-        
-        // Update actualJobAmount to match what was actually captured (in case of rounding differences)
-        if (Math.abs(totalCaptured - actualJobAmount) < 0.01) {
-          actualJobAmount = totalCaptured;
-        }
       } else if (job.payment.providerId) {
         // Full capture for flat jobs
         await capturePaymentIntent(job.payment.providerId);
