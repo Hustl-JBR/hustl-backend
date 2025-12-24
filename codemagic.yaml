@@ -1,0 +1,97 @@
+workflows:
+  ios-release:
+    name: Hustl iOS Release
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.hustljobs.app
+      node: 18.17.0
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm ci
+      
+      - name: Sync Capacitor iOS
+        script: |
+          npx cap sync ios
+      
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios/App
+          pod install
+      
+      - name: Set up code signing
+        script: |
+          xcode-project use-profiles
+      
+      - name: Build iOS app
+        script: |
+          cd ios/App
+          xcode-project build-ipa \
+            --workspace "App.xcworkspace" \
+            --scheme "App" \
+            --archive-flags="-destination 'generic/platform=iOS'"
+    
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - ios/App/build/Reports/**/*
+    
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - Internal Testers
+      email:
+        recipients:
+          - your-email@example.com  # Replace with your email
+        notify:
+          success: true
+          failure: true
+
+  ios-development:
+    name: Hustl iOS Dev Build
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      ios_signing:
+        distribution_type: development
+        bundle_identifier: com.hustljobs.app
+      node: 18.17.0
+      xcode: latest
+      cocoapods: default
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'develop'
+          include: true
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+      
+      - name: Sync Capacitor iOS
+        script: npx cap sync ios
+      
+      - name: Install CocoaPods
+        script: |
+          cd ios/App
+          pod install
+      
+      - name: Build for simulator
+        script: |
+          cd ios/App
+          xcodebuild \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            -derivedDataPath build
+    
+    artifacts:
+      - ios/App/build/**/*.app
