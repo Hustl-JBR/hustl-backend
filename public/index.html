@@ -20077,7 +20077,7 @@ async function renderJobs(reset = false) {
         
         const jobTitle = document.createElement("span");
         jobTitle.style.fontSize = "14px";
-        jobTitle.style.color = "#8e8e93";
+        jobTitle.style.color = "#64748b";
         jobTitle.style.whiteSpace = "nowrap";
         jobTitle.style.overflow = "hidden";
         jobTitle.style.textOverflow = "ellipsis";
@@ -20086,13 +20086,18 @@ async function renderJobs(reset = false) {
         jobTitle.textContent = job.title;
         jobRow.appendChild(jobTitle);
         
-        // Status badge
+        // Status badge with emojis and colors
         let statusText = "";
+        let statusEmoji = "";
         let statusBg = "";
         let statusColor = "";
+        let statusBorder = "";
         if (job.status === 'IN_PROGRESS') {
+          statusEmoji = "🟡";
           statusText = "In Progress";
-          statusBg = "#fff3cd";
+          statusBg = "#fef3c7";
+          statusColor = "#92400e";
+          statusBorder = "#fcd34d";
           statusColor = "#856404";
         } else if (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') {
           statusText = "Scheduled";
