@@ -5549,6 +5549,11 @@
             if (data.type === 'job_status_update') {
               handleJobStatusUpdate(data);
             }
+            
+            // Handle new messages - instant delivery
+            if (data.type === 'new_message') {
+              handleNewMessage(data);
+            }
           } catch (parseError) {
             console.error('[WebSocket] Error parsing message:', parseError);
           }
