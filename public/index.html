@@ -5951,6 +5951,140 @@
     }
     
     // ============================================
+    // PULL-TO-REFRESH - Refresh current view, not navigate away
+    // ============================================
+    let pullStartY = 0;
+    let isPulling = false;
+    let pullRefreshIndicator = null;
+    
+    function initPullToRefresh() {
+      // Create refresh indicator
+      if (!document.getElementById('pull-refresh-indicator')) {
+        pullRefreshIndicator = document.createElement('div');
+        pullRefreshIndicator.id = 'pull-refresh-indicator';
+        pullRefreshIndicator.style.cssText = `
+          position: fixed;
+          top: -60px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #3b82f6;
+          color: white;
+          padding: 0.75rem 1.5rem;
+          border-radius: 30px;
+          font-size: 0.9rem;
+          font-weight: 600;
+          z-index: 9999;
+          transition: top 0.3s ease;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        `;
+        pullRefreshIndicator.innerHTML = '↓ Pull to refresh';
+        document.body.appendChild(pullRefreshIndicator);
+      }
+      
+      document.addEventListener('touchstart', handleTouchStart, { passive: true });
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    }
+    
+    function handleTouchStart(e) {
+      // Only activate if at top of page
+      if (window.scrollY === 0) {
+        pullStartY = e.touches[0].clientY;
+        isPulling = true;
+      }
+    }
+    
+    function handleTouchMove(e) {
+      if (!isPulling) return;
+      
+      const pullCurrentY = e.touches[0].clientY;
+      const pullDistance = pullCurrentY - pullStartY;
+      
+      // Only show indicator when pulling down from top
+      if (pullDistance > 30 && window.scrollY === 0) {
+        if (pullRefreshIndicator) {
+          pullRefreshIndicator.style.top = Math.min(pullDistance - 60, 20) + 'px';
+          if (pullDistance > 100) {
+            pullRefreshIndicator.innerHTML = '↑ Release to refresh';
+          } else {
+            pullRefreshIndicator.innerHTML = '↓ Pull to refresh';
+          }
+        }
+        // Prevent default scroll behavior when pulling
+        if (pullDistance > 10) {
+          e.preventDefault();
+        }
+      }
+    }
+    
+    function handleTouchEnd(e) {
+      if (!isPulling) return;
+      isPulling = false;
+      
+      const pullEndY = e.changedTouches[0].clientY;
+      const pullDistance = pullEndY - pullStartY;
+      
+      // Hide indicator
+      if (pullRefreshIndicator) {
+        pullRefreshIndicator.style.top = '-60px';
+      }
+      
+      // If pulled far enough, refresh current view
+      if (pullDistance > 100 && window.scrollY === 0) {
+        refreshCurrentView();
+      }
+    }
+    
+    // Refresh the current view without navigating away
+    async function refreshCurrentView() {
+      console.log('[Pull-to-Refresh] Refreshing current view:', activeView);
+      
+      // Show refreshing toast
+      showJobStatusNotification('🔄 Refreshing...', 'Updating your view', 'info');
+      
+      // Clear caches
+      if (typeof requestCache !== 'undefined') {
+        requestCache.clear();
+      }
+      
+      try {
+        // Refresh based on current view
+        switch (activeView) {
+          case 'jobs':
+            if (typeof renderJobs === 'function') await renderJobs(true);
+            break;
+          case 'manage-jobs':
+            if (typeof loadActiveJobs === 'function') await loadActiveJobs();
+            if (typeof loadPostedJobs === 'function') await loadPostedJobs();
+            if (typeof loadCompletedJobs === 'function') await loadCompletedJobs();
+            break;
+          case 'messages':
+            if (typeof refreshMessagesOnly === 'function') await refreshMessagesOnly();
+            break;
+          case 'notifications':
+            if (typeof loadNotifications === 'function') await loadNotifications();
+            break;
+          case 'profile':
+            // Re-render profile if possible
+            if (typeof showView === 'function') showView('profile');
+            break;
+          default:
+            // Refresh jobs as fallback
+            if (typeof renderJobs === 'function') await renderJobs(true);
+        }
+        
+        console.log('[Pull-to-Refresh] Refresh complete');
+      } catch (error) {
+        console.error('[Pull-to-Refresh] Error:', error);
+      }
+    }
+    
+    // Initialize pull-to-refresh on mobile
+    if ('ontouchstart' in window) {
+      setTimeout(initPullToRefresh, 1000);
+    }
+    
+    // ============================================
     // CENTRALIZED REVIEW SYSTEM - Single Source of Truth
     // ============================================
     // All reviews come from backend API - never stored locally
