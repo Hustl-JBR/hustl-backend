@@ -19,6 +19,10 @@ class PullToRefresh {
   }
 
   init() {
+    // Pull-to-refresh disabled per user request
+    // It was causing choppy behavior and full page reloads
+    return;
+    
     // Only on mobile
     if (window.innerWidth > 768) return;
     
