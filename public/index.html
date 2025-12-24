@@ -20098,27 +20098,31 @@ async function renderJobs(reset = false) {
           statusBg = "#fef3c7";
           statusColor = "#92400e";
           statusBorder = "#fcd34d";
-          statusColor = "#856404";
         } else if (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') {
+          statusEmoji = "📅";
           statusText = "Scheduled";
-          statusBg = "#cce5ff";
-          statusColor = "#004085";
+          statusBg = "#dbeafe";
+          statusColor = "#1e40af";
+          statusBorder = "#93c5fd";
         } else if (isCompleted) {
+          statusEmoji = "✅";
           statusText = "Completed";
-          statusBg = "#d4edda";
-          statusColor = "#155724";
+          statusBg = "#dcfce7";
+          statusColor = "#166534";
+          statusBorder = "#86efac";
         }
         
         if (statusText) {
           const statusBadge = document.createElement("span");
           statusBadge.style.fontSize = "11px";
-          statusBadge.style.fontWeight = "500";
-          statusBadge.style.padding = "2px 8px";
-          statusBadge.style.borderRadius = "10px";
+          statusBadge.style.fontWeight = "600";
+          statusBadge.style.padding = "3px 8px";
+          statusBadge.style.borderRadius = "12px";
           statusBadge.style.background = statusBg;
           statusBadge.style.color = statusColor;
+          statusBadge.style.border = `1px solid ${statusBorder}`;
           statusBadge.style.flexShrink = "0";
-          statusBadge.textContent = statusText;
+          statusBadge.textContent = `${statusEmoji} ${statusText}`;
           jobRow.appendChild(statusBadge);
         }
         
