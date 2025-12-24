@@ -385,7 +385,7 @@
     .btn-primary, button[style*="background: #2563eb"], button[style*="background:#2563eb"], button[style*="background: var(--primary)"] {
       background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
       border: none !important;
-      border-radius: 10px !important;
+      border-radius: 12px !important;
       font-weight: 600 !important;
       box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25) !important;
       transition: all 0.2s ease !important;
@@ -394,6 +394,54 @@
     .btn-primary:active, button[style*="background: #2563eb"]:active {
       transform: scale(0.98) !important;
       box-shadow: 0 1px 4px rgba(59, 130, 246, 0.2) !important;
+    }
+    
+    /* Rounder buttons globally */
+    .btn, button {
+      border-radius: 12px !important;
+    }
+    
+    .btn-secondary {
+      border-radius: 12px !important;
+    }
+    
+    /* Pull-to-refresh indicator from mobile-core.js */
+    .pull-to-refresh {
+      position: fixed;
+      top: -60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #3b82f6;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.3s ease;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+    
+    .pull-to-refresh.visible {
+      transform: translateX(-50%) translateY(70px);
+    }
+    
+    .pull-spinner {
+      width: 18px;
+      height: 18px;
+      animation: none;
+    }
+    
+    .pull-to-refresh.refreshing .pull-spinner {
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
     }
 
     .app-shell {
