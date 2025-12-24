@@ -469,6 +469,11 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         console.log(`[HOURLY JOB - PHASE 2B] Payment capture:`);
         console.log(`[HOURLY JOB - PHASE 2B]   Original authorized: $${originalAuthorized.toFixed(2)}`);
         console.log(`[HOURLY JOB - PHASE 2B]   Actual amount to capture: $${actualJobAmount.toFixed(2)}`);
+        console.log(`[HOURLY JOB - PHASE 2B]   actualJobAmount type: ${typeof actualJobAmount}`);
+        console.log(`[HOURLY JOB - PHASE 2B]   actualJobAmount raw value: ${actualJobAmount}`);
+        console.log(`[HOURLY JOB - PHASE 2B]   actualHours: ${actualHours}`);
+        console.log(`[HOURLY JOB - PHASE 2B]   hourlyRate: ${hourlyRate}`);
+        console.log(`[HOURLY JOB - PHASE 2B]   Expected cents: ${Math.round(actualJobAmount * 100)}`);
         
         // Partial capture from single PaymentIntent
         await capturePaymentIntent(job.payment.providerId, actualJobAmount);
