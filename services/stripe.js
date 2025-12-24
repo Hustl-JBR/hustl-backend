@@ -57,6 +57,13 @@ async function createPaymentIntent({ amount, customerId, jobId, metadata, idempo
 async function capturePaymentIntent(paymentIntentId, amountToCapture = null, idempotencyKey = null) {
   const stripeClient = requireStripe();
   
+  // DEBUG: Log all inputs
+  console.log(`[STRIPE CAPTURE DEBUG] Called with:`);
+  console.log(`[STRIPE CAPTURE DEBUG]   paymentIntentId: ${paymentIntentId}`);
+  console.log(`[STRIPE CAPTURE DEBUG]   amountToCapture (raw): ${amountToCapture}`);
+  console.log(`[STRIPE CAPTURE DEBUG]   amountToCapture type: ${typeof amountToCapture}`);
+  console.log(`[STRIPE CAPTURE DEBUG]   idempotencyKey: ${idempotencyKey}`);
+  
   // Generate idempotency key if not provided
   // Pattern: capture-{paymentIntentId}-{timestamp}
   const key = idempotencyKey || `capture-${paymentIntentId}-${Date.now()}`;
@@ -65,13 +72,23 @@ async function capturePaymentIntent(paymentIntentId, amountToCapture = null, ide
     idempotencyKey: key
   };
   
-  // If amountToCapture is provided, do partial capture
+  // If amountToCapture is provided and valid, do partial capture
   // Otherwise, capture the full authorized amount
-  if (amountToCapture !== null) {
-    options.amount_to_capture = Math.round(amountToCapture * 100); // Convert to cents
+  // CRITICAL: Check for null, undefined, NaN, and ensure it's a positive number
+  if (amountToCapture !== null && amountToCapture !== undefined && !isNaN(amountToCapture) && amountToCapture > 0) {
+    const amountInCents = Math.round(amountToCapture * 100);
+    options.amount_to_capture = amountInCents;
+    console.log(`[STRIPE CAPTURE DEBUG]   Partial capture: $${amountToCapture} → ${amountInCents} cents`);
+  } else {
+    console.log(`[STRIPE CAPTURE DEBUG]   FULL CAPTURE (amountToCapture was ${amountToCapture})`);
   }
   
+  console.log(`[STRIPE CAPTURE DEBUG]   Final options:`, JSON.stringify(options));
+  
   const paymentIntent = await stripeClient.paymentIntents.capture(paymentIntentId, options);
+  
+  console.log(`[STRIPE CAPTURE DEBUG]   Result: captured ${paymentIntent.amount_received} cents (status: ${paymentIntent.status})`);
+  
   return paymentIntent;
 }
 
