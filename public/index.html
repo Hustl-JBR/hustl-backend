@@ -2023,16 +2023,18 @@
       flex: 1;
       overflow-y: auto;
       background: #fff;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
     }
     
     .conversation-item {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 12px 16px;
+      padding: 14px 16px;
       cursor: pointer;
-      transition: background 0.15s;
-      border-bottom: 0.5px solid #c6c6c8;
+      transition: all 0.2s ease;
+      border-bottom: 0.5px solid #e5e5ea;
       background: #fff;
       position: relative;
     }
