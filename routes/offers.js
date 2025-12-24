@@ -576,12 +576,22 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
     let jobAmount = 0;
     let maxAmount = 0; // For hourly jobs, this is the max possible charge
     
+    // PHASE 2B: Hourly Job Buffer Authorization
+    // For hourly jobs, authorize 1.5x the estimated hours as a buffer
+    // This eliminates the need for extension payments
+    const HOURLY_BUFFER_MULTIPLIER = 1.5;
+    
     if (offer.job.payType === 'hourly' && offer.job.hourlyRate && offer.job.estHours) {
       const hourlyRate = parseFloat(offer.job.hourlyRate);
-      const maxHours = parseInt(offer.job.estHours);
-      maxAmount = hourlyRate * maxHours; // Max possible charge
-      jobAmount = maxAmount; // Authorize the max amount, but we'll capture actual amount later
-      console.log(`[HOURLY JOB] Authorizing max amount: $${maxAmount} ($${hourlyRate}/hr × ${maxHours} hrs)`);
+      const estHours = parseInt(offer.job.estHours);
+      const maxHours = Math.ceil(estHours * HOURLY_BUFFER_MULTIPLIER); // Buffer: 1.5x estimated hours
+      maxAmount = hourlyRate * maxHours; // Max possible charge (with buffer)
+      jobAmount = maxAmount; // Authorize the buffered max amount
+      console.log(`[HOURLY JOB - PHASE 2B] Authorizing buffered amount: $${maxAmount.toFixed(2)}`);
+      console.log(`[HOURLY JOB - PHASE 2B]   Hourly rate: $${hourlyRate}/hr`);
+      console.log(`[HOURLY JOB - PHASE 2B]   Estimated hours: ${estHours} hrs`);
+      console.log(`[HOURLY JOB - PHASE 2B]   Max hours (1.5x buffer): ${maxHours} hrs`);
+      console.log(`[HOURLY JOB - PHASE 2B]   Customer will only be charged for ACTUAL hours worked`);
     } else {
       // For flat jobs: use proposedAmount if it exists (hustler's proposed price), otherwise use job.amount
       // If hustler proposed a price, that's what the customer is accepting
