@@ -1,0 +1,179 @@
+<analysis>**original_problem_statement:** The user wants to analyze and refactor a working web app with real user flows, payments, messaging, and job logic. The codebase is messy and contains bugs. The initial request was for **Phase 1: Analysis Only**, to identify broken areas and propose a clear improvement roadmap without modifying any code. The user provided a  file as the authoritative source of truth. After the analysis, the user approved a phased implementation plan to improve the application's stability and safety.
+
+**PRODUCT REQUIREMENTS:**
+- **Phase 1 (Completed):** Improve safety and stability.
+  - Implement Stripe webhooks and reconciliation.
+  - Add idempotency keys to all Stripe operations.
+  - Use database transactions for atomic operations.
+  - Extract fee calculations into a shared service.
+  - Standardize error responses.
+  - Document and enforce job state transitions.
+- **Phase 2 (Current):** Simplify payment logic.
+  - Eliminate fragile difference-only charges for post-acceptance price changes.
+  - For flat-rate jobs, prohibit post-acceptance price changes.
+  - For hourly jobs, use a single pre-authorization with a buffer (1.5x) and capture only the actual hours worked.
+- **Future Phases:**
+  - **Phase 3:** Improve Admin tooling (reconciliation, overrides).
+  - **Phase 4:** Polish UX, messaging, and navigation/state sync.
+
+**User's preferred language**: English
+
+**what currently exists?**
+The project is a Node.js/Express backend for a job marketplace application (Hustl). It uses Prisma as its ORM and integrates heavily with Stripe for payments, including Stripe Connect for user payouts.
+
+**Phase 1 (Safety & Stability) has been fully implemented and deployed.** This includes centralized fee calculations, standardized error handling, database transactions for critical payment flows, idempotency keys on Stripe calls, robust Stripe webhook handlers, a read-only payment reconciliation script, and documentation for the job state machine.
+
+The agent has also created a design proposal and a detailed implementation plan for Phase 2, which have been approved by the user.
+
+**Last working item**:
+- **Last item agent was working:** The agent created a detailed step-by-step implementation plan for the Phase 2 payment logic refactor. This was a plan-only task, and no code was implemented. The agent is now waiting for the user to review this plan and give the green light for implementation.
+- **Status:** NOT STARTED (Implementation is pending user approval of the plan).
+- **Agent Testing Done:** N/A (The last item was creating a markdown plan).
+- **Which testing method agent to use?** backend testing agent
+- **User Testing Done:** N/A
+
+**All Pending/In progress Issue list**:
+- **Issue 1: Fragile difference-only payment logic for price changes (P0)**
+  - **Description:** When a job's price is changed after acceptance, the system creates a new, separate PaymentIntent for the *difference* in price. This creates a fragmented payment history, complicates reconciliation and fee calculation, and has led to uncaptured payments.
+  - **Attempted fixes:** None. Per user instruction, the agent first created a design proposal and an implementation plan to address this architecturally rather than with a patch.
+  - **Next debug checklist:** This is now an implementation task, not a debugging one. The next step is to follow the plan outlined in .
+  - **Why fix this issue and what will be achieved with the fix?** This fix will create a single, authoritative PaymentIntent per job, simplifying the entire payment lifecycle. It will ensure Stripe is the source of truth, make reconciliation trivial, and guarantee correct fee calculations and payouts.
+  - **Status:** NOT STARTED (Implementation plan is created and awaiting user approval to begin coding).
+  - **Is recurring issue?** Y
+  - **Should Test frontend/backend/both after fix?** backend
+  - **Blocked on other issue:** None. Blocked on user approval of the implementation plan.
+
+**In progress Task List**:
+- **Task 1: Implement Phase 2 Payment Logic Refactor (P0)**
+  - **Where to resume:** Begin implementation based on the user-approved plan in .
+  - **What will be achieved with this?** The application's payment logic will be simplified and hardened. Post-acceptance price changes for flat-rate jobs will be prohibited. Hourly jobs will use a single, buffered pre-authorization, with the final amount captured upon completion.
+  - **Status:** NOT STARTED
+  - **Should Test frontend/backend/both after fix?** backend
+  - **Blocked on something:** User approval of the implementation plan document.
+
+**Upcoming and Future Tasks**
+- **Upcoming Tasks (Phase 2):**
+  - Implement logic to prohibit post-acceptance price changes for flat-rate jobs (in ).
+  - Implement logic for a single, buffered (1.5x) pre-authorization for hourly jobs (in  or ).
+  - Update job completion logic to capture only the actual hours worked from the pre-authorized amount for hourly jobs (in ).
+  - Perform minimal frontend updates to reflect the new business rules (e.g., disabling price change buttons after acceptance).
+- **Future Tasks (Phase 3 & 4):**
+  - **Phase 3:** Build admin tooling for reconciliation, manual overrides, and customer support.
+  - **Phase 4:** Improve UX for messaging and fix navigation/state-syncing issues.
+
+**Completed work in this session**
+- **Phase 1 - Safety & Stability (DONE & DEPLOYED):**
+  - **Task 1: Fee Calculation Service:** Created  and refactored all routes to use it.
+  - **Task 2: Standardized Error Service:** Created  and updated routes to use a consistent error format.
+  - **Task 3: Database Transactions:** Wrapped critical DB updates in  in  and .
+  - **Task 4: Stripe Idempotency Keys:** Hardened all Stripe API calls in  to prevent duplicate operations.
+  - **Bug Fix:** Fixed a tip payment bug by adding validation for the hustler's Stripe Connect account in .
+  - **Task 5: Stripe Webhook Enhancements:** Improved idempotency and logging in the webhook handlers in .
+  - **Task 6: Reconciliation Script:** Created a read-only script at  to detect DB/Stripe drift.
+  - **Task 7: State Machine Documentation:** Created  to document valid job status transitions.
+- **Phase 2 Planning (DONE):**
+  - Created  and got user approval.
+  - Created .
+
+**Earlier issues found/mentioned but not fixed**
+None. The agent has systematically addressed all issues raised by the user in a phased manner.
+
+**Known issue recurrence from previous fork**
+N/A
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+- **Backend:** Node.js, Express.js
+- **Database:** Prisma ORM (likely over PostgreSQL).
+- **Payments:** Stripe API, including PaymentIntents, Stripe Connect for payouts, and Webhooks for state synchronization.
+- **Architecture:** Service-oriented structure with distinct route files for different resources and service files for business logic.
+
+**key DB schema**
+- **Source:** 
+- **Key Models:**
+  - **User:** Represents both Customers and Hustlers. Has a relation to .
+  - **Job:** The central model. Contains details like , , , and relations to , , , .
+  - **Offer:** Represents a hustler's bid on a job.
+  - **Payment:** Tracks the Stripe PaymentIntent associated with a Job. Contains  (Stripe's  ID) and  (, , ).
+  - **Payout:** Tracks transfers made to a Hustler's Stripe Connect account.
+
+**changes in tech stack**
+None.
+
+**All files of reference**
+- : **Most important file.** Contains the approved plan for the immediate next steps.
+- : The overall guide to how the application should work.
+- : The source of truth for all data models.
+- , , : These files contain the core payment and job lifecycle logic that will be modified in Phase 2.
+- : The service containing all Stripe API interactions.
+
+**Areas that need refactoring**:
+The primary area for refactoring is the payment logic, which is the focus of the upcoming Phase 2 implementation. Specifically, removing the difference-only payment intent creation and standardizing the flow for flat-rate and hourly jobs.
+
+**key api endpoints**
+- : Create an offer for a job.
+- : Customer accepts an offer, triggering payment pre-authorization.
+- : Hustler verifies start code, job moves to .
+- : Customer verifies completion code, triggering payment capture and hustler payout.
+- : The fragile flow that is being removed in Phase 2.
+- : Endpoint to receive all Stripe events.
+
+**Critical Info for New Agent**
+- **You are starting Phase 2 implementation.** Phase 1 (Safety & Stability) is complete and deployed.
+- **Your primary task is to execute the plan in **. Do not deviate from it without proposing a change and getting user approval.
+- **The main goal is to eliminate difference-only payments.** Every job should have one, and only one, authoritative PaymentIntent in Stripe.
+- **All development and testing MUST be done assuming Stripe TEST MODE.** The user has been very explicit about this.
+- **The user controls all deployments.** Your job is to make small, incremental, safe commits. The user will deploy them via the Save to Github feature, which connects to their Railway deployment pipeline.
+- **The core business logic is considered sound.** Your role is to harden and simplify the implementation, not redesign the concept.
+
+**documents and test_reports created in this job**
+- /app/TASK_1_SUMMARY.md
+- /app/tests/pricing.test.js
+- /app/TASK_2_SUMMARY.md
+- /app/TASK_3_SUMMARY.md
+- /app/tests/stripe-idempotency.test.js
+- /app/TASK_4_SUMMARY.md
+- /app/TIP_BUG_FIX_SUMMARY.md
+- /app/TASK_5_SUMMARY.md
+- /app/scripts/reconcile-payments.js
+- /app/TASK_6_SUMMARY.md
+- /app/JOB_STATE_MACHINE.md
+- /app/TASK_7_SUMMARY.md
+- /app/PHASE_2_PAYMENT_DESIGN_PROPOSAL.md
+- /app/PHASE_2_IMPLEMENTATION_PLAN.md
+
+**Last 10 User Messages and any pending HUMAN messages**
+1.  **USER:** Approves the Phase 2 design proposal and requests a step-by-step implementation plan (no code).
+2.  **AGENT:** Acknowledges and creates the  document.
+3.  **AGENT:** Summarizes that the design proposal is ready for review.
+4.  **USER:** Kicks off Phase 2 by identifying a critical issue with post-acceptance price changes and requests a design proposal (no code) to fix it.
+5.  **AGENT:** Provides a final summary of Phase 1 completion and asks for next steps.
+6.  **USER:** Confirms all Phase 1 tasks (1-7) are deployed and the system is stable.
+7.  **AGENT:** Provides a final summary for Task 7 (Job State Machine Documentation) and states that Phase 1 is now complete.
+8.  **USER:** Approves Task 6, instructs the agent to deploy, and then proceed with Task 7.
+9.  **AGENT:** Provides a summary for Task 6 (Reconciliation Script) and asks for deployment approval.
+10. **USER:** Confirms Task 5 is complete and verified, and approves the agent to proceed with Task 6 (Read-only reconciliation).
+
+**Project Health Check:**
+- **Working:** Core application logic, Phase 1 stability features (webhooks, transactions, idempotency).
+- **Broken:** The post-acceptance price change flow (Flow B) is fragile and a known issue. This is the target of the upcoming Phase 2 work.
+- **Mocked:** N/A. The application works against Stripe's test mode.
+
+**3rd Party Integrations**
+- **Stripe:** Used for all payment processing, including escrow (pre-authorization and capture), refunds, and payouts to connected accounts (Stripe Connect). The user manages API keys in their Railway environment.
+
+**Testing status**
+- **Testing agent used after significant changes:** NO
+- **Troubleshoot agent used after agent stuck in loop:** NO
+- **Test files created:**
+  - 
+  - 
+- **Known regressions:** None.
+
+**Credentials to test flow:**
+All credentials (Stripe keys, database URL) are managed as environment variables in the user's Railway deployment. The agent does not have direct access to them and must write code that consumes them from . All Stripe operations should use test keys.
+
+**What agent forgot to execute**
+The agent has followed the user's instructions meticulously, including the phased approach and plan-only steps. Nothing was forgotten. The partial completion of Task 2 (Standardized Errors) was a conscious decision to provide a working foundation, which the user then approved for deployment.</analysis>
