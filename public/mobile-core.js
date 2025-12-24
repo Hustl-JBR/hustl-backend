@@ -370,24 +370,24 @@ class MobileBottomNav {
     const items = document.createElement('div');
     items.className = 'mobile-bottom-nav-items';
 
+    // Cleaner, minimal nav items - reduced to 5 for better UX
     const navItems = [
-      { id: 'home', icon: '🏠', label: 'Home', view: 'home' },
-      { id: 'jobs', icon: '💼', label: 'Jobs', view: 'jobs' },
-      { id: 'create', icon: '➕', label: 'Create', view: 'post' },
-      { id: 'manage', icon: '📋', label: 'Manage', view: 'manage-jobs' },
-      { id: 'messages', icon: '💬', label: 'Messages', view: 'messages' },
-      { id: 'profile', icon: '👤', label: 'Profile', view: 'profile' },
+      { id: 'home', icon: '<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>', label: 'Home', view: 'home' },
+      { id: 'jobs', icon: '<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>', label: 'Browse', view: 'jobs' },
+      { id: 'create', icon: '<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>', label: 'Post', view: 'post', isMain: true },
+      { id: 'manage', icon: '<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/></svg>', label: 'Manage', view: 'manage-jobs' },
+      { id: 'profile', icon: '<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>', label: 'Profile', view: 'profile' },
     ];
 
     navItems.forEach(item => {
       const navItem = document.createElement('button');
-      navItem.className = 'mobile-bottom-nav-item';
+      navItem.className = 'mobile-bottom-nav-item' + (item.isMain ? ' main-action' : '');
       navItem.dataset.view = item.view;
       navItem.id = `mobileNav${item.id.charAt(0).toUpperCase() + item.id.slice(1)}`;
 
       const icon = document.createElement('div');
       icon.className = 'mobile-bottom-nav-icon';
-      icon.textContent = item.icon;
+      icon.innerHTML = item.icon;
 
       const label = document.createElement('div');
       label.className = 'mobile-bottom-nav-label';
@@ -396,17 +396,121 @@ class MobileBottomNav {
       navItem.appendChild(icon);
       navItem.appendChild(label);
 
-      // Add badge for messages
-      if (item.view === 'messages') {
-        navItem.classList.add('mobile-bottom-nav-badge');
-        navItem.setAttribute('data-count', '0');
-      }
-
       items.appendChild(navItem);
     });
 
     this.nav.appendChild(items);
     document.body.appendChild(this.nav);
+    
+    // Add CSS for the new nav style
+    if (!document.getElementById('mobile-nav-styles-v2')) {
+      const style = document.createElement('style');
+      style.id = 'mobile-nav-styles-v2';
+      style.textContent = `
+        .mobile-bottom-nav {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-top: 1px solid rgba(0, 0, 0, 0.06);
+          padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)) 8px;
+          z-index: 9999;
+        }
+        
+        .mobile-bottom-nav-items {
+          display: flex;
+          justify-content: space-around;
+          align-items: center;
+          max-width: 500px;
+          margin: 0 auto;
+        }
+        
+        .mobile-bottom-nav-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 6px 12px;
+          background: none;
+          border: none;
+          color: #9ca3af;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border-radius: 12px;
+          min-width: 56px;
+        }
+        
+        .mobile-bottom-nav-item:active {
+          transform: scale(0.92);
+        }
+        
+        .mobile-bottom-nav-item.active {
+          color: #3b82f6;
+        }
+        
+        .mobile-bottom-nav-item.active .mobile-bottom-nav-icon {
+          transform: scale(1.1);
+        }
+        
+        .mobile-bottom-nav-item.main-action {
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          color: white;
+          border-radius: 14px;
+          padding: 10px 16px;
+          margin: -8px 4px 0 4px;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+        }
+        
+        .mobile-bottom-nav-item.main-action:active {
+          transform: scale(0.95);
+        }
+        
+        .mobile-bottom-nav-item.main-action .mobile-bottom-nav-label {
+          display: none;
+        }
+        
+        .mobile-bottom-nav-item.main-action .mobile-bottom-nav-icon {
+          margin-bottom: 0;
+        }
+        
+        .mobile-bottom-nav-icon {
+          margin-bottom: 2px;
+          transition: transform 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .mobile-bottom-nav-icon svg {
+          width: 22px;
+          height: 22px;
+        }
+        
+        .mobile-bottom-nav-label {
+          font-size: 10px;
+          font-weight: 500;
+          letter-spacing: -0.2px;
+        }
+        
+        /* Ensure content doesn't get hidden behind nav */
+        body {
+          padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
+        }
+        
+        @media (min-width: 769px) {
+          .mobile-bottom-nav {
+            display: none !important;
+          }
+          body {
+            padding-bottom: 0 !important;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
   }
 
   setupEventListeners() {
