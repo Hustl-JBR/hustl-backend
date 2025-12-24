@@ -20006,16 +20006,22 @@ async function renderJobs(reset = false) {
           item.classList.add("active");
         }
 
-        // Avatar (circular with profile pic or initials)
+        // Avatar (circular with profile pic - uses photoUrl or ui-avatars fallback)
         const avatarContainer = document.createElement("div");
         avatarContainer.className = "conversation-avatar";
-        if (otherUser && otherUser.profilePic) {
-          avatarContainer.innerHTML = `<img src="${otherUser.profilePic}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
-        } else if (otherUser && otherUser.name) {
-          avatarContainer.textContent = otherUser.name.charAt(0).toUpperCase();
-        } else {
-          avatarContainer.textContent = "?";
-        }
+        const userName = otherUser?.name || "User";
+        const userPhotoUrl = otherUser?.photoUrl || otherUser?.profilePic;
+        const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=3b82f6&color=fff&size=128&bold=true`;
+        
+        const avatarImg = document.createElement("img");
+        avatarImg.style.cssText = "width:100%;height:100%;border-radius:50%;object-fit:cover;";
+        avatarImg.src = userPhotoUrl || fallbackUrl;
+        avatarImg.alt = userName;
+        avatarImg.onerror = function() {
+          this.onerror = null;
+          this.src = fallbackUrl;
+        };
+        avatarContainer.appendChild(avatarImg);
         item.appendChild(avatarContainer);
         
         // Info section: Name on top, Job title below, status badge
