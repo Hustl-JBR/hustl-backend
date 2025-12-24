@@ -521,23 +521,9 @@
     }
     
     /* Pull-to-refresh indicator from mobile-core.js */
+    /* Pull-to-refresh disabled per user request */
     .pull-to-refresh {
-      position: fixed;
-      top: -60px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #3b82f6;
-      color: white;
-      padding: 12px 20px;
-      border-radius: 30px;
-      font-size: 14px;
-      font-weight: 600;
-      z-index: 9999;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: transform 0.3s ease;
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      display: none !important;
     }
     
     .pull-to-refresh.visible {
