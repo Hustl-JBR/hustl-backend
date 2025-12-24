@@ -1,6 +1,13 @@
 const Stripe = require('stripe');
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// Initialize Stripe only if key is provided - allows server to start without Stripe for testing
+const stripe = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY)
+  : null;
+
+if (!stripe) {
+  console.warn('⚠️  [services/stripe.js] Stripe not initialized - STRIPE_SECRET_KEY not provided.');
+}
 
 /**
  * Create a payment intent with idempotency protection
