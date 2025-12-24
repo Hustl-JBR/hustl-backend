@@ -34798,6 +34798,91 @@ try {
   </script>
   
   <!-- Performance-optimized script loading -->
+  <!-- Capacitor Native Bridge -->
+  <script type="module">
+    // Initialize Capacitor plugins for native app experience
+    import { Capacitor } from 'https://esm.sh/@capacitor/core@6';
+    import { SplashScreen } from 'https://esm.sh/@capacitor/splash-screen@6';
+    import { StatusBar, Style } from 'https://esm.sh/@capacitor/status-bar@6';
+    import { Keyboard } from 'https://esm.sh/@capacitor/keyboard@6';
+    import { App } from 'https://esm.sh/@capacitor/app@6';
+    
+    window.Capacitor = Capacitor;
+    window.isNativeApp = Capacitor.isNativePlatform();
+    
+    // Initialize native features
+    async function initCapacitor() {
+      if (!window.isNativeApp) {
+        console.log('[Capacitor] Running in web browser');
+        return;
+      }
+      
+      console.log('[Capacitor] Running in native app');
+      
+      try {
+        // Configure status bar
+        await StatusBar.setStyle({ style: Style.Dark });
+        await StatusBar.setBackgroundColor({ color: '#2563eb' });
+        console.log('[Capacitor] Status bar configured');
+      } catch (e) {
+        console.log('[Capacitor] Status bar not available:', e.message);
+      }
+      
+      try {
+        // Hide splash screen after app loads
+        await SplashScreen.hide();
+        console.log('[Capacitor] Splash screen hidden');
+      } catch (e) {
+        console.log('[Capacitor] Splash screen not available:', e.message);
+      }
+      
+      try {
+        // Handle keyboard events for better mobile UX
+        Keyboard.addListener('keyboardWillShow', (info) => {
+          document.body.style.paddingBottom = info.keyboardHeight + 'px';
+        });
+        Keyboard.addListener('keyboardWillHide', () => {
+          document.body.style.paddingBottom = '0px';
+        });
+        console.log('[Capacitor] Keyboard listeners added');
+      } catch (e) {
+        console.log('[Capacitor] Keyboard not available:', e.message);
+      }
+      
+      try {
+        // Handle app state changes (background/foreground)
+        App.addListener('appStateChange', ({ isActive }) => {
+          console.log('[Capacitor] App state:', isActive ? 'foreground' : 'background');
+          if (isActive && window.hustlWebSocket && window.hustlWebSocket.readyState !== WebSocket.OPEN) {
+            // Reconnect WebSocket when app comes to foreground
+            if (typeof initWebSocket === 'function') {
+              initWebSocket();
+            }
+          }
+        });
+        
+        // Handle back button on Android
+        App.addListener('backButton', ({ canGoBack }) => {
+          if (canGoBack) {
+            window.history.back();
+          } else {
+            // Optionally minimize app instead of closing
+            App.minimizeApp();
+          }
+        });
+        console.log('[Capacitor] App listeners added');
+      } catch (e) {
+        console.log('[Capacitor] App listeners not available:', e.message);
+      }
+    }
+    
+    // Run after DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initCapacitor);
+    } else {
+      initCapacitor();
+    }
+  </script>
   <script src="https://js.stripe.com/v3/"></script>
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
