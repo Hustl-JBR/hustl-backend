@@ -58,7 +58,14 @@ function validateEnvironment() {
 validateEnvironment();
 
 const Stripe = require("stripe");
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY || "");
+// Initialize Stripe only if key is provided - allows server to start without Stripe for testing
+const stripe = process.env.STRIPE_SECRET_KEY 
+  ? Stripe(process.env.STRIPE_SECRET_KEY)
+  : null;
+
+if (!stripe) {
+  console.warn('⚠️  Stripe not initialized - STRIPE_SECRET_KEY not provided. Payment features will not work.');
+}
 
 const app = express();
 const PORT = process.env.PORT || 8080;
