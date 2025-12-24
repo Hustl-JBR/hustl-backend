@@ -363,50 +363,65 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
       // Ensure minimum of 0.01 hours (36 seconds) to prevent zero charges
       if (actualHours < 0.01) {
         actualHours = 0.01;
-        console.log(`[HOURLY JOB] Time worked (${timeDiffMs}ms) is less than 0.01 hours, setting to minimum 0.01 hours`);
+        console.log(`[HOURLY JOB - PHASE 2B] Time worked (${timeDiffMs}ms) is less than 0.01 hours, setting to minimum 0.01 hours`);
       }
       
       // Round to 2 decimal places (e.g., 1.67 hours)
       actualHours = Math.round(actualHours * 100) / 100;
       
-      console.log(`[HOURLY JOB] Time calculation - startedAt: ${startedAt.toISOString()}, completionTime: ${completionTime.toISOString()}, timeDiffMs: ${timeDiffMs}ms (${(timeDiffMs/1000).toFixed(2)}s), actualHours: ${actualHours}`);
+      console.log(`[HOURLY JOB - PHASE 2B] Time calculation:`);
+      console.log(`[HOURLY JOB - PHASE 2B]   Started at: ${startedAt.toISOString()}`);
+      console.log(`[HOURLY JOB - PHASE 2B]   Completed at: ${completionTime.toISOString()}`);
+      console.log(`[HOURLY JOB - PHASE 2B]   Actual hours worked: ${actualHours} hrs`);
       
       // Calculate actual charge: actualHours × hourlyRate
       const hourlyRate = Number(job.hourlyRate);
       actualJobAmount = actualHours * hourlyRate;
       
-      console.log(`[HOURLY JOB] Amount calculation - actualHours: ${actualHours}, hourlyRate: $${hourlyRate}, actualJobAmount: $${actualJobAmount.toFixed(2)}`);
+      // PHASE 2B: Get max hours from requirements (1.5x buffer set during offer acceptance)
+      // Falls back to estHours for backward compatibility with older jobs
+      const maxHours = requirements.maxHours || job.estHours || 0;
       
-      // Get current max hours (may have been extended)
-      const currentMaxHours = job.estHours || 0;
+      console.log(`[HOURLY JOB - PHASE 2B] Amount calculation:`);
+      console.log(`[HOURLY JOB - PHASE 2B]   Actual hours: ${actualHours} hrs`);
+      console.log(`[HOURLY JOB - PHASE 2B]   Max hours (buffered): ${maxHours} hrs`);
+      console.log(`[HOURLY JOB - PHASE 2B]   Hourly rate: $${hourlyRate}/hr`);
+      console.log(`[HOURLY JOB - PHASE 2B]   Actual amount: $${actualJobAmount.toFixed(2)}`);
       
-      // HARD LIMIT: Block completion if max hours exceeded without extension
-      if (actualHours > currentMaxHours) {
+      // PHASE 2B: Reject completion if actual hours exceed buffered max
+      // No more extension payment flow - customer must cancel and rebook if more time needed
+      if (actualHours > maxHours) {
         return res.status(400).json({ 
-          error: `Cannot complete job: ${actualHours.toFixed(2)} hours worked exceeds max ${currentMaxHours} hours. Customer must extend hours first.`,
+          error: `Cannot complete job: ${actualHours.toFixed(2)} hours worked exceeds the authorized maximum of ${maxHours} hours.`,
+          code: 'BUFFER_EXCEEDED',
           actualHours: actualHours,
-          maxHours: currentMaxHours,
-          exceeded: true
+          maxHours: maxHours,
+          exceeded: true,
+          message: 'The job took longer than the authorized buffer. Please contact support or the customer to resolve this situation.',
+          resolution: [
+            'Contact the customer to discuss the situation',
+            'Customer may need to cancel this job and create a new one with more hours',
+            'Contact support for exceptional circumstances'
+          ]
         });
       }
       
-      // Calculate total authorized amount (original + extensions)
-      let totalAuthorizedAmount = Number(job.payment.amount);
-      const extensionPaymentIntents = requirements.extensionPaymentIntents || [];
+      // PHASE 2B: Single PaymentIntent validation
+      // The authorized amount should be: maxHours × hourlyRate + fees
+      const authorizedAmount = Number(job.payment.amount);
+      const maxAuthorizedJobAmount = maxHours * hourlyRate;
       
-      // Sum up all extension amounts
-      extensionPaymentIntents.forEach(ext => {
-        totalAuthorizedAmount += Number(ext.amount || 0);
-      });
-      
-      // Ensure we don't charge more than the total authorized amount
-      if (actualJobAmount > totalAuthorizedAmount) {
-        console.warn(`[HOURLY JOB] Actual amount ($${actualJobAmount}) exceeds total authorized ($${totalAuthorizedAmount}). Capping to authorized.`);
-        actualJobAmount = totalAuthorizedAmount;
-        actualHours = totalAuthorizedAmount / hourlyRate; // Recalculate hours based on cap
+      // Ensure we don't charge more than the authorized amount
+      if (actualJobAmount > maxAuthorizedJobAmount) {
+        console.warn(`[HOURLY JOB - PHASE 2B] Actual amount ($${actualJobAmount.toFixed(2)}) exceeds max authorized ($${maxAuthorizedJobAmount.toFixed(2)}). Capping to authorized.`);
+        actualJobAmount = maxAuthorizedJobAmount;
+        actualHours = maxHours;
       }
       
-      console.log(`[HOURLY JOB] Worked ${actualHours} hrs × $${hourlyRate}/hr = $${actualJobAmount.toFixed(2)} (max authorized: $${totalAuthorizedAmount.toFixed(2)})`);
+      console.log(`[HOURLY JOB - PHASE 2B] Summary:`);
+      console.log(`[HOURLY JOB - PHASE 2B]   Worked: ${actualHours} hrs × $${hourlyRate}/hr = $${actualJobAmount.toFixed(2)}`);
+      console.log(`[HOURLY JOB - PHASE 2B]   Max authorized: ${maxHours} hrs × $${hourlyRate}/hr = $${maxAuthorizedJobAmount.toFixed(2)}`);
+      console.log(`[HOURLY JOB - PHASE 2B]   Customer will be refunded: $${(maxAuthorizedJobAmount - actualJobAmount).toFixed(2)} (unused buffer)`);
     } else {
       // Flat job: use the payment amount (which should be the negotiated price if price was negotiated)
       // This is the amount that was actually authorized/paid, not the original job.amount
