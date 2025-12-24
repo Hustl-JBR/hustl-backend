@@ -6039,24 +6039,27 @@
     async function refreshCurrentView() {
       console.log('[Pull-to-Refresh] Refreshing current view:', activeView);
       
-      // Show refreshing toast
-      showJobStatusNotification('🔄 Refreshing...', 'Updating your view', 'info');
+      // Show instant skeleton loading state (no toast delay)
+      showSkeletonLoading();
       
-      // Clear caches
+      // Clear caches immediately
       if (typeof requestCache !== 'undefined') {
         requestCache.clear();
       }
       
       try {
-        // Refresh based on current view
+        // Refresh based on current view - run in parallel where possible
         switch (activeView) {
           case 'jobs':
             if (typeof renderJobs === 'function') await renderJobs(true);
             break;
           case 'manage-jobs':
-            if (typeof loadActiveJobs === 'function') await loadActiveJobs();
-            if (typeof loadPostedJobs === 'function') await loadPostedJobs();
-            if (typeof loadCompletedJobs === 'function') await loadCompletedJobs();
+            // Run all three in parallel
+            await Promise.all([
+              typeof loadActiveJobs === 'function' ? loadActiveJobs() : Promise.resolve(),
+              typeof loadPostedJobs === 'function' ? loadPostedJobs() : Promise.resolve(),
+              typeof loadCompletedJobs === 'function' ? loadCompletedJobs() : Promise.resolve()
+            ]);
             break;
           case 'messages':
             if (typeof refreshMessagesOnly === 'function') await refreshMessagesOnly();
@@ -6065,17 +6068,60 @@
             if (typeof loadNotifications === 'function') await loadNotifications();
             break;
           case 'profile':
-            // Re-render profile if possible
             if (typeof showView === 'function') showView('profile');
             break;
           default:
-            // Refresh jobs as fallback
             if (typeof renderJobs === 'function') await renderJobs(true);
         }
         
+        hideSkeletonLoading();
         console.log('[Pull-to-Refresh] Refresh complete');
       } catch (error) {
+        hideSkeletonLoading();
         console.error('[Pull-to-Refresh] Error:', error);
+      }
+    }
+    
+    // Show skeleton loading overlay (instant, no text)
+    function showSkeletonLoading() {
+      let loader = document.getElementById('app-skeleton-loader');
+      if (!loader) {
+        loader = document.createElement('div');
+        loader.id = 'app-skeleton-loader';
+        loader.style.cssText = `
+          position: fixed;
+          top: 60px;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+          background-size: 200% 100%;
+          animation: shimmer 1s infinite linear;
+          z-index: 9999;
+        `;
+        
+        // Add shimmer animation if not exists
+        if (!document.getElementById('shimmer-style')) {
+          const style = document.createElement('style');
+          style.id = 'shimmer-style';
+          style.textContent = `
+            @keyframes shimmer {
+              0% { background-position: -200% 0; }
+              100% { background-position: 200% 0; }
+            }
+          `;
+          document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(loader);
+      }
+      loader.style.display = 'block';
+    }
+    
+    function hideSkeletonLoading() {
+      const loader = document.getElementById('app-skeleton-loader');
+      if (loader) {
+        loader.style.display = 'none';
       }
     }
     
