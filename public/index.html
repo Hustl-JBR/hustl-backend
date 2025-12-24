@@ -5992,9 +5992,8 @@
     function updateLocalJobState(jobId, jobUpdate, paymentUpdate) {
       console.log(`[WebSocket] Updating local state for job ${jobId}`);
       
-      // Clear any cached job data
+      // Clear any cached job data immediately
       if (typeof requestCache !== 'undefined') {
-        // Clear cache entries related to jobs
         requestCache.forEach((value, key) => {
           if (key.includes('/jobs') || key.includes('/offers')) {
             requestCache.delete(key);
@@ -6002,26 +6001,26 @@
         });
       }
       
-      // Refresh the current view based on what's active
-      setTimeout(() => {
-        if (typeof activeView !== 'undefined') {
-          if (activeView === 'manage-jobs') {
-            // Refresh manage jobs tabs
-            if (typeof loadActiveJobs === 'function') loadActiveJobs();
-            if (typeof loadPostedJobs === 'function') loadPostedJobs();
-            if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
-          } else if (activeView === 'jobs') {
-            // Refresh job listings
-            if (typeof renderJobs === 'function') renderJobs(true);
-          }
+      // Refresh the current view IMMEDIATELY - no delay needed
+      // Server has already committed by the time WebSocket message arrives
+      if (typeof activeView !== 'undefined') {
+        if (activeView === 'manage-jobs') {
+          // Run refreshes in parallel for speed
+          Promise.all([
+            typeof loadActiveJobs === 'function' ? loadActiveJobs() : Promise.resolve(),
+            typeof loadPostedJobs === 'function' ? loadPostedJobs() : Promise.resolve(),
+            typeof loadCompletedJobs === 'function' ? loadCompletedJobs() : Promise.resolve()
+          ]).catch(console.error);
+        } else if (activeView === 'jobs') {
+          if (typeof renderJobs === 'function') renderJobs(true);
         }
-        
-        // If a job details modal is open for this job, refresh it
-        const jobModal = document.querySelector('[data-job-modal-id="' + jobId + '"]');
-        if (jobModal && typeof openJobDetails === 'function') {
-          openJobDetails(jobId);
-        }
-      }, 500); // Small delay to ensure server has committed changes
+      }
+      
+      // If a job details modal is open for this job, refresh it
+      const jobModal = document.querySelector('[data-job-modal-id="' + jobId + '"]');
+      if (jobModal && typeof openJobDetails === 'function') {
+        openJobDetails(jobId);
+      }
     }
     
     // Initialize WebSocket when user logs in
