@@ -308,6 +308,33 @@ router.post('/:id/messages', [
       data: { lastMessageAt: new Date() },
     });
 
+    // ============================================
+    // REAL-TIME SYNC: Send WebSocket notification to recipient
+    // ============================================
+    try {
+      const recipientId = thread.userAId === req.user.id ? thread.userBId : thread.userAId;
+      
+      if (recipientId && global.sendWebSocketMessage) {
+        global.sendWebSocketMessage(recipientId, {
+          type: 'new_message',
+          threadId: req.params.id,
+          jobId: thread.jobId,
+          message: {
+            id: message.id,
+            body: body,
+            senderId: req.user.id,
+            senderName: req.user.name,
+            createdAt: message.createdAt,
+            attachments: attachments
+          },
+          timestamp: new Date().toISOString()
+        });
+        console.log(`[WebSocket] Sent new_message to recipient ${recipientId}`);
+      }
+    } catch (wsError) {
+      console.error('[WebSocket] Error sending message notification:', wsError);
+    }
+
     // Send email notification to recipient (the other user in the thread)
     try {
       const recipientId = thread.userAId === req.user.id ? thread.userBId : thread.userAId;
