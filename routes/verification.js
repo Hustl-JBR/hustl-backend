@@ -260,6 +260,53 @@ router.post('/job/:jobId/verify-start', authenticate, async (req, res) => {
       jobStatus: 'IN_PROGRESS'
     });
 
+    // ============================================
+    // REAL-TIME SYNC: Notify both parties via WebSocket
+    // ============================================
+    try {
+      const wsPayload = {
+        type: 'job_status_update',
+        event: 'start_code_verified',
+        jobId: jobId,
+        jobTitle: updatedJob.title,
+        newStatus: 'IN_PROGRESS',
+        timestamp: new Date().toISOString(),
+        // Include relevant job details for UI update
+        job: {
+          id: jobId,
+          status: 'IN_PROGRESS',
+          startCodeVerified: true,
+          payType: updatedJob.payType,
+          hourlyRate: updatedJob.hourlyRate,
+          estHours: updatedJob.estHours,
+          amount: updatedJob.amount
+        }
+      };
+
+      // Notify the customer (job owner)
+      if (updatedJob.customerId && global.sendWebSocketMessage) {
+        global.sendWebSocketMessage(updatedJob.customerId, {
+          ...wsPayload,
+          role: 'customer',
+          message: `${updatedJob.hustler?.name || 'Your hustler'} has started working on "${updatedJob.title}"!`
+        });
+        console.log(`[WebSocket] Sent start_code_verified to customer ${updatedJob.customerId}`);
+      }
+
+      // Notify the hustler (confirmation of their action)
+      if (updatedJob.hustlerId && global.sendWebSocketMessage) {
+        global.sendWebSocketMessage(updatedJob.hustlerId, {
+          ...wsPayload,
+          role: 'hustler',
+          message: `Job "${updatedJob.title}" is now active! Time to work.`
+        });
+        console.log(`[WebSocket] Sent start_code_verified to hustler ${updatedJob.hustlerId}`);
+      }
+    } catch (wsError) {
+      // Don't fail the request if WebSocket notification fails
+      console.error('[WebSocket] Error sending start code notification:', wsError);
+    }
+
   } catch (error) {
     console.error('Error verifying start code:', error);
     return Errors.internal('Failed to verify start code').send(res);
