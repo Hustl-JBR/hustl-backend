@@ -14475,6 +14475,38 @@ async function renderJobs(reset = false) {
         
         modalContent.appendChild(actionsSection);
         
+        // Add sticky footer Apply button on mobile (if job is open and user is not owner)
+        if (window.innerWidth <= 768 && job.status === 'OPEN' && !isOwner && user && isHustler) {
+          const stickyFooter = document.createElement("div");
+          stickyFooter.id = "stickyApplyFooter";
+          stickyFooter.style.cssText = "position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #e5e7eb; box-shadow: 0 -4px 12px rgba(0,0,0,0.1); z-index: 10001; display: flex; gap: 12px; align-items: center;";
+          
+          const priceInfo = document.createElement("div");
+          priceInfo.style.cssText = "flex: 1;";
+          priceInfo.innerHTML = `
+            <div style="font-size: 0.8rem; color: #6b7280;">💰 Pay</div>
+            <div style="font-size: 1.25rem; font-weight: 700; color: #059669;">$${job.amount || '0'}</div>
+          `;
+          stickyFooter.appendChild(priceInfo);
+          
+          const footerApplyBtn = document.createElement("button");
+          footerApplyBtn.style.cssText = "flex: 2; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; padding: 14px 24px; border-radius: 14px; font-size: 1rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);";
+          footerApplyBtn.textContent = "Apply Now →";
+          footerApplyBtn.addEventListener("click", () => {
+            // Scroll to the apply form
+            const applyForm = actionsSection.querySelector('textarea') || actionsSection.querySelector('.btn-primary');
+            if (applyForm) {
+              applyForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              if (applyForm.tagName === 'TEXTAREA') {
+                setTimeout(() => applyForm.focus(), 500);
+              }
+            }
+          });
+          stickyFooter.appendChild(footerApplyBtn);
+          
+          modalOverlay.appendChild(stickyFooter);
+        }
+        
         modalOverlay.appendChild(modalContent);
         document.body.appendChild(modalOverlay);
         document.body.style.overflow = "hidden";
