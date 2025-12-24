@@ -833,6 +833,58 @@ router.post('/job/:jobId/verify-completion', authenticate, async (req, res) => {
         customerId: job.customerId,
         hustlerId: job.hustlerId
       });
+
+      // ============================================
+      // REAL-TIME SYNC: Notify both parties via WebSocket
+      // ============================================
+      try {
+        const wsPayload = {
+          type: 'job_status_update',
+          event: 'completion_code_verified',
+          jobId: jobId,
+          jobTitle: updatedJob.title,
+          newStatus: 'PAID',
+          timestamp: new Date().toISOString(),
+          // Include payment details for UI
+          payment: {
+            actualJobAmount: Number(actualJobAmount.toFixed(2)),
+            actualHours: job.payType === 'hourly' ? Number(actualHours.toFixed(2)) : null,
+            hustlerPayout: Number(hustlerPayout.toFixed(2)),
+            tipAmount: Number(tipAmount.toFixed(2))
+          },
+          // Include relevant job details for UI update
+          job: {
+            id: jobId,
+            status: 'PAID',
+            completionCodeVerified: true,
+            payType: job.payType
+          }
+        };
+
+        // Notify the customer
+        if (updatedJob.customerId && global.sendWebSocketMessage) {
+          global.sendWebSocketMessage(updatedJob.customerId, {
+            ...wsPayload,
+            role: 'customer',
+            message: `"${updatedJob.title}" is complete! Payment of $${actualJobAmount.toFixed(2)} released to ${updatedJob.hustler?.name || 'hustler'}.`
+          });
+          console.log(`[WebSocket] Sent completion_code_verified to customer ${updatedJob.customerId}`);
+        }
+
+        // Notify the hustler with payout details
+        if (updatedJob.hustlerId && global.sendWebSocketMessage) {
+          global.sendWebSocketMessage(updatedJob.hustlerId, {
+            ...wsPayload,
+            role: 'hustler',
+            message: `🎉 Job complete! You earned $${hustlerPayout.toFixed(2)} for "${updatedJob.title}"!`
+          });
+          console.log(`[WebSocket] Sent completion_code_verified to hustler ${updatedJob.hustlerId}`);
+        }
+      } catch (wsError) {
+        // Don't fail the request if WebSocket notification fails
+        console.error('[WebSocket] Error sending completion notification:', wsError);
+      }
+
     } catch (paymentError) {
       console.error('[JOB COMPLETION] ❌ CRITICAL ERROR in payment processing:', paymentError);
       console.error('[JOB COMPLETION] Error details:', {
