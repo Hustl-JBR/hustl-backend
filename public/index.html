@@ -607,7 +607,7 @@
       left: 0 !important;
       right: 0 !important;
       bottom: 0 !important;
-      background: linear-gradient(180deg, #f0f7ff 0%, #fff 100%) !important;
+      background: #fff !important;
       z-index: 10002 !important;
       padding: 0;
       flex-direction: column;
@@ -635,16 +635,16 @@
       justify-content: space-between;
       padding: 16px 20px;
       background: #fff;
-      border-bottom: 2px solid #e0e7ff;
+      border-bottom: 1px solid #e5e7eb;
       position: sticky;
       top: 0;
       z-index: 10;
     }
     
     .mobile-menu-header h2 {
-      font-size: 28px !important;
+      font-size: 24px !important;
       font-weight: 700 !important;
-      color: #1e40af !important;
+      color: #111827 !important;
       margin: 0 !important;
     }
     
@@ -653,15 +653,15 @@
       width: 36px !important;
       height: 36px !important;
       border-radius: 50% !important;
-      background: #dbeafe !important;
-      border: 2px solid #93c5fd !important;
+      background: #f3f4f6 !important;
+      border: none !important;
       font-size: 18px !important;
       font-weight: 400 !important;
       cursor: pointer !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
-      color: #1e40af !important;
+      color: #6b7280 !important;
       transition: all 0.2s ease;
       -webkit-tap-highlight-color: transparent;
       padding: 0;
@@ -672,7 +672,7 @@
     
     .mobile-menu-close:hover,
     .mobile-menu-close:active {
-      background: #bfdbfe !important;
+      background: #e5e7eb !important;
       transform: scale(0.95);
     }
     
@@ -686,62 +686,57 @@
     /* Menu items container */
     .mobile-menu-items {
       flex: 1;
-      padding: 12px 16px;
+      padding: 8px 16px;
     }
 
     .mobile-menu-item {
       width: 100%;
-      padding: 16px 20px;
-      font-size: 17px;
+      padding: 14px 16px;
+      font-size: 16px;
       font-weight: 500;
       text-align: left;
-      border-radius: 14px;
-      background: #fff;
-      border: 1.5px solid #e0e7ff;
+      border-radius: 12px;
+      background: transparent;
+      border: none;
       color: #374151;
       cursor: pointer;
-      transition: all 0.2s ease;
-      margin-bottom: 8px;
+      transition: all 0.15s ease;
+      margin-bottom: 4px;
       display: flex;
       align-items: center;
-      gap: 14px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      gap: 12px;
     }
     
     .mobile-menu-item .menu-emoji {
-      font-size: 22px;
+      font-size: 20px;
     }
 
     .mobile-menu-item:hover,
     .mobile-menu-item:active {
-      background: #eff6ff;
-      border-color: #93c5fd;
-      transform: translateX(4px);
+      background: #f3f4f6;
     }
     
     .mobile-menu-item.active {
-      background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
-      border-color: #3b82f6;
-      color: #1e40af;
+      background: #eff6ff;
+      color: #2563eb;
       font-weight: 600;
-      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
     }
 
     .mobile-menu .header-auth {
       padding: 16px;
-      background: #fff;
-      border-top: 2px solid #e0e7ff;
+      background: #f9fafb;
+      border-top: 1px solid #e5e7eb;
       margin-top: auto;
     }
 
     .mobile-menu .btn-login-header,
     .mobile-menu .btn-signup-header {
       width: 100%;
-      padding: 16px;
-      font-size: 17px;
+      padding: 14px;
+      font-size: 16px;
       font-weight: 600;
-      margin-bottom: 10px;
-      border-radius: 14px;
+      margin-bottom: 8px;
+      border-radius: 12px;
       z-index: 1;
       position: relative;
       opacity: 1 !important;
@@ -752,15 +747,13 @@
     }
     
     .mobile-menu .btn-signup-header {
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+      background: #2563eb !important;
       color: white !important;
       border: none !important;
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     }
     
     .mobile-menu .btn-signup-header:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+      background: #1d4ed8 !important;
     }
     
     /* Sign Out button specific styling */
@@ -769,40 +762,37 @@
     .mobile-menu .btn-signup-header[data-action="signout"] {
       background: #fff !important;
       color: #dc2626 !important;
-      border: 2px solid #fecaca !important;
+      border: 1px solid #fecaca !important;
       font-weight: 500 !important;
-      box-shadow: none !important;
     }
     
     .mobile-menu .btn-signup-header[data-action="signout"]:hover {
       background: #fef2f2 !important;
-      border-color: #f87171 !important;
     }
     
     .mobile-menu .btn-login-header {
       background: #fff !important;
       color: #2563eb !important;
-      border: 2px solid #93c5fd !important;
+      border: 1px solid #e5e7eb !important;
     }
     
     .mobile-menu .btn-login-header:hover {
-      background: #eff6ff !important;
-      border-color: #3b82f6 !important;
+      background: #f9fafb !important;
     }
     
     .mobile-menu-user-info {
-      padding: 14px 20px;
-      font-size: 15px;
-      color: #64748b;
+      padding: 12px 16px;
+      font-size: 14px;
+      color: #6b7280;
       text-align: center;
-      background: linear-gradient(135deg, #f0f9ff 0%, #fff 100%);
-      border-bottom: 1px solid #e0e7ff;
-      border-radius: 12px;
-      margin: 0 0 12px 0;
+      background: #fff;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      border: 1px solid #e5e7eb;
     }
     
     .mobile-menu-user-info strong {
-      color: #1e40af;
+      color: #111827;
     }
 
     /* Hide old auth pill */
