@@ -6276,8 +6276,12 @@
     }
     
     function handleTouchStart(e) {
-      // Only activate if at top of page
-      if (window.scrollY === 0) {
+      // Only activate if REALLY at top of page and not in a scrollable container
+      const target = e.target;
+      const scrollableParent = target.closest('.jobs-list, .conversations-list, .chat-messages-container, [style*="overflow"]');
+      if (scrollableParent && scrollableParent.scrollTop > 0) return;
+      
+      if (window.scrollY <= 5) {
         pullStartY = e.touches[0].clientY;
         isPulling = true;
       }
@@ -6289,19 +6293,15 @@
       const pullCurrentY = e.touches[0].clientY;
       const pullDistance = pullCurrentY - pullStartY;
       
-      // Only show indicator when pulling down from top
-      if (pullDistance > 30 && window.scrollY === 0) {
+      // Much higher threshold - only show indicator when pulling down significantly
+      if (pullDistance > 60 && window.scrollY <= 5) {
         if (pullRefreshIndicator) {
-          pullRefreshIndicator.style.top = Math.min(pullDistance - 60, 20) + 'px';
-          if (pullDistance > 100) {
+          pullRefreshIndicator.style.top = Math.min(pullDistance - 80, 20) + 'px';
+          if (pullDistance > 150) {
             pullRefreshIndicator.innerHTML = '↑ Release to refresh';
           } else {
             pullRefreshIndicator.innerHTML = '↓ Pull to refresh';
           }
-        }
-        // Prevent default scroll behavior when pulling
-        if (pullDistance > 10) {
-          e.preventDefault();
         }
       }
     }
@@ -6318,8 +6318,8 @@
         pullRefreshIndicator.style.top = '-60px';
       }
       
-      // If pulled far enough, refresh current view
-      if (pullDistance > 100 && window.scrollY === 0) {
+      // Much higher threshold - only refresh on deliberate long pull
+      if (pullDistance > 150 && window.scrollY <= 5) {
         refreshCurrentView();
       }
     }
