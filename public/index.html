@@ -5412,61 +5412,53 @@
 
           <!-- ABOUT / LEGAL VIEW -->
       <section id="view-about" style="display:none;">
-        <!-- Hero Section -->
-        <div style="text-align: center; padding: 2rem 1rem; max-width: 600px; margin: 0 auto;">
+        <!-- Unique About Header - Different from Home -->
+        <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%); border-radius: 24px; padding: 2rem 1.5rem; margin-bottom: 1.5rem; text-align: center; position: relative; overflow: hidden; box-shadow: 0 8px 32px rgba(30, 58, 138, 0.3);">
+          <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.1) 0%, transparent 50%); pointer-events: none;"></div>
           
-          <!-- Icon -->
-          <div style="width: 80px; height: 80px; margin: 1.5rem auto 1.25rem; background: var(--primary); border-radius: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-            </svg>
+          <div style="position: relative; z-index: 1;">
+            <div style="font-size: 4rem; margin-bottom: 0.75rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));">🚀</div>
+            <h1 style="font-size: 2rem; font-weight: 800; color: #fff; margin: 0 0 0.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+              About Hustl
+            </h1>
+            <p style="font-size: 1rem; color: rgba(255,255,255,0.9); margin: 0; line-height: 1.5; max-width: 400px; margin: 0 auto;">
+              Founded in Brentwood, TN – built to make it easier for people to help each other and earn real money.
+            </p>
           </div>
-          
-          <!-- Main Headline -->
-          <h1 style="font-size: 2rem; font-weight: 700; line-height: 1.2; margin: 0 0 0.75rem; color: var(--text-main);">
-            About Hustl
-          </h1>
-          
-          <!-- Subheadline -->
-          <p style="font-size: 1rem; color: var(--text-muted); margin: 0 0 1.5rem; line-height: 1.5;">
-            Founded in Brentwood, TN – built to make it easier for people to help each other and make real money on the side.
-          </p>
         </div>
         
-        <!-- About Cards -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+        <!-- About Cards - Horizontal Scroll on Mobile -->
+        <div style="display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 1rem; margin-bottom: 1rem; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory;">
           
           <!-- Card 1: For Customers -->
-          <div class="card" style="text-align: center; padding: 1.5rem; border: 1px solid rgba(251, 191, 36, 0.3); background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, transparent 100%);">
-            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">👥</div>
-            <h3 style="font-size: 1.1rem; margin: 0 0 0.5rem; color: #fbbf24;">For Customers</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0; line-height: 1.5;">If you need help – moving, yard work, errands – describe the job, set a fair price, and connect with someone local who's ready to work.</p>
+          <div style="flex: 0 0 280px; scroll-snap-align: start; text-align: center; padding: 1.5rem; border-radius: 20px; border: 2px solid #fbbf24; background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%); box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);">
+            <div style="font-size: 3rem; margin-bottom: 0.75rem;">👥</div>
+            <h3 style="font-size: 1.1rem; margin: 0 0 0.5rem; color: #b45309; font-weight: 700;">For Customers</h3>
+            <p style="color: #92400e; font-size: 0.9rem; margin: 0; line-height: 1.5;">Need help with moving, yard work, or errands? Post a job and connect with local hustlers ready to work!</p>
           </div>
           
           <!-- Card 2: For Hustlers -->
-          <div class="card" style="text-align: center; padding: 1.5rem; border: 1px solid rgba(59, 130, 246, 0.3); background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, transparent 100%);">
-            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">💪</div>
-            <h3 style="font-size: 1.1rem; margin: 0 0 0.5rem; color: var(--primary);">For Hustlers</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0; line-height: 1.5;">Turn your time, truck, or muscle into extra cash on your own schedule. No long-term commitments – just clear jobs and clear payouts.</p>
+          <div style="flex: 0 0 280px; scroll-snap-align: start; text-align: center; padding: 1.5rem; border-radius: 20px; border: 2px solid #3b82f6; background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);">
+            <div style="font-size: 3rem; margin-bottom: 0.75rem;">💪</div>
+            <h3 style="font-size: 1.1rem; margin: 0 0 0.5rem; color: #1e40af; font-weight: 700;">For Hustlers</h3>
+            <p style="color: #1e3a8a; font-size: 0.9rem; margin: 0; line-height: 1.5;">Turn your time, truck, or skills into extra cash. Work on your schedule with no commitments!</p>
           </div>
           
           <!-- Card 3: Our Mission -->
-          <div class="card" style="text-align: center; padding: 1.5rem; border: 1px solid rgba(34, 197, 94, 0.3); background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, transparent 100%);">
-            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🎯</div>
-            <h3 style="font-size: 1.1rem; margin: 0 0 0.5rem; color: var(--success);">Our Mission</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0; line-height: 1.5;">Supporting small, local businesses and solo operators. Help people build regular clients, repeat work, and real side-income in the community.</p>
+          <div style="flex: 0 0 280px; scroll-snap-align: start; text-align: center; padding: 1.5rem; border-radius: 20px; border: 2px solid #22c55e; background: linear-gradient(180deg, #f0fdf4 0%, #dcfce7 100%); box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);">
+            <div style="font-size: 3rem; margin-bottom: 0.75rem;">🎯</div>
+            <h3 style="font-size: 1.1rem; margin: 0 0 0.5rem; color: #166534; font-weight: 700;">Our Mission</h3>
+            <p style="color: #15803d; font-size: 0.9rem; margin: 0; line-height: 1.5;">Supporting local hustlers and small businesses. Build clients, repeat work, and real income!</p>
           </div>
         </div>
         
-        <!-- Main Message Card -->
-        <div class="card" style="margin-bottom: 1.5rem; border: 1px solid rgba(37, 99, 235, 0.2); background: white; text-align: center; padding: 2rem 1.5rem;">
-          <p style="margin: 0; font-weight: 600; color: var(--primary); font-size: 1.125rem; line-height: 1.6;">
+        <!-- Mission Statement - Glossy Card -->
+        <div style="margin-bottom: 1.5rem; border-radius: 20px; background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); text-align: center; padding: 2rem 1.5rem; position: relative; overflow: hidden; box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);">
+          <div style="position: absolute; top: 0; left: 0; right: 0; height: 50%; background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 100%); pointer-events: none;"></div>
+          <p style="margin: 0; font-weight: 600; color: #fff; font-size: 1.1rem; line-height: 1.6; position: relative; z-index: 1;">
             Post a job, apply to one, show up, do solid work, and get paid – that's the heart of Hustl.
           </p>
-          <p style="margin: 1rem 0 0 0; font-size: 1.25rem; font-weight: 600; color: var(--primary);">
+          <p style="margin: 1rem 0 0 0; font-size: 1.5rem; font-weight: 700; color: #fff; position: relative; z-index: 1;">
             Just keep hustling. 💪
           </p>
         </div>
