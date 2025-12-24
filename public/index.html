@@ -201,6 +201,99 @@
       -moz-osx-font-smoothing: grayscale;
     }
 
+    /* ============================================
+       APP-LIKE MOBILE OPTIMIZATIONS
+       ============================================ */
+    
+    /* Prevent overscroll bounce on iOS */
+    html, body {
+      overscroll-behavior: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Disable text selection on interactive elements for native feel */
+    button, a, .nav-item, .job-card, .tab-btn {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* Smooth scrolling everywhere */
+    * {
+      scroll-behavior: smooth;
+    }
+    
+    /* Active/pressed state for touch feedback */
+    button:active, .job-card:active, .nav-item:active, .tab-btn:active {
+      transform: scale(0.98);
+      opacity: 0.9;
+    }
+    
+    /* Fast transitions for snappy feel */
+    button, .job-card, .nav-item, .tab-btn, a {
+      transition: transform 0.1s ease, opacity 0.1s ease, background 0.15s ease, box-shadow 0.15s ease;
+    }
+    
+    /* Skeleton loading animation for cards */
+    .skeleton-loading {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.2s ease-in-out infinite;
+      border-radius: 8px;
+    }
+    
+    @keyframes skeleton-shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    
+    /* Page transition animation */
+    .view-container {
+      animation: viewFadeIn 0.2s ease-out;
+    }
+    
+    @keyframes viewFadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Card entrance animation */
+    .job-card {
+      animation: cardSlideIn 0.25s ease-out;
+      animation-fill-mode: both;
+    }
+    
+    .job-card:nth-child(1) { animation-delay: 0ms; }
+    .job-card:nth-child(2) { animation-delay: 30ms; }
+    .job-card:nth-child(3) { animation-delay: 60ms; }
+    .job-card:nth-child(4) { animation-delay: 90ms; }
+    .job-card:nth-child(5) { animation-delay: 120ms; }
+    
+    @keyframes cardSlideIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Bottom navigation - more app-like */
+    @media (max-width: 768px) {
+      .bottom-nav {
+        padding-bottom: env(safe-area-inset-bottom, 0.5rem) !important;
+        box-shadow: 0 -2px 20px rgba(0,0,0,0.08) !important;
+      }
+      
+      .nav-item {
+        transition: transform 0.15s ease !important;
+      }
+      
+      .nav-item:active {
+        transform: scale(0.92) !important;
+      }
+      
+      .nav-item.active {
+        transform: scale(1.05);
+      }
+    }
+
     /* Subtle background pattern */
     body::before {
       content: '';
