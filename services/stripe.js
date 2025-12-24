@@ -55,6 +55,8 @@ async function createPaymentIntent({ amount, customerId, jobId, metadata, idempo
  * @returns {Promise<object>} Captured payment intent
  */
 async function capturePaymentIntent(paymentIntentId, amountToCapture = null, idempotencyKey = null) {
+  const stripeClient = requireStripe();
+  
   // Generate idempotency key if not provided
   // Pattern: capture-{paymentIntentId}-{timestamp}
   const key = idempotencyKey || `capture-${paymentIntentId}-${Date.now()}`;
@@ -69,7 +71,7 @@ async function capturePaymentIntent(paymentIntentId, amountToCapture = null, ide
     options.amount_to_capture = Math.round(amountToCapture * 100); // Convert to cents
   }
   
-  const paymentIntent = await stripe.paymentIntents.capture(paymentIntentId, options);
+  const paymentIntent = await stripeClient.paymentIntents.capture(paymentIntentId, options);
   return paymentIntent;
 }
 
@@ -80,11 +82,13 @@ async function capturePaymentIntent(paymentIntentId, amountToCapture = null, ide
  * @returns {Promise<object>} Cancelled payment intent
  */
 async function voidPaymentIntent(paymentIntentId, idempotencyKey = null) {
+  const stripeClient = requireStripe();
+  
   // Generate idempotency key if not provided
   // Pattern: void-{paymentIntentId}-{timestamp}
   const key = idempotencyKey || `void-${paymentIntentId}-${Date.now()}`;
   
-  const paymentIntent = await stripe.paymentIntents.cancel(paymentIntentId, {
+  const paymentIntent = await stripeClient.paymentIntents.cancel(paymentIntentId, {
     idempotencyKey: key
   });
   return paymentIntent;
@@ -98,11 +102,13 @@ async function voidPaymentIntent(paymentIntentId, idempotencyKey = null) {
  * @returns {Promise<object>} Refund object
  */
 async function createRefund(paymentIntentId, amount, idempotencyKey = null) {
+  const stripeClient = requireStripe();
+  
   // Generate idempotency key if not provided
   // Pattern: refund-{paymentIntentId}-{timestamp}
   const key = idempotencyKey || `refund-${paymentIntentId}-${Date.now()}`;
   
-  const refund = await stripe.refunds.create({
+  const refund = await stripeClient.refunds.create({
     payment_intent: paymentIntentId,
     amount: amount ? Math.round(amount * 100) : undefined, // Partial refund if amount specified
   }, {
@@ -113,7 +119,9 @@ async function createRefund(paymentIntentId, amount, idempotencyKey = null) {
 
 // Stripe Connect: Create connected account for hustler
 async function createConnectedAccount(email, country = 'US') {
-  const account = await stripe.accounts.create({
+  const stripeClient = requireStripe();
+  
+  const account = await stripeClient.accounts.create({
     type: 'express',
     country: country,
     email: email,
