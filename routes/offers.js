@@ -684,6 +684,20 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
         completionCode,
       };
       
+      // PHASE 2B: Store maxHours for hourly jobs (1.5x buffer)
+      // This is used during completion to validate actual hours worked
+      if (offer.job.payType === 'hourly' && offer.job.hourlyRate && offer.job.estHours) {
+        const estHours = parseInt(offer.job.estHours);
+        const maxHours = Math.ceil(estHours * 1.5); // 1.5x buffer
+        updateData.requirements = {
+          ...jobRequirements,
+          maxHours: maxHours, // Store max authorized hours
+          bufferMultiplier: 1.5, // Store multiplier for reference
+          authorizedAt: new Date().toISOString()
+        };
+        console.log(`[HOURLY JOB - PHASE 2B] Stored maxHours=${maxHours} in job requirements`);
+      }
+      
       // If hustler proposed a price (and it's a flat job), update job.amount to match
       if (offer.proposedAmount && offer.proposedAmount > 0 && offer.job.payType === 'flat') {
         const originalAmount = parseFloat(offer.job.amount || 0);
@@ -699,7 +713,7 @@ router.post('/:id/accept', authenticate, requireRole('CUSTOMER'), async (req, re
       // If keepOpenUntilAccepted was set, job auto-closes now
       if (shouldAutoClose) {
         updateData.requirements = {
-          ...jobRequirements,
+          ...(updateData.requirements || jobRequirements),
           keepOpenUntilAccepted: false, // Clear the flag
         };
       }
