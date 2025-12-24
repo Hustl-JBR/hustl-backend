@@ -19999,98 +19999,14 @@ async function renderJobs(reset = false) {
           item.appendChild(unreadDot);
         }
 
-        // Archive/Delete buttons (hidden by default, shown on hover)
-        const actionsRow = document.createElement("div");
-        actionsRow.className = "conversation-actions";
-        
-        // Archive/Unarchive button
-        const archived = JSON.parse(localStorage.getItem("archivedConversations") || "[]");
-        const isArchived = archived.includes(job.id);
-        const archiveBtn = document.createElement("button");
-        archiveBtn.className = "small-btn";
-        archiveBtn.style.background = isArchived ? "#dbeafe" : "transparent";
-        archiveBtn.style.color = isArchived ? "#1e40af" : "#6b7280";
-        archiveBtn.style.padding = "0.375rem 0.5rem";
-        archiveBtn.style.fontSize = "0.75rem";
-        archiveBtn.style.border = "none";
-        archiveBtn.style.borderRadius = "4px";
-        archiveBtn.style.cursor = "pointer";
-        archiveBtn.textContent = isArchived ? "📦" : "📦";
-        archiveBtn.title = isArchived ? "Unarchive" : "Archive";
-        archiveBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const archived = JSON.parse(localStorage.getItem("archivedConversations") || "[]");
-          if (isArchived) {
-            const index = archived.indexOf(job.id);
-            if (index > -1) {
-              archived.splice(index, 1);
-              localStorage.setItem("archivedConversations", JSON.stringify(archived));
-              showToast("Conversation unarchived");
-              renderMessagesView();
-            }
-          } else {
-            if (!archived.includes(job.id)) {
-              archived.push(job.id);
-              localStorage.setItem("archivedConversations", JSON.stringify(archived));
-              showToast("Conversation archived");
-              renderMessagesView();
-            }
-          }
-        });
-        actionsRow.appendChild(archiveBtn);
-        
-        // Delete/Restore button (only allow delete for completed jobs)
-        const isDeleted = deleted.includes(job.id);
-        const isCompleted = job.status === 'PAID' || job.status === 'COMPLETED_BY_HUSTLER';
-        
-        const deleteBtn = document.createElement("button");
-        deleteBtn.className = "small-btn";
-        deleteBtn.style.background = isDeleted ? "#fecaca" : "transparent";
-        deleteBtn.style.color = isDeleted ? "#991b1b" : "#6b7280";
-        deleteBtn.style.padding = "0.375rem 0.5rem";
-        deleteBtn.style.fontSize = "0.75rem";
-        deleteBtn.style.border = "none";
-        deleteBtn.style.borderRadius = "4px";
-        deleteBtn.style.cursor = (isCompleted || isDeleted) ? "pointer" : "not-allowed";
-        deleteBtn.style.opacity = (isCompleted || isDeleted) ? "1" : "0.5";
-        deleteBtn.textContent = isDeleted ? "↩" : "🗑";
-        deleteBtn.title = isDeleted ? "Restore" : (isCompleted ? "Delete" : "Delete (only available for completed jobs)");
-        deleteBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const deleted = JSON.parse(localStorage.getItem("deletedConversations") || "[]");
-          if (isDeleted) {
-            const index = deleted.indexOf(job.id);
-            if (index > -1) {
-              deleted.splice(index, 1);
-              localStorage.setItem("deletedConversations", JSON.stringify(deleted));
-              showToast("Conversation restored");
-              renderMessagesView();
-            }
-          } else {
-            // Only allow deletion for completed jobs
-            if (!isCompleted) {
-              showToast("You can only delete conversations for completed jobs.");
-              return;
-            }
-            if (confirm("Delete this conversation? This will hide it from your messages list. You can restore it later.")) {
-              if (!deleted.includes(job.id)) {
-                deleted.push(job.id);
-                localStorage.setItem("deletedConversations", JSON.stringify(deleted));
-                showToast("Conversation deleted");
-                renderMessagesView();
-              }
-            }
-          }
-        });
-        actionsRow.appendChild(deleteBtn);
-        
-        item.appendChild(actionsRow);
-
+        // Click handler - open conversation
         item.addEventListener("click", () => {
           activeConversationJobId = job.id;
           activeConversationThreadId = thread.id;
           // Reset message tracking for new conversation
-          resetMessageTracking();
+          if (typeof resetMessageTracking === 'function') {
+            resetMessageTracking();
+          }
           
           // On mobile: hide conversation list and show chat area
           if (window.innerWidth <= 768) {
@@ -20116,8 +20032,8 @@ async function renderJobs(reset = false) {
       }
       } catch (error) {
         console.error("Error loading conversations:", error);
-        convList.innerHTML = "<div class='muted' style='padding: 2rem; text-align: center;'>Error loading conversations. Please try again.</div>";
-        convTitle.textContent = "Select a conversation";
+        convList.innerHTML = "<div style='padding: 40px 20px; text-align: center; color: #8e8e93;'>Error loading conversations. Please try again.</div>";
+        convTitle.textContent = "Messages";
         convSummary.textContent = "";
         convMessages.innerHTML = "";
       }
