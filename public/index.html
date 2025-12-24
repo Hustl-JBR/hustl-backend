@@ -4935,31 +4935,32 @@
 
       <!-- JOBS VIEW -->
       <section id="view-jobs" style="display:none;">
-        <!-- Filter Button & Sort Row - Centered -->
-        <div class="card" style="margin-bottom: 0.75rem; padding: 0.6rem 0.75rem; display: flex; justify-content: center; align-items: center; min-height: auto; border-radius: 16px;">
-          <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: nowrap; justify-content: center; width: 100%;" class="filters-sort-row">
+        <!-- Filter Bar - Clean Minimal -->
+        <div style="margin-bottom: 16px; padding: 12px 16px; background: #fff; border-bottom: 1px solid #f0f0f0;">
+          <div style="display: flex; gap: 12px; align-items: center;">
             <!-- Filters Button -->
-            <button id="filtersToggleBtn" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.85rem; height: 36px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1.5px solid #93c5fd; border-radius: 18px; font-size: 0.8rem; font-weight: 600; color: #1e40af; cursor: pointer; position: relative; box-sizing: border-box; flex-shrink: 0;" class="filters-btn-mobile">
-              <span>⚙️ Filters</span>
-              <span id="filtersBadge" style="display: none; background: #3b82f6; color: white; border-radius: 10px; padding: 0.1rem 0.4rem; font-size: 0.65rem; font-weight: 700; min-width: 16px; text-align: center;">0</span>
+            <button id="filtersToggleBtn" style="display: flex; align-items: center; gap: 6px; padding: 8px 14px; background: #f3f4f6; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; color: #374151; cursor: pointer;">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 4h18M3 12h18M3 20h18"/></svg>
+              Filters
+              <span id="filtersBadge" style="display: none; background: #111827; color: white; border-radius: 10px; padding: 1px 6px; font-size: 11px; font-weight: 600;">0</span>
             </button>
             
             <!-- Sort Dropdown -->
-            <select id="jobsSortSelect" style="padding: 0.45rem 0.6rem; height: 36px; border: 1.5px solid #e5e7eb; border-radius: 12px; font-size: 0.8rem; background: white; cursor: pointer; box-sizing: border-box; font-weight: 500; color: #374151; min-width: 100px; flex: 1; max-width: 140px;" class="sort-select-mobile">
-              <option value="newest">📅 Newest</option>
-              <option value="highest_paid">💰 Highest</option>
-              <option value="lowest_paid">💵 Lowest</option>
-              <option value="closest">📍 Closest</option>
-              <option value="soonest">⏰ Soonest</option>
+            <select id="jobsSortSelect" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: white; color: #374151; cursor: pointer; flex: 1; max-width: 140px;">
+              <option value="newest">Newest</option>
+              <option value="highest_paid">Highest Paid</option>
+              <option value="lowest_paid">Lowest Paid</option>
+              <option value="closest">Closest</option>
+              <option value="soonest">Soonest</option>
             </select>
             
-            <!-- List/Map Toggle - Compact Pill -->
-            <div style="display: flex; background: #f1f5f9; border-radius: 18px; padding: 2px; border: 1px solid #e2e8f0; flex-shrink: 0;" class="toggle-container-mobile">
-              <button id="jobsViewListBtn" class="jobs-view-toggle active" style="padding: 0.35rem 0.7rem; background: white; border: none; border-radius: 14px; font-size: 0.75rem; font-weight: 600; color: #1e40af; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.08); transition: all 0.2s;">
-                📋 List
+            <!-- List/Map Toggle -->
+            <div style="display: flex; background: #f3f4f6; border-radius: 8px; padding: 2px;">
+              <button id="jobsViewListBtn" class="jobs-view-toggle active" style="padding: 6px 12px; background: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; color: #111827; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                List
               </button>
-              <button id="jobsViewMapBtn" class="jobs-view-toggle" style="padding: 0.35rem 0.7rem; background: transparent; border: none; border-radius: 14px; font-size: 0.75rem; font-weight: 500; color: #64748b; cursor: pointer; transition: all 0.2s;">
-                🗺️ Map
+              <button id="jobsViewMapBtn" class="jobs-view-toggle" style="padding: 6px 12px; background: transparent; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; color: #6b7280; cursor: pointer;">
+                Map
               </button>
             </div>
           </div>
