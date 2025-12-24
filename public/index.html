@@ -7172,6 +7172,11 @@
       // Update window.activeView for fallback access
       window.activeView = view;
       
+      // Update bottom navigation active state
+      if (window.updateBottomNav) {
+        window.updateBottomNav(view);
+      }
+      
       // Hide ALL sections first including auth section
       document
         .querySelectorAll("[id^='view-']")
