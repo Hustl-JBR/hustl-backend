@@ -358,17 +358,16 @@
       }
     }
     
-    /* Fixed App Bottom Navigation - Starbucks Style */
+    /* Fixed App Bottom Navigation - Clean Minimal Style */
     .app-bottom-nav {
       display: none;
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
-      height: 70px;
+      height: 56px;
       background: #fff;
-      border-top: 1px solid #e5e7eb;
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+      border-top: 1px solid #f0f0f0;
       z-index: 9998;
       padding-bottom: env(safe-area-inset-bottom, 0px);
     }
@@ -377,8 +376,7 @@
       .app-bottom-nav {
         display: flex;
         justify-content: space-around;
-        align-items: flex-start;
-        padding-top: 8px;
+        align-items: center;
       }
     }
     
@@ -391,95 +389,51 @@
       flex: 1;
       background: none;
       border: none;
-      padding: 4px 0;
+      padding: 6px 0;
       cursor: pointer;
       color: #9ca3af;
-      transition: all 0.2s ease;
+      transition: color 0.15s ease;
       position: relative;
       -webkit-tap-highlight-color: transparent;
     }
     
     .nav-tab .nav-icon {
-      width: 24px;
-      height: 24px;
-      stroke-width: 2;
-      transition: all 0.2s ease;
+      width: 22px;
+      height: 22px;
+      transition: color 0.15s ease;
     }
     
     .nav-tab span {
       font-size: 10px;
       font-weight: 500;
-      transition: all 0.2s ease;
+      letter-spacing: -0.2px;
     }
     
     .nav-tab:active {
-      transform: scale(0.92);
+      opacity: 0.7;
     }
     
     .nav-tab.active {
-      color: #2563eb;
+      color: #111827;
     }
     
     .nav-tab.active .nav-icon {
-      stroke-width: 2.5;
+      stroke-width: 2;
     }
     
-    .nav-tab.active span {
-      font-weight: 600;
-    }
-    
-    /* Center Post Button - Floating Style */
-    .nav-tab-post {
-      position: relative;
-      color: #fff;
-    }
-    
-    .nav-post-btn {
-      width: 50px;
-      height: 50px;
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-top: -20px;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
-      transition: all 0.2s ease;
-    }
-    
-    .nav-post-btn svg {
-      width: 24px;
-      height: 24px;
-      stroke: white;
-    }
-    
-    .nav-tab-post:active .nav-post-btn {
-      transform: scale(0.92);
-      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
-    }
-    
-    .nav-tab-post span {
-      color: #6b7280;
-      margin-top: 4px;
-    }
-    
-    .nav-tab-post.active span {
-      color: #2563eb;
-    }
-    
-    /* Badge for unread messages */
+    /* Badge for notifications */
     .nav-badge {
       position: absolute;
-      top: 0;
+      top: 2px;
       right: 50%;
-      transform: translateX(12px);
+      transform: translateX(10px);
       background: #ef4444;
       color: white;
-      font-size: 10px;
-      font-weight: 700;
-      padding: 1px 5px;
-      border-radius: 10px;
-      min-width: 16px;
+      font-size: 9px;
+      font-weight: 600;
+      padding: 1px 4px;
+      border-radius: 8px;
+      min-width: 14px;
       text-align: center;
     }
     
