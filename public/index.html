@@ -5515,6 +5515,331 @@
     const API_BASE = BACKEND_URL;
     
     // ============================================
+    // WEBSOCKET CLIENT - Real-time State Sync
+    // ============================================
+    let hustlWebSocket = null;
+    let wsReconnectAttempts = 0;
+    const WS_MAX_RECONNECT_ATTEMPTS = 5;
+    const WS_RECONNECT_DELAY = 3000; // 3 seconds
+    
+    function initWebSocket() {
+      const token = localStorage.getItem('hustl_token');
+      if (!token) {
+        console.log('[WebSocket] No auth token, skipping connection');
+        return;
+      }
+      
+      // Convert HTTP URL to WebSocket URL
+      const wsUrl = BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://') + '/ws?token=' + encodeURIComponent(token);
+      
+      try {
+        hustlWebSocket = new WebSocket(wsUrl);
+        
+        hustlWebSocket.onopen = function() {
+          console.log('[WebSocket] Connected successfully');
+          wsReconnectAttempts = 0; // Reset reconnect counter on successful connection
+        };
+        
+        hustlWebSocket.onmessage = function(event) {
+          try {
+            const data = JSON.parse(event.data);
+            console.log('[WebSocket] Received:', data.type, data);
+            
+            // Handle job status updates
+            if (data.type === 'job_status_update') {
+              handleJobStatusUpdate(data);
+            }
+          } catch (parseError) {
+            console.error('[WebSocket] Error parsing message:', parseError);
+          }
+        };
+        
+        hustlWebSocket.onclose = function(event) {
+          console.log('[WebSocket] Connection closed:', event.code, event.reason);
+          hustlWebSocket = null;
+          
+          // Attempt to reconnect if not a normal closure
+          if (event.code !== 1000 && wsReconnectAttempts < WS_MAX_RECONNECT_ATTEMPTS) {
+            wsReconnectAttempts++;
+            console.log(`[WebSocket] Reconnecting in ${WS_RECONNECT_DELAY/1000}s (attempt ${wsReconnectAttempts}/${WS_MAX_RECONNECT_ATTEMPTS})`);
+            setTimeout(initWebSocket, WS_RECONNECT_DELAY);
+          }
+        };
+        
+        hustlWebSocket.onerror = function(error) {
+          console.error('[WebSocket] Error:', error);
+        };
+      } catch (wsError) {
+        console.error('[WebSocket] Failed to create connection:', wsError);
+      }
+    }
+    
+    // Handle job status updates from WebSocket
+    function handleJobStatusUpdate(data) {
+      const { event, jobId, newStatus, role, message, job, payment } = data;
+      
+      console.log(`[WebSocket] Job ${jobId} status update: ${event} -> ${newStatus} (role: ${role})`);
+      
+      // Show appropriate notification based on event and role
+      if (event === 'start_code_verified') {
+        if (role === 'hustler') {
+          // Hustler gets a stronger confirmation modal
+          showJobStartedModal(data);
+        } else if (role === 'customer') {
+          // Customer gets a notification that job has started
+          showJobStatusNotification('🚀 Job Started!', message, 'info');
+        }
+      } else if (event === 'completion_code_verified') {
+        if (role === 'hustler') {
+          // Hustler gets a celebration modal with payout info
+          showJobCompletedModal(data);
+        } else if (role === 'customer') {
+          // Customer gets a notification that job is complete
+          showJobStatusNotification('✅ Job Complete!', message, 'success');
+        }
+      }
+      
+      // Update local job state and re-render UI
+      updateLocalJobState(jobId, job, payment);
+    }
+    
+    // Show a notification banner (mobile-friendly, non-blocking)
+    function showJobStatusNotification(title, message, type = 'info') {
+      // Remove any existing notification
+      const existingNotification = document.getElementById('ws-notification');
+      if (existingNotification) {
+        existingNotification.remove();
+      }
+      
+      const bgColor = type === 'success' ? '#10b981' : type === 'info' ? '#3b82f6' : '#f59e0b';
+      
+      const notification = document.createElement('div');
+      notification.id = 'ws-notification';
+      notification.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: ${bgColor};
+        color: white;
+        padding: 1rem;
+        z-index: 10000;
+        text-align: center;
+        animation: slideDown 0.3s ease-out;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      `;
+      notification.innerHTML = `
+        <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 0.25rem;">${title}</div>
+        <div style="font-size: 0.9rem; opacity: 0.95;">${message}</div>
+      `;
+      
+      // Add animation keyframes if not already added
+      if (!document.getElementById('ws-notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'ws-notification-styles';
+        style.textContent = `
+          @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+          }
+          @keyframes slideUp {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(-100%); opacity: 0; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      document.body.appendChild(notification);
+      
+      // Auto-dismiss after 5 seconds
+      setTimeout(() => {
+        notification.style.animation = 'slideUp 0.3s ease-in forwards';
+        setTimeout(() => notification.remove(), 300);
+      }, 5000);
+      
+      // Click to dismiss
+      notification.addEventListener('click', () => {
+        notification.style.animation = 'slideUp 0.3s ease-in forwards';
+        setTimeout(() => notification.remove(), 300);
+      });
+    }
+    
+    // Show modal for hustler when job starts (stronger confirmation)
+    function showJobStartedModal(data) {
+      const { jobTitle, message } = data;
+      
+      // Remove any existing modal
+      const existingModal = document.getElementById('ws-job-modal');
+      if (existingModal) existingModal.remove();
+      
+      const modal = document.createElement('div');
+      modal.id = 'ws-job-modal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+        padding: 1rem;
+      `;
+      
+      modal.innerHTML = `
+        <div style="background: white; border-radius: 16px; padding: 2rem; max-width: 400px; width: 100%; text-align: center; animation: modalPop 0.3s ease-out;">
+          <div style="font-size: 4rem; margin-bottom: 1rem;">🚀</div>
+          <div style="font-size: 1.5rem; font-weight: 700; color: #1f2937; margin-bottom: 0.5rem;">Job Started!</div>
+          <div style="font-size: 1.1rem; color: #4b5563; margin-bottom: 1.5rem;">${jobTitle || 'Your job'}</div>
+          <div style="font-size: 0.95rem; color: #6b7280; margin-bottom: 1.5rem; line-height: 1.5;">
+            The timer is now running. Do great work!<br>
+            Ask for the <strong>completion code</strong> when you're done.
+          </div>
+          <button onclick="this.closest('#ws-job-modal').remove()" style="
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.875rem 2rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+          ">Let's Go! 💪</button>
+        </div>
+      `;
+      
+      // Add modal animation
+      if (!document.getElementById('ws-modal-styles')) {
+        const style = document.createElement('style');
+        style.id = 'ws-modal-styles';
+        style.textContent = `
+          @keyframes modalPop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      document.body.appendChild(modal);
+    }
+    
+    // Show modal for hustler when job completes (celebration with payout)
+    function showJobCompletedModal(data) {
+      const { jobTitle, payment, message } = data;
+      const payout = payment?.hustlerPayout || 0;
+      const hours = payment?.actualHours;
+      
+      // Remove any existing modal
+      const existingModal = document.getElementById('ws-job-modal');
+      if (existingModal) existingModal.remove();
+      
+      const modal = document.createElement('div');
+      modal.id = 'ws-job-modal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+        padding: 1rem;
+      `;
+      
+      modal.innerHTML = `
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 16px; padding: 2rem; max-width: 400px; width: 100%; text-align: center; animation: modalPop 0.3s ease-out; color: white;">
+          <div style="font-size: 4rem; margin-bottom: 1rem;">🎉</div>
+          <div style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Job Complete!</div>
+          <div style="font-size: 1rem; opacity: 0.9; margin-bottom: 1.5rem;">${jobTitle || 'Your job'}</div>
+          <div style="background: rgba(255,255,255,0.2); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;">
+            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">You earned</div>
+            <div style="font-size: 2.5rem; font-weight: 700;">$${payout.toFixed(2)}</div>
+            ${hours ? `<div style="font-size: 0.85rem; opacity: 0.9; margin-top: 0.5rem;">${hours.toFixed(2)} hours worked</div>` : ''}
+          </div>
+          <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 1.5rem;">
+            Payment is on its way to your account! 💰
+          </div>
+          <button onclick="this.closest('#ws-job-modal').remove()" style="
+            background: white;
+            color: #059669;
+            border: none;
+            padding: 0.875rem 2rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+          ">Awesome! 🙌</button>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+    }
+    
+    // Update local job state and refresh UI
+    function updateLocalJobState(jobId, jobUpdate, paymentUpdate) {
+      console.log(`[WebSocket] Updating local state for job ${jobId}`);
+      
+      // Clear any cached job data
+      if (typeof requestCache !== 'undefined') {
+        // Clear cache entries related to jobs
+        requestCache.forEach((value, key) => {
+          if (key.includes('/jobs') || key.includes('/offers')) {
+            requestCache.delete(key);
+          }
+        });
+      }
+      
+      // Refresh the current view based on what's active
+      setTimeout(() => {
+        if (typeof activeView !== 'undefined') {
+          if (activeView === 'manage-jobs') {
+            // Refresh manage jobs tabs
+            if (typeof loadActiveJobs === 'function') loadActiveJobs();
+            if (typeof loadPostedJobs === 'function') loadPostedJobs();
+            if (typeof loadCompletedJobs === 'function') loadCompletedJobs();
+          } else if (activeView === 'jobs') {
+            // Refresh job listings
+            if (typeof renderJobs === 'function') renderJobs(true);
+          }
+        }
+        
+        // If a job details modal is open for this job, refresh it
+        const jobModal = document.querySelector('[data-job-modal-id="' + jobId + '"]');
+        if (jobModal && typeof openJobDetails === 'function') {
+          openJobDetails(jobId);
+        }
+      }, 500); // Small delay to ensure server has committed changes
+    }
+    
+    // Initialize WebSocket when user logs in
+    window.addEventListener('hustl_auth_change', function(event) {
+      if (event.detail && event.detail.loggedIn) {
+        initWebSocket();
+      } else {
+        // Close WebSocket on logout
+        if (hustlWebSocket) {
+          hustlWebSocket.close(1000, 'User logged out');
+          hustlWebSocket = null;
+        }
+      }
+    });
+    
+    // Also initialize on page load if already logged in
+    if (localStorage.getItem('hustl_token')) {
+      // Delay slightly to ensure page is ready
+      setTimeout(initWebSocket, 1000);
+    }
+    
+    // ============================================
     // CENTRALIZED REVIEW SYSTEM - Single Source of Truth
     // ============================================
     // All reviews come from backend API - never stored locally
