@@ -482,6 +482,41 @@
       min-width: 16px;
       text-align: center;
     }
+    
+    /* Manage Jobs Pill Tabs */
+    .manage-tabs-container {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    
+    .manage-pill-tab {
+      padding: 10px 16px;
+      background: #f3f4f6;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #374151;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .manage-pill-tab:hover {
+      background: #e5e7eb;
+    }
+    
+    .manage-pill-tab.active {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      border-color: #059669;
+      color: white;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
+    }
+      border-radius: 10px;
+      min-width: 16px;
+      text-align: center;
+    }
 
     /* Clean, subtle background */
     body::before {
