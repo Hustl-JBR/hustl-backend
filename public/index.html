@@ -607,7 +607,7 @@
       left: 0 !important;
       right: 0 !important;
       bottom: 0 !important;
-      background: #f8f8f8 !important;
+      background: linear-gradient(180deg, #f0f7ff 0%, #fff 100%) !important;
       z-index: 10002 !important;
       padding: 0;
       flex-direction: column;
@@ -635,7 +635,7 @@
       justify-content: space-between;
       padding: 16px 20px;
       background: #fff;
-      border-bottom: 1px solid #e5e5e5;
+      border-bottom: 2px solid #e0e7ff;
       position: sticky;
       top: 0;
       z-index: 10;
@@ -644,24 +644,24 @@
     .mobile-menu-header h2 {
       font-size: 28px !important;
       font-weight: 700 !important;
-      color: #000 !important;
+      color: #1e40af !important;
       margin: 0 !important;
     }
     
     /* Close button for mobile menu */
     .mobile-menu-close {
-      width: 32px !important;
-      height: 32px !important;
+      width: 36px !important;
+      height: 36px !important;
       border-radius: 50% !important;
-      background: #e5e5e5 !important;
-      border: none !important;
+      background: #dbeafe !important;
+      border: 2px solid #93c5fd !important;
       font-size: 18px !important;
       font-weight: 400 !important;
       cursor: pointer !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
-      color: #666 !important;
+      color: #1e40af !important;
       transition: all 0.2s ease;
       -webkit-tap-highlight-color: transparent;
       padding: 0;
@@ -672,7 +672,7 @@
     
     .mobile-menu-close:hover,
     .mobile-menu-close:active {
-      background: #d5d5d5 !important;
+      background: #bfdbfe !important;
       transform: scale(0.95);
     }
     
@@ -686,43 +686,51 @@
     /* Menu items container */
     .mobile-menu-items {
       flex: 1;
-      padding: 8px 12px;
-      background: #f8f8f8;
+      padding: 12px 16px;
     }
 
     .mobile-menu-item {
       width: 100%;
       padding: 16px 20px;
       font-size: 17px;
-      font-weight: 400;
+      font-weight: 500;
       text-align: left;
-      border-radius: 12px;
+      border-radius: 14px;
       background: #fff;
-      border: none;
-      color: #1c1c1e;
+      border: 1.5px solid #e0e7ff;
+      color: #374151;
       cursor: pointer;
-      transition: all 0.15s ease;
-      margin-bottom: 2px;
+      transition: all 0.2s ease;
+      margin-bottom: 8px;
       display: flex;
       align-items: center;
       gap: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    
+    .mobile-menu-item .menu-emoji {
+      font-size: 22px;
     }
 
     .mobile-menu-item:hover,
     .mobile-menu-item:active {
-      background: #f0f0f0;
+      background: #eff6ff;
+      border-color: #93c5fd;
+      transform: translateX(4px);
     }
     
     .mobile-menu-item.active {
-      background: #007aff15;
-      color: #007aff;
-      font-weight: 500;
+      background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+      border-color: #3b82f6;
+      color: #1e40af;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
     }
 
     .mobile-menu .header-auth {
       padding: 16px;
       background: #fff;
-      border-top: 1px solid #e5e5e5;
+      border-top: 2px solid #e0e7ff;
       margin-top: auto;
     }
 
@@ -732,20 +740,27 @@
       padding: 16px;
       font-size: 17px;
       font-weight: 600;
-      margin-bottom: 8px;
-      border-radius: 12px;
+      margin-bottom: 10px;
+      border-radius: 14px;
       z-index: 1;
       position: relative;
       opacity: 1 !important;
       visibility: visible !important;
       display: block !important;
       text-align: center;
+      transition: all 0.2s ease;
     }
     
     .mobile-menu .btn-signup-header {
-      background: #007aff !important;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
       color: white !important;
       border: none !important;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    
+    .mobile-menu .btn-signup-header:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
     }
     
     /* Sign Out button specific styling */
@@ -753,24 +768,41 @@
     .mobile-menu .btn-signup-header[onclick*="SignOut"],
     .mobile-menu .btn-signup-header[data-action="signout"] {
       background: #fff !important;
-      color: #ff3b30 !important;
-      border: 1px solid #e5e5e5 !important;
-      font-weight: 400 !important;
+      color: #dc2626 !important;
+      border: 2px solid #fecaca !important;
+      font-weight: 500 !important;
+      box-shadow: none !important;
+    }
+    
+    .mobile-menu .btn-signup-header[data-action="signout"]:hover {
+      background: #fef2f2 !important;
+      border-color: #f87171 !important;
     }
     
     .mobile-menu .btn-login-header {
       background: #fff !important;
-      color: #007aff !important;
-      border: 1px solid #e5e5e5 !important;
+      color: #2563eb !important;
+      border: 2px solid #93c5fd !important;
+    }
+    
+    .mobile-menu .btn-login-header:hover {
+      background: #eff6ff !important;
+      border-color: #3b82f6 !important;
     }
     
     .mobile-menu-user-info {
-      padding: 16px 20px;
-      font-size: 14px;
-      color: #8e8e93;
+      padding: 14px 20px;
+      font-size: 15px;
+      color: #64748b;
       text-align: center;
-      background: #fff;
-      border-bottom: 1px solid #e5e5e5;
+      background: linear-gradient(135deg, #f0f9ff 0%, #fff 100%);
+      border-bottom: 1px solid #e0e7ff;
+      border-radius: 12px;
+      margin: 0 0 12px 0;
+    }
+    
+    .mobile-menu-user-info strong {
+      color: #1e40af;
     }
 
     /* Hide old auth pill */
