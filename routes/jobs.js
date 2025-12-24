@@ -1429,175 +1429,20 @@ router.post('/:id/decline-price-change', authenticate, requireRole('CUSTOMER'), 
     deprecatedAt: '2025-12-23'
   });
 });
-      where: { id: req.params.id },
-      data: {
-        requirements: {
-          ...existingRequirements,
-          proposedPriceChange: {
-            ...proposedPrice,
-            status: 'DECLINED',
-            declinedAt: new Date().toISOString()
-          }
-        }
-      }
-    });
 
-    // Send notification email to hustler
-    const { sendPriceChangeDeclinedEmail } = require('../services/email');
-    try {
-      await sendPriceChangeDeclinedEmail(
-        job.hustler.email,
-        job.hustler.name,
-        job.title,
-        job.id
-      );
-    } catch (emailError) {
-      console.error('Error sending price change declined email:', emailError);
-    }
-
-    res.json({ 
-      success: true,
-      job: updatedJob
-    });
-  } catch (error) {
-    console.error('Decline price change error:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: error.message 
-    });
-  }
-});
-
-// POST /jobs/:id/finalize-price-change - Customer finalizes price change after authorizing additional payment
+// POST /jobs/:id/finalize-price-change - DEPRECATED (Phase 2)
+// Price changes after acceptance are no longer allowed for flat-rate jobs.
 router.post('/:id/finalize-price-change', authenticate, requireRole('CUSTOMER'), async (req, res) => {
-  try {
-    const { paymentIntentId } = req.body;
-    
-    if (!paymentIntentId) {
-      return res.status(400).json({ error: 'Payment intent ID required' });
-    }
-
-    const job = await prisma.job.findUnique({
-      where: { id: req.params.id },
-      include: { 
-        payment: true,
-        hustler: { select: { id: true, name: true, email: true } }
-      }
-    });
-
-    if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
-    }
-
-    if (job.customerId !== req.user.id) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    const requirements = job.requirements || {};
-    let parsedRequirements = requirements;
-    if (typeof parsedRequirements === 'string') {
-      try {
-        parsedRequirements = JSON.parse(parsedRequirements);
-      } catch (e) {
-        parsedRequirements = {};
-      }
-    }
-
-    const proposedPrice = parsedRequirements.proposedPriceChange;
-    if (!proposedPrice || proposedPrice.status !== 'ACCEPTED_PENDING_PAYMENT') {
-      return res.status(400).json({ 
-        error: 'No pending price change payment found' 
-      });
-    }
-
-    if (proposedPrice.differencePaymentIntentId !== paymentIntentId) {
-      return res.status(400).json({ 
-        error: 'Payment intent ID does not match' 
-      });
-    }
-
-    // Verify payment intent is authorized
-    const Stripe = require('stripe');
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    
-    if (paymentIntent.status !== 'requires_capture') {
-      return res.status(400).json({ 
-        error: 'Payment not authorized',
-        status: paymentIntent.status
-      });
-    }
-
-    // Calculate new job amount
-    let newJobAmount = job.amount;
-    if (job.payType === 'hourly') {
-      const newRate = proposedPrice.hourlyRate !== null ? proposedPrice.hourlyRate : job.hourlyRate;
-      const newHours = proposedPrice.estHours !== null ? proposedPrice.estHours : job.estHours;
-      newJobAmount = newRate * newHours;
-    } else {
-      newJobAmount = proposedPrice.amount !== null ? proposedPrice.amount : job.amount;
-    }
-
-    // Calculate fees using centralized pricing service
-    const newFees = calculateFees(newJobAmount);
-
-    // Update original payment intent to new total
-    if (job.payment && job.payment.providerId) {
-      try {
-        const existingIntent = await stripe.paymentIntents.retrieve(job.payment.providerId);
-        if (existingIntent.status === 'requires_capture' || existingIntent.status === 'requires_payment_method') {
-          await stripe.paymentIntents.update(job.payment.providerId, {
-            amount: Math.round(newFees.total * 100),
-            metadata: {
-              ...existingIntent.metadata,
-              amount: newJobAmount.toString(),
-              tip: '0',
-              customerFee: newFees.customerFee.toString(),
-              priceUpdatedAt: new Date().toISOString(),
-              differencePaymentIntentId: paymentIntentId
-            }
-          });
-        }
-      } catch (stripeError) {
-        console.error('[PRICE CHANGE] Error updating original payment intent:', stripeError);
-      }
-    }
-
-    // Update job with new price
-    const updateData = {
-      amount: newJobAmount
-    };
-    
-    if (job.payType === 'hourly') {
-      if (proposedPrice.hourlyRate !== null) {
-        updateData.hourlyRate = proposedPrice.hourlyRate;
-      }
-      if (proposedPrice.estHours !== null) {
-        updateData.estHours = proposedPrice.estHours;
-      }
-    }
-
-    const updatedJob = await prisma.job.update({
-      where: { id: req.params.id },
-      data: {
-        ...updateData,
-        requirements: {
-          ...parsedRequirements,
-          proposedPriceChange: {
-            ...proposedPrice,
-            status: 'ACCEPTED',
-            acceptedAt: new Date().toISOString()
-          }
-        }
-      },
-      include: {
-        customer: { select: { id: true, name: true, email: true } }
-      }
-    });
-
-    // Update payment record
-    if (job.payment) {
-      await prisma.payment.update({
+  // Log deprecation attempt for monitoring
+  console.warn(`[DEPRECATED] POST /jobs/${req.params.id}/finalize-price-change attempted by user ${req.user.id}`);
+  
+  return res.status(410).json({
+    error: 'This endpoint has been deprecated',
+    code: 'ENDPOINT_DEPRECATED',
+    message: 'Post-acceptance price changes are no longer supported. Price is locked when the customer accepts an offer.',
+    deprecatedAt: '2025-12-23'
+  });
+});
         where: { id: job.payment.id },
         data: {
           amount: newJobAmount,
