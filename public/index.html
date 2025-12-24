@@ -35482,6 +35482,39 @@ try {
     });
     
     document.addEventListener('DOMContentLoaded', initializeApp);
+    
+    // Initialize Bottom Navigation
+    document.addEventListener('DOMContentLoaded', function() {
+      const bottomNav = document.getElementById('appBottomNav');
+      if (bottomNav) {
+        bottomNav.querySelectorAll('.nav-tab').forEach(tab => {
+          tab.addEventListener('click', function() {
+            const view = this.dataset.view;
+            if (view && typeof setView === 'function') {
+              setView(view);
+              // Update active state
+              bottomNav.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+              this.classList.add('active');
+            }
+          });
+        });
+      }
+    });
+    
+    // Update bottom nav active state when view changes
+    window.updateBottomNav = function(view) {
+      const bottomNav = document.getElementById('appBottomNav');
+      if (bottomNav) {
+        bottomNav.querySelectorAll('.nav-tab').forEach(tab => {
+          const tabView = tab.dataset.view;
+          if (tabView === view || (view === 'manage-jobs' && tabView === 'profile')) {
+            tab.classList.add('active');
+          } else {
+            tab.classList.remove('active');
+          }
+        });
+      }
+    };
   } else {
     // DOM is already ready
     initializeApp();
