@@ -1397,36 +1397,24 @@ router.post('/:id/propose-price-change', authenticate, requireRole('HUSTLER'), a
   });
 });
 
-// POST /jobs/:id/accept-price-change - Customer accepts price change
-// If price increases, customer must authorize additional payment
-// If price decreases, customer gets refund notification
+// POST /jobs/:id/accept-price-change - DEPRECATED (Phase 2)
+// Price changes after acceptance are no longer allowed for flat-rate jobs.
 router.post('/:id/accept-price-change', authenticate, requireRole('CUSTOMER'), async (req, res) => {
-  try {
-    const job = await prisma.job.findUnique({
-      where: { id: req.params.id },
-      include: { 
-        payment: true,
-        hustler: { select: { id: true, name: true, email: true } }
-      }
-    });
-
-    if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
-    }
-
-    if (job.customerId !== req.user.id) {
-      return res.status(403).json({ error: 'Forbidden - You can only accept price changes for your own jobs' });
-    }
-
-    // Price changes only allowed before start code
-    if (job.startCodeVerified) {
-      return res.status(400).json({ 
-        error: 'Price is locked. Cannot change price after job has started.' 
-      });
-    }
-
-    const requirements = job.requirements || {};
-    const proposedPrice = requirements.proposedPriceChange;
+  // Log deprecation attempt for monitoring
+  console.warn(`[DEPRECATED] POST /jobs/${req.params.id}/accept-price-change attempted by user ${req.user.id}`);
+  
+  return res.status(410).json({
+    error: 'This endpoint has been deprecated',
+    code: 'ENDPOINT_DEPRECATED',
+    message: 'Post-acceptance price changes are no longer supported. Price is locked when the customer accepts an offer. If you need to change the price, please cancel the job and create a new one, or contact support.',
+    deprecatedAt: '2025-12-23',
+    alternatives: [
+      'Review offers carefully before accepting',
+      'Cancel the current job and create a new one',
+      'Contact support for exceptional circumstances'
+    ]
+  });
+});
 
     if (!proposedPrice || proposedPrice.status !== 'PENDING') {
       return res.status(400).json({ 
