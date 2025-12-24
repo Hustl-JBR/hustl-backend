@@ -19875,8 +19875,8 @@ async function renderJobs(reset = false) {
 
         if (threads.length === 0) {
           convList.innerHTML =
-            "<div class='muted' style='padding: 2rem; text-align: center;'>No conversations yet.<br>Messages will appear here once you have an assigned job.</div>";
-          convTitle.textContent = "Select a conversation";
+            "<div style='padding: 40px 20px; text-align: center; color: #8e8e93;'><div style='font-size: 40px; margin-bottom: 12px;'>💬</div><div style='font-size: 17px; font-weight: 500;'>No Messages</div><div style='font-size: 14px; margin-top: 4px;'>Your conversations will appear here</div></div>";
+          convTitle.textContent = "Messages";
           convSummary.textContent = "";
           convMessages.innerHTML = "";
           activeConversationJobId = null;
@@ -19884,38 +19884,26 @@ async function renderJobs(reset = false) {
           return;
         }
 
-        // Get current tab (default to 'active')
-        const activeTab = window.activeConversationTab || 'active';
-        const deleted = JSON.parse(localStorage.getItem("deletedConversations") || "[]");
-        
-        // Filter threads by tab
-        const filteredThreads = threads.filter(thread => {
-          const isDeleted = deleted.includes(thread.job.id);
-          if (activeTab === 'active') {
-            return !isDeleted; // Show non-deleted in active tab
-          } else if (activeTab === 'deleted') {
-            return isDeleted; // Show deleted in deleted tab
-          }
-          return true;
+        // Sort threads: In-progress jobs first, then by most recent message
+        const sortedThreads = threads.sort((a, b) => {
+          const statusOrder = { 'IN_PROGRESS': 0, 'SCHEDULED': 1, 'ASSIGNED': 1, 'PAID': 2, 'COMPLETED_BY_HUSTLER': 2 };
+          const aOrder = statusOrder[a.job?.status] ?? 3;
+          const bOrder = statusOrder[b.job?.status] ?? 3;
+          if (aOrder !== bOrder) return aOrder - bOrder;
+          // Within same priority, sort by latest message time
+          const aTime = a.messages?.[0]?.createdAt || a.updatedAt || 0;
+          const bTime = b.messages?.[0]?.createdAt || b.updatedAt || 0;
+          return new Date(bTime) - new Date(aTime);
         });
 
         // If nothing is selected yet, auto-open the first thread
-        if (!activeConversationJobId && filteredThreads.length > 0) {
-          activeConversationJobId = filteredThreads[0].job.id;
-          activeConversationThreadId = filteredThreads[0].id;
+        if (!activeConversationJobId && sortedThreads.length > 0) {
+          activeConversationJobId = sortedThreads[0].job.id;
+          activeConversationThreadId = sortedThreads[0].id;
         }
 
-        // Show empty state if no conversations in current tab
-        if (filteredThreads.length === 0) {
-          const emptyMessage = activeTab === 'deleted' 
-            ? "No deleted conversations. Deleted conversations will appear here."
-            : "No active conversations yet.<br>Messages will appear here once you have an assigned job.";
-          convList.innerHTML = `<div class='muted' style='padding: 2rem; text-align: center;'>${emptyMessage}</div>`;
-          await renderConversation();
-          return;
-        }
-
-        filteredThreads.forEach((thread) => {
+        // Render each conversation item (clean iMessage-like style)
+        sortedThreads.forEach((thread) => {
           const otherUser = user.id === thread.userAId ? thread.userB : thread.userA;
           const job = thread.job;
 
@@ -19932,109 +19920,83 @@ async function renderJobs(reset = false) {
           item.classList.add("active");
         }
 
-        // Avatar (small circular profile photo)
+        // Avatar (circular with initials)
         const avatarContainer = document.createElement("div");
         avatarContainer.className = "conversation-avatar";
-        if (otherUser) {
-          avatarContainer.innerHTML = renderUserAvatar(otherUser, 40);
+        if (otherUser && otherUser.profilePic) {
+          avatarContainer.innerHTML = `<img src="${otherUser.profilePic}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+        } else if (otherUser && otherUser.name) {
+          avatarContainer.textContent = otherUser.name.charAt(0).toUpperCase();
+        } else {
+          avatarContainer.textContent = "?";
         }
         item.appendChild(avatarContainer);
         
-        // Info section (name, job title, status, preview)
+        // Info section (simplified: name + preview only)
         const infoContainer = document.createElement("div");
         infoContainer.className = "conversation-info";
-        infoContainer.style.flex = "1";
-        infoContainer.style.minWidth = "0";
         
-        if (otherUser) {
-          // User name
-          const name = document.createElement("div");
-          name.className = "conversation-name";
-          name.textContent = otherUser.name || "Unknown";
-          if (hasUnread) {
-            name.style.fontWeight = "700";
-            name.style.color = "#1e40af";
+        // User name with job title
+        const nameRow = document.createElement("div");
+        nameRow.style.display = "flex";
+        nameRow.style.justifyContent = "space-between";
+        nameRow.style.alignItems = "center";
+        nameRow.style.marginBottom = "2px";
+        
+        const name = document.createElement("div");
+        name.className = "conversation-name";
+        name.textContent = otherUser?.name || "Unknown";
+        if (hasUnread) {
+          name.style.fontWeight = "700";
+        }
+        nameRow.appendChild(name);
+        
+        // Time of last message
+        const latestMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
+        if (latestMessage && latestMessage.createdAt) {
+          const timeEl = document.createElement("span");
+          timeEl.className = "conversation-time";
+          const msgDate = new Date(latestMessage.createdAt);
+          const now = new Date();
+          const isToday = msgDate.toDateString() === now.toDateString();
+          const isYesterday = new Date(now - 86400000).toDateString() === msgDate.toDateString();
+          if (isToday) {
+            timeEl.textContent = msgDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+          } else if (isYesterday) {
+            timeEl.textContent = "Yesterday";
+          } else {
+            timeEl.textContent = msgDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
           }
-          infoContainer.appendChild(name);
-          
-          // Job title + status
-          const jobMeta = document.createElement("div");
-          jobMeta.style.display = "flex";
-          jobMeta.style.alignItems = "center";
-          jobMeta.style.gap = "0.5rem";
-          jobMeta.style.fontSize = "0.75rem";
-          jobMeta.style.color = "var(--text-muted)";
-          jobMeta.style.marginBottom = "0.25rem";
-          
-          const titleText = document.createElement("span");
-          titleText.textContent = job.title;
-          jobMeta.appendChild(titleText);
-          
-          // Job status badge
-          let statusText = "";
-          let statusColor = "";
-          if (job.status === 'PAID' || job.status === 'COMPLETED_BY_HUSTLER') {
-            statusText = "✅ Completed";
-            statusColor = "#166534";
-          } else if (job.status === 'IN_PROGRESS') {
-            statusText = "🟡 In Progress";
-            statusColor = "#ca8a04";
-          } else if (job.status === 'SCHEDULED' || job.status === 'ASSIGNED') {
-            // SCHEDULED/ASSIGNED = Hustler accepted, waiting for start code (not active yet)
-            statusText = job.status === 'SCHEDULED' ? "📅 Scheduled" : "📅 Assigned";
-            statusColor = "#2563eb";
-          }
-          
-          if (statusText) {
-            const statusBadge = document.createElement("span");
-            statusBadge.style.background = statusColor === "#166534" ? "#dcfce7" : 
-                                           statusColor === "#ca8a04" ? "#fef3c7" :
-                                           statusColor === "#2563eb" ? "#dbeafe" : "#d1fae5";
-            statusBadge.style.color = statusColor;
-            statusBadge.style.padding = "0.125rem 0.375rem";
-            statusBadge.style.borderRadius = "4px";
-            statusBadge.style.fontSize = "0.7rem";
-            statusBadge.style.fontWeight = "600";
-            statusBadge.textContent = statusText;
-            jobMeta.appendChild(statusBadge);
-          }
-          
-          infoContainer.appendChild(jobMeta);
+          nameRow.appendChild(timeEl);
         }
         
-        // Latest message preview
-        const latestMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
+        infoContainer.appendChild(nameRow);
+        
+        // Preview: Job title + last message
         const preview = document.createElement("div");
         preview.className = "conversation-preview";
+        let previewText = job.title;
         if (latestMessage) {
-          const previewText = latestMessage.body.length > 60 ? latestMessage.body.substring(0, 60) + "..." : latestMessage.body;
-          preview.textContent = previewText;
-          if (hasUnread) {
-            preview.style.color = "#1e40af";
-            preview.style.fontWeight = "600";
-          }
-        } else {
-          preview.textContent = "No messages yet";
-          preview.style.fontStyle = "italic";
+          previewText = latestMessage.body.length > 40 ? latestMessage.body.substring(0, 40) + "..." : latestMessage.body;
+        }
+        preview.textContent = previewText;
+        if (hasUnread) {
+          preview.style.color = "#000";
+          preview.style.fontWeight = "500";
         }
         infoContainer.appendChild(preview);
         
         item.appendChild(infoContainer);
         
-        // Unread badge
+        // Unread indicator (small blue dot)
         if (hasUnread) {
-          const unreadBadge = document.createElement("div");
-          unreadBadge.className = "unread-badge";
-          unreadBadge.style.background = "#3b82f6";
-          unreadBadge.style.color = "#fff";
-          unreadBadge.style.borderRadius = "12px";
-          unreadBadge.style.padding = "0.2rem 0.5rem";
-          unreadBadge.style.fontSize = "0.7rem";
-          unreadBadge.style.fontWeight = "700";
-          unreadBadge.style.minWidth = "20px";
-          unreadBadge.style.textAlign = "center";
-          unreadBadge.textContent = unreadCount > 99 ? "99+" : unreadCount.toString();
-          item.appendChild(unreadBadge);
+          const unreadDot = document.createElement("div");
+          unreadDot.style.width = "10px";
+          unreadDot.style.height = "10px";
+          unreadDot.style.borderRadius = "50%";
+          unreadDot.style.background = "#007aff";
+          unreadDot.style.flexShrink = "0";
+          item.appendChild(unreadDot);
         }
 
         // Archive/Delete buttons (hidden by default, shown on hover)
