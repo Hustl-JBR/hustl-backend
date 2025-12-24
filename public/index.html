@@ -11308,40 +11308,54 @@ async function renderJobs(reset = false) {
       });
     }
     
-    // Apply sorting
-    if (activeSortBy === 'newest') {
-      filteredJobs.sort((a, b) => {
-        const dateA = new Date(a.createdAt || a.created_at || 0);
-        const dateB = new Date(b.createdAt || b.created_at || 0);
-        return dateB - dateA; // Newest first
-      });
-    } else if (activeSortBy === 'highest_paid') {
-      filteredJobs.sort((a, b) => {
+    // Helper function to get status priority (lower = higher priority)
+    function getStatusPriority(status) {
+      const priorities = {
+        'IN_PROGRESS': 0,      // Active jobs first
+        'SCHEDULED': 1,        // Scheduled jobs second
+        'ASSIGNED': 1,         // Assigned jobs second
+        'OPEN': 2,             // Open jobs third
+        'REQUESTED': 2,        // Requested jobs third
+        'PAID': 3,             // Completed jobs last
+        'COMPLETED_BY_HUSTLER': 3,
+        'CANCELLED': 4
+      };
+      return priorities[status] ?? 5;
+    }
+    
+    // Apply sorting - ALWAYS prioritize in-progress/scheduled jobs first, then apply secondary sort
+    // First, separate jobs by status priority
+    filteredJobs.sort((a, b) => {
+      const priorityA = getStatusPriority(a.status);
+      const priorityB = getStatusPriority(b.status);
+      
+      // If different priorities, sort by priority
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      
+      // Within same priority, apply the selected sort
+      if (activeSortBy === 'highest_paid') {
         const amountA = Number(a.amount) || 0;
         const amountB = Number(b.amount) || 0;
-        return amountB - amountA; // Highest first
-      });
-    } else if (activeSortBy === 'lowest_paid') {
-      filteredJobs.sort((a, b) => {
+        return amountB - amountA;
+      } else if (activeSortBy === 'lowest_paid') {
         const amountA = Number(a.amount) || 0;
         const amountB = Number(b.amount) || 0;
-        return amountA - amountB; // Lowest first
-      });
-    } else if (activeSortBy === 'closest' && userLocation) {
-      filteredJobs.sort((a, b) => {
-        // Use approximate location for sorting (Step 3)
+        return amountA - amountB;
+      } else if (activeSortBy === 'soonest') {
+        const dateA = a.startTime ? new Date(a.startTime) : new Date(a.date || a.createdAt || 0);
+        const dateB = b.startTime ? new Date(b.startTime) : new Date(b.date || b.createdAt || 0);
+        return dateA - dateB;
+      } else if (activeSortBy === 'closest' && userLocation) {
         const aLat = a.approximateLat !== null && a.approximateLat !== undefined 
-          ? parseFloat(a.approximateLat) 
-          : (a.lat ? parseFloat(a.lat) : null);
+          ? parseFloat(a.approximateLat) : (a.lat ? parseFloat(a.lat) : null);
         const aLng = a.approximateLng !== null && a.approximateLng !== undefined 
-          ? parseFloat(a.approximateLng) 
-          : (a.lng ? parseFloat(a.lng) : null);
+          ? parseFloat(a.approximateLng) : (a.lng ? parseFloat(a.lng) : null);
         const bLat = b.approximateLat !== null && b.approximateLat !== undefined 
-          ? parseFloat(b.approximateLat) 
-          : (b.lat ? parseFloat(b.lat) : null);
+          ? parseFloat(b.approximateLat) : (b.lat ? parseFloat(b.lat) : null);
         const bLng = b.approximateLng !== null && b.approximateLng !== undefined 
-          ? parseFloat(b.approximateLng) 
-          : (b.lng ? parseFloat(b.lng) : null);
+          ? parseFloat(b.approximateLng) : (b.lng ? parseFloat(b.lng) : null);
         
         if (!aLat || !aLng) return 1;
         if (!bLat || !bLng) return -1;
@@ -11364,11 +11378,13 @@ async function renderJobs(reset = false) {
           return R * 2 * Math.atan2(Math.sqrt(calc), Math.sqrt(1 - calc));
         })();
         return distA - distB;
-      });
-    } else if (activeSortBy === 'soonest') {
-      filteredJobs.sort((a, b) => {
-        const dateA = a.startTime ? new Date(a.startTime) : new Date(a.date || a.createdAt || 0);
-        const dateB = b.startTime ? new Date(b.startTime) : new Date(b.date || b.createdAt || 0);
+      }
+      
+      // Default: newest first
+      const dateA = new Date(a.createdAt || a.created_at || 0);
+      const dateB = new Date(b.createdAt || b.created_at || 0);
+      return dateB - dateA;
+    });        const dateB = b.startTime ? new Date(b.startTime) : new Date(b.date || b.createdAt || 0);
         return dateA - dateB; // Soonest first
       });
     }
