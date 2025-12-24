@@ -19918,8 +19918,23 @@ async function renderJobs(reset = false) {
           return;
         }
 
+        // Filter out deleted conversations
+        const deleted = JSON.parse(localStorage.getItem("deletedConversations") || "[]");
+        const activeThreads = threads.filter(thread => !deleted.includes(thread.job?.id));
+        
+        if (activeThreads.length === 0) {
+          convList.innerHTML =
+            "<div style='padding: 40px 20px; text-align: center; color: #8e8e93;'><div style='font-size: 40px; margin-bottom: 12px;'>💬</div><div style='font-size: 17px; font-weight: 500;'>No Messages</div><div style='font-size: 14px; margin-top: 4px;'>Your conversations will appear here</div></div>";
+          convTitle.textContent = "Messages";
+          convSummary.textContent = "";
+          convMessages.innerHTML = "";
+          activeConversationJobId = null;
+          activeConversationThreadId = null;
+          return;
+        }
+
         // Sort threads: In-progress jobs first, then by most recent message
-        const sortedThreads = threads.sort((a, b) => {
+        const sortedThreads = activeThreads.sort((a, b) => {
           const statusOrder = { 'IN_PROGRESS': 0, 'SCHEDULED': 1, 'ASSIGNED': 1, 'PAID': 2, 'COMPLETED_BY_HUSTLER': 2 };
           const aOrder = statusOrder[a.job?.status] ?? 3;
           const bOrder = statusOrder[b.job?.status] ?? 3;
