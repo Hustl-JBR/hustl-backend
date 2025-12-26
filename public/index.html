@@ -1761,11 +1761,11 @@
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
+      min-height: calc(100vh - 200px); /* Ensure list fills available space */
     }
     
     /* Only add scrollbar when there's content - use class instead of :has() for better compatibility */
     .jobs-list.has-content {
-      max-height: 400px;
       overflow-y: auto;
       padding-right: 0.2rem;
     }
