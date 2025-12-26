@@ -451,17 +451,19 @@
       text-align: center;
     }
     
-    /* Clean Manage Tabs */
+    /* Clean Manage Tabs - Prevent Text Wrapping */
     .manage-tab-btn {
-      padding: 8px 16px;
+      padding: 8px 12px;
       background: transparent;
       border: none;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 500;
       color: #6b7280;
       cursor: pointer;
       transition: color 0.15s ease;
       position: relative;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     
     .manage-tab-btn:hover {
@@ -481,6 +483,7 @@
       right: 0;
       height: 2px;
       background: #111827;
+      border-radius: 1px;
     }
       border-radius: 10px;
       min-width: 16px;
