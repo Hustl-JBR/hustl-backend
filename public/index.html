@@ -383,9 +383,21 @@
         align-items: center;
       }
       
-      /* Add padding to main content to prevent overlap with bottom nav */
-      main {
-        padding-bottom: 80px !important;
+      /* Add padding to ALL content to prevent overlap with bottom nav */
+      main,
+      section[id^="view-"],
+      .jobs-list,
+      .conversations-list,
+      #managePostedJobsList,
+      #manageActiveJobsList,
+      #manageCompletedJobsList,
+      #manageAppliedJobsList {
+        padding-bottom: 100px !important;
+      }
+      
+      /* Ensure body has space at bottom */
+      body {
+        padding-bottom: 80px;
       }
     }
     
