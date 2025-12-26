@@ -13830,9 +13830,6 @@ async function renderJobs(reset = false) {
           
           actionsSection.appendChild(applicantsSection);
           
-          // Add the applicants footer indicator if there are pending offers
-          actionsSection.appendChild(applicantsFooter);
-          
           // Clear the flag after using it
           window._viewingFromPostedTab = false;
         } else if (userHasApplied && !isViewingApplied) {
