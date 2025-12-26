@@ -359,17 +359,21 @@
     }
     
     /* Fixed App Bottom Navigation - Clean Minimal Style */
+    /* Modern Bottom Navigation - Clean iOS/Android Style */
     .app-bottom-nav {
       display: none;
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
-      height: 56px;
-      background: #fff;
-      border-top: 1px solid #f0f0f0;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 0.5px solid rgba(0, 0, 0, 0.08);
       z-index: 9998;
       padding-bottom: env(safe-area-inset-bottom, 0px);
+      box-shadow: 0 -1px 10px rgba(0, 0, 0, 0.03);
     }
     
     @media (max-width: 768px) {
@@ -378,6 +382,11 @@
         justify-content: space-around;
         align-items: center;
       }
+      
+      /* Add padding to main content to prevent overlap with bottom nav */
+      main {
+        padding-bottom: 80px !important;
+      }
     }
     
     .nav-tab {
@@ -385,22 +394,24 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 2px;
+      gap: 4px;
       flex: 1;
       background: none;
       border: none;
-      padding: 6px 0;
+      padding: 8px 0;
       cursor: pointer;
       color: #9ca3af;
-      transition: color 0.15s ease;
+      transition: all 0.2s ease;
       position: relative;
       -webkit-tap-highlight-color: transparent;
+      border-radius: 12px;
+      margin: 4px 2px;
     }
     
     .nav-tab .nav-icon {
-      width: 22px;
-      height: 22px;
-      transition: color 0.15s ease;
+      width: 24px;
+      height: 24px;
+      transition: all 0.2s ease;
     }
     
     .nav-tab span {
