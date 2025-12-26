@@ -992,6 +992,13 @@
       margin-bottom: 0 !important;
     }
     
+    /* View-jobs needs full height to eliminate blank space */
+    #view-jobs {
+      min-height: calc(100vh - 120px);
+      display: flex;
+      flex-direction: column;
+    }
+    
     /* Ensure all views start at the very top with no spacing */
     [id^="view-"] {
       padding-top: 0 !important;
