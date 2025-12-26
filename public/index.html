@@ -14195,43 +14195,6 @@ async function renderJobs(reset = false) {
         
         modalContent.appendChild(actionsSection);
         
-        // Add sticky "Apply" footer bar at the bottom of modal for Browse Jobs view
-        // Only show if user is logged in, job is open, hasn't applied, and not viewing from Posted tab
-        if (!isViewingFromPosted && !isViewingApplied) {
-          const isOpen = (job.status || "").toUpperCase() === "OPEN" || (job.status || "").toUpperCase() === "";
-          if (isOpen && token && !userHasApplied) {
-            const stickyApplyFooter = document.createElement("div");
-            stickyApplyFooter.style.cssText = "position: sticky; bottom: 0; left: 0; right: 0; background: white; padding: 1rem; border-top: 1px solid #e5e7eb; margin: 0 -1rem -1rem -1rem; display: flex; gap: 0.75rem; align-items: center;";
-            stickyApplyFooter.innerHTML = `
-              <button id="stickyApplyBtn" style="flex: 1; padding: 0.875rem 1.5rem; background: #2563eb; color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                Apply Now
-              </button>
-            `;
-            modalContent.appendChild(stickyApplyFooter);
-            
-            // Scroll to apply section when clicked
-            const stickyApplyBtn = stickyApplyFooter.querySelector('#stickyApplyBtn');
-            stickyApplyBtn.addEventListener('click', () => {
-              // Find the apply section and scroll to it
-              const applySection = actionsSection.querySelector('textarea, input[type="number"]');
-              if (applySection) {
-                applySection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                applySection.focus();
-              }
-            });
-          } else if (isOpen && !token) {
-            // Show "Login to Apply" footer for non-logged-in users
-            const stickyLoginFooter = document.createElement("div");
-            stickyLoginFooter.style.cssText = "position: sticky; bottom: 0; left: 0; right: 0; background: white; padding: 1rem; border-top: 1px solid #e5e7eb; margin: 0 -1rem -1rem -1rem; display: flex; gap: 0.75rem; align-items: center;";
-            stickyLoginFooter.innerHTML = `
-              <button style="flex: 1; padding: 0.875rem 1.5rem; background: #2563eb; color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer;" onclick="document.body.removeChild(document.getElementById('jobDetailModal')); document.body.style.overflow=''; setView('home'); setTimeout(() => document.getElementById('loginEmail')?.focus(), 300);">
-                Login to Apply
-              </button>
-            `;
-            modalContent.appendChild(stickyLoginFooter);
-          }
-        }
-        
         modalOverlay.appendChild(modalContent);
         document.body.appendChild(modalOverlay);
         document.body.style.overflow = "hidden";
