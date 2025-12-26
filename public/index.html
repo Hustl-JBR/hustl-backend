@@ -13531,14 +13531,25 @@ async function renderJobs(reset = false) {
         // BUT if viewing from Posted tab, show applicants instead
         // BUT if user already applied (and not denied), show "Already Applied"
         if (isViewingFromPosted) {
-          // Show applicants section for job owner
+          // Show applicants section for job owner with sticky footer indicator
           const applicantsSection = document.createElement("div");
           applicantsSection.style.cssText = "padding: 1rem; background: #f8f9fa; border-radius: 12px; border: 1px solid #e5e7eb;";
           
           const applicantsTitle = document.createElement("div");
-          applicantsTitle.style.cssText = "font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 1rem;";
-          applicantsTitle.textContent = "👥 Applicants";
+          applicantsTitle.style.cssText = "font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;";
+          applicantsTitle.innerHTML = `<span>👥</span> <span>Applicants</span>`;
           applicantsSection.appendChild(applicantsTitle);
+          
+          // Add "scroll down for applicants" indicator at bottom of modal
+          const applicantsFooter = document.createElement("div");
+          applicantsFooter.style.cssText = "position: sticky; bottom: 0; left: 0; right: 0; background: linear-gradient(to bottom, transparent, #f9fafb 20%); padding: 1.5rem 1rem 1rem; text-align: center;";
+          applicantsFooter.innerHTML = `
+            <div style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: #2563eb; color: white; border-radius: 20px; font-size: 0.85rem; font-weight: 600; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);">
+              <span>👥</span>
+              <span>Applicants Below</span>
+              <span>↓</span>
+            </div>
+          `;
           
           // Fetch applicants/offers for this job
           try {
