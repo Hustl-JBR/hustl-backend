@@ -226,10 +226,12 @@
       background: rgba(0,0,0,0.25);
     }
 
-    /* Prevent overscroll bounce on iOS */
+    /* App-like momentum scrolling - allow momentum but prevent page bounce */
     html, body {
-      overscroll-behavior: none;
-      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
+      overscroll-behavior-x: none;
+      -webkit-overflow-scrolling: touch !important;
+      scroll-behavior: auto;
     }
     
     /* Disable text selection on interactive elements for native feel */
@@ -239,9 +241,27 @@
       -webkit-tap-highlight-color: transparent;
     }
     
-    /* Smooth scrolling everywhere */
+    /* App-like momentum scrolling - remove smooth behavior that causes abrupt stops */
+    html {
+      scroll-behavior: auto; /* Let native momentum handle it */
+    }
+    
+    /* Remove smooth scroll behavior from all elements - causes abrupt stops */
     * {
-      scroll-behavior: smooth;
+      scroll-behavior: auto !important;
+    }
+    
+    /* Improve scrolling performance and smoothness with momentum */
+    body, main, [id^='view-'], .scrollable {
+      -webkit-overflow-scrolling: touch !important;
+      overflow-scrolling: touch !important;
+      overscroll-behavior-y: contain;
+      overscroll-behavior-x: none;
+      /* Hardware acceleration for smooth scrolling */
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
     }
     
     /* Active/pressed state for touch feedback */
@@ -393,6 +413,26 @@
       #manageCompletedJobsList,
       #manageAppliedJobsList {
         padding-bottom: 100px !important;
+        /* Smooth momentum scrolling */
+        -webkit-overflow-scrolling: touch !important;
+        overflow-scrolling: touch !important;
+        overscroll-behavior-y: contain;
+        transform: translateZ(0);
+        will-change: scroll-position;
+        scroll-behavior: auto !important;
+      }
+      
+      /* All scrollable elements get momentum scrolling */
+      [style*="overflow-y: auto"],
+      [style*="overflow-y: scroll"],
+      .scrollable,
+      *[class*="scroll"],
+      *[class*="list"],
+      *[class*="feed"] {
+        -webkit-overflow-scrolling: touch !important;
+        overflow-scrolling: touch !important;
+        overscroll-behavior-y: contain;
+        scroll-behavior: auto !important;
       }
       
       /* Ensure body has space at bottom */
